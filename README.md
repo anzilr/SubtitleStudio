@@ -1,8 +1,8 @@
 # Subtitle Studio
 
-[![GitHub license](https://img.shields.io/github/license/anzilr/SubtitleStudio)](https://github.com/anzilr/SubtitleStudio/blob/main/LICENSE)
-[![GitHub issues](https://img.shields.io/github/issues/anzilr/SubtitleStudio)](https://github.com/anzilr/SubtitleStudio/issues)
-[![GitHub stars](https://img.shields.io/github/stars/anzilr/SubtitleStudio)](https://github.com/anzilr/SubtitleStudio/stargazers)
+[![GitHub license](https://img.shields.io/github/license/Msoneofficial/SubtitleStudio)](https://github.com/Msoneofficial/SubtitleStudio/blob/main/LICENSE)
+[![GitHub issues](https://img.shields.io/github/issues/Msoneofficial/SubtitleStudio)](https://github.com/Msoneofficial/SubtitleStudio/issues)
+[![GitHub stars](https://img.shields.io/github/stars/Msoneofficial/SubtitleStudio)](https://github.com/Msoneofficial/SubtitleStudio/stargazers)
 
 A professional, cross-platform subtitle editing application built with **Flutter**. Subtitle Studio provides powerful tools for editing, synchronizing, and managing subtitle files with an intuitive, modern interface.
 
@@ -64,7 +64,7 @@ A professional, cross-platform subtitle editing application built with **Flutter
 
 **Clone the repository:**
 ```bash
-git clone https://github.com/anzilr/SubtitleStudio.git
+git clone https://github.com/Msoneofficial/SubtitleStudio.git
 cd SubtitleStudio
 ```
 
@@ -259,12 +259,14 @@ Run `flutter pub outdated` to check for dependency updates.
 
 ## 🐛 Known Issues
 
-See [GitHub Issues](https://github.com/anzilr/SubtitleStudio/issues) for known issues and bug reports.
+See [GitHub Issues](https://github.com/Msoneofficial/SubtitleStudio/issues) for known issues and bug reports.
 
 ## 🎯 Roadmap
 
 Future planned features:
 - [ ] Cloud synchronization
+- [ ] GnuLinux/Windows App distribution
+- [ ] Website for the app
 - [ ] Batch processing improvements
 - [ ] Performance optimizations
 - [ ] Additional language support
@@ -276,9 +278,9 @@ This project is licensed under the **GNU General Public License v3.0**. See [LIC
 
 ## 🔗 Links
 
-- **GitHub**: [anzilr/SubtitleStudio](https://github.com/anzilr/SubtitleStudio)
-- **Issues**: [Report a bug](https://github.com/anzilr/SubtitleStudio/issues)
-- **Discussions**: [Get help](https://github.com/anzilr/SubtitleStudio/discussions)
+- **GitHub**: [Msoneofficial/SubtitleStudio](https://github.com/Msoneofficial/SubtitleStudio)
+- **Issues**: [Report a bug](https://github.com/Msoneofficial/SubtitleStudio/issues)
+- **Discussions**: [Get help](https://github.com/Msoneofficial/SubtitleStudio/discussions)
 
 ## 💬 Contact & Support
 
