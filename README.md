@@ -6,6 +6,13 @@
 
 A professional, cross-platform subtitle editing application built with **Flutter**. Subtitle Studio provides powerful tools for editing, synchronizing, and managing subtitle files with an intuitive, modern interface.
 
+Downloads
+---
+
+[<img alt="Download On the Google Play" height="80" src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg">](https://play.google.com/store/apps/details?id=org.malayalamsubtitles.studio)
+[<img alt="Download On the App Store" height="80" src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg">](https://apps.apple.com/in/app/subtitle-studio-by-msone/id6754873530)
+[<img alt="Download on The Mac App Store" height="80" src="https://developer.apple.com/app-store/marketing/guidelines/images/badge-download-on-the-mac-app-store.svg">](https://apps.apple.com/in/app/subtitle-studio/id6752940797?mt=12)
+
 ## ✨ Features
 
 ### Core Features
