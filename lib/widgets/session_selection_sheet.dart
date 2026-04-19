@@ -410,7 +410,8 @@ class _SessionSelectionSheetState extends State<SessionSelectionSheet> {
         line.original = lineData['original'] ?? '';
         line.edited = lineData['edited'];
         line.marked = lineData['marked'] ?? false;
-        line.comment = lineData['comment'];  // Include comment field
+        line.comment = lineData['comment'];
+        line.resolved = lineData['resolved'] ?? false;
         return line;
       }).toList();
 
@@ -560,7 +561,8 @@ class _SessionSelectionSheetState extends State<SessionSelectionSheet> {
         line.original = lineData['original'] ?? '';
         line.edited = lineData['edited'];
         line.marked = lineData['marked'] ?? false;
-        line.comment = lineData['comment'];  // Include comment field
+        line.comment = lineData['comment'];
+        line.resolved = lineData['resolved'] ?? false;
         return line;
       }).toList();
 
