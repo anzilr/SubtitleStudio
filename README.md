@@ -80,13 +80,6 @@ cd SubtitleStudio
 flutter pub get
 ```
 
-**Optional: Set up environment variables** (for Telegram integration):
-```bash
-cp .env.example .env
-# Edit .env and add your credentials if needed
-# See .env.example for instructions
-```
-
 ### 2. Running the App
 
 **Android:**
@@ -194,29 +187,15 @@ Subtitle Studio follows a modular architecture with:
 - **Clean separation** of concerns
 
 
-## 📦 Environment Configuration
+## 🔐 Client Secret Policy
 
-### Telegram Integration (Optional)
+Subtitle Studio does not embed bot tokens, service credentials, or other
+privileged secrets in the Flutter application. Client-side assets and bundled
+configuration can be extracted from released apps.
 
-To enable Telegram integration for bug reporting:
-
-1. **Get a Telegram bot token:**
-   - Talk to [@BotFather](https://t.me/BotFather)
-   - Create a new bot
-   - Copy the token
-
-2. **Configure environment variables:**
-   ```bash
-   cp .env.example .env
-   ```
-
-3. **Edit `.env` file:**
-   ```
-   TELEGRAM_BOT_TOKEN=your_token_here
-   TELEGRAM_CHANNEL_ID=your_channel_id_here
-   ```
-
-4. **Rebuild the app** for changes to take effect
+Features that require privileged third-party credentials must use a trusted
+server-side service or a user-owned credential stored with an appropriate
+platform-secure mechanism.
 
 ## 📊 Version Information
 
@@ -256,11 +235,10 @@ Switch between three beautiful themes:
 
 Key dependencies include:
 - **Flutter**: UI framework
-- **Provider**: State management
+- **Riverpod**: Primary application state management
 - **Isar**: Local database
 - **Media Kit**: Video playback
 - **FFmpeg**: Video processing
-- **Flutter Dotenv**: Environment configuration
 
 Run `flutter pub outdated` to check for dependency updates.
 

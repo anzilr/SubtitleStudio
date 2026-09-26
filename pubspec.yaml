@@ -44,7 +44,6 @@ dependencies:
   equatable: ^2.0.7  # Value equality for immutable states
   flutter_markdown_plus: ^1.0.5  # Markdown rendering for AI explanations
   scrollable_positioned_list: ^0.3.8  # Precise index-based scrolling
-  flutter_dotenv: ^5.1.0  # Environment variables from .env file
   flutter_gemini:  # Gemini AI integration
     git:
       url: https://github.com/AkhmadRamadani/flutter_gemini.git
@@ -71,4 +70,3 @@ flutter:
     - assets/msone_bg.jpg
     - lib/utils/normalization.sed
     - assets/magnet-solid.svg
-    - .env

@@ -26,7 +26,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart' show ProviderScope; // M
 import 'package:subtitle_studio/app/providers/core_providers.dart'; // Riverpod core dependencies
 import 'package:isar_community/isar.dart';              // Local database
 import 'package:path_provider/path_provider.dart'; // File system access
-import 'package:flutter_dotenv/flutter_dotenv.dart'; // Environment variables
 import 'dart:async';                          // Async programming utilities
 
 // Application-specific imports
@@ -62,8 +61,6 @@ Future<void> main(List<String> args) async {
   // Ensure Flutter widget system is initialized before other operations
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Load environment variables from .env file (optional, used for Telegram integration)
-  await dotenv.load();
   
   // Initialize logging system first - essential for debugging startup issues
   await AppLogger.instance.initialize();
