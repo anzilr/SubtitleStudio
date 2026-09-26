@@ -1,13 +1,17 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:file_picker/file_picker.dart' as fp;
-import 'package:subtitle_studio/features/waveform/bloc/waveform_bloc.dart';
-import 'package:subtitle_studio/features/waveform/bloc/waveform_event.dart';
-import 'package:subtitle_studio/features/waveform/widgets/waveform_widget.dart';
-import 'package:subtitle_studio/features/waveform/widgets/waveform_toolbar.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/database/models/models.dart';
+import 'package:subtitle_studio/features/waveform/bloc/waveform_event.dart';
+import 'package:subtitle_studio/features/waveform/providers/waveform_controller.dart';
+import 'package:subtitle_studio/features/waveform/widgets/waveform_toolbar.dart';
+import 'package:subtitle_studio/features/waveform/widgets/waveform_widget.dart';
 
-/// Waveform section for EditScreen - manages waveform display and controls
+/// Standalone waveform section.
+///
+/// A nested [ProviderScope] preserves the old behavior where each standalone
+/// section owned its own WaveformBloc instance. The main Editor does not use
+/// this wrapper; it shares one screen-scoped waveform controller instead.
 class WaveformSection extends StatelessWidget {
   final List<SubtitleLine> subtitles;
   final Duration? playbackPosition;
@@ -16,47 +20,80 @@ class WaveformSection extends StatelessWidget {
   final String? videoPath;
 
   const WaveformSection({
-    Key? key,
+    super.key,
     required this.subtitles,
     this.playbackPosition,
     this.onSeek,
     this.height = 180.0,
     this.videoPath,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => WaveformBloc(),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Toolbar with controls
-          WaveformToolbar(
-            onLoadAudio: () => _handleLoadAudio(context),
-          ),
-
-          // Waveform visualization
-          SizedBox(
-            height: height,
-            child: WaveformWidget(
-              subtitles: subtitles,
-              playbackPosition: playbackPosition,
-              onSeek: onSeek,
-              height: height,
-            ),
-          ),
-        ],
+    return ProviderScope(
+      child: _WaveformSectionContent(
+        subtitles: subtitles,
+        playbackPosition: playbackPosition,
+        onSeek: onSeek,
+        height: height,
       ),
     );
   }
+}
 
-  Future<void> _handleLoadAudio(BuildContext context) async {
+class _WaveformSectionContent extends ConsumerWidget {
+  final List<SubtitleLine> subtitles;
+  final Duration? playbackPosition;
+  final Function(Duration)? onSeek;
+  final double height;
+
+  const _WaveformSectionContent({
+    required this.subtitles,
+    required this.playbackPosition,
+    required this.onSeek,
+    required this.height,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        WaveformToolbar(
+          onLoadAudio: () => _handleLoadAudio(context, ref),
+        ),
+        SizedBox(
+          height: height,
+          child: WaveformWidget(
+            subtitles: subtitles,
+            playbackPosition: playbackPosition,
+            onSeek: onSeek,
+            height: height,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _handleLoadAudio(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
     try {
-      // Pick audio file
       final result = await fp.FilePicker.platform.pickFiles(
         type: fp.FileType.custom,
-        allowedExtensions: ['mp3', 'wav', 'aac', 'm4a', 'ogg', 'flac', 'mp4', 'mkv', 'avi', 'mov'],
+        allowedExtensions: [
+          'mp3',
+          'wav',
+          'aac',
+          'm4a',
+          'ogg',
+          'flac',
+          'mp4',
+          'mkv',
+          'avi',
+          'mov',
+        ],
         dialogTitle: 'Select audio/video file for waveform',
       );
 
@@ -65,9 +102,9 @@ class WaveformSection extends StatelessWidget {
       final filePath = result.files.single.path;
       if (filePath == null) return;
 
-      // Load audio into waveform
-      if (!context.mounted) return;
-      context.read<WaveformBloc>().add(LoadAudioFile(filePath));
+      await ref
+          .read(waveformControllerProvider.notifier)
+          .dispatch(LoadAudioFile(filePath));
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

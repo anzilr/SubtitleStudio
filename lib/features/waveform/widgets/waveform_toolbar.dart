@@ -1,55 +1,52 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:subtitle_studio/features/waveform/bloc/waveform_bloc.dart';
-import 'package:subtitle_studio/features/waveform/bloc/waveform_state.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/features/waveform/bloc/waveform_event.dart';
+import 'package:subtitle_studio/features/waveform/bloc/waveform_state.dart';
+import 'package:subtitle_studio/features/waveform/providers/waveform_controller.dart';
 
-/// Toolbar widget for waveform controls
-class WaveformToolbar extends StatelessWidget {
+/// Toolbar widget for waveform controls.
+class WaveformToolbar extends ConsumerWidget {
   final VoidCallback onLoadAudio;
 
   const WaveformToolbar({
-    Key? key,
+    super.key,
     required this.onLoadAudio,
-  }) : super(key: key);
+  });
 
   @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<WaveformBloc, WaveformState>(
-      builder: (context, state) {
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            border: Border(
-              bottom: BorderSide(
-                color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
-              ),
-            ),
-          ),
-          child: Row(
-            children: [
-              // Load Audio Button
-              _buildLoadButton(context, state),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(waveformControllerProvider);
 
-              const SizedBox(width: 8),
-
-              // Zoom Controls
-              if (state is WaveformReady) ...[
-                const VerticalDivider(),
-                const SizedBox(width: 8),
-                _buildZoomControls(context, state),
-                const SizedBox(width: 8),
-                const VerticalDivider(),
-                const SizedBox(width: 8),
-                _buildAutoScrollToggle(context, state),
-                const Spacer(),
-                _buildInfoDisplay(context, state),
-              ],
-            ],
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border(
+          bottom: BorderSide(
+            color: Theme.of(context)
+                .colorScheme
+                .outline
+                .withValues(alpha: 0.2),
           ),
-        );
-      },
+        ),
+      ),
+      child: Row(
+        children: [
+          _buildLoadButton(context, state),
+          const SizedBox(width: 8),
+          if (state is WaveformReady) ...[
+            const VerticalDivider(),
+            const SizedBox(width: 8),
+            _buildZoomControls(context, ref, state),
+            const SizedBox(width: 8),
+            const VerticalDivider(),
+            const SizedBox(width: 8),
+            _buildAutoScrollToggle(context, ref, state),
+            const Spacer(),
+            _buildInfoDisplay(context, state),
+          ],
+        ],
+      ),
     );
   }
 
@@ -72,14 +69,19 @@ class WaveformToolbar extends StatelessWidget {
     );
   }
 
-  Widget _buildZoomControls(BuildContext context, WaveformReady state) {
+  Widget _buildZoomControls(
+    BuildContext context,
+    WidgetRef ref,
+    WaveformReady state,
+  ) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Zoom Out (+ button for less detail)
         IconButton(
           onPressed: state.canZoomOut
-              ? () => context.read<WaveformBloc>().add(const ZoomOut())
+              ? () => ref
+                  .read(waveformControllerProvider.notifier)
+                  .dispatch(const ZoomOut())
               : null,
           icon: const Icon(Icons.remove),
           tooltip: 'Zoom Out',
@@ -90,12 +92,10 @@ class WaveformToolbar extends StatelessWidget {
             minHeight: 32,
           ),
         ),
-
-        // Zoom Level Indicator
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceVariant,
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(4),
           ),
           child: Text(
@@ -103,11 +103,11 @@ class WaveformToolbar extends StatelessWidget {
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ),
-
-        // Zoom In (- button for more detail)
         IconButton(
           onPressed: state.canZoomIn
-              ? () => context.read<WaveformBloc>().add(const ZoomIn())
+              ? () => ref
+                  .read(waveformControllerProvider.notifier)
+                  .dispatch(const ZoomIn())
               : null,
           icon: const Icon(Icons.add),
           tooltip: 'Zoom In',
@@ -122,14 +122,19 @@ class WaveformToolbar extends StatelessWidget {
     );
   }
 
-  Widget _buildAutoScrollToggle(BuildContext context, WaveformReady state) {
+  Widget _buildAutoScrollToggle(
+    BuildContext context,
+    WidgetRef ref,
+    WaveformReady state,
+  ) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Checkbox(
           value: state.autoScroll,
-          onChanged: (_) =>
-              context.read<WaveformBloc>().add(const ToggleAutoScroll()),
+          onChanged: (_) => ref
+              .read(waveformControllerProvider.notifier)
+              .dispatch(const ToggleAutoScroll()),
           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
           visualDensity: VisualDensity.compact,
         ),
@@ -143,14 +148,13 @@ class WaveformToolbar extends StatelessWidget {
   }
 
   Widget _buildInfoDisplay(BuildContext context, WaveformReady state) {
-    final duration = state.buffer.duration;
-    final durationText = _formatDuration(duration);
+    final durationText = _formatDuration(state.buffer.duration);
     final samplesPerPixel = state.samplesPerPixel;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceVariant,
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(4),
       ),
       child: Row(
@@ -163,7 +167,7 @@ class WaveformToolbar extends StatelessWidget {
           ),
           const SizedBox(width: 6),
           Text(
-            '$durationText • ${samplesPerPixel} samp/px',
+            '$durationText • $samplesPerPixel samp/px',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
@@ -182,8 +186,7 @@ class WaveformToolbar extends StatelessWidget {
       return '${hours}h ${minutes}m ${seconds}s';
     } else if (minutes > 0) {
       return '${minutes}m ${seconds}s';
-    } else {
-      return '${seconds}s';
     }
+    return '${seconds}s';
   }
 }

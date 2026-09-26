@@ -1,11 +1,12 @@
 // Waveform Feature Exports
-// Use this file for easy imports: import 'package:subtitle_studio/features/waveform/waveform.dart';
+// Use this file for easy imports:
+// import 'package:subtitle_studio/features/waveform/waveform.dart';
 
 // Models
 export 'models/waveform_sample.dart';
 
-// BLoC
-export 'bloc/waveform_bloc.dart';
+// Riverpod state management
+export 'providers/waveform_controller.dart';
 export 'bloc/waveform_event.dart';
 export 'bloc/waveform_state.dart';
 
