@@ -47,8 +47,8 @@ import 'package:subtitle_studio/utils/unicode_text_input_formatter.dart';
 import 'package:subtitle_studio/utils/time_input_formatter.dart';
 import 'package:subtitle_studio/themes/theme_provider.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:subtitle_studio/screens/edit_line/edit_line_cubit.dart' hide TimeValidator;
+import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
+import 'package:subtitle_studio/screens/edit_line/edit_line_controller.dart' hide TimeValidator;
 import 'package:subtitle_studio/screens/edit_line/edit_line_state.dart';
 import 'package:subtitle_studio/widgets/ai_explanation_sheet.dart';
 
@@ -56,7 +56,7 @@ import 'package:subtitle_studio/widgets/ai_explanation_sheet.dart';
 // Uses Bloc/Cubit for state management, character counting, and time validation
 // Supports keyboard shortcuts, formatting, and responsive layouts
 
-class EditSubtitleScreen extends StatefulWidget {
+class EditSubtitleScreen extends riverpod.ConsumerStatefulWidget {
   final Id subtitleId; // ID of the subtitle collection
   final int index; // Index of the subtitle line
   final int sessionId;
@@ -84,10 +84,10 @@ class EditSubtitleScreen extends StatefulWidget {
   });
 
   @override
-  EditSubtitleScreenState createState() => EditSubtitleScreenState();
+  riverpod.ConsumerState<EditSubtitleScreen> createState() => EditSubtitleScreenState();
 }
 
-class EditSubtitleScreenState extends State<EditSubtitleScreen> {
+class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen> {
   late TextEditingController _originalController;
   late TextEditingController _editedController;
   late TextEditingController _startTimeController;
@@ -175,7 +175,7 @@ class EditSubtitleScreenState extends State<EditSubtitleScreen> {
   void _instantCharacterCountUpdate() {
     _characterCountTimer?.cancel();
     _characterCountTimer = Timer(const Duration(milliseconds: 50), () {
-      // Character counting handled by EditLineBloc
+      // Character counting handled by EditLineController
     });
   }
 
@@ -189,13 +189,17 @@ class EditSubtitleScreenState extends State<EditSubtitleScreen> {
     _currentIndexController = TextEditingController();
     _scrollController = ScrollController();
 
-    // Character counting listeners - use Cubit for reactive character counting
+    // Keep Riverpod character-count state synchronized with the text fields.
     _originalController.addListener(() {
-      context.read<EditLineCubit>().updateOriginalText(_originalController.text);
+      ref
+          .read(editLineControllerProvider.notifier)
+          .updateOriginalText(_originalController.text);
     });
-    
+
     _editedController.addListener(() {
-      context.read<EditLineCubit>().updateEditedText(_editedController.text);
+      ref
+          .read(editLineControllerProvider.notifier)
+          .updateEditedText(_editedController.text);
     });
 
     // Initialize error tracking variables
@@ -1396,16 +1400,12 @@ class EditSubtitleScreenState extends State<EditSubtitleScreen> {
             enableInteractiveSelection: true,
             showCursor: true,
             onChanged: (value) {
-              // Update Cubit if available
-              try {
-                final cubit = context.read<EditLineCubit>();
-                if (isStartTime) {
-                  cubit.updateStartTime(value);
-                } else {
-                  cubit.updateEndTime(value);
-                }
-              } catch (e) {
-                // Cubit not available, continue with legacy
+              final controller =
+                  ref.read(editLineControllerProvider.notifier);
+              if (isStartTime) {
+                controller.updateStartTime(value);
+              } else {
+                controller.updateEndTime(value);
               }
               
               // Update time controllers after cursor position is set
@@ -1434,22 +1434,31 @@ class EditSubtitleScreenState extends State<EditSubtitleScreen> {
 
         const SizedBox(height: 8),
 
-        // Show error message using BlocBuilder for reactive updates
-        BlocBuilder<EditLineCubit, EditLineState>(
-          buildWhen: (previous, current) =>
-              previous.startTimeError != current.startTimeError ||
-              previous.endTimeError != current.endTimeError ||
-              previous.timeOrderError != current.timeOrderError,
-          builder: (context, state) {
-            // Use Bloc state if initialized, otherwise use legacy state
-            final startError = state.isInitialized ? state.startTimeError : _startTimeError;
-            final endError = state.isInitialized ? state.endTimeError : _endTimeError;
-            final orderError = state.isInitialized ? state.timeOrderError : _timeOrderError;
-            
+        // Watch only the validation slice needed by this field.
+        riverpod.Consumer(
+          builder: (context, ref, child) {
+            final validation = ref.watch(
+              editLineControllerProvider.select(
+                (state) => (
+                  state.isInitialized,
+                  state.startTimeError,
+                  state.endTimeError,
+                  state.timeOrderError,
+                ),
+              ),
+            );
+
+            final startError =
+                validation.$1 ? validation.$2 : _startTimeError;
+            final endError =
+                validation.$1 ? validation.$3 : _endTimeError;
+            final orderError =
+                validation.$1 ? validation.$4 : _timeOrderError;
+
             final componentError = isStartTime ? startError : endError;
             final hasComponentErr = componentError != null;
             final hasOrderErr = orderError != null;
-            
+
             if (hasComponentErr) {
               return Text(
                 componentError,
@@ -1471,8 +1480,7 @@ class EditSubtitleScreenState extends State<EditSubtitleScreen> {
                 textAlign: TextAlign.center,
               );
             }
-            
-            // No error
+
             return const SizedBox.shrink();
           },
         ),
@@ -4826,19 +4834,25 @@ class EditSubtitleScreenState extends State<EditSubtitleScreen> {
                                                 Positioned(
                                                   bottom: 1,
                                                   right: 4,
-                                                  child: BlocBuilder<EditLineCubit, EditLineState>(
-                                                    buildWhen: (previous, current) =>
-                                                        previous.originalCharCount != current.originalCharCount ||
-                                                        previous.originalHasLongLine != current.originalHasLongLine,
-                                                    builder: (context, state) {
-                                                      // Use Bloc state if available, fallback to legacy state
-                                                      final charCount = state.isInitialized 
-                                                          ? state.originalCharCount 
+                                                  child: riverpod.Consumer(
+                                                    builder: (context, ref, child) {
+                                                      final characterState = ref.watch(
+                                                        editLineControllerProvider.select(
+                                                          (state) => (
+                                                            state.isInitialized,
+                                                            state.originalCharCount,
+                                                            state.originalHasLongLine,
+                                                          ),
+                                                        ),
+                                                      );
+
+                                                      final charCount = characterState.$1
+                                                          ? characterState.$2
                                                           : _originalCharCount;
-                                                      final hasLongLine = state.isInitialized
-                                                          ? state.originalHasLongLine
+                                                      final hasLongLine = characterState.$1
+                                                          ? characterState.$3
                                                           : _originalHasLongLine;
-                                                      
+
                                                       return _CharacterCountWidget(
                                                         count: charCount,
                                                         hasLongLine: hasLongLine,
@@ -5075,19 +5089,25 @@ class EditSubtitleScreenState extends State<EditSubtitleScreen> {
                                             Positioned(
                                               bottom: 1,
                                               right: 4,
-                                              child: BlocBuilder<EditLineCubit, EditLineState>(
-                                                buildWhen: (previous, current) =>
-                                                    previous.editedCharCount != current.editedCharCount ||
-                                                    previous.editedHasLongLine != current.editedHasLongLine,
-                                                builder: (context, state) {
-                                                  // Use Bloc state if available, fallback to legacy state
-                                                  final charCount = state.isInitialized 
-                                                      ? state.editedCharCount 
+                                              child: riverpod.Consumer(
+                                                builder: (context, ref, child) {
+                                                  final characterState = ref.watch(
+                                                    editLineControllerProvider.select(
+                                                      (state) => (
+                                                        state.isInitialized,
+                                                        state.editedCharCount,
+                                                        state.editedHasLongLine,
+                                                      ),
+                                                    ),
+                                                  );
+
+                                                  final charCount = characterState.$1
+                                                      ? characterState.$2
                                                       : _editedCharCount;
-                                                  final hasLongLine = state.isInitialized
-                                                      ? state.editedHasLongLine
+                                                  final hasLongLine = characterState.$1
+                                                      ? characterState.$3
                                                       : _editedHasLongLine;
-                                                  
+
                                                   return _CharacterCountWidget(
                                                     count: charCount,
                                                     hasLongLine: hasLongLine,
