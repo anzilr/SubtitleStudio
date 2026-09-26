@@ -49,7 +49,6 @@ import 'package:subtitle_studio/themes/theme_provider.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
 import 'package:subtitle_studio/screens/edit_line/edit_line_controller.dart' hide TimeValidator;
-import 'package:subtitle_studio/screens/edit_line/edit_line_state.dart';
 import 'package:subtitle_studio/widgets/ai_explanation_sheet.dart';
 
 // Edit subtitle line screen with video player integration

@@ -5241,10 +5241,9 @@ Future<void> _deleteSelectedSubtitles() async {
               child: const IsolatedLoader(isVisible: true,), // Use the new loader
             ),
         ],
-      )
-      ) // FirstTimeInstructions
-      ), // PopScope
-    );
+      ),
+    ),
+  );
   }
 
   // New method to build the empty state view
