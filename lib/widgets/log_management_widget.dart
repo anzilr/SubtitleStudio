@@ -6,13 +6,11 @@
 // - View log statistics and file information
 // - Export logs for debugging purposes
 // - Share logs via email and messaging platforms
-// - Send logs directly to developer's Telegram channel
-// - Clear log files when needed
+// // - Clear log files when needed
 // - Copy log directory paths for manual access
 //
 // Key Features for iOS Port:
-// - Replace Telegram integration with iOS-native sharing
-// - Use iOS document picker for export functionality
+// // - Use iOS document picker for export functionality
 // - Implement iOS-specific file management
 // - Replace overlay snackbars with iOS toast notifications
 
@@ -20,10 +18,7 @@ import 'dart:io';                              // File system operations
 import 'package:flutter/material.dart';       // Flutter UI framework
 import 'package:flutter/services.dart';       // Clipboard and system services
 import 'package:path_provider/path_provider.dart'; // App directory access
-import 'package:flutter_dotenv/flutter_dotenv.dart'; // Environment variables
 // Cross-platform sharing
-import 'package:http/http.dart' as http;      // HTTP requests for Telegram API
-import 'dart:convert';                        // JSON encoding/decoding
 import '../utils/app_logger.dart';            // Application logging system
 
 /// A comprehensive widget for managing application logs and debugging information
@@ -34,13 +29,11 @@ import '../utils/app_logger.dart';            // Application logging system
 /// - Real-time log statistics display (file count, total size, date ranges)
 /// - Export logs to timestamped files for debugging
 /// - Share logs via system sharing interface
-/// - Direct Telegram integration for developer bug reports
-/// - Bulk log file cleanup functionality
+/// /// - Bulk log file cleanup functionality
 /// - Copy log directory path to clipboard
 /// 
 /// **Developer Integration:**
-/// - Telegram Bot API integration for automatic bug reporting
-/// - Structured log export with metadata
+/// /// - Structured log export with metadata
 /// - Context-aware error reporting
 /// - Progress indicators for long-running operations
 /// 
@@ -51,8 +44,7 @@ import '../utils/app_logger.dart';            // Application logging system
 /// - Accessible design with proper focus management
 /// 
 /// **iOS Port Considerations:**
-/// - Replace Telegram API calls with iOS native sharing
-/// - Use NSFileManager for file operations
+/// /// - Use NSFileManager for file operations
 /// - Implement iOS document provider for log access
 /// - Replace overlay notifications with iOS toast equivalents
 class LogManagementWidget extends StatefulWidget {
@@ -86,23 +78,6 @@ class LogManagementWidget extends StatefulWidget {
 /// - User-friendly error messages via overlay notifications
 /// - Graceful degradation when operations fail
 class _LogManagementWidgetState extends State<LogManagementWidget> {
-  // Telegram Bot Configuration for Developer Bug Reports
-  // These credentials are loaded from environment variables (.env file)
-  // To enable Telegram integration:
-  // 1. Copy .env.example to .env in the project root
-  // 2. Add your Telegram bot token and channel ID to .env
-  // 3. Rebuild the app
-  //
-  // For iOS port: Replace with iOS native sharing or third-party service integration
-  // For open-source deployments: Configure your own Telegram bot or use alternative services
-  //
-  // The .env file should be in the root of your project (same level as pubspec.yaml)
-  String? get _telegramBotToken => dotenv.env['TELEGRAM_BOT_TOKEN'];
-  String? get _telegramChannelId => dotenv.env['TELEGRAM_CHANNEL_ID'];
-  
-  /// Check if Telegram integration is configured
-  bool get _isTelegramConfigured => _telegramBotToken?.isNotEmpty == true && _telegramChannelId?.isNotEmpty == true;
-  
   /// Current log file statistics including count, size, and date information
   /// Structure: {totalFiles, totalSizeReadable, newestLog, oldestLog}
   Map<String, dynamic>? _logStats;
@@ -193,108 +168,6 @@ class _LogManagementWidgetState extends State<LogManagementWidget> {
 
   
   
-  Future<void> _sendToTelegram() async {
-    try {
-      setState(() {
-        _isLoading = true;
-      });
-
-      // Check if Telegram is configured
-      if (!_isTelegramConfigured) {
-        setState(() {
-          _isLoading = false;
-        });
-        if (mounted) {
-          _showSnackBar(
-            'Telegram integration is not configured.\nPlease set TELEGRAM_BOT_TOKEN and TELEGRAM_CHANNEL_ID in .env file.',
-            Colors.orange,
-            duration: 5,
-          );
-        }
-        return;
-      }
-
-      // Ensure we have an exported log file
-      if (_lastExportPath == null) {
-        await _exportLogs();
-        if (_lastExportPath == null) {
-          setState(() {
-            _isLoading = false;
-          });
-          return;
-        }
-      }
-
-      final logFile = File(_lastExportPath!);
-      if (!await logFile.exists()) {
-        throw Exception('Log file not found');
-      }
-
-      // Prepare the message
-      final message = '''
-🐛 Subtitle Studio Bug Report
-
-📅 Generated: ${DateTime.now().toLocal().toString().split('.').first}
-📱 App Version: 1.0.1+2
-📊 Log File: ${logFile.path.split('/').last}
-📦 File Size: ${await _formatFileSize(await logFile.length())}
-
-User has submitted a bug report. Please check the attached log file for details.
-
-#BugReport #MSoneSubEditor
-''';
-
-      // Send to Telegram
-      final uri = Uri.parse('https://api.telegram.org/bot$_telegramBotToken/sendDocument');
-      
-      final request = http.MultipartRequest('POST', uri);
-      request.fields['chat_id'] = _telegramChannelId!;
-      request.fields['caption'] = message;
-      request.fields['parse_mode'] = 'HTML';
-      
-      // Add the file
-      request.files.add(await http.MultipartFile.fromPath(
-        'document',
-        logFile.path,
-        filename: logFile.path.split('/').last,
-      ));
-
-      final response = await request.send();
-      final responseBody = await response.stream.bytesToString();
-      
-      setState(() {
-        _isLoading = false;
-      });
-
-      if (response.statusCode == 200) {
-        final responseData = json.decode(responseBody);
-        if (responseData['ok'] == true) {
-          if (mounted) {
-            _showSnackBar(
-              'Bug report sent to Telegram successfully!',
-              Colors.green,
-              duration: 3,
-            );
-          }
-        } else {
-          throw Exception('Telegram API error: ${responseData['description']}');
-        }
-      } else {
-        throw Exception('HTTP ${response.statusCode}: Failed to send to Telegram');
-      }
-    } catch (e, stackTrace) {
-      setState(() {
-        _isLoading = false;
-      });
-      
-      await AppLogger.instance.error('Failed to send log to Telegram: $e', stackTrace: stackTrace, context: 'LogManagementWidget._sendToTelegram');
-      
-      if (mounted) {
-        _showSnackBar('Failed to send to Telegram: $e', Colors.red, duration: 5);
-      }
-    }
-  }
-
   Future<String> _formatFileSize(int bytes) async {
     if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
@@ -566,26 +439,6 @@ User has submitted a bug report. Please check the attached log file for details.
             //   ),
             // ),
             // const SizedBox(height: 8),
-            
-            Tooltip(
-              message: _isTelegramConfigured
-                  ? 'Send logs to configured Telegram channel'
-                  : 'Telegram not configured. Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHANNEL_ID in .env file to enable.',
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _isTelegramConfigured ? _sendToTelegram : null,
-                  icon: const Icon(Icons.telegram),
-                  label: const Text('Send to Telegram'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _isTelegramConfigured ? Colors.blue[600] : Colors.grey[400],
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
             
             Row(
               children: [

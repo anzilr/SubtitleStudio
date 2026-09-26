@@ -1318,6 +1318,89 @@ class _HomeScreenContentState extends ConsumerState<_HomeScreenContent> with Tic
     );
   }
 
+  Future<void> _navigateToEditScreen(Session session) async {
+    try {
+      await ref
+          .read(homeControllerProvider.notifier)
+          .updateLastEditedSession(session.id);
+
+      if (!mounted) return;
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => EditScreenBloc(
+            subtitleCollectionId: session.subtitleCollectionId,
+            lastEditedIndex: session.lastEditedIndex,
+            sessionId: session.id,
+          ),
+        ),
+      );
+
+      if (mounted) {
+        await _reRegisterHomeScreenShortcuts();
+        ref.read(homeControllerProvider.notifier).loadSessions();
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Navigation error: $e');
+      }
+      if (mounted) {
+        ref.read(homeControllerProvider.notifier).loadSessions();
+      }
+    }
+  }
+
+  Future<void> _handleCreate() async {
+    try {
+      if (!mounted) return;
+
+      final controller = ref.read(homeControllerProvider.notifier);
+
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16.0)),
+        ),
+        builder: (context) => CreateSubtitleSheet(
+          onSubtitleCreated: (subtitleData) async {
+            if (subtitleData == null) return;
+
+            controller.loadSessions();
+
+            final createdSessionId = subtitleData['sessionId'];
+            if (createdSessionId is! int) {
+              throw StateError(
+                'New subtitle creation did not return a valid session ID.',
+              );
+            }
+
+            await controller.updateLastEditedSession(createdSessionId);
+
+            if (mounted) {
+              final navigator = Navigator.of(context);
+              navigator.push(
+                MaterialPageRoute(
+                  builder: (context) => EditSubtitleScreenBloc(
+                    subtitleId: subtitleData['subtitleCollectionId'],
+                    index: 1,
+                    sessionId: createdSessionId,
+                    isNewSubtitle: true,
+                    editMode: subtitleData['editMode'] ?? true,
+                  ),
+                ),
+              );
+            }
+          },
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      SnackbarHelper.showError(context, 'Error: $e');
+    }
+  }
+
   void _handleImport() {
     // Capture cubit reference before opening bottom sheet
     final controller = ref.read(homeControllerProvider.notifier);
