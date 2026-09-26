@@ -104,7 +104,7 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
   final ItemScrollController _itemScrollController = ItemScrollController();
   final ItemPositionsListener _itemPositionsListener = ItemPositionsListener.create();
   final ScrollController _scrollbarController = ScrollController(); // For custom scrollbar
-  double _scrollbarThumbOffset = 0.0;
+  final ValueNotifier<double> _scrollbarThumbOffset = ValueNotifier<double>(0.0);
   bool _isDraggingScrollbar = false;
   int? _highlightedIndex;  final GlobalKey<VideoPlayerWidgetState> _videoPlayerKey = GlobalKey();
   final GlobalKey _waveformKey = GlobalKey(); // Add waveform key
@@ -828,6 +828,7 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
     
     _sourceScrollController.dispose(); // Dispose source view scroll controller
     _scrollbarController.dispose(); // Dispose custom scrollbar controller
+    _scrollbarThumbOffset.dispose();
     _goToController.dispose();
     super.dispose();
   }
@@ -1136,19 +1137,16 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
   }
 
   void _updateScrollbarPosition() {
-    if (_isDraggingScrollbar) return; // Don't update while dragging
-    if (!mounted) return; // Don't update if widget is disposed
-    
+    if (_isDraggingScrollbar || !mounted) return;
+
     final positions = _itemPositionsListener.itemPositions.value;
     if (positions.isEmpty || subtitleLines.isEmpty) return;
-    
-    // Get the first visible item
-    final firstVisible = positions.where((pos) => pos.itemLeadingEdge >= 0).firstOrNull;
+
+    final firstVisible =
+        positions.where((pos) => pos.itemLeadingEdge >= 0).firstOrNull;
     if (firstVisible != null) {
-      final progress = firstVisible.index / subtitleLines.length;
-      setState(() {
-        _scrollbarThumbOffset = progress;
-      });
+      _scrollbarThumbOffset.value =
+          firstVisible.index / subtitleLines.length;
     }
   }
 
@@ -4907,71 +4905,87 @@ Future<void> _deleteSelectedSubtitles() async {
       bottom: 0,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          // Use the actual height of the list view container
           final scrollableHeight = constraints.maxHeight;
           final thumbHeight = max(50.0, scrollableHeight * 0.1);
           final trackHeight = scrollableHeight - thumbHeight;
-          final thumbTop = _scrollbarThumbOffset * trackHeight;
-          
-          return GestureDetector(
-            onVerticalDragStart: (details) {
-              setState(() {
-                _isDraggingScrollbar = true;
-              });
-            },
-            onVerticalDragUpdate: (details) {
-              if (subtitleLines.isEmpty) return;
-              
-              // Use the actual scrollable height from constraints
-              final currentThumbHeight = max(50.0, scrollableHeight * 0.1);
-              final currentTrackHeight = scrollableHeight - currentThumbHeight;
-              
-              // Calculate new offset based on drag position
-              final localY = details.localPosition.dy - 8; // Account for top margin
-              final newOffset = (localY / currentTrackHeight).clamp(0.0, 1.0);
-              
-              setState(() {
-                _scrollbarThumbOffset = newOffset;
-              });
-              
-              // Scroll to corresponding index
-              final targetIndex = (newOffset * subtitleLines.length).round().clamp(0, subtitleLines.length - 1);
-              if (_itemScrollController.isAttached) {
-                _itemScrollController.jumpTo(
-                  index: targetIndex,
-                  alignment: 0.0,
-                );
-              }
-            },
-            onVerticalDragEnd: (details) {
-              setState(() {
-                _isDraggingScrollbar = false;
-              });
-            },
-            child: Container(
-              width: 20,
-              margin: const EdgeInsets.only(right: 0, top: 8, bottom: 8),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Stack(
-                children: [
-                  Positioned(
-                    top: thumbTop,
-                    left: 4,
-                    right: 4,
-                    child: Container(
-                      height: thumbHeight,
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                    ),
+
+          return ValueListenableBuilder<double>(
+            valueListenable: _scrollbarThumbOffset,
+            builder: (context, thumbOffset, child) {
+              final thumbTop = thumbOffset * trackHeight;
+
+              return GestureDetector(
+                onVerticalDragStart: (_) {
+                  _isDraggingScrollbar = true;
+                },
+                onVerticalDragUpdate: (details) {
+                  if (subtitleLines.isEmpty) return;
+
+                  final currentThumbHeight =
+                      max(50.0, scrollableHeight * 0.1);
+                  final currentTrackHeight =
+                      scrollableHeight - currentThumbHeight;
+                  if (currentTrackHeight <= 0) return;
+
+                  final localY = details.localPosition.dy - 8;
+                  final newOffset =
+                      (localY / currentTrackHeight).clamp(0.0, 1.0);
+
+                  _scrollbarThumbOffset.value = newOffset;
+
+                  final targetIndex =
+                      (newOffset * subtitleLines.length)
+                          .round()
+                          .clamp(0, subtitleLines.length - 1);
+                  if (_itemScrollController.isAttached) {
+                    _itemScrollController.jumpTo(
+                      index: targetIndex,
+                      alignment: 0.0,
+                    );
+                  }
+                },
+                onVerticalDragEnd: (_) {
+                  _isDraggingScrollbar = false;
+                },
+                onVerticalDragCancel: () {
+                  _isDraggingScrollbar = false;
+                },
+                child: Container(
+                  width: 20,
+                  margin: const EdgeInsets.only(
+                    right: 0,
+                    top: 8,
+                    bottom: 8,
                   ),
-                ],
-              ),
-            ),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .surface
+                        .withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Stack(
+                    children: [
+                      Positioned(
+                        top: thumbTop,
+                        left: 4,
+                        right: 4,
+                        child: Container(
+                          height: thumbHeight,
+                          decoration: BoxDecoration(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withValues(alpha: 0.7),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
           );
         },
       ),
