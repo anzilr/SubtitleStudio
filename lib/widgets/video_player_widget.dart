@@ -197,8 +197,10 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> with AutomaticKeep
   SubtitleTimelineIndex _secondarySubtitleIndex =
       const SubtitleTimelineIndex.empty();
 
-  // Cached framerate value
+  // Cached framerate value and in-flight probe. Keeping the Future prevents
+  // multiple FFmpeg processes from being started before the first probe ends.
   double? _cachedFramerate;
+  Future<double?>? _framerateFuture;
 
   // Custom font handling
   String? _subtitleFontFamily; // family name used in TextStyle
@@ -292,6 +294,8 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> with AutomaticKeep
     // Update video if path changed
     if (widget.videoPath != oldWidget.videoPath) {
       debugPrint('VideoPlayer: Video path changed, reinitializing');
+      _cachedFramerate = null;
+      _framerateFuture = null;
       _initializePlayer();
     }
   }
@@ -827,6 +831,9 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> with AutomaticKeep
   }
 
   void updateVideo(String newPath) async {
+    _cachedFramerate = null;
+    _framerateFuture = null;
+
     // Reset initialization flag for new video
     setState(() {
       _isInitializingTracks = true;
@@ -1125,19 +1132,21 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> with AutomaticKeep
   
   // Public method to access the framerate
   double? getFrameRate() {
-    // Return cached value if available
-    if (_cachedFramerate != null) {
-      return _cachedFramerate;
+    final cached = _cachedFramerate;
+    if (cached != null) {
+      return cached;
     }
-    
-    // Start fetching framerate in background if not already cached
-    _getFramerateInternal().then((value) {
-      if (value != null) {
+
+    _framerateFuture ??= _getFramerateInternal().then((value) {
+      if (value != null && mounted) {
         _cachedFramerate = value;
       }
+      return value;
+    }).whenComplete(() {
+      _framerateFuture = null;
     });
-    
-    // Return default value for now
+
+    // Keep the existing synchronous API and fallback while probing.
     return 25.0;
   }
 
