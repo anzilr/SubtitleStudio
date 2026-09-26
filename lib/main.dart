@@ -287,13 +287,10 @@ class MainApp extends StatelessWidget {
   }
 }
 
-/// Splash screen wrapper that handles app initialization and file intent processing
-/// 
-/// This widget serves as a transition between the splash screen and main app:
-/// 1. Displays splash screen for 5 seconds
-/// 2. Checks for file association intents (when app opened via .srt file)
-/// 3. Processes initial file data if available
-/// 4. Navigates to HomeScreen with optional initial file
+/// Splash screen wrapper that resolves startup file intents before navigation.
+///
+/// A short minimum display time keeps the transition smooth without delaying
+/// startup for several seconds after initialization is already complete.
 /// 
 /// File Association Support:
 /// - Handles .srt files opened with the app
@@ -322,8 +319,34 @@ class _SplashTransitionWrapperState extends State<SplashTransitionWrapper> {
   @override
   void initState() {
     super.initState();
-    _checkForIntentData();  // Check for file association data
-    _navigateToHome();      // Start navigation timer
+    unawaited(_initializeAndNavigate());
+  }
+
+  Future<void> _initializeAndNavigate() async {
+    final minimumSplash = Future<void>.delayed(
+      const Duration(milliseconds: 1200),
+    );
+
+    await Future.wait<void>([
+      _checkForIntentData(),
+      minimumSplash,
+    ]);
+
+    if (!mounted || _navigatedToSourceView) return;
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => HomeScreen(
+          initialFilePath: _intentFilePath,
+          initialFileName: _intentFilePath != null
+              ? IntentHandler.getFileName(_intentFilePath!)
+              : null,
+          isProjectFile: _isMsoneFile,
+          originalSafUri: _originalIntentUri,
+        ),
+      ),
+    );
   }
 
   /// Check for initial intent data when app is opened via file association
@@ -340,10 +363,8 @@ class _SplashTransitionWrapperState extends State<SplashTransitionWrapper> {
       if (widget.initialFile != null) {
         final processedPath = await IntentHandler.processFilePath(widget.initialFile!);
         if (processedPath != null) {
-          setState(() {
-            _intentFilePath = processedPath;
-            _isMsoneFile = IntentHandler.isMsoneFile(widget.initialFile!); // Check file type using original path
-          });
+          _intentFilePath = processedPath;
+          _isMsoneFile = IntentHandler.isMsoneFile(widget.initialFile!);
           await AppLogger.instance.info('File from command line: $_intentFilePath, isMsoneFile: $_isMsoneFile');
         }
         return;
@@ -355,9 +376,7 @@ class _SplashTransitionWrapperState extends State<SplashTransitionWrapper> {
         if (IntentHandler.isSrtFile(intentActionInfo.path)) {
           if (intentActionInfo.action == 'source_view') {
             // Navigate directly to Source View and mark that we've navigated
-            setState(() {
-              _navigatedToSourceView = true;
-            });
+            _navigatedToSourceView = true;
             if (mounted) {
               Navigator.pushReplacement(
                 context,
@@ -371,58 +390,19 @@ class _SplashTransitionWrapperState extends State<SplashTransitionWrapper> {
             }
           } else {
             // Default import behavior
-            setState(() {
-              _intentFilePath = intentActionInfo.path;
-              _originalIntentUri = intentActionInfo.safUri;
-              _isMsoneFile = false;
-            });
+            _intentFilePath = intentActionInfo.path;
+            _originalIntentUri = intentActionInfo.safUri;
+            _isMsoneFile = false;
           }
         } else if (IntentHandler.isMsoneFile(intentActionInfo.path)) {
           // MSONE files always go to import (no source view for MSONE)
-          setState(() {
-            _intentFilePath = intentActionInfo.path;
-            _originalIntentUri = intentActionInfo.safUri;
-            _isMsoneFile = true;
-          });
+          _intentFilePath = intentActionInfo.path;
+          _originalIntentUri = intentActionInfo.safUri;
+          _isMsoneFile = true;
         }
       }
     } catch (e) {
       await AppLogger.instance.warning('Error checking intent data: $e');
-    }
-  }
-
-  /// Navigate to HomeScreen after splash screen duration
-  /// 
-  /// Timing considerations:
-  /// - 5-second delay allows splash screen animation to complete
-  /// - Provides time for background initialization
-  /// - Ensures smooth user experience transition
-  /// 
-  /// Passes file data if available from intent processing
-  /// Skips navigation if already navigated to source view
-  void _navigateToHome() async {
-    // Keep 5 seconds delay since we're now handling the splash screen entirely in Flutter
-    await Future.delayed(const Duration(seconds: 5));
-    
-    // Skip navigation to home if we've already navigated to source view
-    if (_navigatedToSourceView) {
-      return;
-    }
-    
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => HomeScreen(
-            initialFilePath: _intentFilePath,
-            initialFileName: _intentFilePath != null 
-                ? IntentHandler.getFileName(_intentFilePath!) 
-                : null,
-            isProjectFile: _isMsoneFile,
-            originalSafUri: _originalIntentUri,  // Pass original SAF URI
-          ),
-        ),
-      );
     }
   }
 
