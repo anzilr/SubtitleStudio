@@ -62,6 +62,7 @@ import 'msone_submission_screen.dart';
 import 'package:subtitle_studio/screens/edit/edit_controller.dart';
 import 'package:subtitle_studio/screens/edit/edit_state.dart';
 import 'package:subtitle_studio/screens/edit/models/subtitle_entry.dart';
+import 'package:subtitle_studio/screens/edit/controllers/subtitle_controller.dart';
 import 'package:subtitle_studio/features/waveform/bloc/waveform_bloc.dart';
 import 'package:subtitle_studio/features/waveform/bloc/waveform_event.dart';
 import 'package:subtitle_studio/features/waveform/bloc/waveform_state.dart';
@@ -81,18 +82,6 @@ class EditScreen extends riverpod.ConsumerStatefulWidget {
 
   @override
   riverpod.ConsumerState<EditScreen> createState() => _EditScreenState();
-}
-
-class SubtitleController extends GetxController {
-  var subtitleLines = <SubtitleLine>[].obs;
-
-  void updateSubtitleLine(int index, SubtitleLine newLine) {
-    subtitleLines[index] = newLine;
-  }
-
-  void setSubtitleLines(List<SubtitleLine> lines) {
-    subtitleLines.value = lines;
-  }
 }
 
 class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerProviderStateMixin {
