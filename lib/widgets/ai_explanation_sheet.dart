@@ -965,12 +965,10 @@ class _AiExplanationSheetContentState extends ConsumerState<_AiExplanationSheetC
             onSurfaceColor,
             mutedColor,
           ),
-          ),
         ),
       ],
     );
   }
-
 
   Widget _buildExplanationState(
     AiExplanationState state,
