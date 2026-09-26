@@ -229,47 +229,6 @@ class SubtitleParser {
   }
 
   // Convert ASS time format (h:mm:ss.cc) to standard format (hh:mm:ss.sss)
-        startTime = _convertAssTime(startTime);
-        endTime = _convertAssTime(endTime);
-        
-        subtitles.add(SimpleSubtitleLine(
-          index: index,
-          startTime: startTime,
-          endTime: endTime,
-          text: text,
-        ));
-        
-        index++;
-      }
-    }
-    
-    return subtitles;
-  }
-  
-  // Helper method to handle ASS line splitting correctly (respecting commas in text)
-  static List<String> _splitAssLine(String line) {
-    List<String> result = [];
-    bool inQuote = false;
-    int lastSplit = 0;
-    
-    for (int i = 0; i < line.length; i++) {
-      if (line[i] == ',') {
-        if (!inQuote) {
-          result.add(line.substring(lastSplit, i).trim());
-          lastSplit = i + 1;
-        }
-      }
-      // Handle text field which might contain commas
-      if (result.length == 9) {
-        result.add(line.substring(lastSplit).trim());
-        break;
-      }
-    }
-    
-    return result;
-  }
-  
-  // Convert ASS time format (h:mm:ss.cc) to standard format (hh:mm:ss.sss)
   static String _convertAssTime(String assTime) {
     final parts = assTime.split(':');
     if (parts.length == 3) {
