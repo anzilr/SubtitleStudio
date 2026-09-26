@@ -1198,7 +1198,7 @@ class _DummyTextInputClient implements TextInputClient {
   }
 
   @override
-  void onFocusReceived() {}
+  bool onFocusReceived() => false;
 }
 
 class DictionaryResult {
