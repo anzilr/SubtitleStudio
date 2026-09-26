@@ -61,8 +61,7 @@ app.*.map.json
 # Ignore all files starting with 'generated'
 generated*
 
-# Ignore test folder
-/test/
+# Tests are version-controlled so migration regressions can be caught by CI.
 
 # Flutter build args
 .flutter-args
