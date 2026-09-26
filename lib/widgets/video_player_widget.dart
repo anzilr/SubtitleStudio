@@ -54,6 +54,8 @@ import 'package:subtitle_studio/utils/responsive_layout.dart'; // Import respons
 import 'package:subtitle_studio/screens/screen_edit_line.dart'; // Import EditSubtitleScreenState
 import 'package:subtitle_studio/widgets/video/subtitle.dart';
 import 'package:subtitle_studio/widgets/video/subtitle_timeline_index.dart';
+import 'package:subtitle_studio/widgets/video/repeat_range_dialog.dart';
+export 'package:subtitle_studio/widgets/video/repeat_range_dialog.dart';
 export 'package:subtitle_studio/widgets/video/subtitle.dart';
 
 /// Advanced video player widget with integrated subtitle overlay system
@@ -5167,7 +5169,7 @@ class _RepeatButtonState extends State<_RepeatButton> {
               setButtonState(() {
                 _isLongPressing = true;
               });
-              _showRepeatRangeDialog(context, videoPlayerState);
+              _showRepeatRangeDialog(context);
               // Reset long press flag after a delay
               Future.delayed(const Duration(milliseconds: 500), () {
                 if (mounted) {
@@ -5181,7 +5183,7 @@ class _RepeatButtonState extends State<_RepeatButton> {
               setButtonState(() {
                 _isLongPressing = true;
               });
-              _showRepeatRangeDialog(context, videoPlayerState);
+              _showRepeatRangeDialog(context);
               // Reset long press flag after a delay
               Future.delayed(const Duration(milliseconds: 500), () {
                 if (mounted) {
@@ -5220,7 +5222,7 @@ class _RepeatButtonState extends State<_RepeatButton> {
     );
   }
   
-  void _showRepeatRangeDialog(BuildContext context, VideoPlayerWidgetState videoPlayerState) {
+  void _showRepeatRangeDialog(BuildContext context) {
     // Find the EditSubtitleScreen state to access subtitle data and methods
     final editScreenState = context.findAncestorStateOfType<EditSubtitleScreenState>();
     if (editScreenState == null) return;
@@ -5229,279 +5231,8 @@ class _RepeatButtonState extends State<_RepeatButton> {
       context: context,
       builder: (BuildContext dialogContext) => RepeatRangeDialog(
         editScreenState: editScreenState,
-        videoPlayerState: videoPlayerState,
       ),
     );
-  }
-}
-
-/// Dialog for setting custom repeat range
-class RepeatRangeDialog extends StatefulWidget {
-  final EditSubtitleScreenState editScreenState;
-  final VideoPlayerWidgetState videoPlayerState;
-
-  const RepeatRangeDialog({
-    super.key,
-    required this.editScreenState,
-    required this.videoPlayerState,
-  });
-
-  @override
-  RepeatRangeDialogState createState() => RepeatRangeDialogState();
-}
-
-class RepeatRangeDialogState extends State<RepeatRangeDialog> {
-  int _startIndex = 0;
-  int _endIndex = 0;
-  late TextEditingController _startController;
-  late TextEditingController _endController;
-  
-  @override
-  void initState() {
-    super.initState();
-    // Set default values
-    final subtitleCount = widget.editScreenState.subtitles.length;
-    if (subtitleCount > 0) {
-      _endIndex = subtitleCount - 1;
-    }
-    
-    // Initialize controllers
-    _startController = TextEditingController(text: '${_startIndex + 1}');
-    _endController = TextEditingController(text: '${_endIndex + 1}');
-  }
-  
-  @override
-  void dispose() {
-    _startController.dispose();
-    _endController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final subtitleCount = widget.editScreenState.subtitles.length;
-    
-    if (subtitleCount == 0) {
-      return AlertDialog(
-        title: const Text('No Subtitles'),
-        content: const Text('No subtitles available for custom range repeat.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
-        ],
-      );
-    }
-
-    return AlertDialog(
-      title: Row(
-        children: [
-          Icon(Icons.repeat_one, color: Colors.orange, size: 20),
-          const SizedBox(width: 8),
-          const Text('Custom Repeat Range', style: TextStyle(fontSize: 18)),
-        ],
-      ),
-      content: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 300),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Select subtitle range for repeat playback:',
-              style: TextStyle(fontSize: 16),
-            ),
-            const SizedBox(height: 20),
-            
-            // Start and End Index Text Fields
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Start Subtitle:',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: _startController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          isDense: true,
-                        ),
-                        onChanged: (value) {
-                          final intValue = int.tryParse(value);
-                          if (intValue != null && intValue >= 1 && intValue <= subtitleCount) {
-                            setState(() {
-                              _startIndex = intValue - 1;
-                              // Ensure end index is not less than start index
-                              if (_endIndex < _startIndex) {
-                                _endIndex = _startIndex;
-                                _endController.text = '${_endIndex + 1}';
-                              }
-                            });
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'End Subtitle:',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: _endController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          isDense: true,
-                        ),
-                        onChanged: (value) {
-                          final intValue = int.tryParse(value);
-                          if (intValue != null && intValue >= _startIndex + 1 && intValue <= subtitleCount) {
-                            setState(() {
-                              _endIndex = intValue - 1;
-                            });
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            
-            const SizedBox(height: 20),
-            
-            // Preview info
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(0.2)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Range: ${_endIndex - _startIndex + 1} subtitle(s)',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.orange,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  if (widget.editScreenState.subtitles.isNotEmpty) ...[
-                    Text(
-                      'Start: ${_formatDuration(widget.editScreenState.subtitles[_startIndex].start)}',
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                    Text(
-                      'End: ${_formatDuration(widget.editScreenState.subtitles[_endIndex].end)}',
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          style: TextButton.styleFrom(
-            foregroundColor: Colors.grey[600],
-          ),
-          child: const Text('Cancel'),
-        ),
-        TextButton(
-          onPressed: () {
-            // Switch to normal repeat mode (clear custom range)
-            widget.editScreenState.clearCustomRepeatRange();
-            
-            // Enable normal repeat mode if not already enabled
-            if (!widget.editScreenState.isRepeatModeEnabled) {
-              widget.editScreenState.toggleRepeatMode();
-            } else {
-              // Just restart with normal mode
-              widget.editScreenState.startRepeatPlayback();
-            }
-            
-            Navigator.of(context).pop();
-            
-            // Show confirmation
-            SnackbarHelper.showSuccess(context, 'Normal repeat mode enabled');
-          },
-          style: TextButton.styleFrom(
-            foregroundColor: Colors.grey[600],
-          ),
-          child: const Text('Normal Repeat'),
-        ),
-        ElevatedButton(
-          onPressed: () {
-            // Validate inputs
-            final startValue = int.tryParse(_startController.text);
-            final endValue = int.tryParse(_endController.text);
-            
-            if (startValue == null || endValue == null ||
-                startValue < 1 || startValue > subtitleCount ||
-                endValue < startValue || endValue > subtitleCount) {
-              SnackbarHelper.showError(context, 'Please enter valid range (1-$subtitleCount)');
-              return;
-            }
-            
-            // Set custom range and enable repeat mode
-            widget.editScreenState.setCustomRepeatRange(startValue - 1, endValue - 1);
-            
-            // Enable repeat mode if not already enabled
-            if (!widget.editScreenState.isRepeatModeEnabled) {
-              widget.editScreenState.toggleRepeatMode();
-            } else {
-              // Just restart with new range
-              widget.editScreenState.startRepeatPlayback();
-            }
-            
-            Navigator.of(context).pop();
-            
-            // Show confirmation
-            SnackbarHelper.showSuccess(context, 'Custom repeat range set: $startValue to $endValue');
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.orange,
-            foregroundColor: Colors.white,
-          ),
-          child: const Text('Apply Range'),
-        ),
-      ],
-    );
-  }
-  
-  String _formatDuration(Duration duration) {
-    final hours = duration.inHours;
-    final minutes = duration.inMinutes.remainder(60);
-    final seconds = duration.inSeconds.remainder(60);
-    final milliseconds = duration.inMilliseconds.remainder(1000);
-    
-    if (hours > 0) {
-      return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}.${(milliseconds / 10).round().toString().padLeft(2, '0')}';
-    } else {
-      return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}.${(milliseconds / 10).round().toString().padLeft(2, '0')}';
-    }
   }
 }
 
