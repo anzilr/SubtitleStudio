@@ -1,4 +1,4 @@
-Riverpod migration checkpoint 2
+Riverpod migration checkpoint 2b
 Date: 2026-09-26
 Scope:
 - ProviderScope and Isar bootstrap injection
@@ -7,3 +7,4 @@ Scope:
 - AI Explanation Cubit -> Riverpod
 - Edit Line Cubit bindings -> Riverpod
 - Selective rebuilds for edit-line validation and character counters
+- Provider import ambiguity fix
