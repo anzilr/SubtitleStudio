@@ -1381,15 +1381,15 @@ class _HomeScreenContentState extends ConsumerState<_HomeScreenContent> with Tic
             if (subtitleData != null) {
               controller.loadSessions();
               
-              final session = Session(
-                subtitleCollectionId: subtitleData['subtitleCollectionId'],
-                fileName: subtitleData['fileName'] ?? '',
-                lastEditedIndex: subtitleData['lastEditedIndex'],
-                editMode: subtitleData['editMode'] ?? true,
-              );
-              
-              await controller.updateLastEditedSession(session.id);
-              
+              final createdSessionId = subtitleData['sessionId'];
+              if (createdSessionId is! int) {
+                throw StateError(
+                  'New subtitle creation did not return a valid session ID.',
+                );
+              }
+
+              await controller.updateLastEditedSession(createdSessionId);
+
               if (mounted) {
                 final navigator = Navigator.of(context);
                 navigator.push(
@@ -1397,7 +1397,7 @@ class _HomeScreenContentState extends ConsumerState<_HomeScreenContent> with Tic
                     builder: (context) => EditSubtitleScreenBloc(
                       subtitleId: subtitleData['subtitleCollectionId'],
                       index: 1,
-                      sessionId: subtitleData['sessionId'],
+                      sessionId: createdSessionId,
                       isNewSubtitle: true,
                       editMode: subtitleData['editMode'] ?? true,
                     ),
