@@ -21,6 +21,7 @@
 // - Adapt file operations to iOS sandbox restrictions
 // - Use iOS-native error reporting systems
 
+import 'dart:async';                           // Timers and unawaited futures
 import 'dart:io';                              // File system operations
 import 'dart:convert';                         // JSON encoding for structured logs
 import 'package:flutter/foundation.dart';     // Flutter debugging utilities
@@ -102,10 +103,17 @@ class AppLogger {
   String? _deviceInfo;               // Cached device information
   String? _appInfo;                  // Cached app version information
   bool _isInitialized = false;       // Initialization state flag
-  
+
+  // Buffered file logging keeps frequent editor/search events off the hot path.
+  final List<String> _pendingEntries = <String>[];
+  Timer? _flushTimer;
+  Future<void> _flushChain = Future<void>.value();
+
   // Configuration constants
   static const int maxLogFileSize = 5 * 1024 * 1024; // 5MB per log file
   static const int maxLogFiles = 3;                   // Keep last 3 log files only
+  static const int _flushEntryThreshold = 24;
+  static const Duration _flushDelay = Duration(milliseconds: 750);
   
   /// Initialize the logging system
   /// This should be called early in main() function
@@ -296,17 +304,24 @@ class AppLogger {
     return buffer.toString();
   }
 
-  /// Write log entry to file and console
-  Future<void> _writeLog(LogLevel level, String message, {
+  /// Queue a log entry for serialized batched file output.
+  Future<void> _writeLog(
+    LogLevel level,
+    String message, {
     String? context,
     StackTrace? stackTrace,
     Map<String, dynamic>? extra,
   }) async {
     if (!_isInitialized && level != LogLevel.fatal) {
-      // For non-fatal logs, try to initialize if not done yet
       await initialize();
     }
-    
+
+    // Verbose debug logs are useful during development but should not create
+    // production disk I/O.
+    if (level == LogLevel.debug && !kDebugMode) {
+      return;
+    }
+
     final logEntry = _formatLogEntry(
       level,
       message,
@@ -314,28 +329,63 @@ class AppLogger {
       stackTrace: stackTrace,
       extra: extra,
     );
-    
-    // Always print to console in debug mode
+
     if (kDebugMode) {
       debugPrint(logEntry.trim());
     }
-    
-    // Write to file if available
-    try {
-      if (_logFile != null) {
-        await _logFile!.writeAsString(logEntry, mode: FileMode.append);
-        
-        // Check if we need to rotate the log file
-        final size = await _logFile!.length();
+
+    if (_logFile == null) return;
+
+    _pendingEntries.add(logEntry);
+
+    final shouldFlushImmediately =
+        level.value >= LogLevel.error.value ||
+        _pendingEntries.length >= _flushEntryThreshold;
+
+    if (shouldFlushImmediately) {
+      await _flushPendingLogs();
+    } else {
+      _scheduleFlush();
+    }
+  }
+
+  void _scheduleFlush() {
+    if (_flushTimer?.isActive == true) return;
+
+    _flushTimer = Timer(_flushDelay, () {
+      _flushTimer = null;
+      unawaited(_flushPendingLogs());
+    });
+  }
+
+  /// Serializes file appends so concurrent callers cannot interleave writes.
+  Future<void> _flushPendingLogs() {
+    _flushTimer?.cancel();
+    _flushTimer = null;
+
+    _flushChain = _flushChain.then((_) async {
+      final file = _logFile;
+      if (file == null || _pendingEntries.isEmpty) return;
+
+      final batch = _pendingEntries.join();
+      _pendingEntries.clear();
+
+      try {
+        await file.writeAsString(batch, mode: FileMode.append);
+
+        final size = await file.length();
         if (size > maxLogFileSize) {
           final directory = await getApplicationSupportDirectory();
-          final appLogsDir = Directory('${directory.path}/Subtitle Studio/logs');
+          final appLogsDir =
+              Directory('${directory.path}/Subtitle Studio/logs');
           await _rotateLogsIfNeeded(appLogsDir);
         }
+      } catch (e) {
+        debugPrint('Failed to write log batch: $e');
       }
-    } catch (e) {
-      debugPrint('Failed to write to log file: $e');
-    }
+    });
+
+    return _flushChain;
   }
 
   /// Log debug message
@@ -431,6 +481,7 @@ class AppLogger {
   /// Share logs with developer or support
   /// This creates a comprehensive log report and saves it to the documents directory
   Future<String> exportLogsToFile({String? fileName}) async {
+    await _flushPendingLogs();
     try {
       final logFiles = await getLogFiles();
       
@@ -592,6 +643,7 @@ class AppLogger {
 
   /// Clear all log files
   Future<void> clearLogs() async {
+    await _flushPendingLogs();
     try {
       final logFiles = await getLogFiles();
       
@@ -614,6 +666,7 @@ class AppLogger {
 
   /// Get log statistics
   Future<Map<String, dynamic>> getLogStats() async {
+    await _flushPendingLogs();
     try {
       final logFiles = await getLogFiles();
       
