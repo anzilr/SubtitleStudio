@@ -53,6 +53,7 @@ import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/utils/responsive_layout.dart'; // Import responsive layout utilities
 import 'package:subtitle_studio/screens/screen_edit_line.dart'; // Import EditSubtitleScreenState
 import 'package:subtitle_studio/widgets/video/subtitle.dart';
+import 'package:subtitle_studio/widgets/video/subtitle_timeline_index.dart';
 export 'package:subtitle_studio/widgets/video/subtitle.dart';
 
 /// Advanced video player widget with integrated subtitle overlay system
@@ -191,6 +192,10 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> with AutomaticKeep
   
   List<Subtitle> _currentSubtitles = [];
   List<Subtitle> _currentSecondarySubtitles = [];
+  SubtitleTimelineIndex _primarySubtitleIndex =
+      const SubtitleTimelineIndex.empty();
+  SubtitleTimelineIndex _secondarySubtitleIndex =
+      const SubtitleTimelineIndex.empty();
 
   // Cached framerate value
   double? _cachedFramerate;
@@ -261,6 +266,8 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> with AutomaticKeep
     super.initState();
     _currentSubtitles = widget.subtitles;
     _currentSecondarySubtitles = widget.secondarySubtitles;
+    _primarySubtitleIndex = SubtitleTimelineIndex(widget.subtitles);
+    _secondarySubtitleIndex = SubtitleTimelineIndex(widget.secondarySubtitles);
     _loadSubtitlePreferences();
     _initializePlayer();
   }
@@ -865,6 +872,7 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> with AutomaticKeep
     
     // Update subtitle data WITHOUT calling setState to avoid rebuilding the video player
     _currentSubtitles = newSubtitles;
+    _primarySubtitleIndex = SubtitleTimelineIndex(newSubtitles);
     // Reset active subtitle cache when subtitles update
     _currentActiveSubtitles = [];
     _currentActiveSecondarySubtitles = [];
@@ -893,6 +901,7 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> with AutomaticKeep
   void updateSecondarySubtitles(List<Subtitle> newSubtitles) {
     // Update secondary subtitle data WITHOUT calling setState to avoid rebuilding the video player
     _currentSecondarySubtitles = newSubtitles;
+    _secondarySubtitleIndex = SubtitleTimelineIndex(newSubtitles);
     // Reset secondary subtitle cache
     _currentActiveSecondarySubtitles = [];
     
@@ -1017,8 +1026,9 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> with AutomaticKeep
     
     try {
       // Find all active subtitles at current position (supports overlapping subtitles)
-      final newActiveSubtitles = _findAllActiveSubtitles(_currentSubtitles, position);
-      final newActiveSecondarySubtitles = _findAllActiveSubtitles(_currentSecondarySubtitles, position);
+      final newActiveSubtitles = _primarySubtitleIndex.findActive(position);
+      final newActiveSecondarySubtitles =
+          _secondarySubtitleIndex.findActive(position);
       
       
       // Check if primary subtitles changed (compare list contents)
@@ -1066,77 +1076,6 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> with AutomaticKeep
     }
     
     return true;
-  }
-
-  // Find all active subtitles at the current position (supports overlapping subtitles)
-  List<Subtitle> _findAllActiveSubtitles(List<Subtitle> subtitles, Duration position) {
-    if (subtitles.isEmpty) return [];
-    
-    // Safety check: prevent operations on very large lists that could cause hangs
-    if (subtitles.length > 10000) {
-      debugPrint('Warning: Very large subtitle list (${subtitles.length} items), performance may be affected');
-    }
-    
-    final positionMs = position.inMilliseconds;
-    final activeSubtitles = <Subtitle>[];
-    
-    // Use binary search to find the first potential match, then scan nearby subtitles
-    int left = 0;
-    int right = subtitles.length - 1;
-    int? firstMatchIndex;
-    
-    // Binary search to find any subtitle that contains the current position
-    while (left <= right) {
-      final mid = (left + right) ~/ 2;
-      final subtitle = subtitles[mid];
-      
-      final startMs = subtitle.start.inMilliseconds;
-      final endMs = subtitle.end.inMilliseconds;
-      
-      if (positionMs >= startMs && positionMs < endMs) {
-        firstMatchIndex = mid;
-        break;
-      } else if (positionMs < startMs) {
-        right = mid - 1;
-      } else {
-        left = mid + 1;
-      }
-    }
-    
-    // If we found a match, scan backwards and forwards to find all overlapping subtitles
-    if (firstMatchIndex != null) {
-      // Scan backwards to find all subtitles that overlap with current position
-      int scanIndex = firstMatchIndex;
-      while (scanIndex >= 0) {
-        final subtitle = subtitles[scanIndex];
-        final startMs = subtitle.start.inMilliseconds;
-        final endMs = subtitle.end.inMilliseconds;
-        
-        if (positionMs >= startMs && positionMs < endMs) {
-          activeSubtitles.insert(0, subtitle); // Insert at beginning to maintain order
-          scanIndex--;
-        } else {
-          break; // Stop scanning backwards once we're outside the range
-        }
-      }
-      
-      // Scan forwards to find additional overlapping subtitles (skip the firstMatchIndex as it's already added)
-      scanIndex = firstMatchIndex + 1;
-      while (scanIndex < subtitles.length) {
-        final subtitle = subtitles[scanIndex];
-        final startMs = subtitle.start.inMilliseconds;
-        final endMs = subtitle.end.inMilliseconds;
-        
-        if (positionMs >= startMs && positionMs < endMs) {
-          activeSubtitles.add(subtitle);
-          scanIndex++;
-        } else {
-          break; // Stop scanning forwards once we're outside the range
-        }
-      }
-    }
-    
-    return activeSubtitles;
   }
 
   Duration getCurrentPosition() {
