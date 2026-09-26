@@ -1,0 +1,8 @@
+Riverpod migration checkpoint 1
+Date: 2026-09-26
+Scope:
+- Riverpod root ProviderScope
+- Isar bootstrap provider
+- Home Cubit -> Riverpod
+- Source View Cubit -> Riverpod
+- CI batching policy
