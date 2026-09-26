@@ -2,9 +2,11 @@ name: Cross-platform baseline
 
 on:
   workflow_dispatch:
-  pull_request:
+  push:
     branches:
-      - development
+      - refactor/riverpod-architecture
+    paths:
+      - .github/ci-checkpoint
 
 permissions:
   contents: read
