@@ -1,19 +1,12 @@
-Riverpod migration checkpoint 5
+Riverpod migration checkpoint 5b
 Date: 2026-09-26
 Checks:
 - flutter analyze
 - flutter test
 
-Scope since checkpoint 4b:
-- Avoid full Editor rebuilds on playback position ticks
-- Isolate custom scrollbar repaint with ValueNotifier
-- Preload Home session summaries with one bulk Isar read
-- Remove client-side Telegram bot credentials and dotenv asset plumbing
-- Extract Subtitle model from video_player_widget.dart
-- Add indexed overlap-safe subtitle timeline lookup with tests
-- Reuse timeline index in fullscreen controls
-- Remove Editor GetX subtitle render state
-- Remove GetX dependency
-- Deduplicate in-flight FFmpeg framerate probes
+Corrections after checkpoint 5:
+- Restored Home navigation helper removed during summary refactor
+- Restored Home create-session helper
+- Removed obsolete dotenv/Telegram client path from Log Management
 
 Platform builds intentionally disabled.
