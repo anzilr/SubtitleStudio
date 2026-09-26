@@ -250,18 +250,7 @@ class MainApp extends StatelessWidget {
             title: 'Subtitle Studio ${AppInfo.version}',
             theme: themeProvider.getThemeData(),
             home: _getInitialScreen(),
-            // Performance optimizations for keyboard responsiveness
             debugShowCheckedModeBanner: false,
-            // Enable hardware acceleration for smoother animations
-            builder: (context, child) {
-              return MediaQuery(
-                // Optimize text scaling for consistent performance
-                data: MediaQuery.of(context).copyWith(
-                  textScaleFactor: MediaQuery.of(context).textScaleFactor.clamp(0.8, 1.2),
-                ),
-                child: child!,
-              );
-            },
           );
         },
       ),
