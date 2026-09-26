@@ -1,15 +1,13 @@
-Riverpod migration checkpoint 3
+Riverpod migration checkpoint 3b
 Date: 2026-09-26
 Checks:
 - flutter analyze
 - flutter test
 
-Scope:
-- Main Editor Cubit bindings -> Riverpod
-- SubtitleEntry extracted from Editor UI
-- Persisted session ID fix
-- Editor navigation boundary fixes
-- Negative delete-index guard
-- ASS parser rewrite and regression tests
+Corrections since checkpoint 3:
+- Fixed Editor build-tree delimiter after BlocListener removal
+- Removed stale edit-line state import
+- ASS parser duplicate implementation removed
+- ASS regression tests added
 
-Platform builds intentionally disabled for migration checkpoints.
+Platform builds remain disabled.
