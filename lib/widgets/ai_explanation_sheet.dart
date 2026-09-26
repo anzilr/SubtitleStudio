@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_gemini/flutter_gemini.dart';
-import 'package:subtitle_studio/features/ai_explanation/ai_explanation_cubit.dart';
+import 'package:subtitle_studio/features/ai_explanation/ai_explanation_controller.dart';
 import 'package:subtitle_studio/features/ai_explanation/ai_explanation_state.dart';
 import 'package:subtitle_studio/database/models/preferences_model.dart';
 import 'package:subtitle_studio/themes/theme_provider.dart';
@@ -38,7 +39,6 @@ Keep the explanation concise and easy to understand.''';
   /// Show AI explanation for the given text with optional context
   static Future<void> show({
     required BuildContext context,
-    required AiExplanationCubit aiExplanationCubit,
     required String currentText,
     List<String>? previousLines,
     List<String>? nextLines,
@@ -75,7 +75,6 @@ Keep the explanation concise and easy to understand.''';
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => _AiExplanationSheetContent(
-        aiExplanationCubit: aiExplanationCubit,
         currentText: currentText,
         initialPreviousLines: previousLines ?? [],
         initialNextLines: nextLines ?? [],
@@ -124,8 +123,7 @@ Keep the explanation concise and easy to understand.''';
 }
 
 /// Stateful content widget for the AI Explanation Sheet
-class _AiExplanationSheetContent extends StatefulWidget {
-  final AiExplanationCubit aiExplanationCubit;
+class _AiExplanationSheetContent extends ConsumerStatefulWidget {
   final String currentText;
   final List<String> initialPreviousLines;
   final List<String> initialNextLines;
@@ -135,7 +133,6 @@ class _AiExplanationSheetContent extends StatefulWidget {
   final List<String>? editedAllLines;
 
   const _AiExplanationSheetContent({
-    required this.aiExplanationCubit,
     required this.currentText,
     required this.initialPreviousLines,
     required this.initialNextLines,
@@ -146,10 +143,10 @@ class _AiExplanationSheetContent extends StatefulWidget {
   });
 
   @override
-  State<_AiExplanationSheetContent> createState() => _AiExplanationSheetContentState();
+  ConsumerState<_AiExplanationSheetContent> createState() => _AiExplanationSheetContentState();
 }
 
-class _AiExplanationSheetContentState extends State<_AiExplanationSheetContent> {
+class _AiExplanationSheetContentState extends ConsumerState<_AiExplanationSheetContent> {
   bool _isEditingPrompt = false;
   late TextEditingController _promptController;
   String? _customPrompt;
@@ -274,7 +271,7 @@ class _AiExplanationSheetContentState extends State<_AiExplanationSheetContent> 
     });
     
     // Trigger AI explanation with current context, model, and prompt
-    widget.aiExplanationCubit.getExplanation(
+    ref.read(aiExplanationControllerProvider.notifier).getExplanation(
       currentLine: _currentAnalyzedText,
       previousLines: _currentPreviousLines,
       nextLines: _currentNextLines,
@@ -961,108 +958,122 @@ class _AiExplanationSheetContentState extends State<_AiExplanationSheetContent> 
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: borderColor, width: 1),
           ),
-          child: StreamBuilder<AiExplanationState>(
-            stream: widget.aiExplanationCubit.stream,
-            initialData: widget.aiExplanationCubit.state,
-            builder: (context, snapshot) {
-              final state = snapshot.data;
-
-              if (state is AiExplanationLoading) {
-                return Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const SizedBox(height: 20),
-                      CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Generating explanation...',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: mutedColor,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                    ],
-                  ),
-                );
-              } else if (state is AiExplanationError) {
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.error_outline, color: Colors.red, size: 48),
-                    const SizedBox(height: 16),
-                    Text(
-                      state.message,
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: Colors.red,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                );
-              } else if (state is AiExplanationSuccess) {
-                return MarkdownBody(
-                  data: state.explanation,
-                  selectable: true,
-                  styleSheet: MarkdownStyleSheet(
-                    p: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      height: 1.6,
-                      color: onSurfaceColor,
-                    ),
-                    h1: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: onSurfaceColor,
-                    ),
-                    h2: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: onSurfaceColor,
-                    ),
-                    h3: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: onSurfaceColor,
-                    ),
-                    code: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontFamily: 'monospace',
-                      backgroundColor: onSurfaceColor.withValues(alpha: 0.1),
-                      color: onSurfaceColor,
-                    ),
-                    blockquote: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      fontStyle: FontStyle.italic,
-                      color: mutedColor,
-                    ),
-                    listBullet: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: onSurfaceColor,
-                    ),
-                    listIndent: 16,
-                  ),
-                );
-              } else {
-                return Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const SizedBox(height: 20),
-                      CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Initializing...',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: mutedColor,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                    ],
-                  ),
-                );
-              }
-            },
+          child: _buildExplanationState(
+            ref.watch(aiExplanationControllerProvider),
+            context,
+            primaryColor,
+            onSurfaceColor,
+            mutedColor,
+          ),
           ),
         ),
       ],
+    );
+  }
+
+
+  Widget _buildExplanationState(
+    AiExplanationState state,
+    BuildContext context,
+    Color primaryColor,
+    Color onSurfaceColor,
+    Color mutedColor,
+  ) {
+    if (state is AiExplanationLoading) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 20),
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Generating explanation...',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: mutedColor,
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      );
+    }
+
+    if (state is AiExplanationError) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.error_outline, color: Colors.red, size: 48),
+          const SizedBox(height: 16),
+          Text(
+            state.message,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: Colors.red,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      );
+    }
+
+    if (state is AiExplanationSuccess) {
+      return MarkdownBody(
+        data: state.explanation,
+        selectable: true,
+        styleSheet: MarkdownStyleSheet(
+          p: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            height: 1.6,
+            color: onSurfaceColor,
+          ),
+          h1: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: onSurfaceColor,
+          ),
+          h2: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: onSurfaceColor,
+          ),
+          h3: Theme.of(context).textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: onSurfaceColor,
+          ),
+          code: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            fontFamily: 'monospace',
+            backgroundColor: onSurfaceColor.withValues(alpha: 0.1),
+            color: onSurfaceColor,
+          ),
+          blockquote: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            fontStyle: FontStyle.italic,
+            color: mutedColor,
+          ),
+          listBullet: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            color: onSurfaceColor,
+          ),
+          listIndent: 16,
+        ),
+      );
+    }
+
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 20),
+          CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Initializing...',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: mutedColor,
+            ),
+          ),
+          const SizedBox(height: 20),
+        ],
+      ),
     );
   }
 
