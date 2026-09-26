@@ -5021,12 +5021,15 @@ class _FullscreenControlsWidgetState extends State<_FullscreenControlsWidget> {
         debugPrint('Resumed video after fullscreen comment dialog closed');
       }
       
-      // Restore original orientation when dialog is dismissed
-      if (originalOrientations != null) {
+      // Restore original orientation when dialog is dismissed.
+      // Capture the nullable value before the async gap so Dart can keep a
+      // non-nullable local reference across the await.
+      final orientationsToRestore = originalOrientations;
+      if (orientationsToRestore != null) {
         try {
           // Add a small delay to ensure overlay removal completes first
           await Future.delayed(const Duration(milliseconds: 150));
-          await SystemChrome.setPreferredOrientations(originalOrientations);
+          await SystemChrome.setPreferredOrientations(orientationsToRestore);
           debugPrint('Restored original orientation after comment dialog');
         } catch (e) {
           debugPrint('Error restoring orientation: $e');
