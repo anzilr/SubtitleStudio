@@ -1,13 +1,16 @@
-Riverpod migration checkpoint 3b
+Riverpod migration checkpoint 4
 Date: 2026-09-26
 Checks:
 - flutter analyze
 - flutter test
 
-Corrections since checkpoint 3:
-- Fixed Editor build-tree delimiter after BlocListener removal
-- Removed stale edit-line state import
-- ASS parser duplicate implementation removed
-- ASS regression tests added
+Scope:
+- Removed legacy EditCubit
+- Extracted SubtitleController and SourceViewPane
+- Fixed Source View add/delete reconciliation with tests
+- Batched subtitle deletion into one Isar transaction
+- Migrated Waveform active state flow to Riverpod
+- Removed WaveformBloc and flutter_bloc dependency
+- Restored system accessibility text scaling
 
-Platform builds remain disabled.
+Platform builds intentionally disabled.
