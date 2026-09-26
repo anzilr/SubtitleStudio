@@ -177,6 +177,33 @@ class EditController extends Notifier<EditState> {
     }
   }
 
+  /// Replace the in-memory subtitle list without writing to persistence.
+  ///
+  /// Used by legacy Editor UI paths that have already performed the database
+  /// mutation themselves. This keeps Riverpod as the single render-state owner
+  /// while those operations are migrated incrementally.
+  void replaceSubtitleLinesLocally(List<SubtitleLine> lines) {
+    _setState(
+      state.copyWith(
+        subtitleLines: List<SubtitleLine>.unmodifiable(lines),
+      ),
+    );
+  }
+
+  /// Replace one in-memory subtitle line without writing to persistence.
+  void updateSubtitleLineLocally(int index, SubtitleLine line) {
+    if (index < 0 || index >= state.subtitleLines.length) {
+      logWarning(
+        'EditController: Ignoring local line update for invalid index $index',
+      );
+      return;
+    }
+
+    final updatedLines = List<SubtitleLine>.from(state.subtitleLines);
+    updatedLines[index] = line;
+    _setState(state.copyWith(subtitleLines: updatedLines));
+  }
+
   /// Refresh subtitle lines from database
   /// 
   /// Used after operations that modify the database directly

@@ -33,7 +33,6 @@ import 'package:subtitle_studio/widgets/project_settings_sheet.dart';
 import 'package:subtitle_studio/screens/edit_line/edit_line_bloc.dart'; // EditSubtitleScreenBloc wrapper
 import 'package:subtitle_studio/utils/time_parser.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:get/get.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:subtitle_studio/widgets/bottom_modal_sheet.dart';
 import 'package:subtitle_studio/operations/subtitle_operations.dart';
@@ -61,7 +60,6 @@ import 'package:subtitle_studio/screens/edit/edit_controller.dart';
 import 'package:subtitle_studio/screens/edit/edit_state.dart';
 import 'package:subtitle_studio/screens/edit/models/subtitle_entry.dart';
 import 'package:subtitle_studio/screens/edit/widgets/source_view_pane.dart';
-import 'package:subtitle_studio/screens/edit/controllers/subtitle_controller.dart';
 import 'package:subtitle_studio/features/waveform/bloc/waveform_event.dart';
 import 'package:subtitle_studio/features/waveform/bloc/waveform_state.dart';
 import 'package:subtitle_studio/features/waveform/providers/waveform_controller.dart';
@@ -91,7 +89,6 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
   
   final Set<int> _selectedIndices = {};
   bool _isSelectionMode = false;
-  final SubtitleController subtitleController = Get.put(SubtitleController());
   SubtitleCollection? subtitleCollection; // Make nullable to avoid late initialization error
   List<SubtitleLine> subtitleLines = []; // Initialize with empty list
   late String fileName;
@@ -194,7 +191,7 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
           setState(() {
             subtitleLines[subtitleIndex].comment = comment;
           });
-          subtitleController.updateSubtitleLine(subtitleIndex, subtitleLines[subtitleIndex]);
+          _controller.updateSubtitleLineLocally(subtitleIndex, subtitleLines[subtitleIndex]);
           _updateSubtitlesWithVersion(subtitleLines);
           if (_videoPlayerKey.currentState != null) {
             _videoPlayerKey.currentState!.updateSubtitles(_subtitles);
@@ -230,7 +227,7 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
     _createInitialCheckpoint();
     
     subtitleLinesFuture = _fetchSubtitleLines().then((subtitles) async {
-      subtitleController.setSubtitleLines(subtitles);
+      _controller.replaceSubtitleLinesLocally(subtitles);
       subtitleCollection = (await fetchSubtitle(widget.subtitleCollectionId))!;
       
   await _loadSavedVideoPath();
@@ -434,8 +431,14 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
         ),
         // Subtitle list
         Expanded(
-          child: Obx(() {
-            return Stack(
+          child: riverpod.Consumer(
+                    builder: (context, ref, _) {
+                      final reactiveSubtitleLines = ref.watch(
+                        editControllerProvider.select(
+                          (state) => state.subtitleLines,
+                        ),
+                      );
+                      return Stack(
               children: [
                 ScrollablePositionedList.builder(
                   itemScrollController: _itemScrollController,
@@ -447,9 +450,9 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
                     left: 8,
                     right: 8,
                   ),
-                  itemCount: subtitleController.subtitleLines.length,
+                  itemCount: reactiveSubtitleLines.length,
                   itemBuilder: (context, index) {
-                    final line = subtitleController.subtitleLines[index];
+                    final line = reactiveSubtitleLines[index];
                     final textContent = line.edited ?? line.original;
                     return _buildSubtitleCard(line, index, textContent);
                   },
@@ -1294,10 +1297,10 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
           if (subtitleCollection != null) {
             SubtitleOperations.showAddLineConfirmation(
               context: context,
-              currentLine: subtitleController.subtitleLines[index],
+              currentLine: _editState.subtitleLines[index],
               collection: subtitleCollection!,
-              currentStartTime: subtitleController.subtitleLines[index].startTime,
-              currentEndTime: subtitleController.subtitleLines[index].endTime,
+              currentStartTime: _editState.subtitleLines[index].startTime,
+              currentEndTime: _editState.subtitleLines[index].endTime,
               subtitleId: widget.subtitleCollectionId,
               refreshCallback: (newLineIndex) => _refreshSubtitleLines(), // Refresh list view
               sessionId: widget.sessionId,
@@ -1315,7 +1318,7 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
             SubtitleOperations.showDeleteConfirmation(
               context: context,
               subtitleId: widget.subtitleCollectionId,
-              currentLine: subtitleController.subtitleLines[index],
+              currentLine: _editState.subtitleLines[index],
               collection: subtitleCollection!,
               onSuccess: _refreshSubtitleLines,
               sessionId: widget.sessionId,
@@ -1864,7 +1867,7 @@ Future<void> _deleteSelectedSubtitles() async {
   });
   
   // Update controller with all new lines
-  subtitleController.setSubtitleLines(subtitleLines);
+  _controller.replaceSubtitleLinesLocally(subtitleLines);
   
   // Regenerate subtitles for video player and update version
   _updateSubtitlesWithVersion(subtitleLines);
@@ -1890,7 +1893,7 @@ Future<void> _deleteSelectedSubtitles() async {
     final state = _editState;
     final updatedSubtitles = state.subtitleLines;
     
-    subtitleController.setSubtitleLines(updatedSubtitles);
+    _controller.replaceSubtitleLinesLocally(updatedSubtitles);
     final newGeneratedSubtitles = _generateSubtitles(updatedSubtitles);
 
     if (!mounted) return;
@@ -2021,7 +2024,7 @@ Future<void> _deleteSelectedSubtitles() async {
     
     // Update the controller
     if (index >= 0 && index < subtitleLines.length) {
-      subtitleController.updateSubtitleLine(index, subtitleLines[index]);
+      _controller.updateSubtitleLineLocally(index, subtitleLines[index]);
     }
     
     // Regenerate subtitles for video player
@@ -2135,7 +2138,7 @@ Future<void> _deleteSelectedSubtitles() async {
         
         // Update controller
         if (index >= 0 && index < subtitleLines.length) {
-          subtitleController.updateSubtitleLine(index, subtitleLines[index]);
+          _controller.updateSubtitleLineLocally(index, subtitleLines[index]);
         }
         
         // Update all subtitle displays (video + waveform)
@@ -2164,7 +2167,7 @@ Future<void> _deleteSelectedSubtitles() async {
         
         // Update controller
         if (index >= 0 && index < subtitleLines.length) {
-          subtitleController.updateSubtitleLine(index, subtitleLines[index]);
+          _controller.updateSubtitleLineLocally(index, subtitleLines[index]);
         }
         
         // Update all subtitle displays (video + waveform)
@@ -2240,7 +2243,7 @@ Future<void> _deleteSelectedSubtitles() async {
                     subtitleLines[index].comment = comment;
                   });
                   // Update controller
-                  subtitleController.updateSubtitleLine(index, subtitleLines[index]);
+                  _controller.updateSubtitleLineLocally(index, subtitleLines[index]);
                   
                   // Update all subtitle displays (video + waveform)
                   _updateAllSubtitleDisplays();
@@ -2264,7 +2267,7 @@ Future<void> _deleteSelectedSubtitles() async {
                     subtitleLines[index].resolved = false;
                   });
                   // Update controller
-                  subtitleController.updateSubtitleLine(index, subtitleLines[index]);
+                  _controller.updateSubtitleLineLocally(index, subtitleLines[index]);
                   
                   // Update all subtitle displays (video + waveform)
                   _updateAllSubtitleDisplays();
@@ -2285,7 +2288,7 @@ Future<void> _deleteSelectedSubtitles() async {
                     subtitleLines[index].resolved = resolved;
                   });
                   // Update controller
-                  subtitleController.updateSubtitleLine(index, subtitleLines[index]);
+                  _controller.updateSubtitleLineLocally(index, subtitleLines[index]);
                 }
                 
                 SnackbarHelper.showSuccess(context, 
@@ -2325,7 +2328,7 @@ Future<void> _deleteSelectedSubtitles() async {
                   });
                   
                   // Update controller
-                  subtitleController.updateSubtitleLine(index, updatedLine);
+                  _controller.updateSubtitleLineLocally(index, updatedLine);
                   
                   // Update all subtitle displays (video + waveform)
                   _updateAllSubtitleDisplays();
@@ -2379,7 +2382,7 @@ Future<void> _deleteSelectedSubtitles() async {
                     subtitleLines[index].comment = comment;
                   });
                   // Update controller
-                  subtitleController.updateSubtitleLine(index, subtitleLines[index]);
+                  _controller.updateSubtitleLineLocally(index, subtitleLines[index]);
                   
                   // Update all subtitle displays (video + waveform)
                   _updateAllSubtitleDisplays();
@@ -2403,7 +2406,7 @@ Future<void> _deleteSelectedSubtitles() async {
                     subtitleLines[index].resolved = false;
                   });
                   // Update controller
-                  subtitleController.updateSubtitleLine(index, subtitleLines[index]);
+                  _controller.updateSubtitleLineLocally(index, subtitleLines[index]);
                   
                   // Update all subtitle displays (video + waveform)
                   _updateAllSubtitleDisplays();
@@ -2424,7 +2427,7 @@ Future<void> _deleteSelectedSubtitles() async {
                     subtitleLines[index].resolved = resolved;
                   });
                   // Update controller
-                  subtitleController.updateSubtitleLine(index, subtitleLines[index]);
+                  _controller.updateSubtitleLineLocally(index, subtitleLines[index]);
                 }
                 
                 SnackbarHelper.showSuccess(context, 
@@ -2464,7 +2467,7 @@ Future<void> _deleteSelectedSubtitles() async {
                   });
                   
                   // Update controller
-                  subtitleController.updateSubtitleLine(index, updatedLine);
+                  _controller.updateSubtitleLineLocally(index, updatedLine);
                   
                   // Update all subtitle displays (video + waveform)
                   _updateAllSubtitleDisplays();
@@ -2510,7 +2513,7 @@ Future<void> _deleteSelectedSubtitles() async {
                 final lines = await subtitleLinesFuture;
                 setState(() {
                   subtitleLines = lines;
-                  subtitleController.setSubtitleLines(lines);
+                  _controller.replaceSubtitleLinesLocally(lines);
                 });
                 
                 // Update all subtitle displays (video + waveform)
@@ -2538,7 +2541,7 @@ Future<void> _deleteSelectedSubtitles() async {
               final lines = await subtitleLinesFuture;
               setState(() {
                 subtitleLines = lines;
-                subtitleController.setSubtitleLines(lines);
+                _controller.replaceSubtitleLinesLocally(lines);
               });
               
               // Update all subtitle displays (video + waveform)
@@ -2578,7 +2581,7 @@ Future<void> _deleteSelectedSubtitles() async {
           });
           
           // Update the controller
-          subtitleController.updateSubtitleLine(subtitleIndex, subtitleLines[subtitleIndex]);
+          _controller.updateSubtitleLineLocally(subtitleIndex, subtitleLines[subtitleIndex]);
           
           // Update all subtitle displays (video + waveform)
           _updateAllSubtitleDisplays();
@@ -5352,7 +5355,7 @@ Future<void> _deleteSelectedSubtitles() async {
           // Update state with new data
           setState(() {
             subtitleLines = updatedSubtitles;
-            subtitleController.setSubtitleLines(updatedSubtitles);
+            _controller.replaceSubtitleLinesLocally(updatedSubtitles);
             _subtitles = _generateSubtitles(updatedSubtitles);
             
             // Recreate the FutureBuilder's future to force it to rebuild
@@ -5423,7 +5426,13 @@ Future<void> _deleteSelectedSubtitles() async {
                   ),
                   // Subtitle list
                   Expanded(
-                    child: Obx(() {
+                    child: riverpod.Consumer(
+                    builder: (context, ref, _) {
+                      final reactiveSubtitleLines = ref.watch(
+                        editControllerProvider.select(
+                          (state) => state.subtitleLines,
+                        ),
+                      );
                       return Stack(
                         children: [
                           ScrollablePositionedList.builder(
@@ -5436,9 +5445,9 @@ Future<void> _deleteSelectedSubtitles() async {
                               left: 8,
                               right: 8,
                             ),
-                            itemCount: subtitleController.subtitleLines.length,
+                            itemCount: reactiveSubtitleLines.length,
                             itemBuilder: (context, index) {
-                              final line = subtitleController.subtitleLines[index];
+                              final line = reactiveSubtitleLines[index];
                               final textContent = line.edited ?? line.original;
                               return _buildSubtitleCard(line, index, textContent);
                             },
@@ -5528,7 +5537,7 @@ Future<void> _deleteSelectedSubtitles() async {
                                   subtitleLines[subtitleIndex].comment = comment;
                                 });
                                 // Update controller
-                                subtitleController.updateSubtitleLine(subtitleIndex, subtitleLines[subtitleIndex]);
+                                _controller.updateSubtitleLineLocally(subtitleIndex, subtitleLines[subtitleIndex]);
                                 
                                 // Regenerate subtitles for video player
                                 _subtitles = _generateSubtitles(subtitleLines);
@@ -5660,7 +5669,7 @@ Future<void> _deleteSelectedSubtitles() async {
                           subtitleLines[subtitleIndex].comment = comment;
                         });
                         // Update controller
-                        subtitleController.updateSubtitleLine(subtitleIndex, subtitleLines[subtitleIndex]);
+                        _controller.updateSubtitleLineLocally(subtitleIndex, subtitleLines[subtitleIndex]);
                         
                         // Regenerate subtitles for video player
                         _subtitles = _generateSubtitles(subtitleLines);
@@ -5682,8 +5691,14 @@ Future<void> _deleteSelectedSubtitles() async {
             if (_isVideoVisible && _selectedVideoPath != null)
               const SizedBox(height: 16),
             Expanded(
-              child: Obx(() {
-                return Stack(
+              child: riverpod.Consumer(
+                    builder: (context, ref, _) {
+                      final reactiveSubtitleLines = ref.watch(
+                        editControllerProvider.select(
+                          (state) => state.subtitleLines,
+                        ),
+                      );
+                      return Stack(
                   children: [
                     ScrollablePositionedList.builder(
                       itemScrollController: _itemScrollController,
@@ -5693,9 +5708,9 @@ Future<void> _deleteSelectedSubtitles() async {
                         bottom: MediaQuery.of(context).padding.bottom + 16, 
                         top: 16
                       ),
-                      itemCount: subtitleController.subtitleLines.length,
+                      itemCount: reactiveSubtitleLines.length,
                       itemBuilder: (context, index) {
-                        final line = subtitleController.subtitleLines[index];
+                        final line = reactiveSubtitleLines[index];
                         final textContent = line.edited ?? line.original;
                         return _buildSubtitleCard(line, index, textContent);
                       },
@@ -5773,7 +5788,7 @@ Future<void> _deleteSelectedSubtitles() async {
                                 subtitleLines[subtitleIndex].comment = comment;
                               });
                               // Update controller
-                              subtitleController.updateSubtitleLine(subtitleIndex, subtitleLines[subtitleIndex]);
+                              _controller.updateSubtitleLineLocally(subtitleIndex, subtitleLines[subtitleIndex]);
                               
                               // Regenerate subtitles for video player
                               _subtitles = _generateSubtitles(subtitleLines);
@@ -5866,8 +5881,14 @@ Future<void> _deleteSelectedSubtitles() async {
                     ],
                   ),
                 ),
-            rightChild: Obx(() {
-              return Stack(
+            rightChild: riverpod.Consumer(
+                    builder: (context, ref, _) {
+                      final reactiveSubtitleLines = ref.watch(
+                        editControllerProvider.select(
+                          (state) => state.subtitleLines,
+                        ),
+                      );
+                      return Stack(
                 children: [
                   ScrollablePositionedList.builder(
                     itemScrollController: _itemScrollController,
@@ -5877,9 +5898,9 @@ Future<void> _deleteSelectedSubtitles() async {
                       bottom: MediaQuery.of(context).padding.bottom + 16, 
                       top: 16
                     ),
-                    itemCount: subtitleController.subtitleLines.length,
+                    itemCount: reactiveSubtitleLines.length,
                     itemBuilder: (context, index) {
-                      final line = subtitleController.subtitleLines[index];
+                      final line = reactiveSubtitleLines[index];
                       final textContent = line.edited ?? line.original;
                       return _buildSubtitleCard(line, index, textContent);
                     },
@@ -5939,7 +5960,7 @@ Future<void> _deleteSelectedSubtitles() async {
                             subtitleLines[subtitleIndex].comment = comment;
                           });
                           // Update controller
-                          subtitleController.updateSubtitleLine(subtitleIndex, subtitleLines[subtitleIndex]);
+                          _controller.updateSubtitleLineLocally(subtitleIndex, subtitleLines[subtitleIndex]);
                           
                           // Regenerate subtitles for video player
                           _subtitles = _generateSubtitles(subtitleLines);
@@ -5997,8 +6018,14 @@ Future<void> _deleteSelectedSubtitles() async {
               if (_isVideoVisible && _selectedVideoPath != null && _isVideoLoaded)
                 const SizedBox(height: 16),
               Expanded(
-                child: Obx(() {
-                  return Stack(
+                child: riverpod.Consumer(
+                    builder: (context, ref, _) {
+                      final reactiveSubtitleLines = ref.watch(
+                        editControllerProvider.select(
+                          (state) => state.subtitleLines,
+                        ),
+                      );
+                      return Stack(
                     children: [
                       ScrollablePositionedList.builder(
                         itemScrollController: _itemScrollController,
@@ -6008,9 +6035,9 @@ Future<void> _deleteSelectedSubtitles() async {
                           bottom: MediaQuery.of(context).padding.bottom + 16, 
                           top: 16
                         ),
-                        itemCount: subtitleController.subtitleLines.length,
+                        itemCount: reactiveSubtitleLines.length,
                         itemBuilder: (context, index) {
-                          final line = subtitleController.subtitleLines[index];
+                          final line = reactiveSubtitleLines[index];
                           final textContent = line.edited ?? line.original;
                           return _buildSubtitleCard(line, index, textContent);
                         },
