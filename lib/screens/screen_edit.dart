@@ -7,6 +7,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
@@ -58,7 +59,7 @@ import 'package:subtitle_studio/utils/msone_hotkey_manager.dart' as hotkey;
 import 'package:subtitle_studio/utils/unicode_text_input_formatter.dart';
 import 'package:subtitle_studio/main.dart';
 import 'msone_submission_screen.dart';
-import 'package:subtitle_studio/screens/edit/edit_cubit.dart';
+import 'package:subtitle_studio/screens/edit/edit_controller.dart';
 import 'package:subtitle_studio/screens/edit/edit_state.dart';
 import 'package:subtitle_studio/screens/edit/models/subtitle_entry.dart';
 import 'package:subtitle_studio/features/waveform/bloc/waveform_bloc.dart';
@@ -66,7 +67,7 @@ import 'package:subtitle_studio/features/waveform/bloc/waveform_event.dart';
 import 'package:subtitle_studio/features/waveform/bloc/waveform_state.dart';
 import 'package:subtitle_studio/features/waveform/widgets/waveform_widget.dart';
 
-class EditScreen extends StatefulWidget {
+class EditScreen extends riverpod.ConsumerStatefulWidget {
   final int subtitleCollectionId;
   final int? lastEditedIndex;
   final int sessionId;
@@ -79,7 +80,7 @@ class EditScreen extends StatefulWidget {
   });
 
   @override
-  State<EditScreen> createState() => _EditScreenState();
+  riverpod.ConsumerState<EditScreen> createState() => _EditScreenState();
 }
 
 class SubtitleController extends GetxController {
@@ -94,9 +95,11 @@ class SubtitleController extends GetxController {
   }
 }
 
-class _EditScreenState extends State<EditScreen> with TickerProviderStateMixin {
-  // BLoC integration helper - provides access to EditCubit
-  EditCubit get _cubit => context.read<EditCubit>();
+class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerProviderStateMixin {
+  // Riverpod integration helpers. Existing local UI fields are retained
+  // temporarily while the Editor migration is completed incrementally.
+  EditController get _controller => ref.read(editControllerProvider.notifier);
+  EditState get _editState => ref.read(editControllerProvider);
   
   final Set<int> _selectedIndices = {};
   bool _isSelectionMode = false;
@@ -368,8 +371,8 @@ class _EditScreenState extends State<EditScreen> with TickerProviderStateMixin {
   // Load floating controls preference
   Future<void> _loadFloatingControlsPreference() async {
     // Migrated to BLoC - floating controls already loaded by cubit.initialize()
-    // Just sync local state from cubit state
-    final state = _cubit.state;
+    // Just sync local state from controller state
+    final state = _editState;
     if (!mounted) return;
     
     setState(() {
@@ -380,8 +383,8 @@ class _EditScreenState extends State<EditScreen> with TickerProviderStateMixin {
   // Load MSone features preference
   Future<void> _loadMsonePreference() async {
     // Migrated to BLoC - MSone preference already loaded by cubit.initialize()
-    // Just sync local state from cubit state
-    final state = _cubit.state;
+    // Just sync local state from controller state
+    final state = _editState;
     if (!mounted) return;
     
     setState(() {
@@ -392,8 +395,8 @@ class _EditScreenState extends State<EditScreen> with TickerProviderStateMixin {
   // Load layout preference
   Future<void> _loadLayoutPreference() async {
     // Migrated to BLoC - layout preference already loaded by cubit.initialize()
-    // Just sync local state from cubit state
-    final state = _cubit.state;
+    // Just sync local state from controller state
+    final state = _editState;
     if (!mounted) return;
     
     if (kDebugMode) {
@@ -683,8 +686,8 @@ class _EditScreenState extends State<EditScreen> with TickerProviderStateMixin {
   // Load resize ratio preference
   Future<void> _loadResizeRatio() async {
     // Migrated to BLoC - resize ratio already loaded by cubit.initialize()
-    // Just sync local state from cubit state
-    final state = _cubit.state;
+    // Just sync local state from controller state
+    final state = _editState;
     if (!mounted) return;
     
     if (kDebugMode) {
@@ -716,7 +719,7 @@ class _EditScreenState extends State<EditScreen> with TickerProviderStateMixin {
     _resizeRatioSaveTimer = Timer(const Duration(milliseconds: 300), () async {
       // Migrated to BLoC - delegate to cubit
       if (mounted) {
-        await _cubit.updateResizeRatio(ratio);
+        await _controller.updateResizeRatio(ratio);
       }
     });
   }
@@ -724,8 +727,8 @@ class _EditScreenState extends State<EditScreen> with TickerProviderStateMixin {
   /// Load mobile video resize ratio from preferences
   Future<void> _loadMobileResizeRatio() async {
     // Migrated to BLoC - mobile resize ratio already loaded by cubit.initialize()
-    // Just sync local state from cubit state
-    final state = _cubit.state;
+    // Just sync local state from controller state
+    final state = _editState;
     if (!mounted) return;
     
     setState(() {
@@ -749,7 +752,7 @@ class _EditScreenState extends State<EditScreen> with TickerProviderStateMixin {
     _mobileResizeRatioSaveTimer = Timer(Duration(milliseconds: 500), () async {
       // Migrated to BLoC - delegate to cubit
       if (mounted) {
-        await _cubit.updateMobileResizeRatio(ratio);
+        await _controller.updateMobileResizeRatio(ratio);
       }
     });
   }
@@ -757,11 +760,11 @@ class _EditScreenState extends State<EditScreen> with TickerProviderStateMixin {
   // Toggle floating controls
   void _toggleFloatingControls(bool value) {
     // Migrated to BLoC - delegate to cubit
-    _cubit.updateFloatingControls(value);
+    _controller.updateFloatingControls(value);
     
     // Update local state from cubit
     if (mounted) {
-      final state = _cubit.state;
+      final state = _editState;
       setState(() {
         _floatingControlsEnabled = state.floatingControlsEnabled;
       });
@@ -918,8 +921,8 @@ class _EditScreenState extends State<EditScreen> with TickerProviderStateMixin {
 
   Future<void> _loadSavedVideoPath() async {
     // Migrated to BLoC - video path already loaded by cubit.initialize()
-    // Just sync local state from cubit state
-    final state = _cubit.state;
+    // Just sync local state from controller state
+    final state = _editState;
     if (!mounted) return;
     
     setState(() {
@@ -944,10 +947,10 @@ class _EditScreenState extends State<EditScreen> with TickerProviderStateMixin {
       });
       
       // Migrated to BLoC - delegate to cubit
-      await _cubit.loadVideo(filePath);
+      await _controller.loadVideo(filePath);
       
-      // Update local state from cubit state
-      final state = _cubit.state;
+      // Update local state from controller state
+      final state = _editState;
       if (!mounted) return;
       
       setState(() {
@@ -962,10 +965,10 @@ class _EditScreenState extends State<EditScreen> with TickerProviderStateMixin {
   }
   Future<void> _unloadVideo() async {
     // Migrated to BLoC - delegate to cubit
-    await _cubit.unloadVideo();
+    await _controller.unloadVideo();
     
-    // Update local state from cubit state
-    final state = _cubit.state;
+    // Update local state from controller state
+    final state = _editState;
     if (!mounted) return;
     
     setState(() {
@@ -978,10 +981,10 @@ class _EditScreenState extends State<EditScreen> with TickerProviderStateMixin {
   // Source view methods
   void _switchToSourceView() {
     // Migrated to BLoC - delegate to cubit
-    _cubit.switchToSourceView();
+    _controller.switchToSourceView();
     
     // Update local state from cubit
-    final state = _cubit.state;
+    final state = _editState;
     setState(() {
       _isSourceView = state.isSourceView;
       _sourceViewEntries = state.sourceViewEntries;
@@ -990,10 +993,10 @@ class _EditScreenState extends State<EditScreen> with TickerProviderStateMixin {
 
   void _switchToTimelineView() {
     // Migrated to BLoC - delegate to cubit
-    _cubit.switchToCardsView();
+    _controller.switchToCardsView();
     
     // Update local state from cubit
-    final state = _cubit.state;
+    final state = _editState;
     setState(() {
       _isSourceView = state.isSourceView;
     });
@@ -1033,7 +1036,7 @@ class _EditScreenState extends State<EditScreen> with TickerProviderStateMixin {
   Future<void> _syncSourceViewToDatabase() async {
     try {
       // Migrated to BLoC - delegate to cubit
-      await _cubit.syncSourceViewToDatabase(_sourceViewEntries);
+      await _controller.syncSourceViewToDatabase(_sourceViewEntries);
       
       // Refresh the subtitle lines cache
       await _refreshSubtitleLines();
@@ -1617,14 +1620,14 @@ class _EditScreenState extends State<EditScreen> with TickerProviderStateMixin {
 
     void _toggleSelection(int index) {
     // Migrated to BLoC - delegate to cubit
-    // BlocListener handles state synchronization automatically
-    _cubit.toggleSelection(index);
+    // Riverpod listener handles state synchronization automatically
+    _controller.toggleSelection(index);
   }
 
   void _clearSelection() {
     // Migrated to BLoC - delegate to cubit
-    // BlocListener handles state synchronization automatically
-    _cubit.clearSelection();
+    // Riverpod listener handles state synchronization automatically
+    _controller.clearSelection();
   }
 
   void _showBatchDeleteConfirmation() {
@@ -1865,7 +1868,7 @@ Future<void> _deleteSelectedSubtitles() async {
   
   for (final index in sortedIndices) {
     try {
-      await _cubit.deleteLine(index);
+      await _controller.deleteLine(index);
       successCount++;
     } catch (e) {
       failCount++;
@@ -1873,8 +1876,8 @@ Future<void> _deleteSelectedSubtitles() async {
     }
   }
   
-  // Update local state from cubit state
-  final state = _cubit.state;
+  // Update local state from controller state
+  final state = _editState;
   setState(() {
     subtitleLines = state.subtitleLines;
   });
@@ -1900,10 +1903,10 @@ Future<void> _deleteSelectedSubtitles() async {
 
   Future<void> _refreshSubtitleLines() async {
     // Migrated to BLoC - delegate to cubit
-    await _cubit.refreshSubtitleLines();
+    await _controller.refreshSubtitleLines();
     
-    // Update local state from cubit state
-    final state = _cubit.state;
+    // Update local state from controller state
+    final state = _editState;
     final updatedSubtitles = state.subtitleLines;
     
     subtitleController.setSubtitleLines(updatedSubtitles);
@@ -2025,10 +2028,10 @@ Future<void> _deleteSelectedSubtitles() async {
     final previousHighlightedIndex = _highlightedIndex;
     
     // Migrated to BLoC - delegate to cubit which handles all business logic
-    await _cubit.markLine(index);
+    await _controller.markLine(index);
     
-    // Update local state from cubit state
-    final state = _cubit.state;
+    // Update local state from controller state
+    final state = _editState;
     setState(() {
       subtitleLines = state.subtitleLines;
       // Restore the highlighted index to prevent unwanted scrolling
@@ -2048,7 +2051,7 @@ Future<void> _deleteSelectedSubtitles() async {
       _videoPlayerKey.currentState!.updateSubtitles(_subtitles);
     }
     
-    // Show feedback based on cubit state
+    // Show feedback based on controller state
     if (!mounted) return;
     if (index >= 0 && index < subtitleLines.length) {
       final marked = subtitleLines[index].marked;
@@ -2141,10 +2144,10 @@ Future<void> _deleteSelectedSubtitles() async {
         }
         
         // Migrated to BLoC - delegate to cubit which handles all business logic
-        await _cubit.updateComment(index, comment);
+        await _controller.updateComment(index, comment);
         
-        // Update local state from cubit state
-        final state = _cubit.state;
+        // Update local state from controller state
+        final state = _editState;
         setState(() {
           subtitleLines = state.subtitleLines;
         });
@@ -2170,10 +2173,10 @@ Future<void> _deleteSelectedSubtitles() async {
       },
       onCommentDeleted: line.comment?.isNotEmpty == true ? () async {
         // Migrated to BLoC - delegate to cubit which handles all business logic
-        await _cubit.updateComment(index, null);
+        await _controller.updateComment(index, null);
         
-        // Update local state from cubit state
-        final state = _cubit.state;
+        // Update local state from controller state
+        final state = _editState;
         setState(() {
           subtitleLines = state.subtitleLines;
         });
@@ -3462,13 +3465,13 @@ Future<void> _deleteSelectedSubtitles() async {
       final end = max(_rangeStartIndex!, index);
       
       // Migrated to BLoC - use cubit for selection updates
-      _cubit.clearSelection();
+      _controller.clearSelection();
       for (int i = start; i <= end; i++) {
-        _cubit.toggleSelection(i);
+        _controller.toggleSelection(i);
       }
       
       // Update local state from cubit
-      final state = _cubit.state;
+      final state = _editState;
       setState(() {
         _selectedIndices
           ..clear()
@@ -3488,8 +3491,8 @@ Future<void> _deleteSelectedSubtitles() async {
       _showSecondarySubtitles = value;
       if (_videoPlayerKey.currentState != null) {
         if (value) {
-          // Use cubit state for subtitles
-          final state = _cubit.state;
+          // Use controller state for subtitles
+          final state = _editState;
           _videoPlayerKey.currentState!.updateSecondarySubtitles(state.secondarySubtitles);
         } else {
           _videoPlayerKey.currentState!.updateSecondarySubtitles([]);
@@ -4333,8 +4336,8 @@ Future<void> _deleteSelectedSubtitles() async {
     // baseSubtitles can be provided (the freshly fetched subtitles) to ensure original-text restoration uses the right data
     Future<void> _loadSavedSecondarySubtitle([List<SubtitleLine>? baseSubtitles]) async {
       // Migrated to BLoC - secondary subtitles already loaded by cubit.initialize()
-      // Just sync local state from cubit state
-      final state = _cubit.state;
+      // Just sync local state from controller state
+      final state = _editState;
       if (!mounted) return;
       
       setState(() {
@@ -4624,9 +4627,9 @@ Future<void> _deleteSelectedSubtitles() async {
         ),
         builder: (context) => SettingsSheet(
           onSettingsChanged: () async {
-            // Reload preferences from database to sync cubit state
-            await _cubit.reloadPreferences();
-            // The BlocListener will automatically update local state from cubit
+            // Reload preferences from database to sync controller state
+            await _controller.reloadPreferences();
+            // The Riverpod listener updates local state from the controller
           },
         ),
       );
@@ -4994,40 +4997,39 @@ Future<void> _deleteSelectedSubtitles() async {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<EditCubit, EditState>(
-      listener: (context, state) {
-        // Sync local state from cubit without triggering full rebuild
-        // This eliminates the need for setState in migrated methods
-        if (!setEquals(_selectedIndices, state.selectedIndices)) {
+    ref.listen<EditState>(editControllerProvider, (previous, next) {
+      final selectionChanged =
+          !setEquals(_selectedIndices, next.selectedIndices) ||
+          _isSelectionMode != next.isSelectionMode;
+      final preferencesChanged =
+          _floatingControlsEnabled != next.floatingControlsEnabled ||
+          _isMsoneEnabled != next.isMsoneEnabled ||
+          _isLayout1 != next.isLayout1 ||
+          _resizeRatio != next.resizeRatio ||
+          _mobileVideoResizeRatio != next.mobileVideoResizeRatio;
+
+      if (!selectionChanged && !preferencesChanged) return;
+      if (!mounted) return;
+
+      setState(() {
+        if (selectionChanged) {
           _selectedIndices
             ..clear()
-            ..addAll(state.selectedIndices);
+            ..addAll(next.selectedIndices);
+          _isSelectionMode = next.isSelectionMode;
         }
-        
-        if (_isSelectionMode != state.isSelectionMode) {
-          _isSelectionMode = state.isSelectionMode;
+
+        if (preferencesChanged) {
+          _floatingControlsEnabled = next.floatingControlsEnabled;
+          _isMsoneEnabled = next.isMsoneEnabled;
+          _isLayout1 = next.isLayout1;
+          _resizeRatio = next.resizeRatio;
+          _mobileVideoResizeRatio = next.mobileVideoResizeRatio;
         }
-        
-        // Sync preferences from cubit state on initialization and updates
-        if (_floatingControlsEnabled != state.floatingControlsEnabled) {
-          setState(() {
-            _floatingControlsEnabled = state.floatingControlsEnabled;
-          });
-        }
-        
-        if (_isMsoneEnabled != state.isMsoneEnabled) {
-          setState(() {
-            _isMsoneEnabled = state.isMsoneEnabled;
-          });
-        }
-        
-        if (_isLayout1 != state.isLayout1) {
-          setState(() {
-            _isLayout1 = state.isLayout1;
-          });
-        }
-      },
-      child: PopScope(
+      });
+    });
+
+    return PopScope(
         canPop: !_isSelectionMode, // Prevent pop when in selection mode
         onPopInvokedWithResult: (bool didPop, Object? result) async {
         // Pause video when going back
@@ -5238,9 +5240,9 @@ Future<void> _deleteSelectedSubtitles() async {
             ),
         ],
       )
-      ) // FirstTimeInstructions  
+      ) // FirstTimeInstructions
       ), // PopScope
-    ); // BlocListener
+    );
   }
 
   // New method to build the empty state view
