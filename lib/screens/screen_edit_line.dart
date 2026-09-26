@@ -50,7 +50,6 @@ import 'package:subtitle_studio/utils/logging_helpers.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:subtitle_studio/screens/edit_line/edit_line_cubit.dart' hide TimeValidator;
 import 'package:subtitle_studio/screens/edit_line/edit_line_state.dart';
-import 'package:subtitle_studio/features/ai_explanation/ai_explanation_cubit.dart';
 import 'package:subtitle_studio/widgets/ai_explanation_sheet.dart';
 
 // Edit subtitle line screen with video player integration
@@ -148,9 +147,6 @@ class EditSubtitleScreenState extends State<EditSubtitleScreen> {
   Timer? _mobileResizeRatioSaveTimer; // Timer for debouncing mobile resize ratio saves
   bool _isMobileResizeRatioLoaded = false; // Track if mobile resize ratio has been loaded from preferences
 
-  // AI Explanation Cubit
-  late AiExplanationCubit _aiExplanationCubit;
-
   // Layout preference for desktop
   String _layoutPreference = 'layout1'; // Default to layout1
 
@@ -192,10 +188,6 @@ class EditSubtitleScreenState extends State<EditSubtitleScreen> {
     _endTimeController = TextEditingController();
     _currentIndexController = TextEditingController();
     _scrollController = ScrollController();
-
-    // Initialize AI Explanation Cubit
-    _aiExplanationCubit = AiExplanationCubit();
-    // Note: Stream listener is handled in the explanation sheet itself
 
     // Character counting listeners - use Cubit for reactive character counting
     _originalController.addListener(() {
@@ -3611,7 +3603,6 @@ class EditSubtitleScreenState extends State<EditSubtitleScreen> {
     if (!mounted) return;
     AiExplanationSheet.show(
       context: context,
-      aiExplanationCubit: _aiExplanationCubit,
       currentText: currentText,
       previousLines: previousLines,
       nextLines: nextLines,
