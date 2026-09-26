@@ -23,6 +23,7 @@ import 'package:flutter/services.dart';        // System services (orientation, 
 import 'package:flutter/foundation.dart';      // Platform detection
 import 'package:provider/provider.dart';       // State management
 import 'package:flutter_riverpod/flutter_riverpod.dart' show ProviderScope; // Migration root
+import 'package:subtitle_studio/app/providers/core_providers.dart'; // Riverpod core dependencies
 import 'package:isar_community/isar.dart';              // Local database
 import 'package:path_provider/path_provider.dart'; // File system access
 import 'package:flutter_dotenv/flutter_dotenv.dart'; // Environment variables
@@ -136,7 +137,14 @@ Future<void> main(List<String> args) async {
   }
   
   await AppLogger.instance.info('Application initialization completed');
-  runApp(ProviderScope(child: MainApp(initialFile: initialFile)));
+  runApp(
+    ProviderScope(
+      overrides: [
+        isarProvider.overrideWithValue(isar),
+      ],
+      child: MainApp(initialFile: initialFile),
+    ),
+  );
 }
 
 /// Initialize Isar database with retry mechanism and exponential backoff
