@@ -60,6 +60,7 @@ import 'package:subtitle_studio/screens/edit/edit_controller.dart';
 import 'package:subtitle_studio/screens/edit/edit_state.dart';
 import 'package:subtitle_studio/screens/edit/models/subtitle_entry.dart';
 import 'package:subtitle_studio/screens/edit/widgets/source_view_pane.dart';
+import 'package:subtitle_studio/screens/edit/widgets/editor_custom_scrollbar.dart';
 import 'package:subtitle_studio/features/waveform/bloc/waveform_event.dart';
 import 'package:subtitle_studio/features/waveform/bloc/waveform_state.dart';
 import 'package:subtitle_studio/features/waveform/providers/waveform_controller.dart';
@@ -4902,96 +4903,12 @@ Future<void> _deleteSelectedSubtitles() async {
   }
 
   Widget _buildCustomScrollbar() {
-    return Positioned(
-      right: 0,
-      top: 0,
-      bottom: 0,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final scrollableHeight = constraints.maxHeight;
-          final thumbHeight = max(50.0, scrollableHeight * 0.1);
-          final trackHeight = scrollableHeight - thumbHeight;
-
-          return ValueListenableBuilder<double>(
-            valueListenable: _scrollbarThumbOffset,
-            builder: (context, thumbOffset, child) {
-              final thumbTop = thumbOffset * trackHeight;
-
-              return GestureDetector(
-                onVerticalDragStart: (_) {
-                  _isDraggingScrollbar = true;
-                },
-                onVerticalDragUpdate: (details) {
-                  if (subtitleLines.isEmpty) return;
-
-                  final currentThumbHeight =
-                      max(50.0, scrollableHeight * 0.1);
-                  final currentTrackHeight =
-                      scrollableHeight - currentThumbHeight;
-                  if (currentTrackHeight <= 0) return;
-
-                  final localY = details.localPosition.dy - 8;
-                  final newOffset =
-                      (localY / currentTrackHeight).clamp(0.0, 1.0);
-
-                  _scrollbarThumbOffset.value = newOffset;
-
-                  final targetIndex =
-                      (newOffset * subtitleLines.length)
-                          .round()
-                          .clamp(0, subtitleLines.length - 1);
-                  if (_itemScrollController.isAttached) {
-                    _itemScrollController.jumpTo(
-                      index: targetIndex,
-                      alignment: 0.0,
-                    );
-                  }
-                },
-                onVerticalDragEnd: (_) {
-                  _isDraggingScrollbar = false;
-                },
-                onVerticalDragCancel: () {
-                  _isDraggingScrollbar = false;
-                },
-                child: Container(
-                  width: 20,
-                  margin: const EdgeInsets.only(
-                    right: 0,
-                    top: 8,
-                    bottom: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .surface
-                        .withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Stack(
-                    children: [
-                      Positioned(
-                        top: thumbTop,
-                        left: 4,
-                        right: 4,
-                        child: Container(
-                          height: thumbHeight,
-                          decoration: BoxDecoration(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withValues(alpha: 0.7),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          );
-        },
-      ),
+    return EditorCustomScrollbar(
+      thumbOffset: _scrollbarThumbOffset,
+      itemCount: subtitleLines.length,
+      itemScrollController: _itemScrollController,
+      onDragStart: () => _isDraggingScrollbar = true,
+      onDragEnd: () => _isDraggingScrollbar = false,
     );
   }
 
