@@ -1,5 +1,3 @@
-import 'dart:math';
-
 // Simple subtitle class for secondary subtitles (no database IDs needed)
 class SimpleSubtitleLine {
   final int index;
@@ -107,37 +105,133 @@ class SubtitleParser {
   
   // Parse ASS/SSA format
   static List<SimpleSubtitleLine> parseAss(String content) {
-    List<SimpleSubtitleLine> subtitles = [];
-    
-    // Find the [Events] section
-    final eventsMatch = RegExp(r'\[Events\].*?Format:(.*?)(?=\r?\n\[|\r?\n*$)', dotAll: true).firstMatch(content);
-    if (eventsMatch == null) return subtitles;
-    
-    final formatLine = eventsMatch.group(1)!.trim();
-    final formatFields = formatLine.split(',').map((s) => s.trim()).toList();
-    
-    // Find the indexes of important fields
-    final startTimeIndex = formatFields.indexOf('Start');
-    final endTimeIndex = formatFields.indexOf('End');
-    final textIndex = formatFields.indexOf('Text');
-    
-    if (startTimeIndex == -1 || endTimeIndex == -1 || textIndex == -1) return subtitles;
-    
-    // Find all dialogue lines
-    final dialogueRegExp = RegExp(r'Dialogue:(.*?)(?=\r?\n|$)', multiLine: true);
-    final matches = dialogueRegExp.allMatches(content);
-    
-    int index = 1;
-    for (final match in matches) {
-      final line = match.group(1)!.trim();
-      final fields = _splitAssLine(line);
-      
-      if (fields.length > max(startTimeIndex, max(endTimeIndex, textIndex))) {
-        String startTime = fields[startTimeIndex];
-        String endTime = fields[endTimeIndex];
-        String text = fields[textIndex].replaceAll(RegExp(r'\\N'), '\n').replaceAll(RegExp(r'\{[^}]*\}'), '');
-        
-        // Convert ASS time format (h:mm:ss.cc) to standard format (hh:mm:ss.sss)
+    final subtitles = <SimpleSubtitleLine>[];
+    final lines = content
+        .replaceAll('\r\n', '\n')
+        .replaceAll('\r', '\n')
+        .split('\n');
+
+    bool inEventsSection = false;
+    List<String>? formatFields;
+    int startTimeIndex = -1;
+    int endTimeIndex = -1;
+    int textIndex = -1;
+    int subtitleIndex = 1;
+
+    for (final rawLine in lines) {
+      final line = rawLine.trim();
+      if (line.isEmpty || line.startsWith(';')) continue;
+
+      // Track the active ASS section explicitly so Format/Dialogue rows from
+      // unrelated sections cannot contaminate event parsing.
+      if (line.startsWith('[') && line.endsWith(']')) {
+        inEventsSection = line.toLowerCase() == '[events]';
+        continue;
+      }
+
+      if (!inEventsSection) continue;
+
+      final lowerLine = line.toLowerCase();
+
+      if (lowerLine.startsWith('format:')) {
+        final declaration = line.substring(line.indexOf(':') + 1).trim();
+        formatFields =
+            declaration.split(',').map((field) => field.trim()).toList();
+
+        startTimeIndex = formatFields.indexWhere(
+          (field) => field.toLowerCase() == 'start',
+        );
+        endTimeIndex = formatFields.indexWhere(
+          (field) => field.toLowerCase() == 'end',
+        );
+        textIndex = formatFields.indexWhere(
+          (field) => field.toLowerCase() == 'text',
+        );
+        continue;
+      }
+
+      if (!lowerLine.startsWith('dialogue:') ||
+          formatFields == null ||
+          startTimeIndex < 0 ||
+          endTimeIndex < 0 ||
+          textIndex < 0) {
+        continue;
+      }
+
+      final dialogue = line.substring(line.indexOf(':') + 1).trimLeft();
+      final fields = _splitAssLine(
+        dialogue,
+        fieldCount: formatFields.length,
+        textIndex: textIndex,
+      );
+
+      if (fields.length != formatFields.length) continue;
+
+      var startTime = fields[startTimeIndex];
+      var endTime = fields[endTimeIndex];
+      final text = fields[textIndex]
+          .replaceAll(RegExp(r'\\N', caseSensitive: false), '\n')
+          .replaceAll(RegExp(r'\{[^}]*\}'), '');
+
+      startTime = _convertAssTime(startTime);
+      endTime = _convertAssTime(endTime);
+
+      subtitles.add(
+        SimpleSubtitleLine(
+          index: subtitleIndex++,
+          startTime: startTime,
+          endTime: endTime,
+          text: text,
+        ),
+      );
+    }
+
+    return subtitles;
+  }
+
+  /// Split an ASS Dialogue payload according to the declared Format row.
+  ///
+  /// Fields before Text are consumed from the left and fields after Text are
+  /// consumed from the right. Everything left in the middle belongs to Text,
+  /// so commas inside subtitle dialogue are preserved even when Text is not
+  /// the final declared field.
+  static List<String> _splitAssLine(
+    String line, {
+    required int fieldCount,
+    required int textIndex,
+  }) {
+    if (fieldCount <= 0 || textIndex < 0 || textIndex >= fieldCount) {
+      return const [];
+    }
+
+    final prefix = <String>[];
+    var left = 0;
+
+    for (var i = 0; i < textIndex; i++) {
+      final comma = line.indexOf(',', left);
+      if (comma < 0) return const [];
+      prefix.add(line.substring(left, comma).trim());
+      left = comma + 1;
+    }
+
+    final suffix = <String>[];
+    var right = line.length;
+
+    for (var i = fieldCount - 1; i > textIndex; i--) {
+      final comma = line.lastIndexOf(',', right - 1);
+      if (comma < left) return const [];
+      suffix.add(line.substring(comma + 1, right).trim());
+      right = comma;
+    }
+
+    return <String>[
+      ...prefix,
+      line.substring(left, right).trim(),
+      ...suffix.reversed,
+    ];
+  }
+
+  // Convert ASS time format (h:mm:ss.cc) to standard format (hh:mm:ss.sss)
         startTime = _convertAssTime(startTime);
         endTime = _convertAssTime(endTime);
         
