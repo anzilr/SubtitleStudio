@@ -1,21 +1,11 @@
-Riverpod migration checkpoint 6
+Riverpod migration checkpoint 6b
 Date: 2026-09-26
 Checks:
 - flutter analyze
 - flutter test
 
-Scope since checkpoint 5b:
-- Fix media-path changes to reuse late-final Player/VideoController
-- Restore saved audio track from Media Kit track readiness instead of fixed delay
-- Make SRT parser tolerant of BOM, optional indexes, mixed separators and missing blank gaps
-- Make WebVTT parser support short timestamps, cue identifiers/settings and metadata blocks
-- Batch AppLogger file writes and serialize flushes
-- Extract repeat-range dialog from video player
-- Split custom controls into Dart part file
-- Split fullscreen controls into Dart part file
-- Split remaining player controls into Dart part file
-- Extract Editor custom scrollbar widget
-- Await startup intent resolution before splash navigation
-- Fix permission fallback async/mounted handling
+Corrections after checkpoint 6:
+- Fixed Dart directive order after video part-file extraction
+- Removed stale log export-path field/helper references
 
 Platform builds intentionally disabled.
