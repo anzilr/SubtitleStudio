@@ -1089,10 +1089,12 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
 
   Future<void> _scrollToIndexWithLoading(int indx) async {
     print('Scrolling to index: $indx');
-    int index = indx - 1;
-    
-    // Validate index first
-    if (index < -1 || index >= subtitleLines.length) {
+    // This helper accepts a 1-based cue number and converts it once to the
+    // zero-based list index required by ScrollablePositionedList.
+    final index = indx - 1;
+
+    // Cue number 0 would become -1 and must never reach scrollTo().
+    if (index < 0 || index >= subtitleLines.length) {
       return;
     }
     
@@ -5030,7 +5032,7 @@ Future<void> _deleteSelectedSubtitles() async {
     });
 
     return PopScope(
-        canPop: !_isSelectionMode, // Prevent pop when in selection mode
+        canPop: !_isSelectionMode && !_isRangeSelectionActive, // Keep selection modes in-screen
         onPopInvokedWithResult: (bool didPop, Object? result) async {
         // Pause video when going back
         if (_videoPlayerKey.currentState != null &&
