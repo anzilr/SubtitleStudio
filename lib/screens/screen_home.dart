@@ -39,6 +39,7 @@ import 'package:subtitle_studio/screens/screen_help.dart';      // Help document
 import 'package:subtitle_studio/screens/screen_source_view.dart'; // Source view screen
 import 'package:subtitle_studio/screens/home/home_controller.dart'; // Home Riverpod controller
 import 'package:subtitle_studio/screens/home/home_state.dart';  // Home screen State
+import 'package:subtitle_studio/screens/home/models/session_summary.dart';
 // Removed startup_permission_manager - not needed with pure SAF implementation
 import 'package:subtitle_studio/utils/file_picker_utils_saf.dart'; // File picker utilities
 import 'package:subtitle_studio/utils/saf_file_handler.dart';    // SAF file operations
@@ -812,56 +813,52 @@ class _HomeScreenContentState extends ConsumerState<_HomeScreenContent> with Tic
 
   Widget _buildSessionCard(Session session, int index, HomeState state) {
     final isLastEdited = state.lastEditedSession?.id == session.id;
-    
-    return FutureBuilder<Map<String, dynamic>>(
-      future: _getSessionInfo(session),
-      builder: (context, snapshot) {
-        final sessionInfo = snapshot.data ?? {};
-        
-        return Container(
-          margin: const EdgeInsets.only(bottom: 6),
-          child: Card(
-            elevation: isLastEdited ? 6 : 1,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: isLastEdited 
-                  ? BorderSide(
-                      color: Theme.of(context).colorScheme.primary,
-                      width: 1.5,
-                    )
-                  : BorderSide.none,
-            ),
-            child: InkWell(
-              onTap: () => _navigateToEditScreen(session),
-              borderRadius: BorderRadius.circular(12),
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min, // Ensure column takes minimum space
-                  children: [
-                    _buildSessionCardHeader(session, isLastEdited),
-                    const SizedBox(height: 8),
-                    Flexible( // Allow info section to shrink if needed
-                      child: _buildSessionCardInfo(sessionInfo, session),
-                    ),
-                  ],
+    final summary =
+        state.sessionSummaries[session.id] ?? SessionSummary.empty(session);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      child: Card(
+        elevation: isLastEdited ? 6 : 1,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: isLastEdited
+              ? BorderSide(
+                  color: Theme.of(context).colorScheme.primary,
+                  width: 1.5,
+                )
+              : BorderSide.none,
+        ),
+        child: InkWell(
+          onTap: () => _navigateToEditScreen(session),
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildSessionCardHeader(session, isLastEdited, summary),
+                const SizedBox(height: 8),
+                Flexible(
+                  child: _buildSessionCardInfo(summary, session),
                 ),
-              ),
+              ],
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
-  Widget _buildSessionCardHeader(Session session, bool isLastEdited) {
-    return FutureBuilder<bool>(
-      future: _isMSoneSubtitle(session),
-      builder: (context, snapshot) {
-        final isMSoneFile = snapshot.data ?? false;
-        
-        return Row(
+  Widget _buildSessionCardHeader(
+    Session session,
+    bool isLastEdited,
+    SessionSummary summary,
+  ) {
+    final isMSoneFile = summary.isMsoneSubtitle;
+
+    return Row(
           children: [
             Container(
               padding: const EdgeInsets.all(6),
@@ -998,13 +995,11 @@ class _HomeScreenContentState extends ConsumerState<_HomeScreenContent> with Tic
             ),
           ],
         );
-      },
-    );
   }
 
-  Widget _buildSessionCardInfo(Map<String, dynamic> sessionInfo, Session session) {
-    final totalLines = sessionInfo['totalLines'] ?? 0;
-    final editedLines = sessionInfo['editedLines'] ?? 0;
+  Widget _buildSessionCardInfo(SessionSummary summary, Session session) {
+    final totalLines = summary.totalLines;
+    final editedLines = summary.editedLines;
     final progress = totalLines > 0 ? editedLines / totalLines : 0.0;
     final iconColor = Theme.of(context).colorScheme.secondary.withValues(alpha: 0.95);
     
@@ -1070,7 +1065,7 @@ class _HomeScreenContentState extends ConsumerState<_HomeScreenContent> with Tic
                 child: _buildInfoItem(
                   icon: Icons.format_list_numbered,
                   label: 'Lines',
-                  value: '${sessionInfo['totalLines'] ?? 0}',
+                  value: '${summary.totalLines}',
                 ),
               ),
               _buildInfoDivider(),
@@ -1078,7 +1073,7 @@ class _HomeScreenContentState extends ConsumerState<_HomeScreenContent> with Tic
                 child: _buildInfoItem(
                   icon: Icons.edit_note,
                   label: 'Edited',
-                  value: '${sessionInfo['editedLines'] ?? 0}',
+                  value: '${summary.editedLines}',
                 ),
               ),
               _buildInfoDivider(),
@@ -1086,7 +1081,7 @@ class _HomeScreenContentState extends ConsumerState<_HomeScreenContent> with Tic
                 child: _buildInfoItem(
                   icon: Icons.my_location,
                   label: 'Last Line',
-                  value: '${sessionInfo['lastEditedIndex'] ?? 1}',
+                  value: '${summary.lastEditedIndex}',
                 ),
               ),
               _buildInfoDivider(),
@@ -1094,7 +1089,7 @@ class _HomeScreenContentState extends ConsumerState<_HomeScreenContent> with Tic
                 child: _buildInfoItem(
                   icon: Icons.language,
                   label: 'Languages',
-                  value: sessionInfo['languageCodes'] ?? 'EN',
+                  value: summary.languageCodes,
                 ),
               ),
             ],
@@ -1321,97 +1316,6 @@ class _HomeScreenContentState extends ConsumerState<_HomeScreenContent> with Tic
         ),
       ),
     );
-  }
-
-  Future<Map<String, dynamic>> _getSessionInfo(Session session) async {
-    return await ref.read(homeControllerProvider.notifier).getSessionInfo(session);
-  }
-
-  Future<bool> _isMSoneSubtitle(Session session) async {
-    return await ref.read(homeControllerProvider.notifier).isMSoneSubtitle(session);
-  }
-
-  Future<void> _navigateToEditScreen(Session session) async {
-    try {
-      await ref.read(homeControllerProvider.notifier).updateLastEditedSession(session.id);
-
-      if (!mounted) return;
-      await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => EditScreenBloc(
-            subtitleCollectionId: session.subtitleCollectionId,
-            lastEditedIndex: session.lastEditedIndex,
-            sessionId: session.id,
-          ),
-        ),
-      );
-
-      if (mounted) {
-        // Re-register HomeScreen shortcuts after returning from EditScreen
-        await _reRegisterHomeScreenShortcuts();
-        ref.read(homeControllerProvider.notifier).loadSessions();
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('Navigation error: $e');
-      }
-      if (mounted) {
-        ref.read(homeControllerProvider.notifier).loadSessions();
-      }
-    }
-  }
-
-  Future<void> _handleCreate() async {
-    try {
-      if (!mounted) return;
-      
-      // Capture cubit reference before opening bottom sheet
-      final controller = ref.read(homeControllerProvider.notifier);
-      
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        useSafeArea: true,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16.0)),
-        ),
-        builder: (context) => CreateSubtitleSheet(
-          onSubtitleCreated: (subtitleData) async {
-            if (subtitleData != null) {
-              controller.loadSessions();
-              
-              final createdSessionId = subtitleData['sessionId'];
-              if (createdSessionId is! int) {
-                throw StateError(
-                  'New subtitle creation did not return a valid session ID.',
-                );
-              }
-
-              await controller.updateLastEditedSession(createdSessionId);
-
-              if (mounted) {
-                final navigator = Navigator.of(context);
-                navigator.push(
-                  MaterialPageRoute(
-                    builder: (context) => EditSubtitleScreenBloc(
-                      subtitleId: subtitleData['subtitleCollectionId'],
-                      index: 1,
-                      sessionId: createdSessionId,
-                      isNewSubtitle: true,
-                      editMode: subtitleData['editMode'] ?? true,
-                    ),
-                  ),
-                );
-              }
-            }
-          },
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      SnackbarHelper.showError(context, 'Error: $e');
-    }
   }
 
   void _handleImport() {

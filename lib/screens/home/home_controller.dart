@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/database/models/preferences_model.dart';
 import 'package:subtitle_studio/screens/home/home_state.dart';
+import 'package:subtitle_studio/screens/home/models/session_summary.dart';
 import 'package:subtitle_studio/screens/home/repositories/session_repository.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 
@@ -43,6 +44,7 @@ class HomeController extends Notifier<HomeState> {
       final sessions = await _repository.fetchAllSessions();
       final lastEditedId = await _repository.getLastEditedSessionId();
       final sortOption = await PreferencesModel.getSessionSortOption();
+      final sessionSummaries = await _repository.fetchSessionSummaries(sessions);
 
       await logInfo(
         'HomeController: Fetched ${sessions.length} sessions, '
@@ -67,6 +69,7 @@ class HomeController extends Notifier<HomeState> {
         isLoading: false,
         recentSessions: sessions,
         lastEditedSession: lastEditedSession,
+        sessionSummaries: sessionSummaries,
         sortOption: sortOption,
         clearError: true,
       );
@@ -143,9 +146,13 @@ class HomeController extends Notifier<HomeState> {
 
       final shouldClearLastEdited =
           state.lastEditedSession?.id == session.id;
+      final updatedSummaries = Map<int, SessionSummary>.from(
+        state.sessionSummaries,
+      )..remove(session.id);
 
       state = state.copyWith(
         recentSessions: updatedSessions,
+        sessionSummaries: updatedSummaries,
         clearLastEditedSession: shouldClearLastEdited,
         clearError: true,
       );

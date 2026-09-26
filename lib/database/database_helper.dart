@@ -178,6 +178,13 @@ Future<List<SubtitleLine>> fetchSubtitleLines(int subtitleCollectionId) async {
   return subtitle?.lines ?? [];
 }
 
+Future<List<SubtitleCollection?>> fetchSubtitleCollectionsByIds(
+  List<int> subtitleCollectionIds,
+) async {
+  if (subtitleCollectionIds.isEmpty) return const [];
+  return isar.subtitleCollections.getAll(subtitleCollectionIds);
+}
+
 Future<int?> getLastEditedIndex(int sessionId) async {
   final session = await isar.sessions.get(sessionId);
   return session?.lastEditedIndex;

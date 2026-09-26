@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import '../../database/models/models.dart';
+import 'package:subtitle_studio/screens/home/models/session_summary.dart';
 
 /// Represents the state of the Home Screen
 /// 
@@ -23,6 +24,7 @@ class HomeState extends Equatable {
   final bool isLoading;
   final List<Session> recentSessions;
   final Session? lastEditedSession;
+  final Map<int, SessionSummary> sessionSummaries;
   final String searchQuery;
   final bool isFabExpanded;
   final SessionSortOption sortOption;
@@ -32,6 +34,7 @@ class HomeState extends Equatable {
     this.isLoading = true,
     this.recentSessions = const [],
     this.lastEditedSession,
+    this.sessionSummaries = const {},
     this.searchQuery = '',
     this.isFabExpanded = false,
     this.sortOption = SessionSortOption.lastOpened,
@@ -43,6 +46,7 @@ class HomeState extends Equatable {
         isLoading: true,
         recentSessions: [],
         lastEditedSession: null,
+        sessionSummaries: {},
         searchQuery: '',
         isFabExpanded: false,
         sortOption: SessionSortOption.lastOpened,
@@ -54,6 +58,7 @@ class HomeState extends Equatable {
     bool? isLoading,
     List<Session>? recentSessions,
     Session? lastEditedSession,
+    Map<int, SessionSummary>? sessionSummaries,
     String? searchQuery,
     bool? isFabExpanded,
     SessionSortOption? sortOption,
@@ -67,6 +72,7 @@ class HomeState extends Equatable {
       lastEditedSession: clearLastEditedSession
           ? null
           : (lastEditedSession ?? this.lastEditedSession),
+      sessionSummaries: sessionSummaries ?? this.sessionSummaries,
       searchQuery: searchQuery ?? this.searchQuery,
       isFabExpanded: isFabExpanded ?? this.isFabExpanded,
       sortOption: sortOption ?? this.sortOption,
@@ -136,6 +142,7 @@ class HomeState extends Equatable {
         isLoading,
         recentSessions,
         lastEditedSession,
+        sessionSummaries,
         searchQuery,
         isFabExpanded,
         sortOption,

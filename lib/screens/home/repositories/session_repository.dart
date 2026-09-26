@@ -1,5 +1,6 @@
 import 'package:subtitle_studio/database/database_helper.dart';
 import 'package:subtitle_studio/database/models/models.dart';
+import 'package:subtitle_studio/screens/home/models/session_summary.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 
 /// Repository for managing subtitle editing sessions
@@ -165,144 +166,62 @@ class SessionRepository {
     }
   }
   
-  /// Gets comprehensive information about a session
-  /// 
-  /// Returns a map containing:
-  /// - totalLines: Total number of subtitle lines
-  /// - editedLines: Number of edited lines
-  /// - lastEditedIndex: Index of last edited line
-  /// - languageCodes: Detected language codes (e.g., "EN/ML")
-  /// - languages: List of detected languages
-  /// 
-  /// Parameters:
-  /// - [session]: Session to analyze
-  Future<Map<String, dynamic>> getSessionInfo(Session session) async {
+  /// Loads all Home-card summaries with one Isar bulk collection read.
+  Future<Map<int, SessionSummary>> fetchSessionSummaries(
+    List<Session> sessions,
+  ) async {
+    if (sessions.isEmpty) return const {};
+
     try {
-      final subtitleLines = await fetchSubtitleLines(session.subtitleCollectionId);
-      final editedCount = subtitleLines
-          .where((line) => line.edited != null && line.edited!.isNotEmpty)
-          .length;
-      
-      // Language detection
-      final detectedLanguageCodes = _detectLanguages(subtitleLines);
-      
-      return {
-        'totalLines': subtitleLines.length,
-        'editedLines': editedCount,
-        'lastEditedIndex': session.lastEditedIndex ?? 1,
-        'languageCodes': detectedLanguageCodes.join('/'),
-        'languages': detectedLanguageCodes.toList(),
-      };
+      final collectionIds = sessions
+          .map((session) => session.subtitleCollectionId)
+          .toList(growable: false);
+      final collections = await fetchSubtitleCollectionsByIds(collectionIds);
+
+      final summaries = <int, SessionSummary>{};
+      for (int i = 0; i < sessions.length; i++) {
+        final session = sessions[i];
+        final collection = i < collections.length ? collections[i] : null;
+        summaries[session.id] = collection == null
+            ? SessionSummary.empty(session)
+            : SessionSummaryAnalyzer.analyze(session, collection.lines);
+      }
+      return summaries;
     } catch (e, stackTrace) {
       await logError(
-        'SessionRepository: Error getting session info for: ${session.fileName}',
-        context: 'getSessionInfo',
+        'SessionRepository: Error loading session summaries',
+        context: 'fetchSessionSummaries',
         error: e,
         stackTrace: stackTrace,
       );
-      
-      // Return default values on error
+
       return {
-        'totalLines': 0,
-        'editedLines': 0,
-        'lastEditedIndex': 1,
-        'languageCodes': 'EN',
-        'languages': ['EN'],
+        for (final session in sessions)
+          session.id: SessionSummary.empty(session),
       };
     }
   }
-  
-  /// Detects if a session contains MSone subtitles
-  /// 
-  /// Checks for MSone-specific keywords in the last 5 lines
-  /// and in the filename.
-  /// 
-  /// Parameters:
-  /// - [session]: Session to check
-  /// 
-  /// Returns true if MSone content is detected.
+
+  /// Compatibility helper for callers that need one session summary.
+  Future<SessionSummary> getSessionSummary(Session session) async {
+    final summaries = await fetchSessionSummaries([session]);
+    return summaries[session.id] ?? SessionSummary.empty(session);
+  }
+
+  Future<Map<String, dynamic>> getSessionInfo(Session session) async {
+    final summary = await getSessionSummary(session);
+    return {
+      'totalLines': summary.totalLines,
+      'editedLines': summary.editedLines,
+      'lastEditedIndex': summary.lastEditedIndex,
+      'languageCodes': summary.languageCodes,
+      'languages': summary.languages,
+    };
+  }
+
   Future<bool> isMSoneSubtitle(Session session) async {
-    try {
-      final subtitleLines = await fetchSubtitleLines(session.subtitleCollectionId);
-      
-      // Check last 5 lines for MSone keywords
-      final linesToCheck = subtitleLines.length >= 5
-          ? subtitleLines.sublist(subtitleLines.length - 5)
-          : subtitleLines;
-      
-      for (final line in linesToCheck) {
-        final text = (line.original + (line.edited ?? '')).toLowerCase();
-        if (text.contains('www.malayalamsubtitles.org') ||
-            text.contains('msone') ||
-            text.contains('msonepage')) {
-          return true;
-        }
-      }
-      
-      // Fallback to filename check
-      final fileName = session.fileName.toLowerCase();
-      return fileName.contains('malayalamsubtitles') || fileName.contains('msone');
-    } catch (e, stackTrace) {
-      await logWarning(
-        'SessionRepository: Error detecting MSone subtitle for: ${session.fileName}',
-        context: 'isMSoneSubtitle',
-        stackTrace: stackTrace,
-      );
-      
-      // Fallback to filename check on error
-      final fileName = session.fileName.toLowerCase();
-      return fileName.contains('malayalamsubtitles') || fileName.contains('msone');
-    }
+    final summary = await getSessionSummary(session);
+    return summary.isMsoneSubtitle;
   }
-  
-  /// Detects languages present in subtitle lines
-  /// 
-  /// Analyzes the first 10 lines for common scripts:
-  /// - Malayalam, Hindi, Arabic, Chinese, Japanese, Korean, Russian
-  /// 
-  /// Returns a set of language codes (e.g., {"EN", "ML", "HI"})
-  Set<String> _detectLanguages(List<SubtitleLine> subtitleLines) {
-    Set<String> detectedLanguageCodes = {'EN'}; // Default English
-    
-    // Check first 10 lines for performance
-    final linesToCheck = subtitleLines.length >= 10
-        ? subtitleLines.take(10)
-        : subtitleLines;
-    
-    for (final line in linesToCheck) {
-      final text = line.original + (line.edited ?? '');
-      
-      if (_containsScript(text, 'Malayalam')) detectedLanguageCodes.add('ML');
-      if (_containsScript(text, 'Hindi')) detectedLanguageCodes.add('HI');
-      if (_containsScript(text, 'Arabic')) detectedLanguageCodes.add('AR');
-      if (_containsScript(text, 'Chinese')) detectedLanguageCodes.add('ZH');
-      if (_containsScript(text, 'Japanese')) detectedLanguageCodes.add('JA');
-      if (_containsScript(text, 'Korean')) detectedLanguageCodes.add('KO');
-      if (_containsScript(text, 'Russian')) detectedLanguageCodes.add('RU');
-    }
-    
-    return detectedLanguageCodes;
-  }
-  
-  /// Checks if text contains characters from a specific script
-  bool _containsScript(String text, String script) {
-    switch (script) {
-      case 'Malayalam':
-        return RegExp(r'[\u0D00-\u0D7F]').hasMatch(text);
-      case 'Hindi':
-        return RegExp(r'[\u0900-\u097F]').hasMatch(text);
-      case 'Arabic':
-        return RegExp(r'[\u0600-\u06FF]').hasMatch(text);
-      case 'Chinese':
-        return RegExp(r'[\u4E00-\u9FFF]').hasMatch(text);
-      case 'Japanese':
-        return RegExp(r'[\u3040-\u309F\u30A0-\u30FF]').hasMatch(text);
-      case 'Korean':
-        return RegExp(r'[\uAC00-\uD7AF]').hasMatch(text);
-      case 'Russian':
-        return RegExp(r'[\u0400-\u04FF]').hasMatch(text);
-      default:
-        return false;
-    }
-  }
+
 }
