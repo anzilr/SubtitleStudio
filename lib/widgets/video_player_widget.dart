@@ -4176,11 +4176,13 @@ class _FullscreenControlsWidgetState extends State<_FullscreenControlsWidget> {
   // Cache active subtitle to avoid expensive searches every frame
   Subtitle? _cachedActiveSubtitle;
   Duration _cachedPosition = Duration.zero;
-  int _cachedSubtitlesVersion = 0;
+  SubtitleTimelineIndex _fullscreenSubtitleIndex =
+      const SubtitleTimelineIndex.empty();
 
   @override
   void initState() {
     super.initState();
+    _fullscreenSubtitleIndex = SubtitleTimelineIndex(widget.subtitles);
     _resetHideTimer();
   }
 
@@ -4193,11 +4195,11 @@ class _FullscreenControlsWidgetState extends State<_FullscreenControlsWidget> {
   @override
   void didUpdateWidget(_FullscreenControlsWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    
-    // Invalidate cache when subtitles change (not just position)
-    if (widget.subtitles != oldWidget.subtitles ||
-        widget.secondarySubtitles != oldWidget.secondarySubtitles) {
-      _cachedSubtitlesVersion++; // Force cache invalidation
+
+    if (widget.subtitles != oldWidget.subtitles) {
+      _fullscreenSubtitleIndex = SubtitleTimelineIndex(widget.subtitles);
+      _cachedActiveSubtitle = null;
+      _cachedPosition = const Duration(milliseconds: -1000);
     }
   }
 
@@ -4686,18 +4688,17 @@ class _FullscreenControlsWidgetState extends State<_FullscreenControlsWidget> {
   /// Get cached active subtitle to avoid expensive searches every frame
   /// When multiple subtitles overlap, returns the first one for marking operations
   Subtitle? _getCachedActiveSubtitle() {
-    // Only recalculate if position changed by more than 100ms or subtitles changed
-    final positionDiff = (widget.position - _cachedPosition).inMilliseconds.abs();
-    final subtitlesHash = widget.subtitles.length;
-    
-    if (positionDiff > 100 || _cachedSubtitlesVersion != subtitlesHash) {
-      // Get all active subtitles and take the first one for marking
-      final activeSubtitles = _findAllActiveSubtitles(widget.subtitles, widget.position);
-      _cachedActiveSubtitle = activeSubtitles.isEmpty ? null : activeSubtitles.first;
+    final positionDiff =
+        (widget.position - _cachedPosition).inMilliseconds.abs();
+
+    if (positionDiff > 100) {
+      final activeSubtitles =
+          _fullscreenSubtitleIndex.findActive(widget.position);
+      _cachedActiveSubtitle =
+          activeSubtitles.isEmpty ? null : activeSubtitles.first;
       _cachedPosition = widget.position;
-      _cachedSubtitlesVersion = subtitlesHash;
     }
-    
+
     return _cachedActiveSubtitle;
   }
 
@@ -4748,63 +4749,6 @@ class _FullscreenControlsWidgetState extends State<_FullscreenControlsWidget> {
         ),
       ),
     );
-  }
-  
-  /// Find all active subtitles at the current position (handles overlaps)
-  /// Uses binary search + bidirectional scanning for efficiency
-  List<Subtitle> _findAllActiveSubtitles(List<Subtitle> subtitles, Duration position) {
-    if (subtitles.isEmpty) return [];
-    
-    final positionMs = position.inMilliseconds;
-    
-    // Binary search to find first subtitle that could be active
-    int left = 0;
-    int right = subtitles.length - 1;
-    int firstCandidate = -1;
-    
-    while (left <= right) {
-      final mid = (left + right) ~/ 2;
-      final subtitle = subtitles[mid];
-      
-      if (positionMs >= subtitle.start.inMilliseconds && 
-          positionMs <= subtitle.end.inMilliseconds) {
-        firstCandidate = mid;
-        right = mid - 1; // Continue searching left for earlier matches
-      } else if (positionMs < subtitle.start.inMilliseconds) {
-        right = mid - 1;
-      } else {
-        left = mid + 1;
-      }
-    }
-    
-    if (firstCandidate == -1) return [];
-    
-    // Collect all active subtitles starting from firstCandidate
-    final activeSubtitles = <Subtitle>[];
-    
-    // Scan backwards from firstCandidate
-    for (int i = firstCandidate; i >= 0; i--) {
-      final subtitle = subtitles[i];
-      if (positionMs >= subtitle.start.inMilliseconds && 
-          positionMs <= subtitle.end.inMilliseconds) {
-        activeSubtitles.insert(0, subtitle);
-      } else if (positionMs > subtitle.end.inMilliseconds) {
-        break; // No more matches possible going backwards
-      }
-    }
-    
-    // Scan forwards from firstCandidate + 1
-    for (int i = firstCandidate + 1; i < subtitles.length; i++) {
-      final subtitle = subtitles[i];
-      if (positionMs >= subtitle.start.inMilliseconds && 
-          positionMs <= subtitle.end.inMilliseconds) {
-        activeSubtitles.add(subtitle);
-      } else if (positionMs < subtitle.start.inMilliseconds) {
-        break; // No more matches possible going forward
-      }
-    }
-    
-    return activeSubtitles;
   }
   
   // Method to toggle mark status using the callback
