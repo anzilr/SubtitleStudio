@@ -6,7 +6,7 @@ import 'package:subtitle_studio/utils/logging_helpers.dart';
 import 'package:subtitle_studio/services/checkpoint_manager.dart';
 import 'package:subtitle_studio/utils/time_parser.dart';
 import 'package:subtitle_studio/main.dart'; // For isar instance
-import '../../screen_edit.dart'; // For SubtitleEntry
+import 'package:subtitle_studio/screens/edit/models/subtitle_entry.dart';
 
 /// Repository layer for subtitle operations
 /// 

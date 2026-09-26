@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/widgets/video_player_widget.dart'; // For Subtitle
 import 'package:subtitle_studio/utils/subtitle_parser.dart'; // For SimpleSubtitleLine
-import '../screen_edit.dart'; // For SubtitleEntry
+import 'package:subtitle_studio/screens/edit/models/subtitle_entry.dart';
 
 /// Immutable state model for the EditScreen
 /// 

@@ -6,7 +6,7 @@ import 'package:subtitle_studio/screens/edit/repositories/screen_repository.dart
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 import 'package:subtitle_studio/widgets/video_player_widget.dart';
 import 'package:subtitle_studio/utils/subtitle_parser.dart';
-import 'package:subtitle_studio/screens/screen_edit.dart'; // For SubtitleEntry
+import 'package:subtitle_studio/screens/edit/models/subtitle_entry.dart';
 
 /// Cubit for managing the Edit Screen state
 /// 

@@ -60,6 +60,7 @@ import 'package:subtitle_studio/main.dart';
 import 'msone_submission_screen.dart';
 import 'package:subtitle_studio/screens/edit/edit_cubit.dart';
 import 'package:subtitle_studio/screens/edit/edit_state.dart';
+import 'package:subtitle_studio/screens/edit/models/subtitle_entry.dart';
 import 'package:subtitle_studio/features/waveform/bloc/waveform_bloc.dart';
 import 'package:subtitle_studio/features/waveform/bloc/waveform_event.dart';
 import 'package:subtitle_studio/features/waveform/bloc/waveform_state.dart';
@@ -90,57 +91,6 @@ class SubtitleController extends GetxController {
 
   void setSubtitleLines(List<SubtitleLine> lines) {
     subtitleLines.value = lines;
-  }
-}
-
-/// Represents a single subtitle entry with all its components for source view
-class SubtitleEntry {
-  String index;
-  String startTime;
-  String endTime;
-  String text;
-
-  SubtitleEntry({
-    required this.index,
-    required this.startTime,
-    required this.endTime,
-    required this.text,
-  });
-
-  /// Convert to SRT format string
-  String toSrtString() {
-    return '$index\n$startTime --> $endTime\n$text\n';
-  }
-
-  /// Parse a single SRT entry from text
-  static SubtitleEntry? fromSrtText(String srtText) {
-    final lines = srtText.trim().split('\n');
-    if (lines.length < 3) return null;
-
-    final index = lines[0].trim();
-    final timecode = lines[1].trim();
-    final text = lines.skip(2).join('\n').trim();
-
-    // Parse timecode
-    final timeParts = timecode.split(' --> ');
-    if (timeParts.length != 2) return null;
-
-    return SubtitleEntry(
-      index: index,
-      startTime: timeParts[0].trim(),
-      endTime: timeParts[1].trim(),
-      text: text,
-    );
-  }
-
-  /// Create from SubtitleLine
-  static SubtitleEntry fromSubtitleLine(SubtitleLine line, int index) {
-    return SubtitleEntry(
-      index: (index + 1).toString(),
-      startTime: line.startTime,
-      endTime: line.endTime,
-      text: line.edited ?? line.original,
-    );
   }
 }
 
