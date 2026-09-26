@@ -248,12 +248,12 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
           
           // Initialize waveform playback position to last edited line
           if (mounted && widget.lastEditedIndex! < subtitles.length) {
-            final startTime = parseTimeString(subtitles[widget.lastEditedIndex!].startTime);
-            setState(() {
-              _lastVideoPosition = startTime;
-            });
-            // Update waveform bloc with the position
-            ref.read(waveformControllerProvider.notifier).dispatch(UpdatePlaybackPosition(startTime));
+            final startTime =
+                parseTimeString(subtitles[widget.lastEditedIndex!].startTime);
+            _lastVideoPosition = startTime;
+            ref
+                .read(waveformControllerProvider.notifier)
+                .dispatch(UpdatePlaybackPosition(startTime));
           }
           
           // Wait for video player to be ready
@@ -1232,11 +1232,14 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
   }
 
   void _onVideoPositionChanged(Duration position) {
-    if (mounted) {
-      setState(() {
-        _lastVideoPosition = position;
-      });
-    }
+    if (!mounted) return;
+
+    // Playback callbacks are frequent. Updating this cache must not rebuild the
+    // entire Editor; Waveform owns its playback-position rendering state.
+    _lastVideoPosition = position;
+    ref
+        .read(waveformControllerProvider.notifier)
+        .dispatch(UpdatePlaybackPosition(position));
   }
 
   void _highlightIndex(int index) {
@@ -1259,12 +1262,10 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
       // This prevents the subtitle from disappearing when seeking to exact start time
       final seekPosition = startTime + const Duration(milliseconds: 50);
       _videoPlayerKey.currentState!.seekTo(seekPosition);
-      // Update _lastVideoPosition for video sync
-      if (mounted) {
-        setState(() {
-          _lastVideoPosition = seekPosition;
-        });
-      }
+      _lastVideoPosition = seekPosition;
+      ref
+          .read(waveformControllerProvider.notifier)
+          .dispatch(UpdatePlaybackPosition(seekPosition));
       _onSubtitleChange(index);
     }
   }
