@@ -307,6 +307,60 @@ Future<bool> deleteSubtitleLineDB(int subtitleId, int lineIndex) async {
   });
 }
 
+
+/// Deletes multiple subtitle lines in one database transaction.
+///
+/// Indices are zero-based positions from the pre-delete collection. Invalid
+/// indices are reported as failures. Duplicate indices are ignored so a cue can
+/// never cause an adjacent cue to be deleted accidentally.
+Future<Map<String, int>> deleteSubtitleLinesDB(
+  int subtitleId,
+  Iterable<int> lineIndices,
+) async {
+  final requestedIndices = lineIndices.toSet();
+
+  if (requestedIndices.isEmpty) {
+    return const {'success': 0, 'failed': 0};
+  }
+
+  return await isar.writeTxn(() async {
+    final subtitle = await isar.subtitleCollections.get(subtitleId);
+    if (subtitle == null) {
+      return {
+        'success': 0,
+        'failed': requestedIndices.length,
+      };
+    }
+
+    final validIndices = requestedIndices
+        .where((index) => index >= 0 && index < subtitle.lines.length)
+        .toSet();
+
+    final failedCount = requestedIndices.length - validIndices.length;
+    if (validIndices.isEmpty) {
+      return {
+        'success': 0,
+        'failed': failedCount,
+      };
+    }
+
+    final remainingLines = <SubtitleLine>[];
+    for (int index = 0; index < subtitle.lines.length; index++) {
+      if (!validIndices.contains(index)) {
+        remainingLines.add(subtitle.lines[index]);
+      }
+    }
+
+    subtitle.lines = sortAndReindexSubtitleLines(remainingLines);
+    await isar.subtitleCollections.put(subtitle);
+
+    return {
+      'success': validIndices.length,
+      'failed': failedCount,
+    };
+  });
+}
+
 Future<bool> splitSubtitleLine(int subtitleId, SubtitleLine firstPart,
     SubtitleLine secondPart, int originalIndex) async {
   try {

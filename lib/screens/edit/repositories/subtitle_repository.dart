@@ -103,38 +103,30 @@ class SubtitleRepository {
     }
   }
 
-  /// Batch delete multiple subtitle lines
-  /// Returns a map with 'success' and 'failed' counts
+  /// Batch delete multiple subtitle lines using one collection rewrite.
+  ///
+  /// [createCheckpoint] is retained for API compatibility; checkpoint creation
+  /// is coordinated by the calling workflow because this repository method
+  /// does not have the session ID required to create one.
   Future<Map<String, int>> batchDeleteLines(
     int collectionId,
-    List<int> indices,
-    {bool createCheckpoint = true}
-  ) async {
-    logInfo('SubtitleRepository: Batch deleting ${indices.length} lines from collection $collectionId');
-    
-    int successCount = 0;
-    int failCount = 0;
-    
-    // Sort indices in descending order to maintain validity during deletion
-    final sortedIndices = indices.toList()..sort((a, b) => b.compareTo(a));
-    
+    List<int> indices, {
+    bool createCheckpoint = true,
+  }) async {
+    logInfo(
+      'SubtitleRepository: Batch deleting ${indices.length} lines '
+      'from collection $collectionId',
+    );
+
     try {
-      for (final index in sortedIndices) {
-        try {
-          final success = await deleteSubtitleLineDB(collectionId, index);
-          if (success) {
-            successCount++;
-          } else {
-            failCount++;
-          }
-        } catch (e) {
-          logError('SubtitleRepository: Error deleting index $index: $e');
-          failCount++;
-        }
-      }
-      
-      logInfo('SubtitleRepository: Batch delete completed - Success: $successCount, Failed: $failCount');
-      return {'success': successCount, 'failed': failCount};
+      final result = await deleteSubtitleLinesDB(collectionId, indices);
+
+      logInfo(
+        'SubtitleRepository: Batch delete completed - '
+        'Success: ${result['success']}, Failed: ${result['failed']}',
+      );
+
+      return result;
     } catch (e) {
       logError('SubtitleRepository: Batch delete error: $e');
       rethrow;
