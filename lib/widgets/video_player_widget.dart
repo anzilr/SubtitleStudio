@@ -253,8 +253,9 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> with AutomaticKeep
   double _currentVolume = 100.0;
   
   // Audio track initialization state
-  /// Flag to prevent saving during initial track setup
+  /// Flag to prevent saving during initial track setup.
   bool _isInitializingTracks = true;
+  bool _audioTrackRestoreInProgress = false;
   
   // Removed rebuild counter for better performance
   // int _buildCounter = 0;
@@ -291,12 +292,11 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> with AutomaticKeep
       updateSecondarySubtitles(widget.secondarySubtitles);
     }
 
-    // Update video if path changed
+    // Reuse the existing Player when the media path changes. _player and
+    // _controller are late final and must only be initialized once.
     if (widget.videoPath != oldWidget.videoPath) {
-      debugPrint('VideoPlayer: Video path changed, reinitializing');
-      _cachedFramerate = null;
-      _framerateFuture = null;
-      _initializePlayer();
+      debugPrint('VideoPlayer: Video path changed, opening new media');
+      updateVideo(widget.videoPath);
     }
   }
 
@@ -833,11 +833,16 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> with AutomaticKeep
   void updateVideo(String newPath) async {
     _cachedFramerate = null;
     _framerateFuture = null;
+    _audioTrackRestoreInProgress = false;
 
-    // Reset initialization flag for new video
-    setState(() {
-      _isInitializingTracks = true;
-    });
+    // Reset track restoration state for the new media.
+    if (mounted) {
+      setState(() {
+        _isInitializingTracks = true;
+        _availableAudioTracks = [];
+        _availableSubtitleTracks = [];
+      });
+    }
     
     _player.stop();
     _player.open(Media(newPath));
@@ -849,9 +854,7 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> with AutomaticKeep
     } catch (e) {
       debugPrint('Error clearing audio track selection: $e');
     }
-    
-    // Load saved track for new video (if any)
-    _loadSavedAudioTrack();
+
   }
 
   void updateSubtitles(List<Subtitle> newSubtitles) {
@@ -980,7 +983,8 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> with AutomaticKeep
       }
     });
     
-    // Set up audio tracks listener
+    // Set up audio tracks listener. Saved audio selection is restored only
+    // after the player reports actual tracks, avoiding fixed-delay races.
     _tracksSubscription = _player.stream.tracks.listen((tracks) {
       if (!mounted) return;
       try {
@@ -988,6 +992,10 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> with AutomaticKeep
           _availableAudioTracks = tracks.audio;
           _availableSubtitleTracks = tracks.subtitle;
         });
+
+        if (_isInitializingTracks && tracks.audio.isNotEmpty) {
+          unawaited(_restoreSavedAudioTrack(tracks.audio));
+        }
       } catch (e) {
         debugPrint('Error in tracks listener: $e');
       }
@@ -1017,9 +1025,7 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> with AutomaticKeep
     // Note: This is called immediately, but volume may not be fully applied
     // until the player is ready. A second call is made in the width listener.
     _player.setVolume(_currentVolume);
-    
-    // Load and apply saved audio track after tracks are available
-    _loadSavedAudioTrack();
+
   }
 
   // Performance optimization: Track current active subtitles to avoid unnecessary rebuilds
@@ -1225,54 +1231,46 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> with AutomaticKeep
     }
   }
   
-  /// Load and apply saved audio track
-  Future<void> _loadSavedAudioTrack() async {
+  /// Restore the saved audio track after Media Kit reports tracks.
+  Future<void> _restoreSavedAudioTrack(
+    List<AudioTrack> availableTracks,
+  ) async {
+    if (!_isInitializingTracks ||
+        _audioTrackRestoreInProgress ||
+        availableTracks.isEmpty) {
+      return;
+    }
+
+    _audioTrackRestoreInProgress = true;
+
     try {
-      // Wait for tracks to be available
-      await Future.delayed(const Duration(milliseconds: 500));
-      
-      if (!mounted || _availableAudioTracks.isEmpty) {
-        // Even if no tracks available, enable saving for future changes
-        setState(() {
-          _isInitializingTracks = false;
-        });
-        return;
-      }
-      
-      // Get saved audio track
-      final savedTrack = await PreferencesModel.getSelectedAudioTrack(widget.subtitleCollectionId);
-      final savedTrackId = savedTrack['id'];
-      
-      if (savedTrackId == null) {
-        // No saved track, use default and enable saving
-        debugPrint('No saved audio track found, using default');
-        setState(() {
-          _isInitializingTracks = false;
-        });
-        return;
-      }
-      
-      // Find matching track in available tracks
-      final matchingTrack = _availableAudioTracks.firstWhere(
-        (track) => track.id == savedTrackId,
-        orElse: () => _availableAudioTracks.first,
+      final savedTrack = await PreferencesModel.getSelectedAudioTrack(
+        widget.subtitleCollectionId,
       );
-      
-      // Apply the track if it's different from current
+      if (!mounted) return;
+
+      final savedTrackId = savedTrack['id'];
+      if (savedTrackId == null) {
+        debugPrint('No saved audio track found, using default');
+        return;
+      }
+
+      final matchingTrack = availableTracks.firstWhere(
+        (track) => track.id == savedTrackId,
+        orElse: () => availableTracks.first,
+      );
+
       if (matchingTrack.id != _currentAudioTrack?.id) {
         await _player.setAudioTrack(matchingTrack);
-        debugPrint('Restored audio track: ${matchingTrack.title} (${matchingTrack.language})');
-      } else {
-        debugPrint('Audio track already set to: ${matchingTrack.title} (${matchingTrack.language})');
+        debugPrint(
+          'Restored audio track: '
+          '${matchingTrack.title} (${matchingTrack.language})',
+        );
       }
-      
-      // Enable saving after restoration is complete
-      setState(() {
-        _isInitializingTracks = false;
-      });
     } catch (e) {
-      debugPrint('Error loading saved audio track: $e');
-      // Enable saving even on error
+      debugPrint('Error restoring saved audio track: $e');
+    } finally {
+      _audioTrackRestoreInProgress = false;
       if (mounted) {
         setState(() {
           _isInitializingTracks = false;
@@ -1280,7 +1278,7 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> with AutomaticKeep
       }
     }
   }
-  
+
   /// Get all available audio tracks in the current video
   /// Returns empty list if no tracks are available or video is not loaded
   List<AudioTrack> getAvailableAudioTracks() {
