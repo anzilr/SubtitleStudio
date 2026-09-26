@@ -1196,6 +1196,9 @@ class _DummyTextInputClient implements TextInputClient {
   void insertContent(KeyboardInsertedContent content) {
     // Empty implementation for dummy client
   }
+
+  @override
+  void onFocusReceived() {}
 }
 
 class DictionaryResult {
