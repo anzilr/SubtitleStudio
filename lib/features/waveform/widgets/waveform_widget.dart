@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:subtitle_studio/features/waveform/bloc/waveform_bloc.dart';
+import 'package:subtitle_studio/features/waveform/providers/waveform_controller.dart';
 import 'package:subtitle_studio/features/waveform/bloc/waveform_state.dart';
 import 'package:subtitle_studio/features/waveform/bloc/waveform_event.dart';
 import 'package:subtitle_studio/features/waveform/widgets/waveform_painter.dart';
@@ -17,7 +17,7 @@ import 'package:subtitle_studio/database/database_helper.dart' as db_helper;
 import 'package:subtitle_studio/services/checkpoint_manager.dart';
 
 /// Main waveform visualization widget with interaction support
-class WaveformWidget extends StatefulWidget {
+class WaveformWidget extends riverpod.ConsumerStatefulWidget {
   final List<SubtitleLine> subtitles;
   final Duration? playbackPosition;
   final Function(Duration)? onSeek;
@@ -44,10 +44,10 @@ class WaveformWidget extends StatefulWidget {
   });
 
   @override
-  State<WaveformWidget> createState() => _WaveformWidgetState();
+  riverpod.ConsumerState<WaveformWidget> createState() => _WaveformWidgetState();
 }
 
-class _WaveformWidgetState extends State<WaveformWidget> {
+class _WaveformWidgetState extends riverpod.ConsumerState<WaveformWidget> {
   // Cache current subtitles for change detection
   List<SubtitleLine> _currentSubtitles = [];
   
@@ -99,7 +99,7 @@ class _WaveformWidgetState extends State<WaveformWidget> {
     // Update playback position if changed
     if (widget.playbackPosition != oldWidget.playbackPosition &&
         widget.playbackPosition != null) {
-      context.read<WaveformBloc>().add(
+      ref.read(waveformControllerProvider.notifier).dispatch(
             UpdatePlaybackPosition(widget.playbackPosition!),
           );
     }
@@ -149,27 +149,25 @@ class _WaveformWidgetState extends State<WaveformWidget> {
       });
       
       // Force waveform repaint
-      context.read<WaveformBloc>().add(const ForceRepaint());
+      ref.read(waveformControllerProvider.notifier).dispatch(const ForceRepaint());
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<WaveformBloc, WaveformState>(
-      builder: (context, state) {
-        if (state is WaveformInitial) {
-          return _buildEmptyState();
-        } else if (state is WaveformLoading) {
-          return _buildLoadingState(state);
-        } else if (state is WaveformError) {
-          return _buildErrorState(state);
-        } else if (state is WaveformReady) {
-          return _buildWaveformView(state);
-        }
+    final state = ref.watch(waveformControllerProvider);
 
-        return const SizedBox.shrink();
-      },
-    );
+    if (state is WaveformInitial) {
+      return _buildEmptyState();
+    } else if (state is WaveformLoading) {
+      return _buildLoadingState(state);
+    } else if (state is WaveformError) {
+      return _buildErrorState(state);
+    } else if (state is WaveformReady) {
+      return _buildWaveformView(state);
+    }
+
+    return const SizedBox.shrink();
   }
 
   Widget _buildEmptyState() {
@@ -317,7 +315,7 @@ class _WaveformWidgetState extends State<WaveformWidget> {
           // Account for border and vertical zoom bar width
           final width = renderBox.size.width - 50; // 50px for vertical zoom bar and borders
           if (width != state.viewportWidth) {
-            context.read<WaveformBloc>().add(UpdateViewportWidth(width));
+            ref.read(waveformControllerProvider.notifier).dispatch(UpdateViewportWidth(width));
           }
         }
       }
@@ -366,7 +364,7 @@ class _WaveformWidgetState extends State<WaveformWidget> {
                         icon: const Icon(Icons.remove, size: 20),
                         tooltip: 'Zoom Out',
                         onPressed: state.canZoomOut
-                            ? () => context.read<WaveformBloc>().add(const ZoomOut())
+                            ? () => ref.read(waveformControllerProvider.notifier).dispatch(const ZoomOut())
                             : null,
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
@@ -397,12 +395,12 @@ class _WaveformWidgetState extends State<WaveformWidget> {
                                 if (diff < 0) {
                                   // Index decreased = zoom in (more detail)
                                   for (int i = 0; i < -diff; i++) {
-                                    context.read<WaveformBloc>().add(const ZoomIn());
+                                    ref.read(waveformControllerProvider.notifier).dispatch(const ZoomIn());
                                   }
                                 } else if (diff > 0) {
                                   // Index increased = zoom out (less detail)
                                   for (int i = 0; i < diff; i++) {
-                                    context.read<WaveformBloc>().add(const ZoomOut());
+                                    ref.read(waveformControllerProvider.notifier).dispatch(const ZoomOut());
                                   }
                                 }
                               } : null,
@@ -415,7 +413,7 @@ class _WaveformWidgetState extends State<WaveformWidget> {
                         icon: const Icon(Icons.add, size: 20),
                         tooltip: 'Zoom In',
                         onPressed: state.canZoomIn
-                            ? () => context.read<WaveformBloc>().add(const ZoomIn())
+                            ? () => ref.read(waveformControllerProvider.notifier).dispatch(const ZoomIn())
                             : null,
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
@@ -454,7 +452,7 @@ class _WaveformWidgetState extends State<WaveformWidget> {
                           color: state.allowOverlap ? Colors.orange : Colors.grey,
                         ),
                         tooltip: state.allowOverlap ? 'Overlap Enabled' : 'Overlap Disabled',
-                        onPressed: () => context.read<WaveformBloc>().add(const ToggleOverlapMode()),
+                        onPressed: () => ref.read(waveformControllerProvider.notifier).dispatch(const ToggleOverlapMode()),
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                       ),
@@ -471,7 +469,7 @@ class _WaveformWidgetState extends State<WaveformWidget> {
                           ),
                         ),
                         tooltip: state.magnetSnapEnabled ? 'Magnet Snap Enabled' : 'Magnet Snap Disabled',
-                        onPressed: () => context.read<WaveformBloc>().add(const ToggleMagnetSnap()),
+                        onPressed: () => ref.read(waveformControllerProvider.notifier).dispatch(const ToggleMagnetSnap()),
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                       ),
@@ -505,7 +503,7 @@ class _WaveformWidgetState extends State<WaveformWidget> {
                         IconButton(
                           icon: const Icon(Icons.close, size: 20, color: Colors.red),
                           tooltip: 'Cancel Edit Mode',
-                          onPressed: () => context.read<WaveformBloc>().add(const ExitTimeEditMode()),
+                          onPressed: () => ref.read(waveformControllerProvider.notifier).dispatch(const ExitTimeEditMode()),
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                         ),
@@ -524,7 +522,7 @@ class _WaveformWidgetState extends State<WaveformWidget> {
                         IconButton(
                           icon: const Icon(Icons.close, size: 20, color: Colors.red),
                           tooltip: 'Cancel Add Line Mode',
-                          onPressed: () => context.read<WaveformBloc>().add(const ExitAddLineMode()),
+                          onPressed: () => ref.read(waveformControllerProvider.notifier).dispatch(const ExitAddLineMode()),
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                         ),
@@ -559,7 +557,7 @@ class _WaveformWidgetState extends State<WaveformWidget> {
                     constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                     onSelected: (value) {
                       if (value == 'toggle_autoscroll') {
-                        context.read<WaveformBloc>().add(const ToggleAutoScroll());
+                        ref.read(waveformControllerProvider.notifier).dispatch(const ToggleAutoScroll());
                       } else if (value == 'settings') {
                         _openWaveformSettings();
                       }
@@ -753,7 +751,7 @@ class _WaveformWidgetState extends State<WaveformWidget> {
                         onPressed: state.verticalZoom < 3.0
                             ? () {
                                 final newZoom = (state.verticalZoom + 0.1).clamp(0.5, 3.0);
-                                context.read<WaveformBloc>().add(UpdateVerticalZoom(newZoom));
+                                ref.read(waveformControllerProvider.notifier).dispatch(UpdateVerticalZoom(newZoom));
                               }
                             : null,
                         padding: EdgeInsets.zero,
@@ -772,7 +770,7 @@ class _WaveformWidgetState extends State<WaveformWidget> {
                         onPressed: state.verticalZoom > 0.5
                             ? () {
                                 final newZoom = (state.verticalZoom - 0.1).clamp(0.5, 3.0);
-                                context.read<WaveformBloc>().add(UpdateVerticalZoom(newZoom));
+                                ref.read(waveformControllerProvider.notifier).dispatch(UpdateVerticalZoom(newZoom));
                               }
                             : null,
                         padding: EdgeInsets.zero,
@@ -821,7 +819,7 @@ class _WaveformWidgetState extends State<WaveformWidget> {
       // Horizontal scroll with mouse wheel
       final newScrollPosition =
           state.scrollPosition + event.scrollDelta.dy * 0.5;
-      context.read<WaveformBloc>().add(
+      ref.read(waveformControllerProvider.notifier).dispatch(
             ScrollSeekToTime(newScrollPosition),
           );
       
@@ -921,8 +919,8 @@ class _WaveformWidgetState extends State<WaveformWidget> {
       newStart = constrained.$1;
       newEnd = constrained.$2;
       
-      context.read<WaveformBloc>().add(UpdateTempStartTime(newStart));
-      context.read<WaveformBloc>().add(UpdateTempEndTime(newEnd));
+      ref.read(waveformControllerProvider.notifier).dispatch(UpdateTempStartTime(newStart));
+      ref.read(waveformControllerProvider.notifier).dispatch(UpdateTempEndTime(newEnd));
       return;
     }
     
@@ -944,8 +942,8 @@ class _WaveformWidgetState extends State<WaveformWidget> {
       newStart = constrained.$1;
       newEnd = constrained.$2;
       
-      context.read<WaveformBloc>().add(UpdateAddLineStartTime(newStart));
-      context.read<WaveformBloc>().add(UpdateAddLineEndTime(newEnd));
+      ref.read(waveformControllerProvider.notifier).dispatch(UpdateAddLineStartTime(newStart));
+      ref.read(waveformControllerProvider.notifier).dispatch(UpdateAddLineEndTime(newEnd));
       return;
     }
     
@@ -967,7 +965,7 @@ class _WaveformWidgetState extends State<WaveformWidget> {
       );
       adjustedTime = constrained.$1;
       
-      context.read<WaveformBloc>().add(UpdateTempStartTime(adjustedTime));
+      ref.read(waveformControllerProvider.notifier).dispatch(UpdateTempStartTime(adjustedTime));
       return;
     } else if (_isDraggingEndBar) {
       var adjustedTime = newTime;
@@ -986,7 +984,7 @@ class _WaveformWidgetState extends State<WaveformWidget> {
       );
       adjustedTime = constrained.$2;
       
-      context.read<WaveformBloc>().add(UpdateTempEndTime(adjustedTime));
+      ref.read(waveformControllerProvider.notifier).dispatch(UpdateTempEndTime(adjustedTime));
       return;
     }
     
@@ -1005,7 +1003,7 @@ class _WaveformWidgetState extends State<WaveformWidget> {
       );
       adjustedTime = constrained.$1;
       
-      context.read<WaveformBloc>().add(UpdateAddLineStartTime(adjustedTime));
+      ref.read(waveformControllerProvider.notifier).dispatch(UpdateAddLineStartTime(adjustedTime));
       return;
     } else if (_isDraggingAddLineEndBar) {
       var adjustedTime = newTime;
@@ -1021,7 +1019,7 @@ class _WaveformWidgetState extends State<WaveformWidget> {
       );
       adjustedTime = constrained.$2;
       
-      context.read<WaveformBloc>().add(UpdateAddLineEndTime(adjustedTime));
+      ref.read(waveformControllerProvider.notifier).dispatch(UpdateAddLineEndTime(adjustedTime));
       return;
     }
     
@@ -1032,7 +1030,7 @@ class _WaveformWidgetState extends State<WaveformWidget> {
     final newScrollPosition = state.scrollPosition - delta;
     
     // Update scroll position and seek video to center viewport time
-    context.read<WaveformBloc>().add(
+    ref.read(waveformControllerProvider.notifier).dispatch(
       ScrollSeekToTime(newScrollPosition),
     );
     
@@ -1087,9 +1085,9 @@ class _WaveformWidgetState extends State<WaveformWidget> {
           final startTime = _getViewportCenterTime(state);
           final endTime = startTime + const Duration(seconds: 2);
           
-          context.read<WaveformBloc>().add(const EnterAddLineMode());
-          context.read<WaveformBloc>().add(UpdateAddLineStartTime(startTime));
-          context.read<WaveformBloc>().add(UpdateAddLineEndTime(endTime));
+          ref.read(waveformControllerProvider.notifier).dispatch(const EnterAddLineMode());
+          ref.read(waveformControllerProvider.notifier).dispatch(UpdateAddLineStartTime(startTime));
+          ref.read(waveformControllerProvider.notifier).dispatch(UpdateAddLineEndTime(endTime));
           _staticLastMouseClickTime = null;
           _staticLastMouseClickPosition = null;
           _staticLastMouseClickSubtitleIndex = null;
@@ -1120,17 +1118,17 @@ class _WaveformWidgetState extends State<WaveformWidget> {
         final subtitle = _currentSubtitles[subtitleIndex];
         final startTime = parseTimeString(subtitle.startTime);
         widget.onSeek?.call(startTime);
-        context.read<WaveformBloc>().add(SeekToTime(startTime));
+        ref.read(waveformControllerProvider.notifier).dispatch(SeekToTime(startTime));
         // Pass 1-based index (subtitle.index) for highlighting
         widget.onSubtitleHighlight?.call(subtitle.index);
       } else {
         // Double-click on waveform
         if (state.isEditMode) {
           // Exit edit mode if we're in it
-          context.read<WaveformBloc>().add(const ExitTimeEditMode());
+          ref.read(waveformControllerProvider.notifier).dispatch(const ExitTimeEditMode());
         } else if (state.isAddLineMode) {
           // Exit add line mode if we're in it
-          context.read<WaveformBloc>().add(const ExitAddLineMode());
+          ref.read(waveformControllerProvider.notifier).dispatch(const ExitAddLineMode());
         } else {
           // Seek to position if not in edit mode
           _seekToPosition(position, state);
@@ -1156,7 +1154,7 @@ class _WaveformWidgetState extends State<WaveformWidget> {
     
     if (subtitleIndex != null) {
       // Right-click on subtitle - enter edit mode
-      context.read<WaveformBloc>().add(EnterTimeEditMode(subtitleIndex));
+      ref.read(waveformControllerProvider.notifier).dispatch(EnterTimeEditMode(subtitleIndex));
     }
   }
 
@@ -1195,9 +1193,9 @@ class _WaveformWidgetState extends State<WaveformWidget> {
         final startTime = _getViewportCenterTime(state);
         final endTime = startTime + const Duration(seconds: 2);
         
-        context.read<WaveformBloc>().add(const EnterAddLineMode());
-        context.read<WaveformBloc>().add(UpdateAddLineStartTime(startTime));
-        context.read<WaveformBloc>().add(UpdateAddLineEndTime(endTime));
+        ref.read(waveformControllerProvider.notifier).dispatch(const EnterAddLineMode());
+        ref.read(waveformControllerProvider.notifier).dispatch(UpdateAddLineStartTime(startTime));
+        ref.read(waveformControllerProvider.notifier).dispatch(UpdateAddLineEndTime(endTime));
         return;
       }
     }
@@ -1207,7 +1205,7 @@ class _WaveformWidgetState extends State<WaveformWidget> {
     
     if (subtitleIndex != null) {
       // Long press on subtitle - enter edit mode
-      context.read<WaveformBloc>().add(EnterTimeEditMode(subtitleIndex));
+      ref.read(waveformControllerProvider.notifier).dispatch(EnterTimeEditMode(subtitleIndex));
     }
   }
 
@@ -1264,9 +1262,9 @@ class _WaveformWidgetState extends State<WaveformWidget> {
           final startTime = _getViewportCenterTime(state);
           final endTime = startTime + const Duration(seconds: 2);
           
-          context.read<WaveformBloc>().add(const EnterAddLineMode());
-          context.read<WaveformBloc>().add(UpdateAddLineStartTime(startTime));
-          context.read<WaveformBloc>().add(UpdateAddLineEndTime(endTime));
+          ref.read(waveformControllerProvider.notifier).dispatch(const EnterAddLineMode());
+          ref.read(waveformControllerProvider.notifier).dispatch(UpdateAddLineStartTime(startTime));
+          ref.read(waveformControllerProvider.notifier).dispatch(UpdateAddLineEndTime(endTime));
           _lastPlayheadTapTime = null;
           return;
         } else {
@@ -1283,10 +1281,10 @@ class _WaveformWidgetState extends State<WaveformWidget> {
       // Double tap on waveform
       if (state.isEditMode) {
         // Exit edit mode if we're in it
-        context.read<WaveformBloc>().add(const ExitTimeEditMode());
+        ref.read(waveformControllerProvider.notifier).dispatch(const ExitTimeEditMode());
       } else if (state.isAddLineMode) {
         // Exit add line mode if we're in it
-        context.read<WaveformBloc>().add(const ExitAddLineMode());
+        ref.read(waveformControllerProvider.notifier).dispatch(const ExitAddLineMode());
       } else {
         // Seek to position if not in edit mode
         _seekToPosition(localPosition, state);
@@ -1355,7 +1353,7 @@ class _WaveformWidgetState extends State<WaveformWidget> {
         now.difference(_lastTapTime!) < _doubleTapDuration) {
       // Double tap - seek to subtitle start and highlight in list
       widget.onSeek?.call(startTime);
-      context.read<WaveformBloc>().add(SeekToTime(startTime));
+      ref.read(waveformControllerProvider.notifier).dispatch(SeekToTime(startTime));
       // Pass 1-based index (subtitle.index) for highlighting
       widget.onSubtitleHighlight?.call(subtitle.index);
       
@@ -1378,7 +1376,7 @@ class _WaveformWidgetState extends State<WaveformWidget> {
     widget.onSeek?.call(time);
 
     // Update state
-    context.read<WaveformBloc>().add(SeekToTime(time));
+    ref.read(waveformControllerProvider.notifier).dispatch(SeekToTime(time));
   }
 
   /// Detect which subtitle was tapped (returns subtitle index or null)
@@ -1662,7 +1660,7 @@ class _WaveformWidgetState extends State<WaveformWidget> {
       
       // Exit edit mode
       if (mounted) {
-        context.read<WaveformBloc>().add(const ExitTimeEditMode());
+        ref.read(waveformControllerProvider.notifier).dispatch(const ExitTimeEditMode());
         
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1714,7 +1712,7 @@ class _WaveformWidgetState extends State<WaveformWidget> {
     }
     
     // Exit add line mode
-    context.read<WaveformBloc>().add(const ExitAddLineMode());
+    ref.read(waveformControllerProvider.notifier).dispatch(const ExitAddLineMode());
     
     // Call the callback with selected times
     widget.onAddLineConfirmed?.call(
@@ -1729,9 +1727,9 @@ class _WaveformWidgetState extends State<WaveformWidget> {
     final startTime = _getViewportCenterTime(state);
     final endTime = startTime + const Duration(seconds: 2);
     
-    context.read<WaveformBloc>().add(const EnterAddLineMode());
-    context.read<WaveformBloc>().add(UpdateAddLineStartTime(startTime));
-    context.read<WaveformBloc>().add(UpdateAddLineEndTime(endTime));
+    ref.read(waveformControllerProvider.notifier).dispatch(const EnterAddLineMode());
+    ref.read(waveformControllerProvider.notifier).dispatch(UpdateAddLineStartTime(startTime));
+    ref.read(waveformControllerProvider.notifier).dispatch(UpdateAddLineEndTime(endTime));
   }
 }
 

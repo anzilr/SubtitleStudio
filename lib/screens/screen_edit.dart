@@ -66,6 +66,7 @@ import 'package:subtitle_studio/screens/edit/controllers/subtitle_controller.dar
 import 'package:subtitle_studio/features/waveform/bloc/waveform_bloc.dart';
 import 'package:subtitle_studio/features/waveform/bloc/waveform_event.dart';
 import 'package:subtitle_studio/features/waveform/bloc/waveform_state.dart';
+import 'package:subtitle_studio/features/waveform/providers/waveform_controller.dart';
 import 'package:subtitle_studio/features/waveform/widgets/waveform_widget.dart';
 
 class EditScreen extends riverpod.ConsumerStatefulWidget {
@@ -258,7 +259,7 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
               _lastVideoPosition = startTime;
             });
             // Update waveform bloc with the position
-            _waveformBloc.add(UpdatePlaybackPosition(startTime));
+            ref.read(waveformControllerProvider.notifier).dispatch(UpdatePlaybackPosition(startTime));
           }
           
           // Wait for video player to be ready
@@ -777,12 +778,12 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
 
     // Only load audio if showing waveform and it's not already loaded for this video
     if (_isWaveformVisible && mounted) {
-      final currentState = _waveformBloc.state;
+      final currentState = ref.read(waveformControllerProvider);
       final isAlreadyLoaded = currentState is WaveformReady && 
                               currentState.sourceFilePath == _selectedVideoPath;
       
       if (!isAlreadyLoaded) {
-        _waveformBloc.add(LoadAudioFile(
+        ref.read(waveformControllerProvider.notifier).dispatch(LoadAudioFile(
           _selectedVideoPath!,
           subtitleCollectionId: widget.subtitleCollectionId,
         ));
@@ -930,7 +931,7 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
     if (filePath != null) {
       // Clear waveform cache and reset waveform state when loading new video
       await PreferencesModel.clearWaveformCache(widget.subtitleCollectionId);
-      _waveformBloc.add(const ClearWaveform());
+      ref.read(waveformControllerProvider.notifier).dispatch(const ClearWaveform());
       setState(() {
         _isWaveformVisible = false;
       });
@@ -3549,7 +3550,7 @@ Future<void> _deleteSelectedSubtitles() async {
           child: _buildMenuItemRow(
             icon: Icons.graphic_eq,
             title: () {
-              final currentState = _waveformBloc.state;
+              final currentState = ref.read(waveformControllerProvider);
               final isWaveformLoaded = currentState is WaveformReady;
               
               if (isWaveformLoaded) {
@@ -3561,7 +3562,7 @@ Future<void> _deleteSelectedSubtitles() async {
             color: Colors.deepPurple,
           ),
         ),
-      if (_isVideoLoaded && _waveformBloc.state is WaveformReady)
+      if (_isVideoLoaded && ref.read(waveformControllerProvider) is WaveformReady)
         PopupMenuItem<String>(
           value: 'regenerate_waveform',
           child: _buildMenuItemRow(
@@ -3856,11 +3857,11 @@ Future<void> _deleteSelectedSubtitles() async {
         // Force regenerate waveform by clearing cache and reloading
         if (_selectedVideoPath != null) {
           await PreferencesModel.clearWaveformCache(widget.subtitleCollectionId);
-          _waveformBloc.add(const ClearWaveform());
+          ref.read(waveformControllerProvider.notifier).dispatch(const ClearWaveform());
           setState(() {
             _isWaveformVisible = true;
           });
-          _waveformBloc.add(LoadAudioFile(
+          ref.read(waveformControllerProvider.notifier).dispatch(LoadAudioFile(
             _selectedVideoPath!,
             subtitleCollectionId: widget.subtitleCollectionId,
           ));
