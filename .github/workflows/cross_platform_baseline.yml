@@ -132,6 +132,7 @@ jobs:
             pkg-config \
             libgtk-3-dev \
             libjson-glib-dev \
+            libkeybinder-3.0-dev \
             liblzma-dev
 
       - name: Set up Flutter
