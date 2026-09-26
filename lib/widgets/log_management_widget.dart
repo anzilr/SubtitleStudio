@@ -63,7 +63,6 @@ class LogManagementWidget extends StatefulWidget {
 /// - `_logStats`: Current log file statistics (count, size, date ranges)
 /// - `_logFiles`: List of available log files for operations
 /// - `_isLoading`: Loading state indicator for UI feedback
-/// - `_lastExportPath`: Cached path of last exported log file
 /// 
 /// **Key Operations:**
 /// - Log statistics loading and refreshing
@@ -232,7 +231,6 @@ class _LogManagementWidgetState extends State<LogManagementWidget> {
         setState(() {
           _logStats = null;
           _logFiles = [];
-          _lastExportPath = null;
         });
         
         await _loadLogStats();
