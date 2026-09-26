@@ -1,10 +1,10 @@
-Riverpod migration checkpoint 2b
+Riverpod migration checkpoint 3
 Date: 2026-09-26
 Scope:
-- ProviderScope and Isar bootstrap injection
-- Home Cubit -> Riverpod
-- Source View Cubit -> Riverpod
-- AI Explanation Cubit -> Riverpod
-- Edit Line Cubit bindings -> Riverpod
-- Selective rebuilds for edit-line validation and character counters
-- Provider import ambiguity fix
+- Remove migrated EditLine Cubit
+- Extract SubtitleEntry model from screen_edit.dart
+- Main Editor Cubit -> Riverpod controller/wrapper/screen bindings
+- Fix persisted session ID after subtitle creation
+- Fix cue-number scroll lower bound and range-selection back handling
+- Reject negative subtitle delete indexes
+- Rewrite ASS [Events] parsing using declared Format fields
