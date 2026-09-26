@@ -6,7 +6,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -63,7 +62,6 @@ import 'package:subtitle_studio/screens/edit/edit_state.dart';
 import 'package:subtitle_studio/screens/edit/models/subtitle_entry.dart';
 import 'package:subtitle_studio/screens/edit/widgets/source_view_pane.dart';
 import 'package:subtitle_studio/screens/edit/controllers/subtitle_controller.dart';
-import 'package:subtitle_studio/features/waveform/bloc/waveform_bloc.dart';
 import 'package:subtitle_studio/features/waveform/bloc/waveform_event.dart';
 import 'package:subtitle_studio/features/waveform/bloc/waveform_state.dart';
 import 'package:subtitle_studio/features/waveform/providers/waveform_controller.dart';
@@ -154,7 +152,6 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
   
   // Waveform support
   bool _isWaveformVisible = false; // Track if waveform is visible
-  late WaveformBloc _waveformBloc; // Waveform BLoC instance
   
   // Hotkey registration guard - prevent repeated registration in didChangeDependencies
   bool _hotkeysRegistered = false;
@@ -162,9 +159,6 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
   @override
   void initState() {
     super.initState();
-    
-    // Initialize waveform BLoC
-    _waveformBloc = WaveformBloc();
     
     // Initialize stable callbacks once to prevent rebuild cascades
     _onActiveSubtitleChangedStable = (arrayIndex) {
@@ -532,9 +526,7 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
                             const Divider(height: 1),
                             SizedBox(
                               height: waveformHeight,
-                              child: BlocProvider<WaveformBloc>.value(
-                                value: _waveformBloc,
-                                child: WaveformWidget(
+                              child: WaveformWidget(
                                   key: _waveformKey,
                                   subtitles: subtitleLines,
                                   playbackPosition: _lastVideoPosition,
@@ -563,7 +555,6 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
                                     _openAddLineSheetWithTimes(startTime, endTime);
                                   },
                                 ),
-                              ),
                             ),
                           ],
                         );
@@ -838,7 +829,6 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
     _sourceScrollController.dispose(); // Dispose source view scroll controller
     _scrollbarController.dispose(); // Dispose custom scrollbar controller
     _goToController.dispose();
-    _waveformBloc.close(); // Dispose waveform BLoC
     super.dispose();
   }
 
@@ -5794,9 +5784,7 @@ Future<void> _deleteSelectedSubtitles() async {
                         height: Platform.isWindows || Platform.isMacOS || Platform.isLinux 
                             ? 240.0 
                             : 180.0, // Taller on desktop for better visibility
-                        child: BlocProvider<WaveformBloc>.value(
-                          value: _waveformBloc,
-                          child: WaveformWidget(
+                        child: WaveformWidget(
                             key: _waveformKey,
                             subtitles: subtitleLines,
                             playbackPosition: _lastVideoPosition,
@@ -5825,7 +5813,6 @@ Future<void> _deleteSelectedSubtitles() async {
                               _openAddLineSheetWithTimes(startTime, endTime);
                             },
                           ),
-                        ),
                       ),
                     ],
                   ],
@@ -5961,9 +5948,7 @@ Future<void> _deleteSelectedSubtitles() async {
                 const Divider(height: 1),
                 SizedBox(
                   height: 180.0,
-                  child: BlocProvider<WaveformBloc>.value(
-                    value: _waveformBloc,
-                    child: WaveformWidget(
+                  child: WaveformWidget(
                       key: _waveformKey,
                       subtitles: subtitleLines,
                       playbackPosition: _lastVideoPosition,
@@ -5992,7 +5977,6 @@ Future<void> _deleteSelectedSubtitles() async {
                         _openAddLineSheetWithTimes(startTime, endTime);
                       },
                     ),
-                  ),
                 ),
               ],
               if (_isVideoVisible && _selectedVideoPath != null && _isVideoLoaded)
