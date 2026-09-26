@@ -1,20 +1,20 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:subtitle_studio/screens/source_view/source_view_cubit.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:subtitle_studio/screens/source_view/source_view_controller.dart';
 import 'package:subtitle_studio/screens/source_view/source_view_state.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/utils/unicode_text_input_formatter.dart';
 
-/// BLoC-enabled wrapper for SourceViewScreen
+/// Riverpod-enabled compatibility wrapper for SourceViewScreen
 /// 
-/// This widget provides the BLoC architecture for the source view screen,
-/// managing state through SourceViewCubit and handling side effects
+/// This widget provides the Riverpod architecture for the source view screen,
+/// managing state through SourceViewController and handling side effects
 /// like error messages and save notifications.
 /// 
 /// Features:
-/// - Automatic state management with BLoC pattern
+/// - Automatic state management with Riverpod pattern
 /// - Error handling with user-friendly messages
 /// - Save operation feedback
 /// - Performance optimizations with proper widget rebuilding
@@ -41,68 +41,83 @@ class SourceViewScreenBloc extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => SourceViewCubit(
-        filePath: filePath,
-        displayName: displayName,
-        safUri: safUri,
-        fileContent: fileContent,
-      ),
-      child: BlocConsumer<SourceViewCubit, SourceViewState>(
-        listener: (context, state) {
-          // Handle error messages
-          if (state.errorMessage != null) {
-            SnackbarHelper.showError(context, state.errorMessage!);
-            context.read<SourceViewCubit>().clearMessages();
-          }
-          
-          // Handle save messages
-          if (state.saveMessage != null) {
-            if (state.saveSuccessful) {
-              if (state.saveMessage!.contains('cache')) {
-                // Enhanced message for cache saves with Save As option
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(state.saveMessage!),
-                        const SizedBox(height: 4),
-                        GestureDetector(
-                          onTap: () {
-                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                            context.read<SourceViewCubit>().saveAsFile();
-                          },
-                          child: const Text(
-                            'Tap here to save to a new location ➤',
-                            style: TextStyle(
-                              decoration: TextDecoration.underline,
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+    return ProviderScope(
+      overrides: [
+        sourceViewConfigProvider.overrideWithValue(
+          SourceViewConfig(
+            filePath: filePath,
+            displayName: displayName,
+            safUri: safUri,
+            fileContent: fileContent,
+          ),
+        ),
+      ],
+      child: const _SourceViewRiverpodHost(),
+    );
+  }
+}
+
+class _SourceViewRiverpodHost extends ConsumerWidget {
+  const _SourceViewRiverpodHost();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(sourceViewControllerProvider);
+    final controller = ref.read(sourceViewControllerProvider.notifier);
+
+    ref.listen<SourceViewState>(sourceViewControllerProvider, (previous, next) {
+      if (next.errorMessage != null &&
+          next.errorMessage != previous?.errorMessage) {
+        SnackbarHelper.showError(context, next.errorMessage!);
+        controller.clearMessages();
+      }
+
+      if (next.saveMessage != null &&
+          next.saveMessage != previous?.saveMessage) {
+        if (next.saveSuccessful) {
+          if (next.saveMessage!.contains('cache')) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(next.saveMessage!),
+                    const SizedBox(height: 4),
+                    GestureDetector(
+                      onTap: () {
+                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                        controller.saveAsFile();
+                      },
+                      child: const Text(
+                        'Tap here to save to a new location ➤',
+                        style: TextStyle(
+                          decoration: TextDecoration.underline,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
                         ),
-                      ],
+                      ),
                     ),
-                    backgroundColor: Colors.orange[700],
-                    duration: const Duration(seconds: 8),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              } else {
-                SnackbarHelper.showSuccess(context, state.saveMessage!);
-              }
-            } else {
-              SnackbarHelper.showError(context, state.saveMessage!);
-            }
-            context.read<SourceViewCubit>().clearMessages();
+                  ],
+                ),
+                backgroundColor: Colors.orange[700],
+                duration: const Duration(seconds: 8),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          } else {
+            SnackbarHelper.showSuccess(context, next.saveMessage!);
           }
-        },
-        builder: (context, state) {
-          return _SourceViewWidget(state: state);
-        },
-      ),
+        } else {
+          SnackbarHelper.showError(context, next.saveMessage!);
+        }
+        controller.clearMessages();
+      }
+    });
+
+    return _SourceViewWidget(
+      state: state,
+      controller: controller,
     );
   }
 }
@@ -114,9 +129,11 @@ class SourceViewScreenBloc extends StatelessWidget {
 /// and implements efficient ListView building.
 class _SourceViewWidget extends StatelessWidget {
   final SourceViewState state;
+  final SourceViewController controller;
   
   const _SourceViewWidget({
     required this.state,
+    required this.controller,
   });
 
   @override
@@ -132,6 +149,7 @@ class _SourceViewWidget extends StatelessWidget {
         }
       },
       child: _SourceViewShortcuts(
+        controller: controller,
         child: Scaffold(
           backgroundColor: Theme.of(context).colorScheme.surface,
           resizeToAvoidBottomInset: true,
@@ -178,7 +196,7 @@ class _SourceViewWidget extends StatelessWidget {
           tooltip: 'Save Options',
           enabled: !state.isSaving,
           onSelected: (String value) {
-            final cubit = context.read<SourceViewCubit>();
+            final cubit = controller;
             switch (value) {
               case 'save':
                 cubit.saveFile();
@@ -251,7 +269,7 @@ class _SourceViewWidget extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () => context.read<SourceViewCubit>().reloadFile(),
+              onPressed: () => controller.reloadFile(),
               child: const Text('Retry'),
             ),
           ],
@@ -264,6 +282,7 @@ class _SourceViewWidget extends StatelessWidget {
       color: Theme.of(context).colorScheme.surface,
       child: _OptimizedSubtitleList(
         subtitleEntries: state.subtitleEntries,
+        controller: controller,
       ),
     );
   }
@@ -301,7 +320,7 @@ class _SourceViewWidget extends StatelessWidget {
           TextButton(
             onPressed: () async {
               final navigator = Navigator.of(context);
-              context.read<SourceViewCubit>().saveFile();
+              controller.saveFile();
               if (context.mounted) {
                 navigator.pop(true);
               }
@@ -325,9 +344,11 @@ class _SourceViewWidget extends StatelessWidget {
 /// Keyboard shortcuts widget for save functionality
 class _SourceViewShortcuts extends StatelessWidget {
   final Widget child;
+  final SourceViewController controller;
   
   const _SourceViewShortcuts({
     required this.child,
+    required this.controller,
   });
 
   @override
@@ -340,7 +361,7 @@ class _SourceViewShortcuts extends StatelessWidget {
         actions: <Type, Action<Intent>>{
           _SaveIntent: CallbackAction<_SaveIntent>(
             onInvoke: (_SaveIntent intent) {
-              context.read<SourceViewCubit>().saveFile();
+              controller.saveFile();
               return null;
             },
           ),
@@ -362,9 +383,11 @@ class _SaveIntent extends Intent {
 /// Optimized subtitle list with performance improvements (matching EditScreen performance)
 class _OptimizedSubtitleList extends StatefulWidget {
   final List<SubtitleEntry> subtitleEntries;
+  final SourceViewController controller;
   
   const _OptimizedSubtitleList({
     required this.subtitleEntries,
+    required this.controller,
   });
 
   @override
@@ -404,6 +427,7 @@ class _OptimizedSubtitleListState extends State<_OptimizedSubtitleList> {
           return _SimpleSubtitleTile(
             entry: widget.subtitleEntries[index],
             index: index,
+            controller: widget.controller,
           );
         },
       ),
@@ -419,15 +443,17 @@ class _OptimizedSubtitleListState extends State<_OptimizedSubtitleList> {
 class _SimpleSubtitleTile extends StatelessWidget {
   final SubtitleEntry entry;
   final int index;
+  final SourceViewController controller;
   
   const _SimpleSubtitleTile({
     required this.entry,
     required this.index,
+    required this.controller,
   });
 
-  /// Notify BLoC that content has changed (called only when needed)
+  /// Notify controller that content has changed (called only when needed)
   void _onSourceViewContentChanged(BuildContext context) {
-    context.read<SourceViewCubit>().markContentChanged();
+    controller.markContentChanged();
   }
 
   @override
