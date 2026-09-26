@@ -296,7 +296,7 @@ Future<bool> deleteSubtitleLineDB(int subtitleId, int lineIndex) async {
     if (subtitle == null) return false;
 
     final newLines = List<SubtitleLine>.from(subtitle.lines);
-    if (lineIndex >= newLines.length) return false;
+    if (lineIndex < 0 || lineIndex >= newLines.length) return false;
 
     newLines.removeAt(lineIndex);
     
