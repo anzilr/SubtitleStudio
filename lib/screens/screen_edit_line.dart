@@ -1880,7 +1880,6 @@ class EditSubtitleScreenState extends State<EditSubtitleScreen> {
     _mobileResizeRatioSaveTimer?.cancel(); // Cancel mobile resize ratio save timer
 
     // Dispose AI Explanation Cubit
-    _aiExplanationCubit.close();
 
     // Remove character count listeners before disposing
     _originalController.removeListener(_instantCharacterCountUpdate);
