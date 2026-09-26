@@ -52,39 +52,8 @@ import 'package:subtitle_studio/database/models/preferences_model.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/utils/responsive_layout.dart'; // Import responsive layout utilities
 import 'package:subtitle_studio/screens/screen_edit_line.dart'; // Import EditSubtitleScreenState
-
-/// Subtitle data structure for video overlay rendering
-/// 
-/// Represents a single subtitle entry with timing and content information.
-/// This class is used throughout the video player for subtitle display
-/// and synchronization operations.
-/// 
-/// **Properties:**
-/// - `index`: Sequential number for subtitle ordering and identification
-/// - `start`: Exact start time for subtitle display
-/// - `end`: Exact end time for subtitle hiding
-/// - `text`: Formatted text content with possible styling markup
-/// 
-/// **iOS Implementation:**
-/// Replace with NSObject-based model or Swift struct for better
-/// integration with iOS video frameworks
-class Subtitle {
-  final int index;         // Subtitle sequence number for ordering
-  final Duration start;    // Precise start time for display
-  final Duration end;      // Precise end time for hiding
-  final String text;       // Formatted subtitle text content
-  final bool marked;       // Whether this subtitle line is marked
-  final String? comment;   // Optional comment for marked lines
-
-  Subtitle({
-    required this.index,   // Must be unique within subtitle collection
-    required this.start,   // Must be >= 0 and < end time
-    required this.end,     // Must be > start time
-    required this.text,    // Can contain formatting markup
-    this.marked = false,   // Default to false for backward compatibility
-    this.comment,          // Optional comment for marked lines
-  });
-}
+import 'package:subtitle_studio/widgets/video/subtitle.dart';
+export 'package:subtitle_studio/widgets/video/subtitle.dart';
 
 /// Advanced video player widget with integrated subtitle overlay system
 /// 
