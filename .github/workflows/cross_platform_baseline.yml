@@ -1,0 +1,189 @@
+name: Cross-platform baseline
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - refactor/riverpod-architecture
+  pull_request:
+    branches:
+      - development
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Analyze and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Prepare optional environment file
+        run: cp .env.example .env
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Run tests when present
+        shell: bash
+        run: |
+          if [ -d test ] && find test -name '*_test.dart' -print -quit | grep -q .; then
+            flutter test
+          else
+            echo "No committed Flutter tests found yet; skipping test execution."
+          fi
+
+  android:
+    name: Android build
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Prepare optional environment file
+        run: cp .env.example .env
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Build Android debug APK
+        run: flutter build apk --debug
+
+  windows:
+    name: Windows build
+    runs-on: windows-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Prepare optional environment file
+        shell: bash
+        run: cp .env.example .env
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Build Windows debug app
+        run: flutter build windows --debug
+
+  linux:
+    name: Linux build
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang \
+            cmake \
+            ninja-build \
+            pkg-config \
+            libgtk-3-dev \
+            liblzma-dev
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Prepare optional environment file
+        run: cp .env.example .env
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Build Linux debug app
+        run: flutter build linux --debug
+
+  macos:
+    name: macOS build
+    runs-on: macos-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Prepare optional environment file
+        run: cp .env.example .env
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Build macOS debug app
+        run: flutter build macos --debug
+
+  ios:
+    name: iOS compile
+    runs-on: macos-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Prepare optional environment file
+        run: cp .env.example .env
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Compile iOS without signing
+        run: flutter build ios --debug --no-codesign
