@@ -76,6 +76,15 @@ The Isar schema/data migration requires its own compatibility plan, backup/resto
 
 ## Baseline CI
 
+To conserve GitHub Actions minutes during the migration, ordinary refactor commits do **not** run the full cross-platform matrix.
+
+The matrix runs only when:
+
+- `.github/ci-checkpoint` is deliberately updated; or
+- the workflow is started manually with `workflow_dispatch`.
+
+Use a checkpoint roughly every 10 commits or after a major migration milestone. Do not trigger the full matrix for tiny file moves, comment changes, or intermediate extraction commits.
+
 The cross-platform workflow intentionally copies `.env.example` to `.env` because the current `pubspec.yaml` declares `.env` as an asset.
 
 This is a temporary compatibility measure. The application should later be changed so `.env` is genuinely optional and privileged secrets are never packaged in the client.
