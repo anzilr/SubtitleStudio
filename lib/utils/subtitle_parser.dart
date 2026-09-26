@@ -106,10 +106,8 @@ class SubtitleParser {
   // Parse ASS/SSA format
   static List<SimpleSubtitleLine> parseAss(String content) {
     final subtitles = <SimpleSubtitleLine>[];
-    final lines = content
-        .replaceAll('\r\n', '\n')
-        .replaceAll('\r', '\n')
-        .split('\n');
+    final normalized = content.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+    final lines = normalized.split('\n');
 
     bool inEventsSection = false;
     List<String>? formatFields;
@@ -119,24 +117,20 @@ class SubtitleParser {
     int subtitleIndex = 1;
 
     for (final rawLine in lines) {
-      final line = rawLine.trim();
-      if (line.isEmpty || line.startsWith(';')) continue;
+      final trimmed = rawLine.trim();
 
-      // Track the active ASS section explicitly so Format/Dialogue rows from
-      // unrelated sections cannot contaminate event parsing.
-      if (line.startsWith('[') && line.endsWith(']')) {
-        inEventsSection = line.toLowerCase() == '[events]';
+      if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+        inEventsSection = trimmed.toLowerCase() == '[events]';
         continue;
       }
 
-      if (!inEventsSection) continue;
+      if (!inEventsSection || trimmed.isEmpty) {
+        continue;
+      }
 
-      final lowerLine = line.toLowerCase();
-
-      if (lowerLine.startsWith('format:')) {
-        final declaration = line.substring(line.indexOf(':') + 1).trim();
-        formatFields =
-            declaration.split(',').map((field) => field.trim()).toList();
+      if (trimmed.toLowerCase().startsWith('format:')) {
+        final declaration = trimmed.substring(trimmed.indexOf(':') + 1);
+        formatFields = declaration.split(',').map((field) => field.trim()).toList();
 
         startTimeIndex = formatFields.indexWhere(
           (field) => field.toLowerCase() == 'start',
@@ -150,7 +144,7 @@ class SubtitleParser {
         continue;
       }
 
-      if (!lowerLine.startsWith('dialogue:') ||
+      if (!trimmed.toLowerCase().startsWith('dialogue:') ||
           formatFields == null ||
           startTimeIndex < 0 ||
           endTimeIndex < 0 ||
@@ -158,43 +152,43 @@ class SubtitleParser {
         continue;
       }
 
-      final dialogue = line.substring(line.indexOf(':') + 1).trimLeft();
+      final payload = trimmed.substring(trimmed.indexOf(':') + 1).trimLeft();
       final fields = _splitAssLine(
-        dialogue,
+        payload,
         fieldCount: formatFields.length,
         textIndex: textIndex,
       );
 
-      if (fields.length != formatFields.length) continue;
+      if (fields.length != formatFields.length) {
+        continue;
+      }
 
-      var startTime = fields[startTimeIndex];
-      var endTime = fields[endTimeIndex];
+      final startTime = _convertAssTime(fields[startTimeIndex]);
+      final endTime = _convertAssTime(fields[endTimeIndex]);
       final text = fields[textIndex]
           .replaceAll(RegExp(r'\\N', caseSensitive: false), '\n')
           .replaceAll(RegExp(r'\{[^}]*\}'), '');
 
-      startTime = _convertAssTime(startTime);
-      endTime = _convertAssTime(endTime);
-
       subtitles.add(
         SimpleSubtitleLine(
-          index: subtitleIndex++,
+          index: subtitleIndex,
           startTime: startTime,
           endTime: endTime,
           text: text,
         ),
       );
+      subtitleIndex++;
     }
 
     return subtitles;
   }
 
-  /// Split an ASS Dialogue payload according to the declared Format row.
+  /// Splits one ASS Dialogue payload according to the declared field count.
   ///
-  /// Fields before Text are consumed from the left and fields after Text are
-  /// consumed from the right. Everything left in the middle belongs to Text,
-  /// so commas inside subtitle dialogue are preserved even when Text is not
-  /// the final declared field.
+  /// Text is special because it may contain commas. Fields before Text are
+  /// consumed from the left, while fields after Text are consumed from the
+  /// right. This preserves commas inside Text even when Text is not the final
+  /// declared field.
   static List<String> _splitAssLine(
     String line, {
     required int fieldCount,
@@ -205,28 +199,31 @@ class SubtitleParser {
     }
 
     final prefix = <String>[];
-    var left = 0;
+    int textStart = 0;
 
-    for (var i = 0; i < textIndex; i++) {
-      final comma = line.indexOf(',', left);
+    for (int i = 0; i < textIndex; i++) {
+      final comma = line.indexOf(',', textStart);
       if (comma < 0) return const [];
-      prefix.add(line.substring(left, comma).trim());
-      left = comma + 1;
+      prefix.add(line.substring(textStart, comma).trim());
+      textStart = comma + 1;
     }
 
     final suffix = <String>[];
-    var right = line.length;
+    int textEnd = line.length;
+    final suffixCount = fieldCount - textIndex - 1;
 
-    for (var i = fieldCount - 1; i > textIndex; i--) {
-      final comma = line.lastIndexOf(',', right - 1);
-      if (comma < left) return const [];
-      suffix.add(line.substring(comma + 1, right).trim());
-      right = comma;
+    for (int i = 0; i < suffixCount; i++) {
+      final comma = line.lastIndexOf(',', textEnd - 1);
+      if (comma < textStart) return const [];
+      suffix.add(line.substring(comma + 1, textEnd).trim());
+      textEnd = comma;
     }
 
-    return <String>[
+    final text = line.substring(textStart, textEnd).trim();
+
+    return [
       ...prefix,
-      line.substring(left, right).trim(),
+      text,
       ...suffix.reversed,
     ];
   }
