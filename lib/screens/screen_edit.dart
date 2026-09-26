@@ -56,12 +56,12 @@ import 'package:subtitle_studio/widgets/import_comments_sheet.dart';
 import 'package:subtitle_studio/operations/subtitle_effect_operations.dart';
 import 'package:subtitle_studio/utils/macos_bookmark_manager.dart';
 import 'package:subtitle_studio/utils/msone_hotkey_manager.dart' as hotkey;
-import 'package:subtitle_studio/utils/unicode_text_input_formatter.dart';
 import 'package:subtitle_studio/main.dart';
 import 'msone_submission_screen.dart';
 import 'package:subtitle_studio/screens/edit/edit_controller.dart';
 import 'package:subtitle_studio/screens/edit/edit_state.dart';
 import 'package:subtitle_studio/screens/edit/models/subtitle_entry.dart';
+import 'package:subtitle_studio/screens/edit/widgets/source_view_pane.dart';
 import 'package:subtitle_studio/screens/edit/controllers/subtitle_controller.dart';
 import 'package:subtitle_studio/features/waveform/bloc/waveform_bloc.dart';
 import 'package:subtitle_studio/features/waveform/bloc/waveform_event.dart';
@@ -6027,185 +6027,16 @@ Future<void> _deleteSelectedSubtitles() async {
 
   /// Build source view widget for direct text editing
   Widget _buildSourceView(List<SubtitleLine> subtitleLines) {
-    // Ensure source entries are up to date
-    if (_sourceViewEntries.isEmpty || _sourceViewEntries.length != subtitleLines.length) {
+    if (_sourceViewEntries.isEmpty ||
+        _sourceViewEntries.length != subtitleLines.length) {
       _sourceViewEntries = _convertSubtitleLinesToEntries(subtitleLines);
     }
 
-    return Container(
-      color: Theme.of(context).colorScheme.surface,
-      child: Column(
-        children: [
-          // Header with source view indicator
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainer,
-              border: Border(
-                bottom: BorderSide(
-                  color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
-                ),
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.code,
-                  color: Theme.of(context).colorScheme.primary,
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Source View - ${_sourceViewEntries.length} Subtitles',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.secondary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  'Direct text editing mode',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Source view list
-          Expanded(
-            child: Scrollbar(
-              controller: _sourceScrollController,
-              thumbVisibility: true,
-              trackVisibility: true,
-              interactive: true,
-              thickness: 8.0,
-              child: ListView.builder(
-                controller: _sourceScrollController,
-                padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 16.0),
-                itemCount: _sourceViewEntries.length,
-                itemBuilder: (context, index) {
-                  return _buildSourceViewSubtitleTile(_sourceViewEntries[index], index);
-                },
-              ),
-            ),
-          ),
-        ],
-      ),
+    return SourceViewPane(
+      entries: _sourceViewEntries,
+      scrollController: _sourceScrollController,
+      onChanged: _onSourceViewContentChanged,
     );
   }
 
-  /// Build a source view subtitle tile for editing
-  Widget _buildSourceViewSubtitleTile(SubtitleEntry entry, int index) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 8.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Index number (editable)
-          SizedBox(
-            width: 100,
-            child: TextFormField(
-              initialValue: entry.index,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
-                fontFamily: 'monospace',
-              ),
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                isDense: true,
-                contentPadding: EdgeInsets.zero,
-              ),
-              onChanged: (value) {
-                entry.index = value;
-                _onSourceViewContentChanged();
-              },
-            ),
-          ),
-          const SizedBox(height: 4),
-          // Timecode line (editable)
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Start time
-              IntrinsicWidth(
-                child: TextFormField(
-                  initialValue: entry.startTime,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Theme.of(context).colorScheme.secondary,
-                    fontFamily: 'monospace',
-                  ),
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  onChanged: (value) {
-                    entry.startTime = value;
-                    _onSourceViewContentChanged();
-                  },
-                ),
-              ),
-              Text(
-                ' --> ',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                  fontFamily: 'monospace',
-                ),
-              ),
-              // End time
-              IntrinsicWidth(
-                child: TextFormField(
-                  initialValue: entry.endTime,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Theme.of(context).colorScheme.secondary,
-                    fontFamily: 'monospace',
-                  ),
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  onChanged: (value) {
-                    entry.endTime = value;
-                    _onSourceViewContentChanged();
-                  },
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          // Subtitle text (editable, multiline)
-          TextFormField(
-            initialValue: entry.text,
-            maxLines: null,
-            inputFormatters: [
-              UnicodeTextInputFormatter(),
-            ],
-            style: TextStyle(
-              fontSize: 14,
-              color: Theme.of(context).colorScheme.onSurface,
-              height: 1.4,
-            ),
-            decoration: const InputDecoration(
-              border: InputBorder.none,
-              isDense: true,
-              contentPadding: EdgeInsets.zero,
-            ),
-            onChanged: (value) {
-              entry.text = value;
-              _onSourceViewContentChanged();
-            },
-          ),
-          const SizedBox(height: 16), // Space between entries like in SRT format
-        ],
-      ),
-    );
-  }
 }
