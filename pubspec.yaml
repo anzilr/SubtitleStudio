@@ -29,7 +29,6 @@ dependencies:
   flutter_svg: ^2.2.0
   ffmpeg_kit_flutter_new_min_gpl: ^2.1.1
   google_fonts: ^6.3.0
-  get: ^4.7.2
   html: ^0.15.6
   shared_preferences: ^2.5.3
   package_info_plus: ^8.3.0
