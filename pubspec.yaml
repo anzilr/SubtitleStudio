@@ -24,6 +24,7 @@ dependencies:
   path_provider: ^2.1.5
   permission_handler: ^12.0.1
   provider: ^6.1.5+1
+  flutter_riverpod: 3.3.2             # Incremental state management migration
   flex_color_picker: ^3.7.1
   flutter_svg: ^2.2.0
   ffmpeg_kit_flutter_new_min_gpl: ^2.1.1
