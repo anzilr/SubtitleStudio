@@ -7,6 +7,7 @@ import 'package:subtitle_studio/services/checkpoint_manager.dart';
 import 'package:subtitle_studio/utils/time_parser.dart';
 import 'package:subtitle_studio/main.dart'; // For isar instance
 import 'package:subtitle_studio/screens/edit/models/subtitle_entry.dart';
+import 'package:subtitle_studio/screens/edit/services/source_view_reconciler.dart';
 
 /// Repository layer for subtitle operations
 /// 
@@ -223,40 +224,39 @@ class SubtitleRepository {
     }
   }
 
-  /// Sync source view entries back to database
+  /// Sync source view entries back to database.
+  ///
+  /// The source list is authoritative: removed entries are deleted, added
+  /// entries become new subtitle lines, and matching existing cues keep their
+  /// original/mark/comment metadata.
   Future<void> syncSourceViewToDatabase(
     int collectionId,
     List<SubtitleEntry> entries,
   ) async {
-    logInfo('SubtitleRepository: Syncing ${entries.length} source view entries to database');
+    logInfo(
+      'SubtitleRepository: Syncing ${entries.length} source view entries to database',
+    );
+
     try {
-      // Get the subtitle collection
       final collection = await isar.subtitleCollections.get(collectionId);
       if (collection == null) {
         throw Exception('Subtitle collection $collectionId not found');
       }
 
-      // Update the lines from source view entries
+      final reconciled = SourceViewReconciler.reconcile(
+        existingLines: collection.lines,
+        entries: entries,
+      );
+
       await isar.writeTxn(() async {
-        for (int i = 0; i < entries.length; i++) {
-          final entry = entries[i];
-          if (i < collection.lines.length) {
-            final line = collection.lines[i];
-            // Update times and text from source view
-            line.startTime = entry.startTime;
-            line.endTime = entry.endTime;
-            // Update edited text (preserve original)
-            if (entry.text != line.original) {
-              line.edited = entry.text;
-            } else {
-              line.edited = null; // Clear edit if it matches original
-            }
-          }
-        }
+        collection.lines = reconciled;
         await isar.subtitleCollections.put(collection);
       });
-      
-      logInfo('SubtitleRepository: Successfully synced source view to database');
+
+      logInfo(
+        'SubtitleRepository: Successfully synced source view '
+        '(${collection.lines.length} lines)',
+      );
     } catch (e) {
       logError('SubtitleRepository: Error syncing source view: $e');
       rethrow;
