@@ -56,10 +56,10 @@ import 'package:subtitle_studio/widgets/video/subtitle.dart';
 import 'package:subtitle_studio/widgets/video/subtitle_timeline_index.dart';
 import 'package:subtitle_studio/widgets/video/repeat_range_dialog.dart';
 export 'package:subtitle_studio/widgets/video/repeat_range_dialog.dart';
+export 'package:subtitle_studio/widgets/video/subtitle.dart';
 part 'video/custom_video_controls.dart';
 part 'video/fullscreen_controls.dart';
 part 'video/player_control_widgets.dart';
-export 'package:subtitle_studio/widgets/video/subtitle.dart';
 
 /// Advanced video player widget with integrated subtitle overlay system
 /// 

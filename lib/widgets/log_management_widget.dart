@@ -88,10 +88,6 @@ class _LogManagementWidgetState extends State<LogManagementWidget> {
   /// Loading state indicator for UI feedback during async operations
   bool _isLoading = false;
   
-  /// Cached path of the last exported log file for sharing operations
-  /// Prevents re-export when sharing multiple times
-  String? _lastExportPath;
-
   @override
   void initState() {
     super.initState();
@@ -139,7 +135,6 @@ class _LogManagementWidgetState extends State<LogManagementWidget> {
       final exportPath = await AppLogger.instance.exportLogsToFile();
       
       setState(() {
-        _lastExportPath = exportPath;
         _isLoading = false;
       });
 
@@ -168,12 +163,6 @@ class _LogManagementWidgetState extends State<LogManagementWidget> {
 
   
   
-  Future<String> _formatFileSize(int bytes) async {
-    if (bytes < 1024) return '$bytes B';
-    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-  }
-
   Future<void> _clearLogs() async {
     final confirmed = await showDialog<bool>(
       context: context,
