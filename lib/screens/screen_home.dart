@@ -33,11 +33,11 @@ import 'package:flutter/material.dart';      // Material Design components
 import 'package:flutter/services.dart';      // Hardware services and keyboard support
 import 'dart:convert';                        // For encoding/decoding file content
 import 'package:flutter_svg/flutter_svg.dart'; // SVG asset support
-import 'package:flutter_bloc/flutter_bloc.dart'; // BLoC state management
+import 'package:flutter_riverpod/flutter_riverpod.dart'; // Riverpod state management
 import 'package:subtitle_studio/screens/edit_line/edit_line_bloc.dart'; // EditSubtitleScreenBloc wrapper
 import 'package:subtitle_studio/screens/screen_help.dart';      // Help documentation
 import 'package:subtitle_studio/screens/screen_source_view.dart'; // Source view screen
-import 'package:subtitle_studio/screens/home/home_cubit.dart';  // Home screen Cubit
+import 'package:subtitle_studio/screens/home/home_controller.dart'; // Home Riverpod controller
 import 'package:subtitle_studio/screens/home/home_state.dart';  // Home screen State
 // Removed startup_permission_manager - not needed with pure SAF implementation
 import 'package:subtitle_studio/utils/file_picker_utils_saf.dart'; // File picker utilities
@@ -119,14 +119,11 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => HomeCubit()..loadSessions(),
-      child: _HomeScreenContent(
-        initialFilePath: initialFilePath,
-        initialFileName: initialFileName,
-        isProjectFile: isProjectFile,
-        originalSafUri: originalSafUri,
-      ),
+    return _HomeScreenContent(
+      initialFilePath: initialFilePath,
+      initialFileName: initialFileName,
+      isProjectFile: isProjectFile,
+      originalSafUri: originalSafUri,
     );
   }
 }
@@ -135,7 +132,7 @@ class HomeScreen extends StatelessWidget {
 /// 
 /// This widget handles the actual UI rendering and user interactions,
 /// while HomeScreen above provides the BLoC provider.
-class _HomeScreenContent extends StatefulWidget {
+class _HomeScreenContent extends ConsumerStatefulWidget {
   final String? initialFilePath;
   final String? initialFileName;
   final bool isProjectFile;
@@ -149,10 +146,10 @@ class _HomeScreenContent extends StatefulWidget {
   });
 
   @override
-  State<_HomeScreenContent> createState() => _HomeScreenContentState();
+  ConsumerState<_HomeScreenContent> createState() => _HomeScreenContentState();
 }
 
-class _HomeScreenContentState extends State<_HomeScreenContent> with TickerProviderStateMixin, WidgetsBindingObserver {
+class _HomeScreenContentState extends ConsumerState<_HomeScreenContent> with TickerProviderStateMixin, WidgetsBindingObserver {
   late AnimationController _fadeController;
   late AnimationController _customFabController;
   late Animation<double> _fadeAnimation;
@@ -169,6 +166,12 @@ class _HomeScreenContentState extends State<_HomeScreenContent> with TickerProvi
   void initState() {
     super.initState();
     logInfo('HomeScreen initialized');
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(homeControllerProvider.notifier).loadSessions();
+      }
+    });
 
     // Add app lifecycle observer for update checks
     WidgetsBinding.instance.addObserver(this);
@@ -334,7 +337,7 @@ class _HomeScreenContentState extends State<_HomeScreenContent> with TickerProvi
     if (state == AppLifecycleState.resumed) {
       _checkFlexibleUpdateCompletion();
       // Also refresh sessions in case they were updated while app was paused
-      context.read<HomeCubit>().loadSessions();
+      ref.read(homeControllerProvider.notifier).loadSessions();
     }
   }
 
@@ -349,7 +352,7 @@ class _HomeScreenContentState extends State<_HomeScreenContent> with TickerProvi
 
   Future<void> _deleteSession(Session session) async {
     try {
-      await context.read<HomeCubit>().deleteSession(session);
+      await ref.read(homeControllerProvider.notifier).deleteSession(session);
       
       // Unfocus search field to prevent keyboard from showing
       _searchFocusNode.unfocus();
@@ -358,7 +361,7 @@ class _HomeScreenContentState extends State<_HomeScreenContent> with TickerProvi
         SnackbarHelper.showSuccess(context, 'Deleted "${session.fileName}"', duration: const Duration(seconds: 2));
       }
     } catch (e) {
-      // Error already shown by BlocConsumer listener
+      // Error is surfaced by the Riverpod state listener
     }
   }
 
@@ -375,20 +378,25 @@ class _HomeScreenContentState extends State<_HomeScreenContent> with TickerProvi
 
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<HomeCubit, HomeState>(
-      listener: (context, state) {
-        // Handle errors
-        if (state.errorMessage != null) {
-          SnackbarHelper.showError(context, state.errorMessage!);
-          context.read<HomeCubit>().clearError();
-        }
-        
-        // Start fade animation when data loads
-        if (!state.isLoading && _fadeController.status == AnimationStatus.dismissed) {
-          _fadeController.forward();
-        }
-      },
-      builder: (context, state) => FirstTimeInstructions(
+    final state = ref.watch(homeControllerProvider);
+
+    ref.listen<HomeState>(homeControllerProvider, (previous, next) {
+      // Handle newly reported errors once, then clear them from state.
+      if (next.errorMessage != null &&
+          next.errorMessage != previous?.errorMessage) {
+        SnackbarHelper.showError(context, next.errorMessage!);
+        ref.read(homeControllerProvider.notifier).clearError();
+      }
+
+      // Start fade animation when the initial session load completes.
+      if (!next.isLoading &&
+          previous?.isLoading != false &&
+          _fadeController.status == AnimationStatus.dismissed) {
+        _fadeController.forward();
+      }
+    });
+
+    return FirstTimeInstructions(
       screenName: 'home',
       instructions: _getHomeInstructions(),
       child: Scaffold(
@@ -409,7 +417,7 @@ class _HomeScreenContentState extends State<_HomeScreenContent> with TickerProvi
                 icon: const Icon(Icons.sort),
                 tooltip: 'Sort Sessions',
                 onSelected: (SessionSortOption option) {
-                  context.read<HomeCubit>().changeSortOption(option);
+                  ref.read(homeControllerProvider.notifier).changeSortOption(option);
                 },
                 itemBuilder: (BuildContext context) => <PopupMenuEntry<SessionSortOption>>[
                   PopupMenuItem<SessionSortOption>(
@@ -557,7 +565,6 @@ class _HomeScreenContentState extends State<_HomeScreenContent> with TickerProvi
         ),
         floatingActionButton: null, // Remove default FAB
       ),
-      ),
     );
   }
 
@@ -669,7 +676,7 @@ class _HomeScreenContentState extends State<_HomeScreenContent> with TickerProvi
       child: TextField(
         controller: _searchController,
         focusNode: _searchFocusNode,
-        onChanged: (value) => context.read<HomeCubit>().updateSearchQuery(value),
+        onChanged: (value) => ref.read(homeControllerProvider.notifier).updateSearchQuery(value),
         decoration: InputDecoration(
           hintText: 'Search subtitle files...',
           prefixIcon: Icon(
@@ -681,7 +688,7 @@ class _HomeScreenContentState extends State<_HomeScreenContent> with TickerProvi
                   icon: const Icon(Icons.clear),
                   onPressed: () {
                     _searchController.clear();
-                    context.read<HomeCubit>().clearSearch();
+                    ref.read(homeControllerProvider.notifier).clearSearch();
                     _searchFocusNode.unfocus();
                   },
                 )
@@ -1276,9 +1283,9 @@ class _HomeScreenContentState extends State<_HomeScreenContent> with TickerProvi
   }
 
   void _toggleCustomFab() {
-    context.read<HomeCubit>().toggleFabExpansion();
+    ref.read(homeControllerProvider.notifier).toggleFabExpansion();
     
-    final isExpanded = context.read<HomeCubit>().state.isFabExpanded;
+    final isExpanded = ref.read(homeControllerProvider).isFabExpanded;
     if (isExpanded) {
       _customFabController.forward();
     } else {
@@ -1317,16 +1324,16 @@ class _HomeScreenContentState extends State<_HomeScreenContent> with TickerProvi
   }
 
   Future<Map<String, dynamic>> _getSessionInfo(Session session) async {
-    return await context.read<HomeCubit>().getSessionInfo(session);
+    return await ref.read(homeControllerProvider.notifier).getSessionInfo(session);
   }
 
   Future<bool> _isMSoneSubtitle(Session session) async {
-    return await context.read<HomeCubit>().isMSoneSubtitle(session);
+    return await ref.read(homeControllerProvider.notifier).isMSoneSubtitle(session);
   }
 
   Future<void> _navigateToEditScreen(Session session) async {
     try {
-      await context.read<HomeCubit>().updateLastEditedSession(session.id);
+      await ref.read(homeControllerProvider.notifier).updateLastEditedSession(session.id);
 
       if (!mounted) return;
       await Navigator.push(
@@ -1343,14 +1350,14 @@ class _HomeScreenContentState extends State<_HomeScreenContent> with TickerProvi
       if (mounted) {
         // Re-register HomeScreen shortcuts after returning from EditScreen
         await _reRegisterHomeScreenShortcuts();
-        context.read<HomeCubit>().loadSessions();
+        ref.read(homeControllerProvider.notifier).loadSessions();
       }
     } catch (e) {
       if (kDebugMode) {
         print('Navigation error: $e');
       }
       if (mounted) {
-        context.read<HomeCubit>().loadSessions();
+        ref.read(homeControllerProvider.notifier).loadSessions();
       }
     }
   }
@@ -1360,7 +1367,7 @@ class _HomeScreenContentState extends State<_HomeScreenContent> with TickerProvi
       if (!mounted) return;
       
       // Capture cubit reference before opening bottom sheet
-      final cubit = context.read<HomeCubit>();
+      final controller = ref.read(homeControllerProvider.notifier);
       
       showModalBottomSheet(
         context: context,
@@ -1372,7 +1379,7 @@ class _HomeScreenContentState extends State<_HomeScreenContent> with TickerProvi
         builder: (context) => CreateSubtitleSheet(
           onSubtitleCreated: (subtitleData) async {
             if (subtitleData != null) {
-              cubit.loadSessions();
+              controller.loadSessions();
               
               final session = Session(
                 subtitleCollectionId: subtitleData['subtitleCollectionId'],
@@ -1381,7 +1388,7 @@ class _HomeScreenContentState extends State<_HomeScreenContent> with TickerProvi
                 editMode: subtitleData['editMode'] ?? true,
               );
               
-              await cubit.updateLastEditedSession(session.id);
+              await controller.updateLastEditedSession(session.id);
               
               if (mounted) {
                 final navigator = Navigator.of(context);
@@ -1409,7 +1416,7 @@ class _HomeScreenContentState extends State<_HomeScreenContent> with TickerProvi
 
   void _handleImport() {
     // Capture cubit reference before opening bottom sheet
-    final cubit = context.read<HomeCubit>();
+    final controller = ref.read(homeControllerProvider.notifier);
     
     showModalBottomSheet(
       context: context,
@@ -1420,7 +1427,7 @@ class _HomeScreenContentState extends State<_HomeScreenContent> with TickerProvi
       ),
       builder: (context) => SubtitleImportOptionsSheet(
         onSubtitleImported: (session) {
-          cubit.loadSessions();
+          controller.loadSessions();
           _navigateToEditScreen(session);
         },
       ),
@@ -1429,7 +1436,7 @@ class _HomeScreenContentState extends State<_HomeScreenContent> with TickerProvi
 
   void _showImportWithFilePath(String filePath, String? fileName, {String? originalSafUri}) {
     // Capture cubit reference before opening bottom sheet
-    final cubit = context.read<HomeCubit>();
+    final controller = ref.read(homeControllerProvider.notifier);
     
     showModalBottomSheet(
       context: context,
@@ -1443,7 +1450,7 @@ class _HomeScreenContentState extends State<_HomeScreenContent> with TickerProvi
         initialFileName: fileName,
         originalSafUri: originalSafUri,  // Pass original SAF URI
         onSubtitleImported: (session) {
-          cubit.loadSessions();
+          controller.loadSessions();
           _navigateToEditScreen(session);
         },
       ),
@@ -1452,7 +1459,7 @@ class _HomeScreenContentState extends State<_HomeScreenContent> with TickerProvi
 
   void _handleExtract() {
     // Capture cubit reference before opening bottom sheet
-    final cubit = context.read<HomeCubit>();
+    final controller = ref.read(homeControllerProvider.notifier);
     
     showModalBottomSheet(
       context: context,
@@ -1464,11 +1471,11 @@ class _HomeScreenContentState extends State<_HomeScreenContent> with TickerProvi
       builder: (context) => SubtitleExtractOptionsSheet(
         onSubtitleExtracted: (session) async {
           try {
-            await cubit.updateLastEditedSession(session.id);
+            await controller.updateLastEditedSession(session.id);
             await Future.delayed(const Duration(milliseconds: 300));
             
             if (mounted) {
-              await cubit.loadSessions();
+              await controller.loadSessions();
               _navigateToEditScreen(session);
             }
           } catch (e) {
@@ -1486,7 +1493,7 @@ class _HomeScreenContentState extends State<_HomeScreenContent> with TickerProvi
 
   void _handleImportProject({String? preselectedFilePath, String? originalSafUri}) {
     // Capture cubit reference before opening bottom sheet
-    final cubit = context.read<HomeCubit>();
+    final controller = ref.read(homeControllerProvider.notifier);
     
     showModalBottomSheet(
       context: context,
@@ -1500,11 +1507,11 @@ class _HomeScreenContentState extends State<_HomeScreenContent> with TickerProvi
         originalSafUri: originalSafUri,  // Pass original SAF URI
         onProjectImported: (session) async {
           try {
-            await cubit.updateLastEditedSession(session.id);
+            await controller.updateLastEditedSession(session.id);
             await Future.delayed(const Duration(milliseconds: 300));
             
             if (mounted) {
-              await cubit.loadSessions();
+              await controller.loadSessions();
               // Navigation is now handled by SessionSelectionSheet
               // No need to navigate here as it would cause duplicate navigation
             }
@@ -1842,8 +1849,8 @@ class _HomeScreenContentState extends State<_HomeScreenContent> with TickerProvi
   /// Show confirmation dialog for clearing all sessions
   void _showClearAllSessionsDialog() {
     // Capture cubit and navigator references before opening dialog
-    final cubit = context.read<HomeCubit>();
-    final state = cubit.state;
+    final controller = ref.read(homeControllerProvider.notifier);
+    final state = ref.read(homeControllerProvider);
     final sessionCount = state.recentSessions.length;
     final navigator = Navigator.of(context);
     final scaffoldMessenger = ScaffoldMessenger.of(context);
@@ -2073,7 +2080,7 @@ class _HomeScreenContentState extends State<_HomeScreenContent> with TickerProvi
                               Navigator.of(dialogContext).pop();
                               
                               // Reload sessions
-                              await cubit.loadSessions();
+                              await controller.loadSessions();
                               
                               // Show success message
                               scaffoldMessenger.showSnackBar(
