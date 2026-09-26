@@ -1,20 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:subtitle_studio/screens/edit/edit_cubit.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:subtitle_studio/screens/edit/edit_controller.dart';
 import 'package:subtitle_studio/screens/edit/edit_state.dart';
 import 'package:subtitle_studio/screens/screen_edit.dart' as legacy;
 
-/// BLoC-enabled wrapper for EditScreen
-/// 
-/// This widget provides a gradual migration path from the legacy StatefulWidget
-/// to the new BLoC architecture. It wraps the existing EditScreen with BLoC
-/// providers and state management.
-/// 
-/// Migration Strategy:
-/// 1. This wrapper provides EditCubit to the widget tree
-/// 2. The legacy _EditScreenState can access cubit via context.read<EditCubit>()
-/// 3. Methods are gradually converted from setState to cubit calls
-/// 4. Once all methods migrated, the legacy code can be removed
+/// Compatibility wrapper for [legacy.EditScreen].
+///
+/// The public class name is kept temporarily so existing navigation call sites
+/// do not need to change during the state-management migration. Internally the
+/// wrapper is Riverpod-based.
 class EditScreenBloc extends StatelessWidget {
   final int subtitleCollectionId;
   final int? lastEditedIndex;
@@ -29,45 +23,87 @@ class EditScreenBloc extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => EditCubit(
-        subtitleCollectionId: subtitleCollectionId,
-        sessionId: sessionId,
-      )..initialize(lastEditedIndex: lastEditedIndex),
-      child: BlocConsumer<EditCubit, EditState>(
-        listener: (context, state) {
-          // Handle side effects here
-          if (state.errorMessage != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.errorMessage!),
-                backgroundColor: Colors.red,
-              ),
-            );
-            // Clear error after showing
-            context.read<EditCubit>().clearError();
-          }
-        },
-        builder: (context, state) {
-          // Show loading state
-          if (state.isLoading) {
-            return Scaffold(
-              appBar: AppBar(title: const Text('Loading...')),
-              body: const Center(
-                child: CircularProgressIndicator(),
-              ),
-            );
-          }
-
-          // Wrap legacy EditScreen with BLoC context
-          // The legacy screen can now access EditCubit via context.read<EditCubit>()
-          return legacy.EditScreen(
+    return ProviderScope(
+      overrides: [
+        editConfigurationProvider.overrideWithValue(
+          EditConfiguration(
             subtitleCollectionId: subtitleCollectionId,
-            lastEditedIndex: lastEditedIndex,
             sessionId: sessionId,
-          );
-        },
+          ),
+        ),
+      ],
+      child: _EditRiverpodHost(
+        subtitleCollectionId: subtitleCollectionId,
+        lastEditedIndex: lastEditedIndex,
+        sessionId: sessionId,
       ),
+    );
+  }
+}
+
+class _EditRiverpodHost extends ConsumerStatefulWidget {
+  final int subtitleCollectionId;
+  final int? lastEditedIndex;
+  final int sessionId;
+
+  const _EditRiverpodHost({
+    required this.subtitleCollectionId,
+    required this.lastEditedIndex,
+    required this.sessionId,
+  });
+
+  @override
+  ConsumerState<_EditRiverpodHost> createState() => _EditRiverpodHostState();
+}
+
+class _EditRiverpodHostState extends ConsumerState<_EditRiverpodHost> {
+  bool _initializationStarted = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    if (_initializationStarted) return;
+    _initializationStarted = true;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref
+          .read(editControllerProvider.notifier)
+          .initialize(lastEditedIndex: widget.lastEditedIndex);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(editControllerProvider);
+
+    ref.listen<EditState>(editControllerProvider, (previous, next) {
+      final message = next.errorMessage;
+      if (message != null && message != previous?.errorMessage) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: Colors.red,
+          ),
+        );
+        ref.read(editControllerProvider.notifier).clearError();
+      }
+    });
+
+    if (state.isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Loading...')),
+        body: const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    return legacy.EditScreen(
+      subtitleCollectionId: widget.subtitleCollectionId,
+      lastEditedIndex: widget.lastEditedIndex,
+      sessionId: widget.sessionId,
     );
   }
 }
