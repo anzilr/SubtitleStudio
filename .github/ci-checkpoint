@@ -1,17 +1,12 @@
-Riverpod migration checkpoint 9
+Riverpod migration checkpoint 9b
 Date: 2026-09-27
 Checks:
 - flutter analyze
 - flutter test
 
-Scope since checkpoint 8:
-- Safe State helper usage across extracted Editor parts
-- Removed legacy Provider theme lookups from both editors
-- Replaced initial-file fixed delay with frame readiness
-- Split Edit-Line preferences into part file
-- Split Edit-Line time helpers into part file
-- Split Edit-Line shortcut handlers into part file
-- Split Edit-Line initialization/readiness helpers into part file
-- Split Edit-Line line actions into part file
+Corrections since checkpoint 9:
+- Restored repeat-range public bridge and State-owned cache field
+- Removed illegal extension instance storage
+- Finished Provider/ThemeProvider lookup replacement in both editors
 
 Platform builds intentionally disabled.
