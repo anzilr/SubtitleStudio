@@ -200,3 +200,201 @@ Future<void> showBatchDeleteConfirmationSheet({
     ),
   );
 }
+
+
+Future<List<int>?> showSelectByIndexSheet({
+  required BuildContext context,
+  required int totalLines,
+}) {
+  return showModalBottomSheet<List<int>>(
+    context: context,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (_) => _SelectByIndexSheet(totalLines: totalLines),
+  );
+}
+
+class _SelectByIndexSheet extends StatefulWidget {
+  final int totalLines;
+
+  const _SelectByIndexSheet({required this.totalLines});
+
+  @override
+  State<_SelectByIndexSheet> createState() => _SelectByIndexSheetState();
+}
+
+class _SelectByIndexSheetState extends State<_SelectByIndexSheet> {
+  final _startController = TextEditingController();
+  final _endController = TextEditingController();
+  String? _errorMessage;
+
+  @override
+  void dispose() {
+    _startController.dispose();
+    _endController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final start = int.tryParse(_startController.text);
+    final end = int.tryParse(_endController.text);
+
+    if (start == null || end == null) {
+      setState(() => _errorMessage = 'Please enter valid numbers');
+      return;
+    }
+    if (start < 1 || end > widget.totalLines || start > end) {
+      setState(
+        () => _errorMessage =
+            'Invalid range (valid: 1-${widget.totalLines})',
+      );
+      return;
+    }
+
+    Navigator.pop(context, <int>[start - 1, end - 1]);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius:
+            const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        left: 24,
+        right: 24,
+        top: 24,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.format_list_numbered,
+                  color: Colors.orange,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  'Select by Index Range',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Enter the start and end indices (1 to ${widget.totalLines}).',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: colors.onSurface.withValues(alpha: 0.6),
+                ),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(
+                child: _field(
+                  _startController,
+                  'Start Index',
+                  '1',
+                  Icons.play_arrow,
+                  isDark,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _field(
+                  _endController,
+                  'End Index',
+                  '${widget.totalLines}',
+                  Icons.stop,
+                  isDark,
+                ),
+              ),
+            ],
+          ),
+          if (_errorMessage != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              _errorMessage!,
+              style: const TextStyle(color: Colors.red),
+            ),
+          ],
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: _submit,
+                  child: const Text('Select'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _field(
+    TextEditingController controller,
+    String label,
+    String hint,
+    IconData icon,
+    bool isDark,
+  ) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark
+            ? colors.onSurface.withValues(alpha: 0.05)
+            : Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: colors.onSurface.withValues(alpha: 0.12),
+        ),
+      ),
+      child: TextField(
+        controller: controller,
+        keyboardType: TextInputType.number,
+        onSubmitted: (_) => _submit(),
+        decoration: InputDecoration(
+          labelText: label,
+          hintText: hint,
+          prefixIcon: Icon(icon, color: Theme.of(context).primaryColor),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 16,
+          ),
+        ),
+      ),
+    );
+  }
+}
