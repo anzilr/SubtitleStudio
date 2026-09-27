@@ -1,17 +1,18 @@
-Riverpod migration checkpoint 9
+Riverpod migration checkpoint 10
 Date: 2026-09-27
 Checks:
 - flutter analyze
 - flutter test
 
-Scope since checkpoint 8b:
-- Extracted Home session card widget
-- Extracted Edit Line text-field widgets
-- Extracted Edit Line time component field
-- Fixed nested Isar preference write transaction
-- Extracted Edit Line confirmation sheets
-- Extracted Edit Line menu rendering
-- Extracted Edit Line placeholder widgets/instructions
-- Removed stale main.dart database imports from Editor, Edit Line, and Olam dictionary
+Scope since checkpoint 9:
+- Extracted Editor main menu rendering
+- Extracted Editor selection menu rendering
+- Extracted Editor static empty-state UI
+- Extracted subtitle card widget
+- Extracted batch-delete confirmation sheet
+- Extracted index-selection sheet
+- Hardened Go-to-Line input validation
+- Extracted shift-selected-times sheet
+- Reduced screen_edit.dart to roughly 4,700 lines
 
 Platform builds intentionally disabled.
