@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:subtitle_studio/themes/theme_provider.dart';
 import 'package:subtitle_studio/widgets/colour_picker_widget.dart';
+import 'package:subtitle_studio/utils/text_formatting.dart';
 
 class FormattingMenu extends StatelessWidget {
   final TextEditingController controller;
@@ -14,53 +15,6 @@ class FormattingMenu extends StatelessWidget {
     required this.colorHistory,
     this.onColorHistoryUpdate,
   });
-
-  void _toggleFormatting(String tag, TextEditingController controller) {
-    // Ensure the controller and selection are valid
-    if (controller.text.isEmpty || !controller.selection.isValid) {
-      return;
-    }
-
-    final originalText = controller.text;
-    final selection = controller.selection;
-    final selectedText = selection.textInside(originalText);
-
-    if (selectedText.isNotEmpty) {
-      final start = selection.start;
-      final end = selection.end;
-
-      // Preserve leading and trailing white spaces
-      final leadingSpaces = selectedText.length > selectedText.trimLeft().length
-          ? selectedText.substring(0, selectedText.indexOf(selectedText.trimLeft()))
-          : '';
-      final trailingSpaces = selectedText.length > selectedText.trimRight().length
-          ? selectedText.substring(selectedText.lastIndexOf(selectedText.trimRight()) + selectedText.trimRight().length)
-          : '';
-
-      final trimmedText = selectedText.trim();
-
-      if (trimmedText.startsWith("<$tag>") && trimmedText.endsWith("</$tag>")) {
-        // Remove tags and restore white spaces
-        final unwrappedText = trimmedText.substring(tag.length + 2, trimmedText.length - (tag.length + 3));
-        controller.text = originalText.replaceRange(start, end, "$leadingSpaces$unwrappedText$trailingSpaces");
-        controller.selection = TextSelection.collapsed(offset: start + unwrappedText.length + leadingSpaces.length);
-      } else {
-        // Add tags and preserve white spaces
-        final wrappedText = "<$tag>$trimmedText</$tag>";
-        controller.text = originalText.replaceRange(start, end, "$leadingSpaces$wrappedText$trailingSpaces");
-        controller.selection = TextSelection.collapsed(offset: start + wrappedText.length + leadingSpaces.length);
-      }
-    } else {
-      // Handle the entire text if no selection
-      final trimmedText = originalText.trim();
-      if (trimmedText.startsWith("<$tag>") && trimmedText.endsWith("</$tag>")) {
-        controller.text = originalText.substring(tag.length + 2, originalText.length - (tag.length + 3));
-      } else if (originalText.isNotEmpty) {
-        controller.text = "<$tag>$trimmedText</$tag>";
-      }
-      controller.selection = TextSelection.collapsed(offset: controller.text.length);
-    }
-  }
 
   void _showColorPicker(BuildContext context) {
     final colorPickerKey = GlobalKey<ColorPickerWithTextEditingState>();
@@ -347,7 +301,7 @@ class FormattingMenu extends StatelessWidget {
         } else if (value == "clear") {
           _showClearFormattingDialog(context);
         } else {
-          _toggleFormatting(value, controller);
+          toggleTextFormatting(controller: controller, tag: value);
         }
       },
       itemBuilder: (BuildContext context) => [

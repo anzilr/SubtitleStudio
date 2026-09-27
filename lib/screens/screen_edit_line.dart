@@ -37,6 +37,7 @@ import 'package:subtitle_studio/widgets/checkpoint_sheet.dart';
 import 'package:subtitle_studio/widgets/comment_dialog.dart';
 import 'package:subtitle_studio/widgets/goto_line_sheet.dart';
 import 'package:subtitle_studio/utils/time_parser.dart';
+import 'package:subtitle_studio/utils/text_formatting.dart';
 import 'package:subtitle_studio/utils/subtitle_parser.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/utils/unicode_text_input_formatter.dart';
@@ -3261,75 +3262,10 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
         break;
     }
 
-    // Use the same logic as FormattingMenu's _toggleFormatting
-    _toggleFormattingForShortcut(tag, _editedController);
+    toggleTextFormatting(controller: _editedController, tag: tag);
 
     // Update character counts
     _instantCharacterCountUpdate();
-  }
-
-  void _toggleFormattingForShortcut(
-    String tag,
-    TextEditingController controller,
-  ) {
-    // This is the same logic from FormattingMenu._toggleFormatting
-    if (controller.text.isEmpty || !controller.selection.isValid) {
-      return;
-    }
-
-    final originalText = controller.text;
-    final selection = controller.selection;
-    final selectedText = selection.textInside(originalText);
-
-    if (selectedText.isNotEmpty) {
-      final start = selection.start;
-      final end = selection.end;
-
-      // Preserve leading and trailing white spaces
-      final leadingSpaces =
-          selectedText.length > selectedText.trimLeft().length
-              ? selectedText.substring(
-                0,
-                selectedText.indexOf(selectedText.trimLeft()),
-              )
-              : '';
-      final trailingSpaces =
-          selectedText.length > selectedText.trimRight().length
-              ? selectedText.substring(
-                selectedText.lastIndexOf(selectedText.trimRight()) +
-                    selectedText.trimRight().length,
-              )
-              : '';
-
-      final trimmedText = selectedText.trim();
-
-      if (trimmedText.startsWith("<$tag>") && trimmedText.endsWith("</$tag>")) {
-        // Remove tags and restore white spaces
-        final unwrappedText = trimmedText.substring(
-          tag.length + 2,
-          trimmedText.length - (tag.length + 3),
-        );
-        controller.text = originalText.replaceRange(
-          start,
-          end,
-          "$leadingSpaces$unwrappedText$trailingSpaces",
-        );
-        controller.selection = TextSelection.collapsed(
-          offset: start + unwrappedText.length + leadingSpaces.length,
-        );
-      } else {
-        // Add tags and preserve white spaces
-        final wrappedText = "<$tag>$trimmedText</$tag>";
-        controller.text = originalText.replaceRange(
-          start,
-          end,
-          "$leadingSpaces$wrappedText$trailingSpaces",
-        );
-        controller.selection = TextSelection.collapsed(
-          offset: start + wrappedText.length + leadingSpaces.length,
-        );
-      }
-    }
   }
 
   void _handleSaveShortcut() async {
