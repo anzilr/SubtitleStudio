@@ -1,21 +1,13 @@
-Riverpod migration checkpoint 10
+Riverpod migration checkpoint 11
 Date: 2026-09-27
 Checks:
 - flutter analyze
 - flutter test
 
-Scope since checkpoint 9b:
-- Split Editor Source View coordination
-- Split Editor navigation/scroll/seek helpers
-- Split Editor shortcut handlers
-- Split Editor media preferences/hotkey setup
-- Split Editor media actions
-- Split Editor subtitle rendering helpers
-- Split Editor selection/copy actions
-- Split Editor menu/modal actions
-- Split Editor initialization helpers
-- Split Editor interface builders
-
-screen_edit.dart is now ~808 lines, down from the original 6000+ line monolith.
+Scope:
+- Continued Video Player file splitting
+- Continued Home screen file splitting
+- Preserved Riverpod state flow
+- No platform build jobs
 
 Platform builds intentionally disabled.
