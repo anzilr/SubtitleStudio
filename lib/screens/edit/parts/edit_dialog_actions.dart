@@ -66,7 +66,7 @@ extension _EditDialogActions on _EditScreenState {
     bool hasResumed = false;
     
     // Mark dialog as open
-    setState(() => _isCommentDialogOpen = true);
+    _setEditorState(() => _isCommentDialogOpen = true);
     
     // Normal mode or fallback - use the standard comment dialog
     CommentDialog.show(
@@ -86,7 +86,7 @@ extension _EditDialogActions on _EditScreenState {
         
         // Update local state from controller state
         final state = _editState;
-        setState(() {
+        _setEditorState(() {
           subtitleLines = state.subtitleLines;
         });
         
@@ -115,7 +115,7 @@ extension _EditDialogActions on _EditScreenState {
         
         // Update local state from controller state
         final state = _editState;
-        setState(() {
+        _setEditorState(() {
           subtitleLines = state.subtitleLines;
         });
         
@@ -140,7 +140,7 @@ extension _EditDialogActions on _EditScreenState {
     ).then((_) {
       // Mark dialog as closed when dismissed
       if (mounted) {
-        setState(() => _isCommentDialogOpen = false);
+        _setEditorState(() => _isCommentDialogOpen = false);
       }
       
       // This executes when the dialog is dismissed (by canceling without save/delete)
@@ -192,7 +192,7 @@ extension _EditDialogActions on _EditScreenState {
                 await updateSubtitleLineComment(widget.subtitleCollectionId, index, comment);
                 // Refresh the subtitle line in UI
                 if (index < subtitleLines.length) {
-                  setState(() {
+                  _setEditorState(() {
                     subtitleLines[index].comment = comment;
                   });
                   // Update controller
@@ -214,7 +214,7 @@ extension _EditDialogActions on _EditScreenState {
                 await unmarkSubtitleLine(widget.subtitleCollectionId, index);
                 // Refresh the subtitle line in UI
                 if (index < subtitleLines.length) {
-                  setState(() {
+                  _setEditorState(() {
                     subtitleLines[index].marked = false;
                     subtitleLines[index].comment = null;
                     subtitleLines[index].resolved = false;
@@ -237,7 +237,7 @@ extension _EditDialogActions on _EditScreenState {
                 await updateSubtitleLineResolved(widget.subtitleCollectionId, index, resolved);
                 // Refresh the subtitle line in UI
                 if (index < subtitleLines.length) {
-                  setState(() {
+                  _setEditorState(() {
                     subtitleLines[index].resolved = resolved;
                   });
                   // Update controller
@@ -276,7 +276,7 @@ extension _EditDialogActions on _EditScreenState {
                   );
                   
                   // Update UI
-                  setState(() {
+                  _setEditorState(() {
                     subtitleLines[index] = updatedLine;
                   });
                   
@@ -330,7 +330,7 @@ extension _EditDialogActions on _EditScreenState {
                 await updateSubtitleLineComment(widget.subtitleCollectionId, index, comment);
                 // Refresh the subtitle line in UI
                 if (index < subtitleLines.length) {
-                  setState(() {
+                  _setEditorState(() {
                     subtitleLines[index].comment = comment;
                   });
                   // Update controller
@@ -352,7 +352,7 @@ extension _EditDialogActions on _EditScreenState {
                 await unmarkSubtitleLine(widget.subtitleCollectionId, index);
                 // Refresh the subtitle line in UI
                 if (index < subtitleLines.length) {
-                  setState(() {
+                  _setEditorState(() {
                     subtitleLines[index].marked = false;
                     subtitleLines[index].comment = null;
                     subtitleLines[index].resolved = false;
@@ -375,7 +375,7 @@ extension _EditDialogActions on _EditScreenState {
                 await updateSubtitleLineResolved(widget.subtitleCollectionId, index, resolved);
                 // Refresh the subtitle line in UI
                 if (index < subtitleLines.length) {
-                  setState(() {
+                  _setEditorState(() {
                     subtitleLines[index].resolved = resolved;
                   });
                   // Update controller
@@ -414,7 +414,7 @@ extension _EditDialogActions on _EditScreenState {
                   );
                   
                   // Update UI
-                  setState(() {
+                  _setEditorState(() {
                     subtitleLines[index] = updatedLine;
                   });
                   
@@ -456,13 +456,13 @@ extension _EditDialogActions on _EditScreenState {
               subtitleCollectionId: widget.subtitleCollectionId,
               onCheckpointRestored: () async {
                 // Reload subtitle lines after checkpoint restoration
-                setState(() {
+                _setEditorState(() {
                   subtitleLinesFuture = fetchSubtitleLines(widget.subtitleCollectionId);
                 });
                 
                 // Wait for the future to complete and update the UI
                 final lines = await subtitleLinesFuture;
-                setState(() {
+                _setEditorState(() {
                   subtitleLines = lines;
                   _controller.replaceSubtitleLinesLocally(lines);
                 });
@@ -484,13 +484,13 @@ extension _EditDialogActions on _EditScreenState {
             subtitleCollectionId: widget.subtitleCollectionId,
             onCheckpointRestored: () async {
               // Reload subtitle lines after checkpoint restoration
-              setState(() {
+              _setEditorState(() {
                 subtitleLinesFuture = fetchSubtitleLines(widget.subtitleCollectionId);
               });
               
               // Wait for the future to complete and update the UI
               final lines = await subtitleLinesFuture;
-              setState(() {
+              _setEditorState(() {
                 subtitleLines = lines;
                 _controller.replaceSubtitleLinesLocally(lines);
               });

@@ -177,10 +177,10 @@ extension _EditProjectActions on _EditScreenState {
               subtitleCollection: subtitleCollection,
               onProjectUpdated: () {
                 // Refresh the current view if needed
-                setState(() {});
+                _setEditorState(() {});
               },
               onSecondarySubtitlesLoaded: (secondarySubtitles) {
-                setState(() {
+                _setEditorState(() {
                   _originalSecondarySubtitles = secondarySubtitles;
                   _secondarySubtitles = _generateSimpleSubtitles(secondarySubtitles);
                   if (_videoPlayerKey.currentState != null) {
@@ -190,7 +190,7 @@ extension _EditProjectActions on _EditScreenState {
                 SnackbarHelper.showSuccess(context, 'Secondary subtitles loaded');
               },
               onSecondarySubtitlesCleared: () {
-                setState(() {
+                _setEditorState(() {
                   _originalSecondarySubtitles = [];
                   _secondarySubtitles = [];
                   if (_videoPlayerKey.currentState != null) {
