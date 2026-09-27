@@ -1216,7 +1216,36 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
         },
         onShowInMarkedLines: isMarked ? () {
           Navigator.pop(context);
-        
+          _showMarkedLinesModalWithHighlight(subtitleLines[index].index);
+        } : null,
+        isMarked: isMarked,
+      ),
+    );
+  }
+
+  void _showEffectsForSingleLine(int index) {
+    final currentLine = subtitleLines[index];
+    final lineText = currentLine.edited ?? currentLine.original;
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SubtitleEffectsSheet(
+          selectedIndices: [index], // Convert to 0-based index
+          onApplyEffect: (effectType, effectConfig) {
+            _applyEffectToSingleLineFromBottomSheet(context, index, effectType, effectConfig);
+          },
+          subtitleLines: [currentLine], // Pass the current line
+          lineText: lineText, // Pass the line text
+        );
+      },
+    );
+  }
+
   Future<void> _applyEffectToSingleLineFromBottomSheet(BuildContext context, int index, String effectType, Map<String, dynamic> effectConfig) async {
     try {
       final currentLine = subtitleLines[index];
@@ -1455,17 +1484,6 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
     // Riverpod migration - delegate to the Riverpod controller
     // Riverpod listener handles state synchronization automatically
     _controller.clearSelection();
-  }
-
-  void _showBatchDeleteConfirmation() {
-    showBatchDeleteConfirmationSheet(
-      context: context,
-      selectedCount: _selectedIndices.length,
-      onConfirm: () async {
-        await _deleteSelectedSubtitles();
-        _clearSelection();
-      },
-    );
   }
 
 Future<void> _deleteSelectedSubtitles() async {
@@ -1716,501 +1734,9 @@ Future<void> _deleteSelectedSubtitles() async {
   }
 
   // Show comment dialog for a specific line
-  void _showCommentDialogForLine(int index) {
-    if (index < 0 || index >= subtitleLines.length) return;
-    
-    final line = subtitleLines[index];
-    
-    // Check if video player is in fullscreen mode for different user experience
-    final videoPlayerState = _videoPlayerKey.currentState;
-    final isInFullscreenMode = videoPlayerState?.isInFullscreenMode() ?? false;
-    
-    if (isInFullscreenMode) {
-      debugPrint('Showing comment dialog for fullscreen mode - line $index');
-      
-      // In fullscreen mode, find corresponding subtitle and use video player's fullscreen comment dialog
-      if (index < _subtitles.length && videoPlayerState != null) {
-        final subtitle = _subtitles[index];
-        
-        // Create a subtitle with current comment for the fullscreen dialog
-        final subtitleWithComment = Subtitle(
-          index: subtitle.index,
-          start: subtitle.start,
-          end: subtitle.end,
-          text: subtitle.text,
-          comment: line.comment,
-        );
-        
-        // Fullscreen controls own their dialog-open lifecycle and duplicate guard.
-        videoPlayerState.showFullscreenCommentDialog(
-          subtitleWithComment,
-          originalText: line.original,
-          editedText: line.edited,
-        );
-        return;
-      }
-    } else {
-      debugPrint('Showing comment dialog for normal mode - line $index');
-    }
-    
-    // Store the current playing state before showing dialog (for normal mode)
-    bool wasPlaying = false;
-    if (videoPlayerState != null && !isInFullscreenMode) {
-      wasPlaying = videoPlayerState.isPlaying();
-      debugPrint('Comment dialog opening in normal mode - video was ${wasPlaying ? 'playing' : 'paused'}');
-      
-      // Pause video if it was playing when comment dialog opens
-      if (wasPlaying) {
-        videoPlayerState.pause();
-        debugPrint('Paused video for comment input in edit screen');
-      }
-    }
-    
-    // Flag to track if video has been resumed to prevent double resuming
-    bool hasResumed = false;
-    
-    // Mark dialog as open
-    setState(() => _isCommentDialogOpen = true);
-    
-    // Normal mode or fallback - use the standard comment dialog
-    CommentDialog.show(
-      context,
-      existingComment: line.comment,
-      originalText: line.original,
-      editedText: line.edited,
-      subtitleIndex: line.index,
-      onCommentSaved: (comment) async {
-        // If the line is not marked, mark it first
-        if (!line.marked) {
-          await _toggleMarkLine(index);
-        }
-        
-        // Riverpod migration - delegate to the Riverpod controller which handles all business logic
-        await _controller.updateComment(index, comment);
-        
-        // Update local state from controller state
-        final state = _editState;
-        setState(() {
-          subtitleLines = state.subtitleLines;
-        });
-        
-        // Update controller
-        if (index >= 0 && index < subtitleLines.length) {
-          _controller.updateSubtitleLineLocally(index, subtitleLines[index]);
-        }
-        
-        // Update all subtitle displays (video + waveform)
-        _updateAllSubtitleDisplays();
-        
-        if (!mounted) return;
-        final modeText = isInFullscreenMode ? 'fullscreen' : 'normal';
-        SnackbarHelper.showSuccess(context, 'Comment updated ($modeText mode)');
-        
-        // Resume video if it was playing before dialog opened and not already resumed
-        if (wasPlaying && videoPlayerState != null && !hasResumed) {
-          hasResumed = true;
-          videoPlayerState.play();
-          debugPrint('Resumed video after comment save in edit screen');
-        }
-      },
-      onCommentDeleted: line.comment?.isNotEmpty == true ? () async {
-        // Riverpod migration - delegate to the Riverpod controller which handles all business logic
-        await _controller.updateComment(index, null);
-        
-        // Update local state from controller state
-        final state = _editState;
-        setState(() {
-          subtitleLines = state.subtitleLines;
-        });
-        
-        // Update controller
-        if (index >= 0 && index < subtitleLines.length) {
-          _controller.updateSubtitleLineLocally(index, subtitleLines[index]);
-        }
-        
-        // Update all subtitle displays (video + waveform)
-        _updateAllSubtitleDisplays();
-        
-        if (!mounted) return;
-        SnackbarHelper.showSuccess(context, 'Comment deleted');
-        
-        // Resume video if it was playing before dialog opened and not already resumed
-        if (wasPlaying && videoPlayerState != null && !hasResumed) {
-          hasResumed = true;
-          videoPlayerState.play();
-          debugPrint('Resumed video after comment delete in edit screen');
-        }
-      } : null,
-    ).then((_) {
-      // Mark dialog as closed when dismissed
-      if (mounted) {
-        setState(() => _isCommentDialogOpen = false);
-      }
-      
-      // This executes when the dialog is dismissed (by canceling without save/delete)
-      // Resume video if it was playing before dialog opened and we haven't already resumed it
-      if (wasPlaying && videoPlayerState != null && !hasResumed) {
-        videoPlayerState.play();
-        debugPrint('Resumed video after comment dialog dismissed in edit screen');
-      }
-    });
-  }
-
   // Show marked lines modal
-  Future<void> _showMarkedLinesModal() async {
-    try {
-      final markedLines = await getMarkedSubtitleLines(widget.subtitleCollectionId);
-      final allLinesWithComments = await getAllSubtitleLinesWithComments(widget.subtitleCollectionId);
-      
-      if (!mounted) return;
-      
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        useSafeArea: true,
-        builder: (modalContext) => SizedBox(
-          height: MediaQuery.of(modalContext).size.height,
-          child: MarkedLinesSheet(
-            markedLines: markedLines,
-            allLinesWithComments: allLinesWithComments,
-            onLineSelected: (index) async {
-              // Close the modal first using the modal's context
-              Navigator.of(modalContext).pop();
-              
-              // Let the route removal/layout update settle before scrolling.
-              await WidgetsBinding.instance.endOfFrame;
-
-              if (!mounted) return;
-              
-              // Navigate to the selected line
-              await _scrollToIndexWithLoading(index + 1); // Convert back to 1-based index
-              _highlightIndex(index);
-              
-              // Seek video to the selected subtitle if video is loaded
-              if (_isVideoLoaded) {
-                _seekToSubtitle(index);
-              }
-            },
-            onCommentUpdated: (index, comment) async {
-              // Update comment in database and refresh UI
-              try {
-                await updateSubtitleLineComment(widget.subtitleCollectionId, index, comment);
-                // Refresh the subtitle line in UI
-                if (index < subtitleLines.length) {
-                  setState(() {
-                    subtitleLines[index].comment = comment;
-                  });
-                  // Update controller
-                  _controller.updateSubtitleLineLocally(index, subtitleLines[index]);
-                  
-                  // Update all subtitle displays (video + waveform)
-                  _updateAllSubtitleDisplays();
-                }
-                
-                SnackbarHelper.showSuccess(context, 
-                  comment != null ? 'Comment updated' : 'Comment deleted');
-              } catch (e) {
-                SnackbarHelper.showError(context, 'Could not update the comment. Please try again.');
-              }
-            },
-            onLineUnmarked: (index) async {
-              // Unmark line and delete comment
-              try {
-                await unmarkSubtitleLine(widget.subtitleCollectionId, index);
-                // Refresh the subtitle line in UI
-                if (index < subtitleLines.length) {
-                  setState(() {
-                    subtitleLines[index].marked = false;
-                    subtitleLines[index].comment = null;
-                    subtitleLines[index].resolved = false;
-                  });
-                  // Update controller
-                  _controller.updateSubtitleLineLocally(index, subtitleLines[index]);
-                  
-                  // Update all subtitle displays (video + waveform)
-                  _updateAllSubtitleDisplays();
-                }
-                
-                SnackbarHelper.showSuccess(context, 'Line unmarked and comment deleted');
-              } catch (e) {
-                SnackbarHelper.showError(context, 'Could not update the mark. Please try again.');
-              }
-            },
-            onResolvedUpdated: (index, resolved) async {
-              // Update resolved status in database
-              try {
-                await updateSubtitleLineResolved(widget.subtitleCollectionId, index, resolved);
-                // Refresh the subtitle line in UI
-                if (index < subtitleLines.length) {
-                  setState(() {
-                    subtitleLines[index].resolved = resolved;
-                  });
-                  // Update controller
-                  _controller.updateSubtitleLineLocally(index, subtitleLines[index]);
-                }
-                
-                SnackbarHelper.showSuccess(context, 
-                  resolved ? 'Comment marked as resolved' : 'Comment marked as unresolved');
-              } catch (e) {
-                SnackbarHelper.showError(context, 'Could not update the comment status. Please try again.');
-              }
-            },
-            onTextEdited: (index, newText) async {
-              // Update edited text in database and refresh UI
-              try {
-                // Update the subtitle line
-                if (index < subtitleLines.length) {
-                  final updatedLine = subtitleLines[index];
-                  updatedLine.edited = newText;
-                  
-                  // Save to database
-                  await saveSubtitleChangesToDatabase(
-                    widget.subtitleCollectionId,
-                    updatedLine,
-                    (String time) {
-                      // Parse time format "HH:mm:ss,SSS" to DateTime
-                      final parts = time.split(',');
-                      final hms = parts[0].split(':');
-                      return DateTime(0, 1, 1, 
-                        int.parse(hms[0]), 
-                        int.parse(hms[1]), 
-                        int.parse(hms[2]), 
-                        int.parse(parts[1]));
-                    },
-                    sessionId: widget.sessionId,
-                  );
-                  
-                  // Update UI
-                  setState(() {
-                    subtitleLines[index] = updatedLine;
-                  });
-                  
-                  // Update controller
-                  _controller.updateSubtitleLineLocally(index, updatedLine);
-                  
-                  // Update all subtitle displays (video + waveform)
-                  _updateAllSubtitleDisplays();
-                  
-                  SnackbarHelper.showSuccess(context, 'Subtitle text updated');
-                }
-              } catch (e) {
-                SnackbarHelper.showError(context, 'Could not update the subtitle text. Please try again.');
-              }
-            },
-          ),
-        ),
-      );
-    } catch (e) {
-      SnackbarHelper.showError(context, 'Could not load marked subtitles. Please try again.');
-    }
-  }
-
   // Show marked lines modal with specific line highlighted
-  Future<void> _showMarkedLinesModalWithHighlight(int databaseIndex) async {
-    try {
-      final markedLines = await getMarkedSubtitleLines(widget.subtitleCollectionId);
-      final allLinesWithComments = await getAllSubtitleLinesWithComments(widget.subtitleCollectionId);
-      
-      if (!mounted) return;
-      
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (modalContext) => DraggableScrollableSheet(
-          initialChildSize: 0.9,
-          minChildSize: 0.5,
-          maxChildSize: 0.95,
-          builder: (_, controller) => MarkedLinesSheet(
-            markedLines: markedLines,
-            allLinesWithComments: allLinesWithComments,
-            initialHighlightLineIndex: databaseIndex, // Pass the database index to highlight
-            onLineSelected: (index) {
-              Navigator.of(modalContext).pop();
-              _navigateToIndex(index);
-              _seekToSubtitle(index);
-            },
-            onCommentUpdated: (index, comment) async {
-              // Update comment in database
-              try {
-                await updateSubtitleLineComment(widget.subtitleCollectionId, index, comment);
-                // Refresh the subtitle line in UI
-                if (index < subtitleLines.length) {
-                  setState(() {
-                    subtitleLines[index].comment = comment;
-                  });
-                  // Update controller
-                  _controller.updateSubtitleLineLocally(index, subtitleLines[index]);
-                  
-                  // Update all subtitle displays (video + waveform)
-                  _updateAllSubtitleDisplays();
-                }
-                
-                SnackbarHelper.showSuccess(context, 
-                  comment != null ? 'Comment updated' : 'Comment deleted');
-              } catch (e) {
-                SnackbarHelper.showError(context, 'Could not update the comment. Please try again.');
-              }
-            },
-            onLineUnmarked: (index) async {
-              // Unmark line and delete comment
-              try {
-                await unmarkSubtitleLine(widget.subtitleCollectionId, index);
-                // Refresh the subtitle line in UI
-                if (index < subtitleLines.length) {
-                  setState(() {
-                    subtitleLines[index].marked = false;
-                    subtitleLines[index].comment = null;
-                    subtitleLines[index].resolved = false;
-                  });
-                  // Update controller
-                  _controller.updateSubtitleLineLocally(index, subtitleLines[index]);
-                  
-                  // Update all subtitle displays (video + waveform)
-                  _updateAllSubtitleDisplays();
-                }
-                
-                SnackbarHelper.showSuccess(context, 'Line unmarked and comment deleted');
-              } catch (e) {
-                SnackbarHelper.showError(context, 'Could not update the mark. Please try again.');
-              }
-            },
-            onResolvedUpdated: (index, resolved) async {
-              // Update resolved status in database
-              try {
-                await updateSubtitleLineResolved(widget.subtitleCollectionId, index, resolved);
-                // Refresh the subtitle line in UI
-                if (index < subtitleLines.length) {
-                  setState(() {
-                    subtitleLines[index].resolved = resolved;
-                  });
-                  // Update controller
-                  _controller.updateSubtitleLineLocally(index, subtitleLines[index]);
-                }
-                
-                SnackbarHelper.showSuccess(context, 
-                  resolved ? 'Comment marked as resolved' : 'Comment marked as unresolved');
-              } catch (e) {
-                SnackbarHelper.showError(context, 'Could not update the comment status. Please try again.');
-              }
-            },
-            onTextEdited: (index, newText) async {
-              // Update edited text in database and refresh UI
-              try {
-                // Update the subtitle line
-                if (index < subtitleLines.length) {
-                  final updatedLine = subtitleLines[index];
-                  updatedLine.edited = newText;
-                  
-                  // Save to database
-                  await saveSubtitleChangesToDatabase(
-                    widget.subtitleCollectionId,
-                    updatedLine,
-                    (String time) {
-                      // Parse time format "HH:mm:ss,SSS" to DateTime
-                      final parts = time.split(',');
-                      final hms = parts[0].split(':');
-                      return DateTime(0, 1, 1, 
-                        int.parse(hms[0]), 
-                        int.parse(hms[1]), 
-                        int.parse(hms[2]), 
-                        int.parse(parts[1]));
-                    },
-                    sessionId: widget.sessionId,
-                  );
-                  
-                  // Update UI
-                  setState(() {
-                    subtitleLines[index] = updatedLine;
-                  });
-                  
-                  // Update controller
-                  _controller.updateSubtitleLineLocally(index, updatedLine);
-                  
-                  // Update all subtitle displays (video + waveform)
-                  _updateAllSubtitleDisplays();
-                  
-                  SnackbarHelper.showSuccess(context, 'Subtitle text updated');
-                }
-              } catch (e) {
-                SnackbarHelper.showError(context, 'Could not update the subtitle text. Please try again.');
-              }
-            },
-          ),
-        ),
-      );
-    } catch (e) {
-      SnackbarHelper.showError(context, 'Could not load marked subtitles. Please try again.');
-    }
-  }
-
   // Show Edit History modal (responsive dialog)
-  void _showCheckpointHistoryModal() {
-    final isLargeScreen = MediaQuery.of(context).size.width > 800;
-    
-    if (isLargeScreen) {
-      // Show as dialog on large screens
-      showDialog(
-        context: context,
-        builder: (context) => Dialog(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: 800,
-              maxHeight: 700,
-            ),
-            child: CheckpointSheet(
-              sessionId: widget.sessionId,
-              subtitleCollectionId: widget.subtitleCollectionId,
-              onCheckpointRestored: () async {
-                // Reload subtitle lines after checkpoint restoration
-                setState(() {
-                  subtitleLinesFuture = fetchSubtitleLines(widget.subtitleCollectionId);
-                });
-                
-                // Wait for the future to complete and update the UI
-                final lines = await subtitleLinesFuture;
-                setState(() {
-                  subtitleLines = lines;
-                  _controller.replaceSubtitleLinesLocally(lines);
-                });
-                
-                // Update all subtitle displays (video + waveform)
-                _updateAllSubtitleDisplays();
-              },
-            ),
-          ),
-        ),
-      );
-    } else {
-      // Show fullscreen on mobile
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          fullscreenDialog: true,
-          builder: (context) => CheckpointSheet(
-            sessionId: widget.sessionId,
-            subtitleCollectionId: widget.subtitleCollectionId,
-            onCheckpointRestored: () async {
-              // Reload subtitle lines after checkpoint restoration
-              setState(() {
-                subtitleLinesFuture = fetchSubtitleLines(widget.subtitleCollectionId);
-              });
-              
-              // Wait for the future to complete and update the UI
-              final lines = await subtitleLinesFuture;
-              setState(() {
-                subtitleLines = lines;
-                _controller.replaceSubtitleLinesLocally(lines);
-              });
-              
-              // Update all subtitle displays (video + waveform)
-              _updateAllSubtitleDisplays();
-            },
-          ),
-        ),
-      );
-    }
-  }
-
   // Show import comments modal
   void _showImportCommentsModal() {
     showModalBottomSheet(
@@ -2545,7 +2071,124 @@ Future<void> _deleteSelectedSubtitles() async {
         _showFindReplaceModal();
         break;
       case 'marked_lines':
-      mpt to save directly
+        _showMarkedLinesModal();
+        break;
+      case 'checkpoint_history':
+        _showCheckpointHistoryModal();
+        break;
+      case 'import_comments':
+        _showImportCommentsModal();
+        break;
+      case 'secondary_subtitle':
+        _showSecondarySubtitleModal();
+        break;
+      case 'toggle_secondary':
+        _toggleSecondarySubtitles(!_showSecondarySubtitles);
+        break;
+      case 'sync':
+        _showSyncModal();
+        break;
+      case 'remove_hearing_impaired':
+        _removeHearingImpairedLines();
+        break;
+      case 'banners':
+        _showInsertBannersModal();
+        break;
+      case 'malayalam_normalize':
+        _showMalayalamNormalizationModal();
+        break;
+      case 'submit_msone':
+        _showSubmitToMsoneModal();
+        break;
+      case 'settings':
+        _showSettingsModal();
+        break;
+      case 'help':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const HelpScreen()),
+        );
+        break;
+    }
+  }
+
+  // Selection menu popup
+  void _showSelectionMenuModal({Offset? position}) {
+    showEditSelectionMenu(
+      context: context,
+      position: position,
+    ).then(_handleSelectionMenuSelection);
+  }
+
+  // Handle selection menu selection
+  void _handleSelectionMenuSelection(String? value) {
+    if (value == null) return;
+
+    switch (value) {
+      case 'copy':
+        _copySelectedSubtitles();
+        break;
+      case 'shift_times':
+        _showShiftSelectedTimesDialog();
+        break;
+      case 'delete':
+        _showBatchDeleteConfirmation();
+        break;
+      case 'select_by_index':
+        _showSelectByIndexDialog();
+        break;
+      case 'range_selection':
+        _toggleRangeSelectionMode();
+        break;
+    }
+  }
+
+  // Helper methods for menu actions
+  void _showGoToLineModal() {
+    showGotToLineModal(
+      context: context,
+      initialValue: '',
+      hintText: subtitleLines.length,
+      title: 'Go to line',
+      onSubmitted: (value) async {
+        final lineNumber = int.tryParse(value.trim());
+        if (lineNumber == null ||
+            lineNumber < 1 ||
+            lineNumber > subtitleLines.length) {
+          SnackbarHelper.showError(
+            context,
+            'Enter a line number between 1 and ${subtitleLines.length}',
+          );
+          return;
+        }
+
+        await _scrollToIndexWithLoading(lineNumber);
+        _highlightIndex(lineNumber - 1);
+
+        if (_isVideoLoaded) {
+          _seekToSubtitle(lineNumber - 1);
+        }
+      },
+    );
+  }
+
+  Future<void> _handleSave() async {
+    try {
+      if (_isSourceView) {
+        await _syncSourceViewToDatabase();
+      }
+
+      final subtitleCollection = await isar.subtitleCollections.get(widget.subtitleCollectionId);
+      if (subtitleCollection == null) {
+        if (mounted) SnackbarHelper.showError(context, 'Failed to load subtitle data');
+        return;
+      }
+
+      final currentLines = await fetchSubtitleLines(widget.subtitleCollectionId);
+      final srtContent = SrtCompiler.generateSrtContent(currentLines);
+      bool saveSuccessful = false;
+
+      // Attempt to save directly
       try {
         if (Platform.isMacOS) {
           final srtBookmark = subtitleCollection.macOsSrtBookmark;
@@ -3094,7 +2737,13 @@ Future<void> _deleteSelectedSubtitles() async {
     }
 
     // Always show comment dialog - marking happens when user presses 'Add' button
-  
+    _showCommentDialogForLine(targetIndex);
+  }
+
+  void _handleFindReplaceShortcut() {
+    _showFindReplaceModal();
+  }
+
   void _handleGotoLineShortcut() {
     _showGoToLineModal();
   }
