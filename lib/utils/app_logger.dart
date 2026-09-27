@@ -212,13 +212,11 @@ class AppLogger {
         final iosInfo = await deviceInfo.iosInfo;
         deviceData['platform'] = 'iOS';
         deviceData['model'] = iosInfo.model;
-        deviceData['name'] = iosInfo.name;
         deviceData['systemVersion'] = iosInfo.systemVersion;
         deviceData['localizedModel'] = iosInfo.localizedModel;
       } else if (Platform.isWindows) {
         final windowsInfo = await deviceInfo.windowsInfo;
         deviceData['platform'] = 'Windows';
-        deviceData['computerName'] = windowsInfo.computerName;
         deviceData['numberOfCores'] = windowsInfo.numberOfCores;
         deviceData['systemMemoryInMegabytes'] = windowsInfo.systemMemoryInMegabytes;
       }
@@ -275,6 +273,63 @@ class AppLogger {
     };
   }
 
+  String _redactSensitiveText(String value) {
+    var redacted = value;
+
+    final homeCandidates = <String?>[
+      Platform.environment['HOME'],
+      Platform.environment['USERPROFILE'],
+      if (Platform.environment['HOMEDRIVE'] != null &&
+          Platform.environment['HOMEPATH'] != null)
+        '${Platform.environment['HOMEDRIVE']}'
+        '${Platform.environment['HOMEPATH']}',
+    ];
+
+    for (final home in homeCandidates) {
+      if (home == null || home.trim().isEmpty) continue;
+
+      final variants = <String>{
+        home,
+        home.replaceAll('\\', '/'),
+        home.replaceAll('/', '\\'),
+      };
+
+      for (final variant in variants) {
+        if (variant.isNotEmpty) {
+          redacted = redacted.replaceAll(variant, '<user-home>');
+        }
+      }
+    }
+
+    // Common credential-shaped values. This is deliberately conservative:
+    // keep the key/label for diagnostics while hiding its value.
+    redacted = redacted.replaceAllMapped(
+      RegExp(
+        r'(?i)(token|api[_ -]?key|authorization|secret)'
+        r'(\s*[:=]\s*)([^\s,;]+)',
+      ),
+      (match) => '${match.group(1)}${match.group(2)}<redacted>',
+    );
+
+    return redacted;
+  }
+
+  Object? _redactExtraValue(Object? value) {
+    if (value is String) return _redactSensitiveText(value);
+    if (value is Map) {
+      return value.map(
+        (key, nested) => MapEntry(
+          key.toString(),
+          _redactExtraValue(nested),
+        ),
+      );
+    }
+    if (value is Iterable) {
+      return value.map(_redactExtraValue).toList(growable: false);
+    }
+    return value;
+  }
+
   /// Format log entry with timestamp, level, and message
   String _formatLogEntry(LogLevel level, String message, {
     String? context,
@@ -284,19 +339,19 @@ class AppLogger {
     final timestamp = DateTime.now().toIso8601String();
     final buffer = StringBuffer();
     
-    buffer.writeln('[$timestamp] [${level.name}] $message');
+    buffer.writeln('[$timestamp] [${level.name}] ${_redactSensitiveText(message)}');
     
     if (context != null) {
-      buffer.writeln('  Context: $context');
+      buffer.writeln('  Context: ${_redactSensitiveText(context)}');
     }
     
     if (extra != null && extra.isNotEmpty) {
-      buffer.writeln('  Extra: ${jsonEncode(extra)}');
+      buffer.writeln('  Extra: ${jsonEncode(_redactExtraValue(extra))}');
     }
     
     if (stackTrace != null) {
       buffer.writeln('  Stack Trace:');
-      buffer.writeln(stackTrace.toString().split('\n').map((line) => '    $line').join('\n'));
+      buffer.writeln(_redactSensitiveText(stackTrace.toString()).split('\n').map((line) => '    $line').join('\n'));
     }
     
     buffer.writeln(''); // Empty line for readability
