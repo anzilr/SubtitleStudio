@@ -1,9 +1,15 @@
 import 'package:flutter_gemini/flutter_gemini.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:subtitle_studio/database/models/preferences_model.dart';
+import 'package:subtitle_studio/app/providers/core_providers.dart';
+import 'package:subtitle_studio/features/ai_explanation/ai_explanation_preferences_repository.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 
 import 'ai_explanation_state.dart';
+
+final aiExplanationPreferencesRepositoryProvider =
+    Provider<AiExplanationPreferencesRepository>(
+  (ref) => AiExplanationPreferencesRepository(ref.watch(isarProvider)),
+);
 
 final aiExplanationControllerProvider =
     NotifierProvider<AiExplanationController, AiExplanationState>(
@@ -11,6 +17,9 @@ final aiExplanationControllerProvider =
 );
 
 class AiExplanationController extends Notifier<AiExplanationState> {
+  AiExplanationPreferencesRepository get _preferences =>
+      ref.read(aiExplanationPreferencesRepositoryProvider);
+
   @override
   AiExplanationState build() => const AiExplanationInitial();
 
@@ -25,7 +34,7 @@ class AiExplanationController extends Notifier<AiExplanationState> {
     String prompt = '';
 
     try {
-      final apiKey = await PreferencesModel.getGeminiApiKey();
+      final apiKey = await _preferences.getGeminiApiKey();
       if (apiKey == null || apiKey.isEmpty) {
         state = const AiExplanationNoApiKey();
         return;
@@ -36,12 +45,12 @@ class AiExplanationController extends Notifier<AiExplanationState> {
       Gemini.init(apiKey: apiKey);
       final gemini = Gemini.instance;
 
-      model = modelName ?? await PreferencesModel.getGeminiModel();
+      model = modelName ?? await _preferences.getGeminiModel();
 
       logInfo('Selected Gemini model: $model');
 
       final promptTemplate =
-          customPrompt ?? await PreferencesModel.getAiExplanationPrompt();
+          customPrompt ?? await _preferences.getAiExplanationPrompt();
 
       prompt = _buildPrompt(
         currentLine: currentLine,
