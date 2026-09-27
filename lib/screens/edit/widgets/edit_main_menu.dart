@@ -295,6 +295,82 @@ List<PopupMenuEntry<String>> _sourceViewItems() {
   ];
 }
 
+Future<String?> showEditSelectionMenu({
+  required BuildContext context,
+  Offset? position,
+}) {
+  final overlay =
+      Overlay.of(context).context.findRenderObject() as RenderBox?;
+
+  final RelativeRect menuPosition;
+  if (position != null && overlay != null) {
+    menuPosition = RelativeRect.fromRect(
+      Rect.fromLTWH(position.dx, position.dy, 0, 0),
+      Offset.zero & overlay.size,
+    );
+  } else {
+    menuPosition = RelativeRect.fromLTRB(
+      MediaQuery.of(context).size.width - 10,
+      kToolbarHeight + 10,
+      10,
+      0,
+    );
+  }
+
+  return showMenu<String>(
+    context: context,
+    position: menuPosition,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12),
+    ),
+    color: Theme.of(context).cardColor,
+    elevation: 8,
+    items: const <PopupMenuEntry<String>>[
+      PopupMenuItem<String>(
+        value: 'copy',
+        child: _MenuItem(
+          icon: Icons.content_copy,
+          title: 'Copy Selected',
+          color: Colors.purple,
+        ),
+      ),
+      PopupMenuItem<String>(
+        value: 'shift_times',
+        child: _MenuItem(
+          icon: Icons.timer,
+          title: 'Shift Times',
+          color: Colors.blue,
+        ),
+      ),
+      PopupMenuItem<String>(
+        value: 'delete',
+        child: _MenuItem(
+          icon: Icons.delete,
+          title: 'Delete Selected',
+          color: Colors.red,
+        ),
+      ),
+      PopupMenuDivider(),
+      PopupMenuItem<String>(
+        value: 'select_by_index',
+        child: _MenuItem(
+          icon: Icons.format_list_numbered,
+          title: 'Select by Index',
+          color: Colors.orange,
+        ),
+      ),
+      PopupMenuItem<String>(
+        value: 'range_selection',
+        child: _MenuItem(
+          icon: Icons.format_line_spacing,
+          title: 'Select by Range',
+          color: Colors.green,
+        ),
+      ),
+    ],
+  );
+}
+
 class _MenuItem extends StatelessWidget {
   final IconData icon;
   final String title;

@@ -3611,83 +3611,10 @@ Future<void> _deleteSelectedSubtitles() async {
 
   // Selection menu popup
   void _showSelectionMenuModal({Offset? position}) {
-    final RenderBox? overlay = Overlay.of(context).context.findRenderObject() as RenderBox?;
-    
-    // Calculate menu position
-    RelativeRect menuPosition;
-    if (position != null && overlay != null) {
-      // Use click position for mouse clicks
-      menuPosition = RelativeRect.fromRect(
-        Rect.fromLTWH(position.dx, position.dy, 0, 0),
-        Offset.zero & overlay.size,
-      );
-    } else {
-      // Default position (top-right) for non-mouse triggers
-      menuPosition = RelativeRect.fromLTRB(
-        MediaQuery.of(context).size.width - 10,
-        kToolbarHeight + 10,
-        10,
-        0,
-      );
-    }
-    
-    showMenu(
+    showEditSelectionMenu(
       context: context,
-      position: menuPosition,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      color: Theme.of(context).cardColor,
-      elevation: 8,
-      items: <PopupMenuEntry<String>>[
-        // Actions
-        PopupMenuItem<String>(
-          value: 'copy',
-          child: _buildMenuItemRow(
-            icon: Icons.content_copy,
-            title: 'Copy Selected',
-            color: Colors.purple,
-          ),
-        ),
-        PopupMenuItem<String>(
-          value: 'shift_times',
-          child: _buildMenuItemRow(
-            icon: Icons.timer,
-            title: 'Shift Times',
-            color: Colors.blue,
-          ),
-        ),
-        PopupMenuItem<String>(
-          value: 'delete',
-          child: _buildMenuItemRow(
-            icon: Icons.delete,
-            title: 'Delete Selected',
-            color: Colors.red,
-          ),
-        ),
-        
-        // Divider
-        const PopupMenuDivider(),
-        
-        // Selection Tools
-        PopupMenuItem<String>(
-          value: 'select_by_index',
-          child: _buildMenuItemRow(
-            icon: Icons.format_list_numbered,
-            title: 'Select by Index',
-            color: Colors.orange,
-          ),
-        ),
-        PopupMenuItem<String>(
-          value: 'range_selection',
-          child: _buildMenuItemRow(
-            icon: Icons.format_line_spacing,
-            title: 'Select by Range',
-            color: Colors.green,
-          ),
-        ),
-      ],
-    ).then((value) => _handleSelectionMenuSelection(value));
+      position: position,
+    ).then(_handleSelectionMenuSelection);
   }
 
   // Handle selection menu selection
