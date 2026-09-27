@@ -46,6 +46,7 @@ import 'package:subtitle_studio/utils/saf_file_handler.dart';    // SAF file ope
 import 'package:subtitle_studio/utils/saf_path_converter.dart';  // SAF path conversion
 import '../utils/responsive_layout.dart';     // Responsive layout utilities
 import '../database/models/models.dart';     // Data models
+import '../database/database_helper.dart'; // Legacy helpers for unmigrated parts
 import '../themes/theme_switcher_button.dart'; // Theme toggle component
 import 'package:subtitle_studio/widgets/settings_sheet.dart';   // Settings modal
 import 'package:subtitle_studio/widgets/create_subtitle_sheet.dart'; // New project creation
