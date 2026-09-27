@@ -242,11 +242,12 @@ extension _WaveformEditing on WaveformWidgetState {
       subtitle.startTime = afterSubtitle.startTime;
       subtitle.endTime = afterSubtitle.endTime;
       
-      // Save to database using the database helper
-      final success = await db_helper.updateMultipleSubtitleLines(
-        widget.subtitleCollectionId!,
-        [subtitle],
-      );
+      final success = await ref
+          .read(waveformSubtitleRepositoryProvider)
+          .updateLines(
+            widget.subtitleCollectionId!,
+            [subtitle],
+          );
       
       if (!success) {
         throw Exception('Failed to update subtitle in database');

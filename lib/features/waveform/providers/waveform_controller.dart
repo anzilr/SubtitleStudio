@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/features/waveform/state/waveform_event.dart';
 import 'package:subtitle_studio/features/waveform/state/waveform_state.dart';
 import 'package:subtitle_studio/features/waveform/services/audio_processor.dart';
+import 'package:subtitle_studio/features/waveform/repositories/waveform_subtitle_repository.dart';
 import 'package:subtitle_studio/database/models/preferences_model.dart';
 
 /// Disposable audio processor dependency for the Waveform feature.
@@ -10,6 +12,11 @@ final waveformAudioProcessorProvider = Provider<AudioProcessor>((ref) {
   ref.onDispose(processor.dispose);
   return processor;
 });
+
+final waveformSubtitleRepositoryProvider =
+    Provider<WaveformSubtitleRepository>(
+  (ref) => WaveformSubtitleRepository(ref.watch(isarProvider)),
+);
 
 final waveformControllerProvider =
     NotifierProvider<WaveformController, WaveformState>(

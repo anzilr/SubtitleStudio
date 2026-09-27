@@ -11,7 +11,6 @@ import 'package:subtitle_studio/features/waveform/widgets/waveform_painter.dart'
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/widgets/settings_sheet.dart';
 import 'package:subtitle_studio/utils/time_parser.dart';
-import 'package:subtitle_studio/database/database_helper.dart' as db_helper;
 import 'package:subtitle_studio/services/checkpoint_manager.dart';
 
 part 'waveform_rendering.dart';
