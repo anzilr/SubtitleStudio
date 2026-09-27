@@ -143,6 +143,32 @@ class HomeController extends Notifier<HomeState> {
     }
   }
 
+  Future<void> clearAllSessions() async {
+    try {
+      await _repository.clearAllSessions();
+      await _activityStore.clear();
+
+      state = state.copyWith(
+        recentSessions: const [],
+        sessionSummaries: const {},
+        sessionLastOpenedEpochMs: const {},
+        clearLastEditedSession: true,
+        clearError: true,
+      );
+    } catch (e, stackTrace) {
+      await logError(
+        'HomeController: Error clearing all sessions',
+        context: 'clearAllSessions',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      state = state.copyWith(
+        errorMessage: 'Could not clear sessions. Please try again.',
+      );
+      rethrow;
+    }
+  }
+
   Future<void> deleteSession(Session session) async {
     try {
       await logInfo(

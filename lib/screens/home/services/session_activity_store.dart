@@ -72,6 +72,11 @@ class SessionActivityStore {
     }
   }
 
+  Future<void> clear() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_lastOpenedKey);
+  }
+
   Future<void> _save(Map<int, int> entries) async {
     final prefs = await SharedPreferences.getInstance();
     final encoded = jsonEncode(

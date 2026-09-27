@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:isar_community/isar.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/screens/home/models/session_summary.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
@@ -111,6 +113,46 @@ class SessionRepository {
   /// - Related metadata
   /// 
   /// Parameters:
+  /// Clear all session-owned persistence while preserving dictionary data and
+  /// application preferences.
+  Future<void> clearAllSessions() async {
+    await logInfo('SessionRepository: Clearing all sessions');
+
+    try {
+      await _isar.writeTxn(() async {
+        await _isar.sessions.clear();
+        await _isar.subtitleCollections.clear();
+        await _isar.checkpoints.clear();
+        await _isar.videoPreferences.clear();
+      });
+
+      try {
+        final appDocDir = await getApplicationDocumentsDirectory();
+        final waveformDir = Directory('${appDocDir.path}/waveforms');
+        if (await waveformDir.exists()) {
+          await waveformDir.delete(recursive: true);
+        }
+      } catch (e, stackTrace) {
+        await logError(
+          'SessionRepository: Failed to clear waveform cache',
+          context: 'clearAllSessions',
+          error: e,
+          stackTrace: stackTrace,
+        );
+      }
+
+      await logInfo('SessionRepository: Cleared all sessions');
+    } catch (e, stackTrace) {
+      await logError(
+        'SessionRepository: Failed to clear all sessions',
+        context: 'clearAllSessions',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
   /// - [session]: Session to delete
   /// 
   /// Throws an exception if deletion fails.
