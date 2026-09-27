@@ -1135,13 +1135,7 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
                                                           Icons.skip_previous,
                                                           size: buttonSize,
                                                           color:
-                                                              Provider.of<
-                                                                        ThemeProvider
-                                                                      >(
-                                                                        context,
-                                                                      ).themeMode ==
-                                                                      ThemeMode
-                                                                          .light
+                                                              Theme.of(context).brightness == Brightness.light
                                                                   ? const Color.fromARGB(
                                                                     255,
                                                                     0,
@@ -1166,13 +1160,7 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
                                                           Icons.book,
                                                           size: buttonSize,
                                                           color:
-                                                              Provider.of<
-                                                                        ThemeProvider
-                                                                      >(
-                                                                        context,
-                                                                      ).themeMode ==
-                                                                      ThemeMode
-                                                                          .light
+                                                              Theme.of(context).brightness == Brightness.light
                                                                   ? const Color.fromARGB(
                                                                     255,
                                                                     0,
@@ -1444,13 +1432,7 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
                                                           Icons.save,
                                                           size: buttonSize,
                                                           color:
-                                                              Provider.of<
-                                                                        ThemeProvider
-                                                                      >(
-                                                                        context,
-                                                                      ).themeMode ==
-                                                                      ThemeMode
-                                                                          .light
+                                                              Theme.of(context).brightness == Brightness.light
                                                                   ? const Color.fromARGB(
                                                                     255,
                                                                     0,
@@ -1502,13 +1484,7 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
                                                                     .play_arrow,
                                                             size: buttonSize,
                                                             color:
-                                                                Provider.of<
-                                                                          ThemeProvider
-                                                                        >(
-                                                                          context,
-                                                                        ).themeMode ==
-                                                                        ThemeMode
-                                                                            .light
+                                                                Theme.of(context).brightness == Brightness.light
                                                                     ? const Color.fromARGB(
                                                                       255,
                                                                       0,
@@ -1567,13 +1543,7 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
                                                           Icons.skip_next,
                                                           size: buttonSize,
                                                           color:
-                                                              Provider.of<
-                                                                        ThemeProvider
-                                                                      >(
-                                                                        context,
-                                                                      ).themeMode ==
-                                                                      ThemeMode
-                                                                          .light
+                                                              Theme.of(context).brightness == Brightness.light
                                                                   ? const Color.fromARGB(
                                                                     255,
                                                                     0,
