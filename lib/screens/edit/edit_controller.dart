@@ -85,7 +85,7 @@ class EditController extends Notifier<EditState> {
     try {
       logInfo('EditController: Starting initialization');
       
-      _setState(state.copyWith(isLoading: true, errorMessage: null));
+      _setState(state.copyWith(isLoading: true, clearErrorMessage: true));
 
       // Load subtitle collection
       final collection = await _subtitleRepo.fetchSubtitleCollection(subtitleCollectionId);
@@ -512,7 +512,7 @@ class EditController extends Notifier<EditState> {
       await _videoRepo.removeVideoPath(subtitleCollectionId);
 
       _setState(state.copyWith(
-        selectedVideoPath: null,
+        clearSelectedVideoPath: true,
         isVideoLoaded: false,
         lastVideoPosition: Duration.zero,
       ));
@@ -803,6 +803,6 @@ class EditController extends Notifier<EditState> {
 
   /// Clear error message
   void clearError() {
-    _setState(state.copyWith(errorMessage: null));
+    _setState(state.copyWith(clearErrorMessage: true));
   }
 }
