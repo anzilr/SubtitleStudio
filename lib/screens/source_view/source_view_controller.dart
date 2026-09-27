@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:subtitle_studio/screens/source_view/source_view_state.dart';
 import 'package:subtitle_studio/utils/app_logger.dart';
 import 'package:subtitle_studio/utils/saf_file_handler.dart';
+import 'package:subtitle_studio/utils/subtitle_parser.dart';
 
 /// Riverpod controller for Source View state
 /// 
@@ -205,25 +206,26 @@ class SourceViewController extends Notifier<SourceViewState> {
     }
   }
 
-  /// Parse SRT content into a list of subtitle entries
+  /// Parse SRT content using the shared tolerant parser.
   List<SubtitleEntry> _parseSrtContent(String content) {
-    final entries = <SubtitleEntry>[];
-    final blocks = content.trim().split(RegExp(r'\n\s*\n'));
-    
-    AppLogger.instance.info('Parsing SRT: ${blocks.length} blocks found');
-    
-    for (int i = 0; i < blocks.length; i++) {
-      final block = blocks[i];
-      
-      final entry = SubtitleEntry.fromSrtText(block);
-      if (entry != null) {
-        entries.add(entry);
-      } else {
-        AppLogger.instance.warning('Failed to parse block $i');
-      }
-    }
-    
-    AppLogger.instance.info('Parsing completed: ${entries.length}/${blocks.length} entries parsed');
+    final parsed = SubtitleParser.parseSrt(content);
+
+    final entries = parsed
+        .map(
+          (line) => SubtitleEntry(
+            index: line.index.toString(),
+            // Source View writes SRT; normalize the shared parser's dot
+            // milliseconds back to the conventional SRT comma form.
+            startTime: line.startTime.replaceAll('.', ','),
+            endTime: line.endTime.replaceAll('.', ','),
+            text: line.text,
+          ),
+        )
+        .toList(growable: false);
+
+    AppLogger.instance.info(
+      'Source View parsed ${entries.length} subtitle entries',
+    );
     return entries;
   }
 
