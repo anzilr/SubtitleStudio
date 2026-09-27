@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/app/providers/core_providers.dart';
-import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/screens/edit_line/edit_line_state.dart';
 import 'package:subtitle_studio/screens/edit_line/repositories/edit_line_repository.dart';
 import 'package:subtitle_studio/screens/edit_line/repositories/edit_line_preferences_repository.dart';
@@ -15,7 +14,7 @@ import 'package:subtitle_studio/database/models/models.dart';
 /// The wrapper overrides this provider for each edit-line screen, giving every
 /// screen its own isolated Riverpod controller without global mutable state.
 class EditLineConfiguration {
-  final Id subtitleCollectionId;
+  final int subtitleCollectionId;
   final int lineIndex;
   final int sessionId;
   final bool isNewSubtitle;
@@ -68,7 +67,7 @@ class EditLineController extends Notifier<EditLineState> {
   EditLineConfiguration get _configuration =>
       ref.read(editLineConfigurationProvider);
 
-  Id get _subtitleCollectionId => _configuration.subtitleCollectionId;
+  int get _subtitleCollectionId => _configuration.subtitleCollectionId;
   int get _initialLineIndex => _configuration.lineIndex;
 
   StreamSubscription<String>? _originalTextSubscription;

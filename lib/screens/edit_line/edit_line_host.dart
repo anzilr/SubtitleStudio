@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/screens/edit_line/edit_line_controller.dart';
 import 'package:subtitle_studio/screens/edit_line/edit_line_state.dart';
 import 'package:subtitle_studio/screens/screen_edit_line.dart' as legacy;
@@ -10,7 +9,7 @@ import 'package:subtitle_studio/utils/subtitle_parser.dart';
 ///
 /// This host scopes the single-line editor's Riverpod providers.
 class EditSubtitleScreenHost extends StatelessWidget {
-  final Id subtitleId;
+  final int subtitleId;
   final int index;
   final int sessionId;
   final bool isNewSubtitle;
@@ -66,7 +65,7 @@ class EditSubtitleScreenHost extends StatelessWidget {
 }
 
 class _EditLineRiverpodHost extends ConsumerStatefulWidget {
-  final Id subtitleId;
+  final int subtitleId;
   final int index;
   final int sessionId;
   final bool isNewSubtitle;

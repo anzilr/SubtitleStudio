@@ -6,9 +6,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/database/models/models.dart';
-import 'package:subtitle_studio/database/database_helper.dart';
 import 'package:subtitle_studio/themes/theme_switcher_button.dart';
 import 'package:subtitle_studio/utils/srt_compiler.dart';
 import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
@@ -73,7 +71,7 @@ part 'edit_line/parts/edit_line_layout.dart';
 // Supports keyboard shortcuts, formatting, and responsive layouts
 
 class EditSubtitleScreen extends riverpod.ConsumerStatefulWidget {
-  final Id subtitleId; // ID of the subtitle collection
+  final int subtitleId; // ID of the subtitle collection
   final int index; // Index of the subtitle line
   final int sessionId;
   final bool isNewSubtitle; // Indicates if this is a new subtitle
