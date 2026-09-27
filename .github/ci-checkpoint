@@ -1,13 +1,16 @@
-Riverpod migration checkpoint 11b
+Riverpod migration checkpoint 12
 Date: 2026-09-28
 Checks:
 - flutter analyze
 - flutter test
 
-Corrections after checkpoint 11:
-- Restore parent imports required by legacy Editor/Home/Edit-Line part files
-- Keep direct Editor last-session update routed through Riverpod
-- Scope nested video control preference writes through ancestor VideoPlayerWidgetState
-- Preserve injected Settings/MSone/video preference repositories
+Scope since checkpoint 11:
+- Route Editor line persistence through repository/controller
+- Move Home clear-all session flow behind controller
+- Route Edit-Line mark/comment/dialog/save/insert persistence through controller
+- Remove Isar/database-helper types from Edit-Line presentation boundary
+- Consolidate Edit-Line preference initialization into one injected snapshot
+- Route Edit-Line preference/video-path writes through controller/repository
+- Remove remaining PreferencesModel usage from Edit-Line presentation layer
 
 Platform builds intentionally disabled.
