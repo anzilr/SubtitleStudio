@@ -458,7 +458,7 @@ extension _HomeConfirmationDialogs on _HomeScreenContentState {
                           
                           try {
                             // Clear all sessions
-                            await clearAllSessions();
+                            await controller.clearAllSessions();
                             
                             if (mounted) {
                               // Close loading dialog
