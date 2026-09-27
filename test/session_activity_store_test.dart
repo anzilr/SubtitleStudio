@@ -52,5 +52,17 @@ void main() {
       () => store.markOpened(0),
       throwsArgumentError,
     );
+    expect(
+      () => store.markOpened(-1),
+      throwsArgumentError,
+    );
+  });
+
+  test('recovers safely from malformed persisted activity JSON', () async {
+    SharedPreferences.setMockInitialValues({
+      'session_last_opened_v1': '{not valid json',
+    });
+
+    expect(await store.loadLastOpened(), isEmpty);
   });
 }
