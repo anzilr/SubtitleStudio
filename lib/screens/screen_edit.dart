@@ -62,6 +62,7 @@ import 'package:subtitle_studio/screens/edit/widgets/source_view_pane.dart';
 import 'package:subtitle_studio/screens/edit/widgets/edit_main_menu.dart';
 import 'package:subtitle_studio/screens/edit/widgets/edit_placeholders.dart';
 import 'package:subtitle_studio/screens/edit/widgets/subtitle_card.dart';
+import 'package:subtitle_studio/screens/edit/widgets/edit_selection_dialogs.dart';
 import 'package:subtitle_studio/screens/edit/widgets/editor_custom_scrollbar.dart';
 import 'package:subtitle_studio/features/waveform/state/waveform_event.dart';
 import 'package:subtitle_studio/features/waveform/state/waveform_state.dart';
@@ -1642,188 +1643,13 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
   }
 
   void _showBatchDeleteConfirmation() {
-    void handleKeyEvent(KeyEvent event) {
-      if (event is KeyDownEvent) {
-        if (event.logicalKey == LogicalKeyboardKey.enter) {
-          Navigator.pop(context);
-          _deleteSelectedSubtitles().then((_) => _clearSelection());
-        }
-      }
-    }
-
-    showModalBottomSheet(
+    showBatchDeleteConfirmationSheet(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => KeyboardListener(
-        focusNode: FocusNode()..requestFocus(),
-        onKeyEvent: handleKeyEvent,
-        child: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        Icons.delete,
-                        color: Colors.red,
-                        size: 28,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Delete Selected Subtitles',
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'This action cannot be undone',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // Warning message
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.red.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: Colors.red.withValues(alpha: 0.3),
-                    width: 1,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.warning_outlined,
-                      color: Colors.red,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Are you sure you want to delete ${_selectedIndices.length} subtitle lines? This action cannot be undone.',
-                        style: TextStyle(
-                          color: Colors.red.shade700,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Action buttons
-              Row(
-                children: [
-                  Expanded(
-                    child: SizedBox(
-                      height: 50,
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.pop(context),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Theme.of(context).colorScheme.onSurface,
-                          side: BorderSide(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3)),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.close, size: 20, color: Theme.of(context).colorScheme.onSurface),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Cancel',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 15,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: SizedBox(
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          Navigator.pop(context);
-                          await _deleteSelectedSubtitles();
-                          _clearSelection();
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.delete, size: 20, color: Theme.of(context).colorScheme.onSurface,),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Delete All',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 15,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 16),
-            ],
-          ),
-        ),
-      ), // Close KeyboardListener
-      )
+      selectedCount: _selectedIndices.length,
+      onConfirm: () async {
+        await _deleteSelectedSubtitles();
+        _clearSelection();
+      },
     );
   }
 
