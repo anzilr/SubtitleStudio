@@ -46,6 +46,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
 import 'package:subtitle_studio/screens/edit_line/edit_line_controller.dart';
 import 'package:subtitle_studio/screens/edit_line/widgets/edit_text_field.dart';
 import 'package:subtitle_studio/screens/edit_line/widgets/time_component_field.dart';
+import 'package:subtitle_studio/screens/edit_line/widgets/edit_line_video_pane.dart';
 import 'package:subtitle_studio/screens/edit_line/widgets/edit_line_dialogs.dart';
 import 'package:subtitle_studio/screens/edit_line/widgets/edit_line_menu.dart';
 import 'package:subtitle_studio/screens/edit_line/widgets/edit_line_placeholders.dart';
@@ -3089,75 +3090,74 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
 
   /// Build video player widget with consistent configuration
   Widget _buildVideoPlayerWidget() {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      child: VideoPlayerWidget(
-        key: _videoPlayerKey,
-        videoPath: _selectedVideoPath!,
-        subtitleCollectionId: widget.subtitleId,
-        subtitles: _subtitles,
-        secondarySubtitles:
-            _showSecondarySubtitles
-                ? _secondarySubtitlesForPlayer
-                : [],
-        onSubtitlesUpdated: () {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              setState(() {
-                _markSubtitlesForRegeneration();
-                _generateSubtitles();
-              });
-            }
-          });
-        },
-        onSubtitleMarked: (subtitleIndex, isMarked) async {
-          // Handle marking/unmarking from video player
-          await _handleVideoPlayerMarkToggle(
-            subtitleIndex,
-            isMarked,
-          );
-        },
-        onSubtitleCommentUpdated: (subtitleIndex, comment) async {
-          // Update comment in database and refresh UI
-          try {
-            await updateSubtitleLineComment(widget.subtitleId, subtitleIndex, comment);
-            // Refresh the subtitle data from database
-            _subtitle = (await isar.subtitleCollections.get(widget.subtitleId))!;
-            
-            // Update current line if it matches
-            if (_subtitleLine != null && _subtitleLine!.index == subtitleIndex + 1) {
-              setState(() {
-                _subtitleLine!.comment = comment;
-              });
-            }
-            
-            // Regenerate subtitles for video player
+    return EditLineVideoPane(
+      videoPlayerKey: _videoPlayerKey,
+      videoPath: _selectedVideoPath!,
+      subtitleCollectionId: widget.subtitleId,
+      subtitles: _subtitles,
+      secondarySubtitles:
+          _showSecondarySubtitles ? _secondarySubtitlesForPlayer : const [],
+      isRepeatModeEnabled: _isRepeatModeEnabled,
+      onSubtitlesUpdated: () {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          setState(() {
             _markSubtitlesForRegeneration();
             _generateSubtitles();
-            
-            SnackbarHelper.showSuccess(context, 
-              comment != null ? 'Comment updated' : 'Comment deleted');
-          } catch (e) {
-            SnackbarHelper.showError(context, 'Could not update the comment. Please try again.');
-          }
-        },
-        onPlayStateChanged: (isPlaying) {
-          // Update play/pause button state when video player state changes
-          if (mounted) {
-            setState(() {
-              _isVideoPlaying = isPlaying;
-            });
-          }
-        },
-        onRepeatModeToggled: (isEnabled) {
-          // Handle repeat mode toggle from video player
-          if (isEnabled != _isRepeatModeEnabled) {
-            _toggleRepeatMode();
-          }
-        },
-        isRepeatModeEnabled: _isRepeatModeEnabled,
-      ),
+          });
+        });
+      },
+      onSubtitleMarked: _handleVideoPlayerMarkToggle,
+      onSubtitleCommentUpdated: _handleVideoPlayerCommentUpdated,
+      onPlayStateChanged: (isPlaying) {
+        if (!mounted) return;
+        setState(() {
+          _isVideoPlaying = isPlaying;
+        });
+      },
+      onRepeatModeToggled: (isEnabled) {
+        if (isEnabled != _isRepeatModeEnabled) {
+          _toggleRepeatMode();
+        }
+      },
     );
+  }
+
+  Future<void> _handleVideoPlayerCommentUpdated(
+    int subtitleIndex,
+    String? comment,
+  ) async {
+    try {
+      await updateSubtitleLineComment(
+        widget.subtitleId,
+        subtitleIndex,
+        comment,
+      );
+      _subtitle =
+          (await isar.subtitleCollections.get(widget.subtitleId))!;
+
+      if (_subtitleLine != null &&
+          _subtitleLine!.index == subtitleIndex + 1) {
+        setState(() {
+          _subtitleLine!.comment = comment;
+        });
+      }
+
+      _markSubtitlesForRegeneration();
+      _generateSubtitles();
+
+      if (!mounted) return;
+      SnackbarHelper.showSuccess(
+        context,
+        comment != null ? 'Comment updated' : 'Comment deleted',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      SnackbarHelper.showError(
+        context,
+        'Could not update the comment. Please try again.',
+      );
+    }
   }
 
   Widget _buildMobileContentWithoutVideo(Column originalContent) {
