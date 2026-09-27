@@ -3069,12 +3069,22 @@ Future<void> _deleteSelectedSubtitles() async {
       hintText: subtitleLines.length,
       title: 'Go to line',
       onSubmitted: (value) async {
-        final lineNumber = int.parse(value); // Keep as 1-based
+        final lineNumber = int.tryParse(value.trim());
+        if (lineNumber == null ||
+            lineNumber < 1 ||
+            lineNumber > subtitleLines.length) {
+          SnackbarHelper.showError(
+            context,
+            'Enter a line number between 1 and ${subtitleLines.length}',
+          );
+          return;
+        }
+
         await _scrollToIndexWithLoading(lineNumber);
-        _highlightIndex(lineNumber - 1); // Convert to 0-based for highlighting
-        
+        _highlightIndex(lineNumber - 1);
+
         if (_isVideoLoaded) {
-          _seekToSubtitle(lineNumber - 1); // Convert to 0-based for seeking
+          _seekToSubtitle(lineNumber - 1);
         }
       },
     );
