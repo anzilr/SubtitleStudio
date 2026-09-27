@@ -55,18 +55,14 @@ extension _EditLineActions on EditSubtitleScreenState {
     );
 
     try {
-      final success = await markSubtitleLine(
-        widget.subtitleId,
-        lineIndex,
-        newMarked,
-      );
+      final success = await _editLineController.setLineMarked(lineIndex, newMarked);
       if (success) {
         _setEditLineState(() {
           _subtitleLine!.marked = newMarked;
         });
 
         // Refresh subtitle collection data and update video player
-        _subtitle = (await isar.subtitleCollections.get(widget.subtitleId))!;
+        _subtitle = (await _editLineController.loadSubtitleCollection())!;
         _markSubtitlesForRegeneration();
         _generateSubtitles();
 

@@ -344,8 +344,7 @@ extension _EditLineVideoActions on EditSubtitleScreenState {
     );
     
     try {
-      final success = await markSubtitleLine(
-        widget.subtitleId,
+      final success = await _editLineController.setLineMarked(
         subtitleIndex, // subtitleIndex is already 0-based array index
         isMarked,
       );
@@ -359,7 +358,7 @@ extension _EditLineVideoActions on EditSubtitleScreenState {
         }
 
         // Refresh subtitle collection data from database to ensure all data is current
-        _subtitle = (await isar.subtitleCollections.get(widget.subtitleId))!;
+        _subtitle = (await _editLineController.loadSubtitleCollection())!;
 
         // Update the subtitles list for video player
         _markSubtitlesForRegeneration();
@@ -418,13 +417,12 @@ extension _EditLineVideoActions on EditSubtitleScreenState {
     String? comment,
   ) async {
     try {
-      await updateSubtitleLineComment(
-        widget.subtitleId,
+      await _editLineController.updateLineComment(
         subtitleIndex,
         comment,
       );
       _subtitle =
-          (await isar.subtitleCollections.get(widget.subtitleId))!;
+          (await _editLineController.loadSubtitleCollection())!;
 
       if (_subtitleLine != null &&
           _subtitleLine!.index == subtitleIndex + 1) {

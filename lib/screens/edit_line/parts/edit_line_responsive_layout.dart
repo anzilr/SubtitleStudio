@@ -34,9 +34,9 @@ extension _EditLineResponsiveLayout on EditSubtitleScreenState {
                           onSubtitleCommentUpdated: (subtitleIndex, comment) async {
                             // Update comment in database and refresh UI
                             try {
-                              await updateSubtitleLineComment(widget.subtitleId, subtitleIndex, comment);
+                              await _editLineController.updateLineComment(subtitleIndex, comment);
                               // Refresh the subtitle data from database
-                              _subtitle = (await isar.subtitleCollections.get(widget.subtitleId))!;
+                              _subtitle = (await _editLineController.loadSubtitleCollection())!;
                               
                               // Update current line if it matches
                               if (_subtitleLine != null && _subtitleLine!.index == subtitleIndex + 1) {
@@ -168,9 +168,9 @@ extension _EditLineResponsiveLayout on EditSubtitleScreenState {
                       onSubtitleCommentUpdated: (subtitleIndex, comment) async {
                         // Update comment in database and refresh UI
                         try {
-                          await updateSubtitleLineComment(widget.subtitleId, subtitleIndex, comment);
+                          await _editLineController.updateLineComment(subtitleIndex, comment);
                           // Refresh the subtitle data from database
-                          _subtitle = (await isar.subtitleCollections.get(widget.subtitleId))!;
+                          _subtitle = (await _editLineController.loadSubtitleCollection())!;
                           
                           // Update current line if it matches
                           if (_subtitleLine != null && _subtitleLine!.index == subtitleIndex + 1) {

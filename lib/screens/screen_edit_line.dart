@@ -104,6 +104,9 @@ class EditSubtitleScreen extends riverpod.ConsumerStatefulWidget {
 }
 
 class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen> {
+  EditLineController get _editLineController =>
+      ref.read(editLineControllerProvider.notifier);
+
   void _setEditLineState(VoidCallback update) {
     if (!mounted) return;
     setState(update);
