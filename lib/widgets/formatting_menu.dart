@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:subtitle_studio/themes/theme_provider.dart';
 import 'package:subtitle_studio/widgets/colour_picker_widget.dart';
 import 'package:subtitle_studio/utils/text_formatting.dart';
 
@@ -285,10 +283,9 @@ class FormattingMenu extends StatelessWidget {
       icon: Icon(
         Icons.format_size, 
         size: 32,
-        color: Provider.of<ThemeProvider>(context).themeMode ==
-                                      ThemeMode.light
-                                  ? const Color.fromARGB(255, 0, 45, 54)
-                                  : const Color.fromARGB(255, 233, 216, 166),
+        color: Theme.of(context).brightness == Brightness.light
+            ? const Color.fromARGB(255, 0, 45, 54)
+            : const Color.fromARGB(255, 233, 216, 166),
       ),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
