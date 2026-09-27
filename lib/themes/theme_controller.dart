@@ -4,9 +4,14 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:subtitle_studio/database/database_helper.dart';
-import 'package:subtitle_studio/database/models/preferences_model.dart';
+import 'package:subtitle_studio/app/providers/core_providers.dart';
+import 'package:subtitle_studio/themes/theme_preferences_repository.dart';
 import 'package:subtitle_studio/themes/theme.dart';
+
+final themePreferencesRepositoryProvider =
+    Provider<ThemePreferencesRepository>(
+  (ref) => ThemePreferencesRepository(ref.watch(isarProvider)),
+);
 
 final themeControllerProvider =
     NotifierProvider<ThemeController, ThemeState>(
@@ -54,6 +59,9 @@ class ThemeState {
 class ThemeController extends Notifier<ThemeState> {
   int _fontCounter = 0;
 
+  ThemePreferencesRepository get _preferences =>
+      ref.read(themePreferencesRepositoryProvider);
+
   @override
   ThemeState build() {
     unawaited(_loadInitialState());
@@ -61,9 +69,9 @@ class ThemeController extends Notifier<ThemeState> {
   }
 
   Future<void> _loadInitialState() async {
-    final savedTheme = await getThemeMode();
-    final fontPath = await PreferencesModel.getAppFontPath();
-    final fontName = await PreferencesModel.getAppFontName();
+    final savedTheme = await _preferences.getThemeMode();
+    final fontPath = await _preferences.getAppFontPath();
+    final fontName = await _preferences.getAppFontName();
 
     String? family;
     if (fontPath != null) {
@@ -90,13 +98,13 @@ class ThemeController extends Notifier<ThemeState> {
       customFontName: state.customFontName,
       fontFamily: state.fontFamily,
     );
-    await saveThemeMode(_themeModeToString(mode));
+    await _preferences.saveThemeMode(_themeModeToString(mode));
   }
 
   Future<void> setCustomFont(String? path) async {
     if (path == null) {
-      await PreferencesModel.setAppFontPath(null);
-      await PreferencesModel.setAppFontName(null);
+      await _preferences.setAppFontPath(null);
+      await _preferences.setAppFontName(null);
       state = ThemeState(themeMode: state.themeMode);
       return;
     }
@@ -109,8 +117,8 @@ class ThemeController extends Notifier<ThemeState> {
       return;
     }
 
-    await PreferencesModel.setAppFontPath(path);
-    await PreferencesModel.setAppFontName(fontName);
+    await _preferences.setAppFontPath(path);
+    await _preferences.setAppFontName(fontName);
 
     state = ThemeState(
       themeMode: state.themeMode,
