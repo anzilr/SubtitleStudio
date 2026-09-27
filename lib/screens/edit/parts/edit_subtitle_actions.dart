@@ -64,7 +64,7 @@ extension _EditSubtitleActions on _EditScreenState {
           // Update the last edited index to the first effect line
           if (effectLines.isNotEmpty) {
             final firstEffectLineIndex = effectLines.first.index;
-            await updateLastEditedIndex(widget.sessionId, firstEffectLineIndex);
+            await _controller.updateLastEditedIndex(firstEffectLineIndex);
           }
           
           // Close the sheet and refresh
@@ -144,11 +144,7 @@ extension _EditSubtitleActions on _EditScreenState {
       );
       
       // Add the line to database
-      final success = await addSubtitleLine(
-        widget.subtitleCollectionId, 
-        newLine, 
-        insertIndex, // 0-based insertion index
-      );
+      final success = await _controller.addSubtitleLine(newLine, insertIndex);
       
       if (success) {
         // Refresh the subtitle lines
@@ -256,7 +252,7 @@ extension _EditSubtitleActions on _EditScreenState {
     await hotkey.MSoneHotkeyManager.instance.unregisterMainEditScreenShortcuts();
     
     // Fetch the session's edit mode before navigating
-    final isEditMode = await getSessionEditMode(widget.sessionId);
+    final isEditMode = await _controller.getSessionEditMode();
     
     if (!mounted) return;
     
@@ -323,7 +319,7 @@ extension _EditSubtitleActions on _EditScreenState {
         ..endTime = "00:00:02,000";
 
       // Add to database
-      final success = await addSubtitleLine(widget.subtitleCollectionId, newLine, 0);
+      final success = await _controller.addSubtitleLine(newLine, 0);
       
       if (success) {
         // Navigate to the editor to edit this new line
@@ -367,7 +363,7 @@ extension _EditSubtitleActions on _EditScreenState {
 
         if (result == true) {
           // Force complete refresh of the subtitle data
-          final updatedSubtitles = await fetchSubtitleLines(widget.subtitleCollectionId);
+          final updatedSubtitles = await _controller.loadSubtitleLines();
           
           if (!mounted) return;
           
@@ -382,10 +378,10 @@ extension _EditSubtitleActions on _EditScreenState {
           });
           
           // Refresh the collection reference as well
-          subtitleCollection = (await fetchSubtitle(widget.subtitleCollectionId))!;
+          subtitleCollection = (await _controller.loadSubtitleCollection())!;
           
           await WidgetsBinding.instance.endOfFrame;
-          final lastIndex = await getLastEditedIndex(widget.sessionId);
+          final lastIndex = await _controller.getLastEditedIndex();
           
           if (lastIndex != null && mounted) {
             await _scrollToIndexWithLoading(lastIndex);

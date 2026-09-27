@@ -245,7 +245,7 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
     
     subtitleLinesFuture = _fetchSubtitleLines().then((subtitles) async {
       _controller.replaceSubtitleLinesLocally(subtitles);
-      subtitleCollection = (await fetchSubtitle(widget.subtitleCollectionId))!;
+      subtitleCollection = (await _controller.loadSubtitleCollection())!;
       
   await _loadSavedVideoPath();
   // Attempt to restore previously loaded secondary subtitles using the freshly fetched subtitles

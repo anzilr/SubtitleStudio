@@ -36,7 +36,7 @@ extension _EditMediaActions on _EditScreenState {
   }
 
   Future<List<SubtitleLine>> _fetchSubtitleLines() async {
-    final subtitles = await fetchSubtitleLines(widget.subtitleCollectionId);
+    final subtitles = await _controller.loadSubtitleLines();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _setEditorState(() {

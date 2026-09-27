@@ -291,6 +291,65 @@ class SubtitleRepository {
     }
   }
 
+  /// Fetch a session by ID.
+  Future<Session?> fetchSession(int sessionId) {
+    return _isar.sessions.get(sessionId);
+  }
+
+  /// Read the last edited cue index for a session.
+  Future<int?> getLastEditedIndex(int sessionId) async {
+    return (await _isar.sessions.get(sessionId))?.lastEditedIndex;
+  }
+
+  /// Persist the last edited cue index for a session.
+  Future<bool> updateLastEditedIndex(int sessionId, int index) async {
+    return _isar.writeTxn(() async {
+      final session = await _isar.sessions.get(sessionId);
+      if (session == null) return false;
+
+      session.lastEditedIndex = index;
+      await _isar.sessions.put(session);
+      return true;
+    });
+  }
+
+  /// Persist a changed subtitle collection.
+  Future<bool> updateCollection(SubtitleCollection collection) async {
+    try {
+      await _isar.writeTxn(() async {
+        await _isar.subtitleCollections.put(collection);
+      });
+      return true;
+    } catch (e) {
+      logError('SubtitleRepository: Error updating collection: $e');
+      return false;
+    }
+  }
+
+  /// Insert a subtitle line and normalize ordering/indexes once.
+  Future<bool> addLine(
+    int collectionId,
+    SubtitleLine line,
+    int insertIndex,
+  ) async {
+    try {
+      return await _isar.writeTxn(() async {
+        final collection = await _isar.subtitleCollections.get(collectionId);
+        if (collection == null) return false;
+
+        final lines = List<SubtitleLine>.from(collection.lines);
+        final targetIndex = insertIndex.clamp(0, lines.length);
+        lines.insert(targetIndex, line);
+        collection.lines = sortAndReindexSubtitleLines(lines);
+        await _isar.subtitleCollections.put(collection);
+        return true;
+      });
+    } catch (e) {
+      logError('SubtitleRepository: Error adding line: $e');
+      return false;
+    }
+  }
+
   /// Generate subtitles for video player from SubtitleLine list
   List<Subtitle> generateSubtitles(List<SubtitleLine> subtitleLines) {
     logInfo('SubtitleRepository: Generating ${subtitleLines.length} subtitles for video player');

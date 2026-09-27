@@ -266,6 +266,54 @@ class EditController extends Notifier<EditState> {
     }
   }
 
+  Future<List<SubtitleLine>> loadSubtitleLines() {
+    return _subtitleRepo.fetchLines(subtitleCollectionId);
+  }
+
+  Future<SubtitleCollection?> loadSubtitleCollection() {
+    return _subtitleRepo.fetchSubtitleCollection(subtitleCollectionId);
+  }
+
+  Future<Session?> loadSession([int? targetSessionId]) {
+    return _subtitleRepo.fetchSession(targetSessionId ?? sessionId);
+  }
+
+  Future<List<SubtitleLine>> loadMarkedLines() {
+    return _subtitleRepo.getMarkedLines(subtitleCollectionId);
+  }
+
+  Future<List<SubtitleLine>> loadLinesWithComments() {
+    return _subtitleRepo.getLinesWithComments(subtitleCollectionId);
+  }
+
+  Future<bool> addSubtitleLine(SubtitleLine line, int insertIndex) async {
+    final success = await _subtitleRepo.addLine(
+      subtitleCollectionId,
+      line,
+      insertIndex,
+    );
+    if (success) {
+      await refreshSubtitleLines();
+    }
+    return success;
+  }
+
+  Future<bool> saveSubtitleCollection(SubtitleCollection collection) {
+    return _subtitleRepo.updateCollection(collection);
+  }
+
+  Future<bool> updateLastEditedIndex(int index) {
+    return _subtitleRepo.updateLastEditedIndex(sessionId, index);
+  }
+
+  Future<int?> getLastEditedIndex() {
+    return _subtitleRepo.getLastEditedIndex(sessionId);
+  }
+
+  Future<bool> getSessionEditMode() {
+    return _subtitleRepo.getSessionEditMode(sessionId);
+  }
+
   /// Set a subtitle line's mark state explicitly.
   Future<bool> setLineMarked(int index, bool marked) async {
     if (index < 0 || index >= state.subtitleLines.length) return false;

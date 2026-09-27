@@ -7,13 +7,13 @@ extension _EditProjectActions on _EditScreenState {
         await _syncSourceViewToDatabase();
       }
 
-      final subtitleCollection = await isar.subtitleCollections.get(widget.subtitleCollectionId);
+      final subtitleCollection = await _controller.loadSubtitleCollection();
       if (subtitleCollection == null) {
         if (mounted) SnackbarHelper.showError(context, 'Failed to load subtitle data');
         return;
       }
 
-      final currentLines = await fetchSubtitleLines(widget.subtitleCollectionId);
+      final currentLines = await _controller.loadSubtitleLines();
       final srtContent = SrtCompiler.generateSrtContent(currentLines);
       bool saveSuccessful = false;
 
@@ -57,7 +57,7 @@ extension _EditProjectActions on _EditScreenState {
               // Update originalFileUri if it wasn't set (for older entries)
               if (originalFileUri.isEmpty) {
                 subtitleCollection.originalFileUri = targetPath;
-                await updateSubtitleCollection(subtitleCollection);
+                await _controller.saveSubtitleCollection(subtitleCollection);
                 print('Updated originalFileUri to: $targetPath');
               }
             } else {
@@ -87,7 +87,7 @@ extension _EditProjectActions on _EditScreenState {
 
   Future<void> _handleSaveFileAs() async {
     try {
-      final subtitle = await fetchSubtitle(widget.subtitleCollectionId);
+      final subtitle = await _controller.loadSubtitleCollection();
 
       if (subtitle == null) {
         throw Exception('Could not find subtitle with ID: ${widget.subtitleCollectionId}');
@@ -125,8 +125,8 @@ extension _EditProjectActions on _EditScreenState {
   Future<void> _handleSaveProject() async {
     try {
       // Get current session and subtitle collection
-      final session = await isar.sessions.get(widget.sessionId);
-      final subtitleCollection = await isar.subtitleCollections.get(widget.subtitleCollectionId);
+      final session = await _controller.loadSession();
+      final subtitleCollection = await _controller.loadSubtitleCollection();
       
       if (session == null || subtitleCollection == null) {
         if (context.mounted) {
@@ -160,8 +160,8 @@ extension _EditProjectActions on _EditScreenState {
   Future<void> _showProjectSettings() async {
     if (context.mounted) {
       // Fetch the current session and subtitle collection
-      final session = await isar.sessions.get(widget.sessionId);
-      final subtitleCollection = await isar.subtitleCollections.get(widget.subtitleCollectionId);
+      final session = await _controller.loadSession();
+      final subtitleCollection = await _controller.loadSubtitleCollection();
       
       if (session != null && subtitleCollection != null) {
         showModalBottomSheet(

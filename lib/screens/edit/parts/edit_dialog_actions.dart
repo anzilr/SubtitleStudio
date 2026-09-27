@@ -154,8 +154,8 @@ extension _EditDialogActions on _EditScreenState {
 
   Future<void> _showMarkedLinesModal() async {
     try {
-      final markedLines = await getMarkedSubtitleLines(widget.subtitleCollectionId);
-      final allLinesWithComments = await getAllSubtitleLinesWithComments(widget.subtitleCollectionId);
+      final markedLines = await _controller.loadMarkedLines();
+      final allLinesWithComments = await _controller.loadLinesWithComments();
       
       if (!mounted) return;
       
@@ -305,8 +305,8 @@ extension _EditDialogActions on _EditScreenState {
 
   Future<void> _showMarkedLinesModalWithHighlight(int databaseIndex) async {
     try {
-      final markedLines = await getMarkedSubtitleLines(widget.subtitleCollectionId);
-      final allLinesWithComments = await getAllSubtitleLinesWithComments(widget.subtitleCollectionId);
+      final markedLines = await _controller.loadMarkedLines();
+      final allLinesWithComments = await _controller.loadLinesWithComments();
       
       if (!mounted) return;
       
@@ -463,7 +463,7 @@ extension _EditDialogActions on _EditScreenState {
               onCheckpointRestored: () async {
                 // Reload subtitle lines after checkpoint restoration
                 _setEditorState(() {
-                  subtitleLinesFuture = fetchSubtitleLines(widget.subtitleCollectionId);
+                  subtitleLinesFuture = _controller.loadSubtitleLines();
                 });
                 
                 // Wait for the future to complete and update the UI
@@ -491,7 +491,7 @@ extension _EditDialogActions on _EditScreenState {
             onCheckpointRestored: () async {
               // Reload subtitle lines after checkpoint restoration
               _setEditorState(() {
-                subtitleLinesFuture = fetchSubtitleLines(widget.subtitleCollectionId);
+                subtitleLinesFuture = _controller.loadSubtitleLines();
               });
               
               // Wait for the future to complete and update the UI
