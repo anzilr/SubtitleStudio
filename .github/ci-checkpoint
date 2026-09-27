@@ -1,18 +1,13 @@
-Riverpod migration checkpoint 9
+Riverpod migration checkpoint 9b
 Date: 2026-09-28
 Checks:
 - flutter analyze
 - flutter test
 
-Scope since checkpoint 8:
-- Split video player controls by responsibility
-- Split Waveform rendering/interactions/editing helpers
-- Move Waveform loader into rendering part
-- Chain existing global Flutter/platform error handlers
-- Exclude generated Isar sources from analyzer noise
-- Self-heal corrupt Home session activity metadata
-- Inject Waveform subtitle persistence repository
-- Inject Editor video/preferences persistence repository
-- Remove static PreferencesModel dependency from VideoRepository
+Corrections after checkpoint 9:
+- Replaced protected setState calls from Waveform extension parts with state-owned mutation wrapper
+- Qualified Waveform static double-click state references
+- Migrated active macOS-aware screen_repository VideoRepository to injected EditorPreferencesRepository
+- Exposed injected video preferences access required for macOS bookmark restoration
 
 Platform builds intentionally disabled.
