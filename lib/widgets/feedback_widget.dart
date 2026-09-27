@@ -158,7 +158,12 @@ class _FeedbackWidgetState extends State<FeedbackWidget> {
         stackTrace: stackTrace,
         context: 'FeedbackWidget._pickScreenshots'
       );
-      _showSnackBar('Failed to pick screenshots: $e', Colors.red);
+      if (mounted) {
+        _showSnackBar(
+          'Could not add screenshots. Please try again.',
+          Colors.red,
+        );
+      }
     }
   }
 
@@ -294,13 +299,26 @@ class _FeedbackWidgetState extends State<FeedbackWidget> {
       try {
         final emailBody = await _composeEmailBody();
         await _shareWithAttachments(emailBody);
-      } catch (shareError) {
-        _showSnackBar('Failed to send feedback: $e', Colors.red);
+      } catch (shareError, shareStackTrace) {
+        await AppLogger.instance.error(
+          'Feedback fallback sharing failed',
+          error: shareError,
+          stackTrace: shareStackTrace,
+          context: 'FeedbackWidget._sendFeedback',
+        );
+        if (mounted) {
+          _showSnackBar(
+            'Could not send feedback. Please try again.',
+            Colors.red,
+          );
+        }
       }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
