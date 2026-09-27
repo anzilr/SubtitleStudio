@@ -2,7 +2,7 @@ import 'package:file_picker/file_picker.dart' as fp;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/database/models/models.dart';
-import 'package:subtitle_studio/features/waveform/bloc/waveform_event.dart';
+import 'package:subtitle_studio/features/waveform/state/waveform_event.dart';
 import 'package:subtitle_studio/features/waveform/providers/waveform_controller.dart';
 import 'package:subtitle_studio/features/waveform/widgets/waveform_toolbar.dart';
 import 'package:subtitle_studio/features/waveform/widgets/waveform_widget.dart';

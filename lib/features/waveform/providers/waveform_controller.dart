@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:subtitle_studio/features/waveform/bloc/waveform_event.dart';
-import 'package:subtitle_studio/features/waveform/bloc/waveform_state.dart';
+import 'package:subtitle_studio/features/waveform/state/waveform_event.dart';
+import 'package:subtitle_studio/features/waveform/state/waveform_state.dart';
 import 'package:subtitle_studio/features/waveform/services/audio_processor.dart';
 import 'package:subtitle_studio/database/models/preferences_model.dart';
 

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:subtitle_studio/features/waveform/bloc/waveform_event.dart';
-import 'package:subtitle_studio/features/waveform/bloc/waveform_state.dart';
+import 'package:subtitle_studio/features/waveform/state/waveform_event.dart';
+import 'package:subtitle_studio/features/waveform/state/waveform_state.dart';
 import 'package:subtitle_studio/features/waveform/providers/waveform_controller.dart';
 
 /// Toolbar widget for waveform controls.

@@ -7,8 +7,8 @@ export 'models/waveform_sample.dart';
 
 // Riverpod state management
 export 'providers/waveform_controller.dart';
-export 'bloc/waveform_event.dart';
-export 'bloc/waveform_state.dart';
+export 'state/waveform_event.dart';
+export 'state/waveform_state.dart';
 
 // Services
 export 'services/audio_processor.dart';

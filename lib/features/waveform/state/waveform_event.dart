@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-/// Events for waveform BLoC
+/// Events for waveform Riverpod controller
 abstract class WaveformEvent extends Equatable {
   const WaveformEvent();
 

@@ -61,8 +61,8 @@ import 'package:subtitle_studio/screens/edit/edit_state.dart';
 import 'package:subtitle_studio/screens/edit/models/subtitle_entry.dart';
 import 'package:subtitle_studio/screens/edit/widgets/source_view_pane.dart';
 import 'package:subtitle_studio/screens/edit/widgets/editor_custom_scrollbar.dart';
-import 'package:subtitle_studio/features/waveform/bloc/waveform_event.dart';
-import 'package:subtitle_studio/features/waveform/bloc/waveform_state.dart';
+import 'package:subtitle_studio/features/waveform/state/waveform_event.dart';
+import 'package:subtitle_studio/features/waveform/state/waveform_state.dart';
 import 'package:subtitle_studio/features/waveform/providers/waveform_controller.dart';
 import 'package:subtitle_studio/features/waveform/widgets/waveform_widget.dart';
 

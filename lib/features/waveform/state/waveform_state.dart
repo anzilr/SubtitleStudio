@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:subtitle_studio/features/waveform/models/waveform_sample.dart';
 
-/// States for waveform BLoC
+/// States for waveform controller
 abstract class WaveformState extends Equatable {
   const WaveformState();
 
