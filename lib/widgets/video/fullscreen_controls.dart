@@ -1057,34 +1057,33 @@ class _RepeatButtonState extends State<_RepeatButton> {
                 setButtonState(() {});
               }
             },
-            onDoubleTap: () {
-              // Double tap shows repeat range dialog (same as long press)
+            onDoubleTap: () async {
               setButtonState(() {
                 _isLongPressing = true;
               });
-              _showRepeatRangeDialog(context);
-              // Reset long press flag after a delay
-              Future.delayed(const Duration(milliseconds: 500), () {
+              try {
+                await _showRepeatRangeDialog(context);
+              } finally {
                 if (mounted) {
                   setButtonState(() {
                     _isLongPressing = false;
                   });
                 }
-              });
+              }
             },
-            onLongPress: () {
+            onLongPress: () async {
               setButtonState(() {
                 _isLongPressing = true;
               });
-              _showRepeatRangeDialog(context);
-              // Reset long press flag after a delay
-              Future.delayed(const Duration(milliseconds: 500), () {
+              try {
+                await _showRepeatRangeDialog(context);
+              } finally {
                 if (mounted) {
                   setButtonState(() {
                     _isLongPressing = false;
                   });
                 }
-              });
+              }
             },
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
@@ -1115,12 +1114,12 @@ class _RepeatButtonState extends State<_RepeatButton> {
     );
   }
   
-  void _showRepeatRangeDialog(BuildContext context) {
-    // Find the EditSubtitleScreen state to access subtitle data and methods
-    final editScreenState = context.findAncestorStateOfType<EditSubtitleScreenState>();
+  Future<void> _showRepeatRangeDialog(BuildContext context) async {
+    final editScreenState =
+        context.findAncestorStateOfType<EditSubtitleScreenState>();
     if (editScreenState == null) return;
-    
-    showDialog(
+
+    await showDialog<void>(
       context: context,
       builder: (BuildContext dialogContext) => RepeatRangeDialog(
         editScreenState: editScreenState,
