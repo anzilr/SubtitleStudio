@@ -1,20 +1,13 @@
-Riverpod migration checkpoint 11
+Riverpod migration checkpoint 11b
 Date: 2026-09-28
 Checks:
 - flutter analyze
 - flutter test
 
-Scope since checkpoint 10:
-- Remove remaining global database-helper access from Editor/Home/Edit-Line UI
-- Add injected application preferences repository
-- Route Settings reads/writes through injected preference persistence
-- Route MSone translator profile persistence through Riverpod
-- Add injected VideoPlayer preference repository
-- Make VideoPlayerWidget Riverpod-aware without changing its public API
-- Load video display preferences with one Isar read
-- Inject audio-track selection persistence
-- Inject subtitle font-size and volume persistence
-- Inject mute/unmute, subtitle background and subtitle-position persistence
-- Remove legacy PreferencesModel dependency from video player
+Corrections after checkpoint 11:
+- Restore parent imports required by legacy Editor/Home/Edit-Line part files
+- Keep direct Editor last-session update routed through Riverpod
+- Scope nested video control preference writes through ancestor VideoPlayerWidgetState
+- Preserve injected Settings/MSone/video preference repositories
 
 Platform builds intentionally disabled.
