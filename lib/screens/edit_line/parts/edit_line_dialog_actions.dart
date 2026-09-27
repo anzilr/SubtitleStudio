@@ -164,8 +164,7 @@ extension _EditLineDialogActions on EditSubtitleScreenState {
           }
           
           // Update comment in database  
-          final success = await updateSubtitleLineComment(
-            widget.subtitleId,
+          final success = await _editLineController.updateLineComment(
             _subtitleLine!.index - 1,
             comment,
           );
@@ -176,7 +175,7 @@ extension _EditLineDialogActions on EditSubtitleScreenState {
             });
             
             // Refresh subtitle collection data and update video player
-            _subtitle = (await isar.subtitleCollections.get(widget.subtitleId))!;
+            _subtitle = (await _editLineController.loadSubtitleCollection())!;
             _markSubtitlesForRegeneration();
             _generateSubtitles();
             
@@ -208,8 +207,7 @@ extension _EditLineDialogActions on EditSubtitleScreenState {
           }
           
           // Delete comment from database
-          final success = await updateSubtitleLineComment(
-            widget.subtitleId,
+          final success = await _editLineController.updateLineComment(
             _subtitleLine!.index - 1,
             null,
           );
@@ -220,7 +218,7 @@ extension _EditLineDialogActions on EditSubtitleScreenState {
             });
             
             // Refresh subtitle collection data and update video player
-            _subtitle = (await isar.subtitleCollections.get(widget.subtitleId))!;
+            _subtitle = (await _editLineController.loadSubtitleCollection())!;
             _markSubtitlesForRegeneration();
             _generateSubtitles();
             
@@ -263,7 +261,7 @@ extension _EditLineDialogActions on EditSubtitleScreenState {
 
   Future<void> _showMarkedLinesModal() async {
     try {
-      final markedLines = await getMarkedSubtitleLines(widget.subtitleId);
+      final markedLines = await _editLineController.getMarkedSubtitleLines();
       
       // Get the current line's database index if it's marked
       int? initialHighlightIndex;
@@ -289,9 +287,9 @@ extension _EditLineDialogActions on EditSubtitleScreenState {
             onCommentUpdated: (index, comment) async {
               // Update comment in database and refresh UI
               try {
-                await updateSubtitleLineComment(widget.subtitleId, index, comment);
+                await _editLineController.updateLineComment(index, comment);
                 // Refresh the subtitle data from database
-                _subtitle = (await isar.subtitleCollections.get(widget.subtitleId))!;
+                _subtitle = (await _editLineController.loadSubtitleCollection())!;
                 
                 // Update current line if it matches
                 if (_subtitleLine != null && _subtitleLine!.index == index + 1) {
@@ -313,9 +311,9 @@ extension _EditLineDialogActions on EditSubtitleScreenState {
             onResolvedUpdated: (index, resolved) async {
               // Update resolved status in database
               try {
-                await updateSubtitleLineResolved(widget.subtitleId, index, resolved);
+                await _editLineController.updateLineResolved(index, resolved);
                 // Refresh the subtitle data from database
-                _subtitle = (await isar.subtitleCollections.get(widget.subtitleId))!;
+                _subtitle = (await _editLineController.loadSubtitleCollection())!;
                 
                 // Update current line if it matches
                 if (_subtitleLine != null && _subtitleLine!.index == index + 1) {
@@ -338,21 +336,16 @@ extension _EditLineDialogActions on EditSubtitleScreenState {
               // Update edited text in database and refresh UI
               try {
                 // Get the subtitle line from database
-                final subtitle = await isar.subtitleCollections.get(widget.subtitleId);
+                final subtitle = await _editLineController.loadSubtitleCollection();
                 if (subtitle != null && index < subtitle.lines.length) {
                   final updatedLine = subtitle.lines[index];
                   updatedLine.edited = newText;
                   
                   // Save to database
-                  await saveSubtitleChangesToDatabase(
-                    widget.subtitleId,
-                    updatedLine,
-                    _parseSubtitleTime,
-                    sessionId: widget.sessionId,
-                  );
+                  await _editLineController.saveCompleteLine(updatedLine);
                   
                   // Refresh the subtitle data from database
-                  _subtitle = (await isar.subtitleCollections.get(widget.subtitleId))!;
+                  _subtitle = (await _editLineController.loadSubtitleCollection())!;
                   
                   // Update current line if it matches
                   if (_subtitleLine != null && _subtitleLine!.index == index + 1) {
@@ -397,7 +390,7 @@ extension _EditLineDialogActions on EditSubtitleScreenState {
               subtitleCollectionId: widget.subtitleId,
               onCheckpointRestored: () async {
                 // Reload subtitle data after checkpoint restoration
-                _subtitle = await isar.subtitleCollections.get(widget.subtitleId);
+                _subtitle = await _editLineController.loadSubtitleCollection();
                 
                 if (_subtitle != null && _subtitleLine != null) {
                   // Re-fetch the current subtitle line to get updated data
@@ -431,7 +424,7 @@ extension _EditLineDialogActions on EditSubtitleScreenState {
             subtitleCollectionId: widget.subtitleId,
             onCheckpointRestored: () async {
               // Reload subtitle data after checkpoint restoration
-              _subtitle = await isar.subtitleCollections.get(widget.subtitleId);
+              _subtitle = await _editLineController.loadSubtitleCollection();
               
               if (_subtitle != null && _subtitleLine != null) {
                 // Re-fetch the current subtitle line to get updated data
