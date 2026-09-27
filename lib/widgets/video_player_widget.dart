@@ -214,6 +214,11 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> with AutomaticKeep
   
   List<Subtitle> _currentSubtitles = [];
   List<Subtitle> _currentSecondarySubtitles = [];
+
+  // Active subtitle caches belong to the State object. Extension methods can
+  // mutate them, but Dart extensions cannot declare instance fields.
+  List<Subtitle> _currentActiveSubtitles = [];
+  List<Subtitle> _currentActiveSecondarySubtitles = [];
   SubtitleTimelineIndex _primarySubtitleIndex =
       const SubtitleTimelineIndex.empty();
   SubtitleTimelineIndex _secondarySubtitleIndex =
