@@ -2,8 +2,8 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:isar_community/isar.dart';
-import 'package:subtitle_studio/database/database_helper.dart' as db;
 import 'package:subtitle_studio/database/models/models.dart';
+import 'package:subtitle_studio/utils/subtitle_sorting.dart';
 import 'package:subtitle_studio/database/models/preferences_model.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 import 'package:subtitle_studio/widgets/video_player_widget.dart'; // For Subtitle
@@ -202,7 +202,20 @@ class EditLineRepository {
     );
 
     try {
-      final success = await db.deleteSubtitleLineDB(collectionId, lineIndex);
+      final success = await _isar.writeTxn(() async {
+        final collection = await _isar.subtitleCollections.get(collectionId);
+        if (collection == null ||
+            lineIndex < 0 ||
+            lineIndex >= collection.lines.length) {
+          return false;
+        }
+
+        final remaining = List<SubtitleLine>.from(collection.lines)
+          ..removeAt(lineIndex);
+        collection.lines = sortAndReindexSubtitleLines(remaining);
+        await _isar.subtitleCollections.put(collection);
+        return true;
+      });
 
       if (success) {
         await logInfo(
@@ -240,7 +253,18 @@ class EditLineRepository {
     );
 
     try {
-      final success = await db.markSubtitleLine(collectionId, lineIndex, marked);
+      final success = await _isar.writeTxn(() async {
+        final collection = await _isar.subtitleCollections.get(collectionId);
+        if (collection == null ||
+            lineIndex < 0 ||
+            lineIndex >= collection.lines.length) {
+          return false;
+        }
+
+        collection.lines[lineIndex].marked = marked;
+        await _isar.subtitleCollections.put(collection);
+        return true;
+      });
 
       if (success) {
         await logInfo(
@@ -278,7 +302,26 @@ class EditLineRepository {
     );
 
     try {
-      await db.updateSubtitleLineComment(collectionId, lineIndex, comment);
+      final success = await _isar.writeTxn(() async {
+        final collection = await _isar.subtitleCollections.get(collectionId);
+        if (collection == null ||
+            lineIndex < 0 ||
+            lineIndex >= collection.lines.length) {
+          return false;
+        }
+
+        collection.lines[lineIndex].comment = comment;
+        await _isar.subtitleCollections.put(collection);
+        return true;
+      });
+
+      if (!success) {
+        await logWarning(
+          'Could not update comment for invalid line $lineIndex',
+          context: 'EditLineRepository.updateSubtitleLineComment',
+        );
+        return false;
+      }
 
       await logInfo(
         'Successfully updated comment for line $lineIndex',
