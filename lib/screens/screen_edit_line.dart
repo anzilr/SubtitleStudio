@@ -53,6 +53,7 @@ import 'package:subtitle_studio/screens/edit_line/widgets/edit_text_field.dart';
 import 'package:subtitle_studio/screens/edit_line/widgets/time_component_field.dart';
 import 'package:subtitle_studio/screens/edit_line/widgets/edit_line_dialogs.dart';
 import 'package:subtitle_studio/screens/edit_line/widgets/edit_line_menu.dart';
+import 'package:subtitle_studio/screens/edit_line/widgets/edit_line_placeholders.dart';
 import 'package:subtitle_studio/widgets/ai_explanation_sheet.dart';
 
 // Edit subtitle line screen with video player integration
@@ -2929,18 +2930,6 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
     }
   }
 
-  List<String> _getEditInstructions() {
-    return [
-      'Use the text field to edit the subtitle line.',
-      'Tap the "Edit Time" button to edit timing (start/end times) for the subtitle.',
-      'Navigate between subtitle lines using the arrow buttons or the line number input.',
-      'The changes will be saved automatically while navigating, or you can save manually using the save button.',
-      'Enable "Auto-Save to File" in the settings to save changes directly to the file.',
-      'Use the formatting menu to apply text styles like bold, italic and color.',
-      'The palette icon opens the color picker for text formatting.',
-    ];
-  }
-
   Widget _buildResponsiveContent(bool shouldShowVideo, Column originalContent) {
     if (ResponsiveLayout.shouldUseDesktopLayout(context)) {
       // Don't build the ResizableSplitView until the resize ratio is loaded
@@ -3017,7 +3006,7 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
       // Apply layout switching based on preference (layout1/layout2)
       final videoContent = shouldShowVideo && _selectedVideoPath != null
           ? _buildVideoPlayerWidget()
-          : _buildNoVideoPlaceholder();
+          : NoVideoPlaceholder(onLoadVideo: _pickVideoFile);
 
       final editingContent = _buildEditingInterfaceWithoutVideo(originalContent);
 
@@ -3276,39 +3265,6 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
           }
         },
         isRepeatModeEnabled: _isRepeatModeEnabled,
-      ),
-    );
-  }
-
-  /// Build placeholder for when no video is loaded
-  Widget _buildNoVideoPlaceholder() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.movie_outlined,
-            size: 80,
-            color: Theme.of(
-              context,
-            ).colorScheme.outline.withOpacity(0.3),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No video loaded',
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(
-              color: Theme.of(context).colorScheme.outline,
-            ),
-          ),
-          const SizedBox(height: 8),
-          ElevatedButton.icon(
-            onPressed: _pickVideoFile,
-            icon: const Icon(Icons.video_file),
-            label: const Text('Load Video'),
-          ),
-        ],
       ),
     );
   }
@@ -3745,7 +3701,7 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
 
     return FirstTimeInstructions(
       screenName: 'edit_line',
-      instructions: _getEditInstructions(),
+      instructions: editLineInstructions,
       child: PopScope(
         canPop: false,
         onPopInvokedWithResult: (didPop, result) async {
@@ -3885,7 +3841,7 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
               ),
               body:
                   _subtitle?.lines.isEmpty ?? false
-                      ? _buildEmptySubtitleView(context)
+                      ? EmptySubtitleView(onAddSubtitle: _addInitialSubtitleLine)
                       : GestureDetector(
                         onSecondaryTap:
                             () =>
@@ -5100,46 +5056,6 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
         ), // Builder (inner - wraps Scaffold)
       ), // PopScope
     ); // FirstTimeInstructions
-  }
-
-  // New method to build the empty state view
-  Widget _buildEmptySubtitleView(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(
-            Icons.subtitles_outlined,
-            size: 80,
-            color: Color(0xFF0A9396),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            "No subtitles yet",
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            "Get started by adding your first subtitle line",
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 16, color: Colors.grey),
-          ),
-          const SizedBox(height: 32),
-          ElevatedButton.icon(
-            onPressed: _addInitialSubtitleLine,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color.fromARGB(255, 1, 54, 64),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            ),
-            icon: const Icon(Icons.add, color: Colors.white),
-            label: const Text(
-              "Add Subtitle Line",
-              style: TextStyle(color: Colors.white, fontSize: 16),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   // Method to add the initial subtitle line
