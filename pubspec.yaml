@@ -46,12 +46,13 @@ dependencies:
   flutter_gemini:  # Gemini AI integration
     git:
       url: https://github.com/AkhmadRamadani/flutter_gemini.git
+      ref: 8c7c8047b903d7b01d9bf1d3516c11142cab8523
 
 dependency_overrides:
   hotkey_manager_linux:
     git:
       url: https://github.com/gepbird/hotkey_manager.git
-      ref: fix-build-failure
+      ref: 1b31e3ca4ab017ee72f54a7065b2073a88403d61
       path: packages/hotkey_manager_linux
 
 dev_dependencies:
