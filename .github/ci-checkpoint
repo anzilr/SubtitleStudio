@@ -1,18 +1,20 @@
-Riverpod migration checkpoint 7
+Riverpod migration checkpoint 8
 Date: 2026-09-27
 Checks:
 - flutter analyze
 - flutter test
 
-Scope since checkpoint 6b:
-- Protect unsaved Source View edits with Save / Discard / Cancel
-- Enlarge Home delete touch target
-- Hide raw exceptions from user-facing Home, Editor and log UI
-- Reduce Home search hot-path work
-- Make Riverpod authoritative for Editor selection state
-- Skip full subtitle sort/reindex for text-only edits
-- Retain current dependency lock as a CI artifact
-- Make Home sorting deterministic
-- Remove obsolete dotenv preparation from CI
+Scope since checkpoint 7:
+- Make Editor boolean preferences Riverpod-owned
+- Type Waveform widget-state access and remove dynamic calls
+- Decouple Isar handle from main.dart
+- Pin Git dependencies to exact validated revisions
+- Redact local paths and credential-shaped values from logs
+- Align README platform/architecture/support documentation
+- Sanitize Riverpod controller error messages
+- Rename Riverpod compatibility wrappers from *Bloc to *Host
+- Move Waveform event/state out of bloc folder
+- Remove dead Editor migration remnants
+- Persist validated pubspec.lock without retriggering Actions
 
 Platform builds intentionally disabled.
