@@ -38,10 +38,6 @@ import 'package:subtitle_studio/operations/subtitle_operations.dart';
 import 'package:subtitle_studio/widgets/search_replace_sheet.dart';
 import 'package:subtitle_studio/widgets/isolated_loader.dart';
 import 'package:subtitle_studio/widgets/secondary_subtitle_sheet.dart';
-import 'package:subtitle_studio/widgets/settings_sheet.dart';
-import 'package:subtitle_studio/widgets/banner_configuration_sheet.dart';
-import 'package:subtitle_studio/widgets/subtitle_sync_sheet.dart';
-import 'package:subtitle_studio/widgets/malayalam_normalization_sheet.dart';
 import 'package:subtitle_studio/widgets/first_time_instructions.dart';
 import 'package:subtitle_studio/widgets/scrolling_title_widget.dart';
 import 'package:subtitle_studio/widgets/marked_lines_sheet.dart';
@@ -63,6 +59,7 @@ import 'package:subtitle_studio/screens/edit/widgets/edit_placeholders.dart';
 import 'package:subtitle_studio/screens/edit/widgets/subtitle_card.dart';
 import 'package:subtitle_studio/screens/edit/widgets/edit_selection_dialogs.dart';
 import 'package:subtitle_studio/screens/edit/widgets/editor_custom_scrollbar.dart';
+import 'package:subtitle_studio/screens/edit/widgets/edit_tool_sheets.dart';
 import 'package:subtitle_studio/features/waveform/state/waveform_event.dart';
 import 'package:subtitle_studio/features/waveform/state/waveform_state.dart';
 import 'package:subtitle_studio/features/waveform/providers/waveform_controller.dart';
@@ -3035,70 +3032,36 @@ Future<void> _deleteSelectedSubtitles() async {
     }
 
   Future<void> _showSyncModal() async {
-    if (context.mounted) {
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        useSafeArea: true,
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.7,
-        ),
-        builder: (context) {
-          return SafeArea(
-            child: SubtitleSyncSheet(
-              subtitleLines: subtitleLines,
-              subtitleId: widget.subtitleCollectionId,
-              isVideoLoaded: _isVideoLoaded,
-              videoPlayerKey: _videoPlayerKey,
-              onRefresh: () {
-                _refreshSubtitleLines();
-                Navigator.pop(context);
-              },
-            ),
-          );
-        },
-      );
-    }
+    if (!mounted) return;
+    await showEditorSyncSheet(
+      context: context,
+      subtitleLines: subtitleLines,
+      subtitleCollectionId: widget.subtitleCollectionId,
+      isVideoLoaded: _isVideoLoaded,
+      videoPlayerKey: _videoPlayerKey,
+      onRefresh: _refreshSubtitleLines,
+    );
   }
 
   Future<void> _showInsertBannersModal() async {
-    if (context.mounted) {
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16.0)),
-        ),
-        builder: (context) => BannerConfigurationSheet(
-          subtitleCollectionId: widget.subtitleCollectionId,
-          sessionId: widget.sessionId,
-          subtitleLines: subtitleLines,
-          onBannersInserted: () {
-            _refreshSubtitleLines();
-            // Removed Navigator.pop(context) - the sheet already handles navigation
-          },
-        ),
-      );
-    }
+    if (!mounted) return;
+    await showEditorBannerSheet(
+      context: context,
+      subtitleCollectionId: widget.subtitleCollectionId,
+      sessionId: widget.sessionId,
+      subtitleLines: subtitleLines,
+      onBannersInserted: _refreshSubtitleLines,
+    );
   }
 
   Future<void> _showMalayalamNormalizationModal() async {
-    if (context.mounted) {
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16.0)),
-        ),
-        builder: (context) => MalayalamNormalizationSheet(
-          subtitleCollectionId: widget.subtitleCollectionId,
-          subtitleLines: subtitleLines,
-          onNormalizationComplete: () {
-            _refreshSubtitleLines();
-          },
-        ),
-      );
-    }
+    if (!mounted) return;
+    await showEditorNormalizationSheet(
+      context: context,
+      subtitleCollectionId: widget.subtitleCollectionId,
+      subtitleLines: subtitleLines,
+      onNormalizationComplete: _refreshSubtitleLines,
+    );
   }
 
   Future<void> _removeHearingImpairedLines() async {
@@ -3306,24 +3269,13 @@ Future<void> _deleteSelectedSubtitles() async {
   }
 
   Future<void> _showSettingsModal() async {
-    if (context.mounted) {
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16.0)),
-        ),
-        builder: (context) => SettingsSheet(
-          onSettingsChanged: () async {
-            // Reload preferences from database to sync controller state
-            await _controller.reloadPreferences();
-            // The Riverpod listener updates local state from the controller
-          },
-        ),
-      );
-    }
+    if (!mounted) return;
+    await showEditorSettingsSheet(
+      context: context,
+      onSettingsChanged: _controller.reloadPreferences,
+    );
   }
-  
+
   Future<void> _navigateToEditSubtitleScreen(int index) async {
     // Unregister EditScreen hotkeys to prevent conflicts with EditSubtitleScreen
     await hotkey.MSoneHotkeyManager.instance.unregisterMainEditScreenShortcuts();
