@@ -212,16 +212,8 @@ extension _EditSubtitleActions on _EditScreenState {
     try {
       final success = await _controller.setLineMarked(subtitleIndex, isMarked);
       if (success) {
-        // Update the subtitle line in the list
         if (subtitleIndex < subtitleLines.length) {
-          _setEditorState(() {
-            subtitleLines[subtitleIndex].marked = isMarked;
-          });
-          
-          // Update the controller
-          _controller.updateSubtitleLineLocally(subtitleIndex, subtitleLines[subtitleIndex]);
-          
-          // Update all subtitle displays (video + waveform)
+          _setEditorState(() {});
           _updateAllSubtitleDisplays();
         }
         
@@ -360,7 +352,6 @@ extension _EditSubtitleActions on _EditScreenState {
           if (!mounted) return;
 
           _setEditorState(() {
-            _subtitles = _generateSubtitles(updatedSubtitles);
             subtitleLinesFuture = Future.value(updatedSubtitles);
           });
           

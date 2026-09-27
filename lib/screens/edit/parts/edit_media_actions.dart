@@ -40,14 +40,8 @@ extension _EditMediaActions on _EditScreenState {
     _controller.replaceSubtitleLinesLocally(subtitles);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _setEditorState(() {
-          _subtitles = _generateSubtitles(subtitles);
-        });
-
-        if (_isVideoLoaded) {
-          _updateVideoPlayerSubtitles();
-        }
+      if (mounted && _isVideoLoaded) {
+        _updateVideoPlayerSubtitles();
       }
     });
     return subtitles;

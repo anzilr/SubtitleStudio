@@ -49,11 +49,6 @@ extension _EditInitializationHelpers on _EditScreenState {
 
   // Helper method to update both video and waveform when subtitles change
   void _updateAllSubtitleDisplays() {
-    // Regenerate subtitles for video player if needed
-    if (subtitleLines.isNotEmpty) {
-      _subtitles = _generateSubtitles(subtitleLines);
-    }
-    
     // Update video player
     if (_videoPlayerKey.currentState != null) {
       _videoPlayerKey.currentState!.updateSubtitles(_subtitles);

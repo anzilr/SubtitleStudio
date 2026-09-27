@@ -193,9 +193,11 @@ class EditController extends Notifier<EditState> {
   /// mutation themselves. This keeps Riverpod as the single render-state owner
   /// while those operations are migrated incrementally.
   void replaceSubtitleLinesLocally(List<SubtitleLine> lines) {
+    final immutableLines = List<SubtitleLine>.unmodifiable(lines);
     _setState(
       state.copyWith(
-        subtitleLines: List<SubtitleLine>.unmodifiable(lines),
+        subtitleLines: immutableLines,
+        generatedSubtitles: _subtitleRepo.generateSubtitles(immutableLines),
       ),
     );
   }
@@ -211,7 +213,12 @@ class EditController extends Notifier<EditState> {
 
     final updatedLines = List<SubtitleLine>.from(state.subtitleLines);
     updatedLines[index] = line;
-    _setState(state.copyWith(subtitleLines: updatedLines));
+    _setState(
+      state.copyWith(
+        subtitleLines: updatedLines,
+        generatedSubtitles: _subtitleRepo.generateSubtitles(updatedLines),
+      ),
+    );
   }
 
   /// Refresh subtitle lines from database
@@ -362,7 +369,12 @@ class EditController extends Notifier<EditState> {
         ..comment = line.comment
         ..resolved = line.resolved;
 
-      _setState(state.copyWith(subtitleLines: updatedLines));
+      _setState(
+        state.copyWith(
+          subtitleLines: updatedLines,
+          generatedSubtitles: _subtitleRepo.generateSubtitles(updatedLines),
+        ),
+      );
       return true;
     } catch (e, stackTrace) {
       logError(
@@ -405,7 +417,12 @@ class EditController extends Notifier<EditState> {
         ..comment = comment
         ..resolved = line.resolved;
 
-      _setState(state.copyWith(subtitleLines: updatedLines));
+      _setState(
+        state.copyWith(
+          subtitleLines: updatedLines,
+          generatedSubtitles: _subtitleRepo.generateSubtitles(updatedLines),
+        ),
+      );
       return true;
     } catch (e, stackTrace) {
       logError(
@@ -441,7 +458,12 @@ class EditController extends Notifier<EditState> {
         ..comment = null
         ..resolved = false;
 
-      _setState(state.copyWith(subtitleLines: updatedLines));
+      _setState(
+        state.copyWith(
+          subtitleLines: updatedLines,
+          generatedSubtitles: _subtitleRepo.generateSubtitles(updatedLines),
+        ),
+      );
       return true;
     } catch (e, stackTrace) {
       logError(
@@ -478,7 +500,12 @@ class EditController extends Notifier<EditState> {
         ..comment = line.comment
         ..resolved = resolved;
 
-      _setState(state.copyWith(subtitleLines: updatedLines));
+      _setState(
+        state.copyWith(
+          subtitleLines: updatedLines,
+          generatedSubtitles: _subtitleRepo.generateSubtitles(updatedLines),
+        ),
+      );
       return true;
     } catch (e, stackTrace) {
       logError(

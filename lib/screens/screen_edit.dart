@@ -113,7 +113,8 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
   late Future<List<SubtitleLine>> subtitleLinesFuture;
   String? _selectedVideoPath;
   bool _isVideoVisible = false;
-  bool _isVideoLoaded = false;  List<Subtitle> _subtitles = [];
+  bool _isVideoLoaded = false;
+  List<Subtitle> get _subtitles => _editState.generatedSubtitles;
   List<Subtitle> _secondarySubtitles = []; // To store secondary subtitles for video player
   List<SimpleSubtitleLine> _originalSecondarySubtitles = []; // Store original format for passing to EditSubtitleScreen
   final ItemScrollController _itemScrollController = ItemScrollController();
@@ -207,10 +208,7 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
         final success = await _controller.updateComment(subtitleIndex, comment);
         if (!success) throw StateError('Comment update failed');
         if (subtitleIndex < subtitleLines.length) {
-          setState(() {
-            subtitleLines[subtitleIndex].comment = comment;
-          });
-          _controller.updateSubtitleLineLocally(subtitleIndex, subtitleLines[subtitleIndex]);
+          _setEditorState(() {});
           _updateSubtitlesWithVersion(subtitleLines);
           if (_videoPlayerKey.currentState != null) {
             _videoPlayerKey.currentState!.updateSubtitles(_subtitles);

@@ -81,17 +81,14 @@ extension _EditSelectionActions on _EditScreenState {
     await _controller.refreshSubtitleLines();
     
     final updatedSubtitles = subtitleLines;
-    final newGeneratedSubtitles = _generateSubtitles(updatedSubtitles);
 
     if (!mounted) return;
 
-    _setEditorState(() {
-      _subtitles = newGeneratedSubtitles;
-    });
+    _setEditorState(() {});
 
     // Update the video player's subtitles directly
     if (_videoPlayerKey.currentState != null) {
-      _videoPlayerKey.currentState!.updateSubtitles(newGeneratedSubtitles);
+      _videoPlayerKey.currentState!.updateSubtitles(_subtitles);
     }
     
     // Update the waveform's subtitles

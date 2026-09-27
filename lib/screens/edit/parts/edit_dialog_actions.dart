@@ -171,15 +171,8 @@ extension _EditDialogActions on _EditScreenState {
               try {
                 final success = await _controller.updateComment(index, comment);
                 if (!success) throw StateError('Comment update failed');
-                // Refresh the subtitle line in UI
                 if (index < subtitleLines.length) {
-                  _setEditorState(() {
-                    subtitleLines[index].comment = comment;
-                  });
-                  // Update controller
-                  _controller.updateSubtitleLineLocally(index, subtitleLines[index]);
-                  
-                  // Update all subtitle displays (video + waveform)
+                  _setEditorState(() {});
                   _updateAllSubtitleDisplays();
                 }
                 
@@ -194,17 +187,8 @@ extension _EditDialogActions on _EditScreenState {
               try {
                 final success = await _controller.unmarkLine(index);
                 if (!success) throw StateError('Unmark failed');
-                // Refresh the subtitle line in UI
                 if (index < subtitleLines.length) {
-                  _setEditorState(() {
-                    subtitleLines[index].marked = false;
-                    subtitleLines[index].comment = null;
-                    subtitleLines[index].resolved = false;
-                  });
-                  // Update controller
-                  _controller.updateSubtitleLineLocally(index, subtitleLines[index]);
-                  
-                  // Update all subtitle displays (video + waveform)
+                  _setEditorState(() {});
                   _updateAllSubtitleDisplays();
                 }
                 
@@ -218,13 +202,8 @@ extension _EditDialogActions on _EditScreenState {
               try {
                 final success = await _controller.updateResolved(index, resolved);
                 if (!success) throw StateError('Resolved-state update failed');
-                // Refresh the subtitle line in UI
                 if (index < subtitleLines.length) {
-                  _setEditorState(() {
-                    subtitleLines[index].resolved = resolved;
-                  });
-                  // Update controller
-                  _controller.updateSubtitleLineLocally(index, subtitleLines[index]);
+                  _setEditorState(() {});
                 }
                 
                 SnackbarHelper.showSuccess(context, 
@@ -300,15 +279,8 @@ extension _EditDialogActions on _EditScreenState {
               try {
                 final success = await _controller.updateComment(index, comment);
                 if (!success) throw StateError('Comment update failed');
-                // Refresh the subtitle line in UI
                 if (index < subtitleLines.length) {
-                  _setEditorState(() {
-                    subtitleLines[index].comment = comment;
-                  });
-                  // Update controller
-                  _controller.updateSubtitleLineLocally(index, subtitleLines[index]);
-                  
-                  // Update all subtitle displays (video + waveform)
+                  _setEditorState(() {});
                   _updateAllSubtitleDisplays();
                 }
                 
@@ -323,17 +295,8 @@ extension _EditDialogActions on _EditScreenState {
               try {
                 final success = await _controller.unmarkLine(index);
                 if (!success) throw StateError('Unmark failed');
-                // Refresh the subtitle line in UI
                 if (index < subtitleLines.length) {
-                  _setEditorState(() {
-                    subtitleLines[index].marked = false;
-                    subtitleLines[index].comment = null;
-                    subtitleLines[index].resolved = false;
-                  });
-                  // Update controller
-                  _controller.updateSubtitleLineLocally(index, subtitleLines[index]);
-                  
-                  // Update all subtitle displays (video + waveform)
+                  _setEditorState(() {});
                   _updateAllSubtitleDisplays();
                 }
                 
@@ -347,13 +310,8 @@ extension _EditDialogActions on _EditScreenState {
               try {
                 final success = await _controller.updateResolved(index, resolved);
                 if (!success) throw StateError('Resolved-state update failed');
-                // Refresh the subtitle line in UI
                 if (index < subtitleLines.length) {
-                  _setEditorState(() {
-                    subtitleLines[index].resolved = resolved;
-                  });
-                  // Update controller
-                  _controller.updateSubtitleLineLocally(index, subtitleLines[index]);
+                  _setEditorState(() {});
                 }
                 
                 SnackbarHelper.showSuccess(context, 
