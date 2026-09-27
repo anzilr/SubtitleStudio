@@ -258,31 +258,41 @@ class AppLogger {
     }
   }
 
-  /// Setup Flutter error handling to catch uncaught errors
+  /// Setup Flutter error handling to catch uncaught errors.
+  ///
+  /// Chain any existing handlers instead of replacing them. This keeps crash
+  /// reporting, framework console output, and host integrations working while
+  /// AppLogger records the same failure.
   void _setupFlutterErrorHandling() {
-    // Catch Flutter framework errors
+    final previousFlutterErrorHandler = FlutterError.onError;
+    final previousPlatformErrorHandler = PlatformDispatcher.instance.onError;
+
     FlutterError.onError = (FlutterErrorDetails details) {
-      // Log the error
-      fatal(
-        'Flutter Error: ${details.exception}',
-        stackTrace: details.stack,
-        context: 'FlutterError.onError',
+      unawaited(
+        fatal(
+          'Flutter Error: ${details.exception}',
+          stackTrace: details.stack,
+          context: 'FlutterError.onError',
+        ),
       );
-      
-      // Call the default error handler in debug mode
-      if (kDebugMode) {
+
+      if (previousFlutterErrorHandler != null) {
+        previousFlutterErrorHandler(details);
+      } else {
         FlutterError.presentError(details);
       }
     };
 
-    // Catch errors not handled by Flutter framework
     PlatformDispatcher.instance.onError = (error, stackTrace) {
-      fatal(
-        'Uncaught Error: $error',
-        stackTrace: stackTrace,
-        context: 'PlatformDispatcher.onError',
+      unawaited(
+        fatal(
+          'Uncaught Error: $error',
+          stackTrace: stackTrace,
+          context: 'PlatformDispatcher.onError',
+        ),
       );
-      return true;
+
+      return previousPlatformErrorHandler?.call(error, stackTrace) ?? true;
     };
   }
 
