@@ -16,7 +16,7 @@ Downloads
 ## ✨ Features
 
 ### Core Features
-- 🎬 **Cross-Platform Support**: Android, iOS, macOS, Windows, Linux, and Web
+- 🎬 **Cross-Platform Support**: Android, iOS, macOS, Windows, and Linux
 - ✏️ **Professional Editing**: Frame-accurate timing adjustments and text formatting
 - 🎥 **Video Synchronization**: Real-time subtitle sync with video playback
 - 💾 **Auto-Save**: Never lose your work with automatic saving
@@ -107,11 +107,6 @@ flutter run -d windows
 flutter run -d linux
 ```
 
-**Web:**
-```bash
-flutter run -d web
-```
-
 ### 3. Building for Release
 
 **Android APK:**
@@ -180,11 +175,18 @@ lib/
 
 ### Architecture
 
-Subtitle Studio follows a modular architecture with:
-- **Feature-first organization** for scalability
-- **Provider pattern** for state management
-- **Isar database** for local persistence
-- **Clean separation** of concerns
+Subtitle Studio is being incrementally modernized while keeping the application
+usable throughout the migration:
+
+- **Riverpod** is the primary application/editor state-management system.
+- **Provider** remains for a small amount of legacy theme/UI state and is being
+  reduced incrementally.
+- **Isar** provides local persistence for sessions, preferences and subtitle
+  data.
+- Large editor/video widgets are being split by feature boundary to improve
+  testability and reviewability.
+- Compatibility wrapper filenames from the earlier BLoC architecture may remain
+  temporarily, but their active state flow is Riverpod-based.
 
 
 ## 🔐 Client Secret Policy
@@ -269,8 +271,8 @@ This project is licensed under the **GNU General Public License v3.0**. See [LIC
 
 ## 💬 Contact & Support
 
-- 🐛 Report bugs via [GitHub Issues](https://github.com/anzilr/MsoneSubEditor/issues)
-- 💬 Start a discussion on [GitHub Discussions](https://github.com/anzilr/MsoneSubEditor/discussions)
+- 🐛 Report bugs via [GitHub Issues](https://github.com/Msoneofficial/SubtitleStudio/issues)
+- 💬 Start a discussion on [GitHub Discussions](https://github.com/Msoneofficial/SubtitleStudio/discussions)
 
 ---
 
