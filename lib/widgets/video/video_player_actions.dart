@@ -219,11 +219,6 @@ extension VideoPlayerActions on VideoPlayerWidgetState {
   
   }
   
-  // Performance optimization: Track current active subtitles to avoid unnecessary rebuilds
-  // Changed to lists to support multiple overlapping subtitles with same timecode
-  List<Subtitle> _currentActiveSubtitles = [];
-  List<Subtitle> _currentActiveSecondarySubtitles = [];
-  
   void _updateActiveSubtitles(Duration position) {
     // Safety check: don't update if widget is disposed or not mounted
     if (!mounted) return;
