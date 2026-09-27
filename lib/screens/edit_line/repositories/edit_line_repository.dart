@@ -6,7 +6,6 @@ import 'package:subtitle_studio/database/database_helper.dart' as db;
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/database/models/preferences_model.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
-import 'package:subtitle_studio/database/database_instance.dart';
 import 'package:subtitle_studio/widgets/video_player_widget.dart'; // For Subtitle
 import 'package:subtitle_studio/utils/subtitle_parser.dart'; // For SimpleSubtitleLine
 import 'package:subtitle_studio/utils/platform_file_handler.dart';
@@ -30,9 +29,9 @@ import 'package:subtitle_studio/utils/platform_file_handler.dart';
 /// - Preferences managed in one place
 /// - File I/O abstracted from UI concerns
 class EditLineRepository {
-  static final EditLineRepository _instance = EditLineRepository._internal();
-  factory EditLineRepository() => _instance;
-  EditLineRepository._internal();
+  final Isar _isar;
+
+  EditLineRepository(this._isar);
 
   /// Fetch a single subtitle line by collection ID and index
   /// 
@@ -47,7 +46,7 @@ class EditLineRepository {
     );
 
     try {
-      final collection = await isar.subtitleCollections.get(collectionId);
+      final collection = await _isar.subtitleCollections.get(collectionId);
 
       if (collection == null) {
         await logWarning(
@@ -97,7 +96,7 @@ class EditLineRepository {
     );
 
     try {
-      final collection = await isar.subtitleCollections.get(collectionId);
+      final collection = await _isar.subtitleCollections.get(collectionId);
 
       if (collection != null) {
         await logInfo(
@@ -144,7 +143,7 @@ class EditLineRepository {
       return await logPerformance(
         'Update subtitle line',
         () async {
-          final collection = await isar.subtitleCollections.get(collectionId);
+          final collection = await _isar.subtitleCollections.get(collectionId);
 
           if (collection == null) {
             await logWarning(
@@ -171,8 +170,8 @@ class EditLineRepository {
           collection.lines[arrayIndex].endTime = endTime;
 
           // Write to database
-          await isar.writeTxn(() async {
-            await isar.subtitleCollections.put(collection);
+          await _isar.writeTxn(() async {
+            await _isar.subtitleCollections.put(collection);
           });
 
           await logInfo(
@@ -309,7 +308,7 @@ class EditLineRepository {
       return await logPerformance(
         'Generate subtitles for video',
         () async {
-          final collection = await isar.subtitleCollections.get(collectionId);
+          final collection = await _isar.subtitleCollections.get(collectionId);
 
           if (collection == null || collection.lines.isEmpty) {
             await logWarning(

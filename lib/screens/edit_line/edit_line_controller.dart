@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/screens/edit_line/edit_line_state.dart';
 import 'package:subtitle_studio/screens/edit_line/repositories/edit_line_repository.dart';
@@ -41,7 +42,7 @@ final editLineConfigurationProvider = Provider<EditLineConfiguration>((ref) {
 });
 
 final editLineRepositoryProvider = Provider<EditLineRepository>((ref) {
-  return EditLineRepository();
+  return EditLineRepository(ref.watch(isarProvider));
 });
 
 final editLineControllerProvider =
