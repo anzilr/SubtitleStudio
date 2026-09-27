@@ -1,15 +1,20 @@
-Riverpod migration checkpoint 12
+Riverpod migration checkpoint 7
 Date: 2026-09-27
 Checks:
 - flutter analyze
 - flutter test
 
-Scope:
-- Removed final legacy Provider state layer
-- Settings custom font state migrated to Riverpod
-- Video Player reduced below 600 lines via focused part files
-- Settings sheet reduced below 600 lines via focused part files
-- Obsolete .env scaffolding removed
-- Riverpod documented as the single app state-management system
+Scope since checkpoint 6b:
+- Inject Isar into active Editor SubtitleRepository
+- Fix recursive updateLastEditedSession/getSessionEditMode repository bugs
+- Align README with Riverpod-only application state
+- Hide remaining raw log-load exception text from users
+- Modernize AI/Waveform/UI color APIs
+- Modernize Color serialization and unnecessary imports
+- Track real per-session last-opened timestamps without Isar schema changes
+- Update DropdownButtonFormField initialization API
+- Update scroll-cache and switch color APIs
+- Migrate Gemini explanation request to prompt API
+- Migrate karaoke selector to RadioGroup
 
 Platform builds intentionally disabled.
