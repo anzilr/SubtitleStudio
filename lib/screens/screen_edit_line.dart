@@ -2348,8 +2348,6 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
           // If the line is not marked, mark it first
           if (!_subtitleLine!.marked) {
             await _toggleMarkLine();
-            // Small delay to ensure mark operation completes
-            await Future.delayed(const Duration(milliseconds: 50));
           }
           
           // Update comment in database  
@@ -2394,8 +2392,6 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
           // If the line is not marked, mark it first (marking is required for comments)
           if (!_subtitleLine!.marked) {
             await _toggleMarkLine();
-            // Small delay to ensure mark operation completes
-            await Future.delayed(const Duration(milliseconds: 50));
           }
           
           // Delete comment from database
@@ -4814,10 +4810,8 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
       // Add to database
       final success = await addSubtitleLine(widget.subtitleId, newLine, 0);
       if (success) {
-        // Wait a moment to ensure database transaction completes
-        await Future.delayed(const Duration(milliseconds: 100));
-
-        // Force refresh subtitle collection from database before fetching line
+        // The database helper completes its transaction before returning.
+        // Force refresh subtitle collection before fetching the new line
         _subtitle = await isar.subtitleCollections.get(widget.subtitleId);
 
         // Refresh the screen with the new line

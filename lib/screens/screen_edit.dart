@@ -1827,9 +1827,7 @@ Future<void> _deleteSelectedSubtitles() async {
       onCommentSaved: (comment) async {
         // If the line is not marked, mark it first
         if (!line.marked) {
-          _toggleMarkLine(index);
-          // Small delay to ensure mark operation completes
-          await Future.delayed(const Duration(milliseconds: 50));
+          await _toggleMarkLine(index);
         }
         
         // Riverpod migration - delegate to the Riverpod controller which handles all business logic
