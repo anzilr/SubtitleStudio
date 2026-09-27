@@ -190,4 +190,16 @@ class EditorPreferencesRepository {
       (preferences) => preferences.mobileVideoResizeRatio = value,
     );
   }
+
+  /// Clear cached waveform metadata for a subtitle collection.
+  Future<void> clearWaveformCache(int subtitleCollectionId) async {
+    await _updateVideoPreferences(subtitleCollectionId, (preferences) {
+      preferences.waveformPcmPath = null;
+      preferences.waveformSampleRate = null;
+      preferences.waveformTotalSamples = null;
+      preferences.waveformChannels = null;
+      preferences.waveformGeneratedAt = null;
+    });
+  }
+
 }

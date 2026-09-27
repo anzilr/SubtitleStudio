@@ -44,7 +44,7 @@ extension _EditMenuActions on _EditScreenState {
       case 'regenerate_waveform':
         // Force regenerate waveform by clearing cache and reloading
         if (_selectedVideoPath != null) {
-          await PreferencesModel.clearWaveformCache(widget.subtitleCollectionId);
+          await _controller.clearWaveformCache();
           ref.read(waveformControllerProvider.notifier).dispatch(const ClearWaveform());
           _setEditorState(() {
             _isWaveformVisible = true;

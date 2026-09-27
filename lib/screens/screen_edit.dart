@@ -19,7 +19,6 @@ import 'package:subtitle_studio/screens/screen_help.dart';
 import 'package:subtitle_studio/utils/responsive_layout.dart';
 import 'package:subtitle_studio/database/database_helper.dart';
 import 'package:subtitle_studio/database/models/models.dart';
-import 'package:subtitle_studio/database/models/preferences_model.dart';
 import 'package:subtitle_studio/themes/theme_switcher_button.dart';
 import 'package:subtitle_studio/utils/project_manager.dart';
 import 'package:subtitle_studio/widgets/export_file_widget.dart';

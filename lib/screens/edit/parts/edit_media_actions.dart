@@ -81,7 +81,7 @@ extension _EditMediaActions on _EditScreenState {
 
     if (filePath != null) {
       // Clear waveform cache and reset waveform state when loading new video
-      await PreferencesModel.clearWaveformCache(widget.subtitleCollectionId);
+      await _controller.clearWaveformCache();
       ref.read(waveformControllerProvider.notifier).dispatch(const ClearWaveform());
       _setEditorState(() {
         _isWaveformVisible = false;

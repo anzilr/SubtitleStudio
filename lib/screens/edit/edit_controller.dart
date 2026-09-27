@@ -314,6 +314,12 @@ class EditController extends Notifier<EditState> {
     return _subtitleRepo.getSessionEditMode(sessionId);
   }
 
+  Future<void> clearWaveformCache() {
+    return ref
+        .read(editorPreferencesRepositoryProvider)
+        .clearWaveformCache(subtitleCollectionId);
+  }
+
   /// Set a subtitle line's mark state explicitly.
   Future<bool> setLineMarked(int index, bool marked) async {
     if (index < 0 || index >= state.subtitleLines.length) return false;
