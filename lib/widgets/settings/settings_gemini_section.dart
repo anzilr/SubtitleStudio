@@ -153,7 +153,7 @@ extension _SettingsGeminiSection on _SettingsSheetState {
                             label: const Text('Refresh Models'),
                           )
                         : DropdownButtonFormField<String>(
-                            value: _geminiModel.startsWith('models/') 
+                            initialValue: _geminiModel.startsWith('models/') 
                                 ? _geminiModel 
                                 : 'models/$_geminiModel',
                             isExpanded: true,

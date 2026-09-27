@@ -519,7 +519,7 @@ class _CreateSubtitleSheetState extends State<CreateSubtitleSheet> {
                   ),
                 ),
                 child: DropdownButtonFormField<String>(
-                  value: _encoding,
+                  initialValue: _encoding,
                   decoration: InputDecoration(
                     labelText: 'File Encoding',
                     prefixIcon: Icon(
