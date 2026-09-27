@@ -28,23 +28,43 @@ void main() {
       );
     });
 
-    test('lastOpened pins active session then uses stable newest-first fallback', () {
-      final active = _session(2, 'two.srt');
+    test('lastOpened sorts by recorded open time then falls back to newest ID', () {
       final state = HomeState(
         isLoading: false,
         recentSessions: [
           _session(1, 'one.srt'),
           _session(5, 'five.srt'),
-          active,
+          _session(2, 'two.srt'),
           _session(3, 'three.srt'),
         ],
-        lastEditedSession: active,
+        sessionLastOpenedEpochMs: const {
+          2: 3000,
+          3: 2000,
+        },
         sortOption: SessionSortOption.lastOpened,
       );
 
       expect(
         state.filteredSessions.map((session) => session.id),
-        [2, 5, 3, 1],
+        [2, 3, 5, 1],
+      );
+    });
+
+    test('lastOpened uses deterministic newest-ID order before tracking exists', () {
+      final state = HomeState(
+        isLoading: false,
+        recentSessions: [
+          _session(1, 'one.srt'),
+          _session(5, 'five.srt'),
+          _session(2, 'two.srt'),
+          _session(3, 'three.srt'),
+        ],
+        sortOption: SessionSortOption.lastOpened,
+      );
+
+      expect(
+        state.filteredSessions.map((session) => session.id),
+        [5, 3, 2, 1],
       );
     });
   });
