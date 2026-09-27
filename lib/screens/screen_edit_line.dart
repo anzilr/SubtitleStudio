@@ -50,6 +50,7 @@ import 'package:subtitle_studio/utils/logging_helpers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
 import 'package:subtitle_studio/screens/edit_line/edit_line_controller.dart' hide TimeValidator;
 import 'package:subtitle_studio/screens/edit_line/widgets/edit_text_field.dart';
+import 'package:subtitle_studio/screens/edit_line/widgets/time_component_field.dart';
 import 'package:subtitle_studio/widgets/ai_explanation_sheet.dart';
 
 // Edit subtitle line screen with video player integration
@@ -1293,198 +1294,24 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
 
   // Build simplified time input field
   Widget _buildTimeComponentFields(String label, bool isStartTime) {
-    final timeController = isStartTime ? _startTimeController : _endTimeController;
+    final timeController =
+        isStartTime ? _startTimeController : _endTimeController;
+    final componentError =
+        isStartTime ? _startTimeError : _endTimeError;
 
-    // Determine error states
-    final hasComponentError =
-        isStartTime ? _startTimeError != null : _endTimeError != null;
-    final hasOrderError = _timeOrderError != null;
-    final hasError = hasComponentError || hasOrderError;
-
-    final borderColor = hasError ? Colors.red : const Color(0xFF0A9396);
-    final focusedBorderColor = hasError ? Colors.red : const Color(0xFF0A9396);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      mainAxisAlignment: MainAxisAlignment.start, // Grow downward only
-      mainAxisSize: MainAxisSize.min, // Take minimum space needed
-      children: [
-        // Title row with video sync button
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-                color: hasError ? Colors.red : null,
-              ),
-            ),
-            if (_isVideoLoaded) ...[
-              const SizedBox(width: 12),
-              IconButton(
-                onPressed:
-                    isStartTime
-                        ? _syncStartTimeFromVideo
-                        : _syncEndTimeFromVideo,
-                icon: const Icon(Icons.sync),
-                color: const Color(0xFF0A9396),
-                iconSize: 20,
-                padding: const EdgeInsets.all(4),
-                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                tooltip:
-                    'Sync ${isStartTime ? 'start' : 'end'} time with current video position',
-                style: IconButton.styleFrom(
-                  backgroundColor: const Color(
-                    0xFF0A9396,
-                  ).withValues(alpha: 0.1),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-        const SizedBox(height: 12),
-
-        // Single time input field with fixed separators
-        TextField(
-          controller: timeController,
-          textAlign: TextAlign.center,
-          keyboardType: TextInputType.number,
-          inputFormatters: [
-            TimeInputFormatter(),
-          ],
-            style: TextStyle(
-              color: hasError ? Colors.red : const Color(0xFFEE9B00),
-              fontSize: 16, // Reduced from 18
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.0, // Reduced from 1.2
-            ),
-            decoration: InputDecoration(
-              hintText: 'HH:mm:ss,SSS',
-              hintStyle: TextStyle(
-                color: Colors.grey[400],
-                fontSize: 14, // Reduced from 16
-                fontWeight: FontWeight.normal,
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 10, // Reduced from 12
-                vertical: 12, // Reduced from 16
-              ),
-              border: const OutlineInputBorder(),
-              enabledBorder: OutlineInputBorder(
-                borderSide: BorderSide(
-                  color: borderColor,
-                  width: 1.5,
-                ),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderSide: BorderSide(
-                  color: focusedBorderColor,
-                  width: 2.0,
-                ),
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            // Disable autocorrect for faster input
-            autocorrect: false,
-            enableSuggestions: false,
-            smartDashesType: SmartDashesType.disabled,
-            smartQuotesType: SmartQuotesType.disabled,
-            textInputAction: TextInputAction.next,
-            enableIMEPersonalizedLearning: false,
-            enableInteractiveSelection: true,
-            showCursor: true,
-            onChanged: (value) {
-              final controller =
-                  ref.read(editLineControllerProvider.notifier);
-              if (isStartTime) {
-                controller.updateStartTime(value);
-              } else {
-                controller.updateEndTime(value);
-              }
-              
-              // Update time controllers after cursor position is set
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                _updateCombinedTimeControllers();
-              });
-            },
-            onEditingComplete: () {
-              // Validate when user finishes editing this field
-              _updateCombinedTimeControllers(validateTime: true);
-            },
-          ),
-
-        const SizedBox(height: 8),
-
-        // Format hint
-        Text(
-          'HH:mm:ss,SSS',
-          style: TextStyle(
-            fontSize: 11,
-            color: hasError ? Colors.red : Colors.grey[600],
-            fontWeight: FontWeight.w400,
-          ),
-          textAlign: TextAlign.center,
-        ),
-
-        const SizedBox(height: 8),
-
-        // Watch only the validation slice needed by this field.
-        riverpod.Consumer(
-          builder: (context, ref, child) {
-            final validation = ref.watch(
-              editLineControllerProvider.select(
-                (state) => (
-                  state.isInitialized,
-                  state.startTimeError,
-                  state.endTimeError,
-                  state.timeOrderError,
-                ),
-              ),
-            );
-
-            final startError =
-                validation.$1 ? validation.$2 : _startTimeError;
-            final endError =
-                validation.$1 ? validation.$3 : _endTimeError;
-            final orderError =
-                validation.$1 ? validation.$4 : _timeOrderError;
-
-            final componentError = isStartTime ? startError : endError;
-            final hasComponentErr = componentError != null;
-            final hasOrderErr = orderError != null;
-
-            if (hasComponentErr) {
-              return Text(
-                componentError,
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: Colors.red,
-                  fontWeight: FontWeight.w500,
-                ),
-                textAlign: TextAlign.center,
-              );
-            } else if (hasOrderErr) {
-              return Text(
-                orderError,
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: Colors.red,
-                  fontWeight: FontWeight.w500,
-                ),
-                textAlign: TextAlign.center,
-              );
-            }
-
-            return const SizedBox.shrink();
-          },
-        ),
-      ],
+    return TimeComponentField(
+      label: label,
+      isStartTime: isStartTime,
+      timeController: timeController,
+      isVideoLoaded: _isVideoLoaded,
+      fallbackComponentError: componentError,
+      fallbackOrderError: _timeOrderError,
+      onSync: isStartTime
+          ? _syncStartTimeFromVideo
+          : _syncEndTimeFromVideo,
+      onTimeChanged: () => _updateCombinedTimeControllers(),
+      onEditingComplete: () =>
+          _updateCombinedTimeControllers(validateTime: true),
     );
   }
 
