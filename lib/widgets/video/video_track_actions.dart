@@ -197,11 +197,22 @@ extension VideoPlayerTrackActions on VideoPlayerWidgetState {
           ),
           content: SizedBox(
             width: double.minPositive,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: _availableAudioTracks.map((track) {
-                return _buildAudioTrackOption(context, track);
-              }).toList(),
+            child: RadioGroup<String>(
+              groupValue: _currentAudioTrack?.id,
+              onChanged: (value) {
+                if (value == null) return;
+                final track = _availableAudioTracks.firstWhere(
+                  (candidate) => candidate.id == value,
+                );
+                setAudioTrack(track);
+                Navigator.of(context).pop();
+              },
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: _availableAudioTracks.map((track) {
+                  return _buildAudioTrackOption(context, track);
+                }).toList(),
+              ),
             ),
           ),
           actions: [
@@ -247,13 +258,6 @@ extension VideoPlayerTrackActions on VideoPlayerWidgetState {
           children: [
             Radio<String>(
               value: track.id,
-              groupValue: _currentAudioTrack?.id,
-              onChanged: (String? value) {
-                if (value != null) {
-                  setAudioTrack(track);
-                  Navigator.of(context).pop();
-                }
-              },
               activeColor: Theme.of(context).primaryColor,
             ),
             const SizedBox(width: 8),
@@ -311,18 +315,26 @@ extension VideoPlayerTrackActions on VideoPlayerWidgetState {
           ),
           content: SizedBox(
             width: double.minPositive,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildSpeedOption(context, 0.25, '0.25x'),
-                _buildSpeedOption(context, 0.5, '0.5x'),
-                _buildSpeedOption(context, 0.75, '0.75x'),
-                _buildSpeedOption(context, 1.0, '1.0x (Normal)'),
-                _buildSpeedOption(context, 1.25, '1.25x'),
-                _buildSpeedOption(context, 1.5, '1.5x'),
-                _buildSpeedOption(context, 1.75, '1.75x'),
-                _buildSpeedOption(context, 2.0, '2.0x'),
-              ],
+            child: RadioGroup<double>(
+              groupValue: _currentSpeed,
+              onChanged: (value) {
+                if (value == null) return;
+                setPlaybackSpeed(value);
+                Navigator.of(context).pop();
+              },
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildSpeedOption(context, 0.25, '0.25x'),
+                  _buildSpeedOption(context, 0.5, '0.5x'),
+                  _buildSpeedOption(context, 0.75, '0.75x'),
+                  _buildSpeedOption(context, 1.0, '1.0x (Normal)'),
+                  _buildSpeedOption(context, 1.25, '1.25x'),
+                  _buildSpeedOption(context, 1.5, '1.5x'),
+                  _buildSpeedOption(context, 1.75, '1.75x'),
+                  _buildSpeedOption(context, 2.0, '2.0x'),
+                ],
+              ),
             ),
           ),
           actions: [
@@ -355,13 +367,6 @@ extension VideoPlayerTrackActions on VideoPlayerWidgetState {
           children: [
             Radio<double>(
               value: speed,
-              groupValue: _currentSpeed,
-              onChanged: (double? value) {
-                if (value != null) {
-                  setPlaybackSpeed(value);
-                  Navigator.of(context).pop();
-                }
-              },
               activeColor: Theme.of(context).primaryColor,
             ),
             const SizedBox(width: 8),
