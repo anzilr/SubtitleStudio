@@ -2565,295 +2565,47 @@ Future<void> _deleteSelectedSubtitles() async {
   // Show dialog to shift timecodes for only selected subtitles
   void _showShiftSelectedTimesDialog() {
     if (_selectedIndices.isEmpty) return;
-    
-    final firstSelectedIndex = _selectedIndices.reduce((a, b) => a < b ? a : b);
-    final lastSelectedIndex = _selectedIndices.reduce((a, b) => a > b ? a : b);
-    
-    final TextEditingController startTimeController = TextEditingController(
-      text: subtitleLines[firstSelectedIndex].startTime
-    );
-    final TextEditingController endTimeController = TextEditingController(
-      text: subtitleLines[lastSelectedIndex].endTime
-    );
-    
-    bool isProcessing = false;
-    
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) {
-          // Dynamic color variables for adaptive theming
-          final isDark = Theme.of(context).brightness == Brightness.dark;
-          final primaryColor = Theme.of(context).primaryColor;
-          final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
-          final mutedColor = onSurfaceColor.withValues(alpha: 0.6);
-          final borderColor = onSurfaceColor.withValues(alpha: 0.12);
 
-          return Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            child: Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-                left: 24,
-                right: 24,
-                top: 24,
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                  // Header Section
-                  Container(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(
-                            Icons.timer,
-                            color: Colors.orange,
-                            size: 28,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Shift Selected Subtitles',
-                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Adjust timing for selected subtitle lines',
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: mutedColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 20),
-                  
-                  // Description
-                  Text(
-                    'Enter new timecodes for the first and last selected subtitles. Only the selected subtitles will be affected.',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: mutedColor,
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // First selected subtitle field
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'First selected subtitle starts at:',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: borderColor,
-                            width: 1,
-                          ),
-                        ),
-                        child: TextField(
-                          controller: startTimeController,
-                          decoration: InputDecoration(
-                            hintText: '00:00:00,000',
-                            prefixIcon: Icon(
-                              Icons.access_time,
-                              color: primaryColor,
-                            ),
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  
-                  const SizedBox(height: 16),
-                  
-                  // Last selected subtitle field
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Last selected subtitle ends at:',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: borderColor,
-                            width: 1,
-                          ),
-                        ),
-                        child: TextField(
-                          controller: endTimeController,
-                          decoration: InputDecoration(
-                            hintText: '00:00:00,000',
-                            prefixIcon: Icon(
-                              Icons.access_time,
-                              color: primaryColor,
-                            ),
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // Action Buttons
-                  Row(
-                    children: [
-                      Expanded(
-                        child: SizedBox(
-                          height: 50,
-                          child: OutlinedButton(
-                            onPressed: () => Navigator.pop(context),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Theme.of(context).colorScheme.onSurface,
-                              side: BorderSide(
-                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.close,
-                                  size: 20,
-                                  color: Theme.of(context).colorScheme.onSurface,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Cancel',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 15,
-                                    color: Theme.of(context).colorScheme.onSurface,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: SizedBox(
-                          height: 50,
-                          child: ElevatedButton(
-                            onPressed: isProcessing
-                                ? null
-                                : () async {
-                                    setState(() => isProcessing = true);
-                                    
-                                    _selectedIndices.map((idx) => subtitleLines[idx]).toList();
-                                    
-                                    final result = await SubtitleSyncOperations.shiftSelectedTimecodes(
-                                      subtitleId: widget.subtitleCollectionId,
-                                      allSubtitleLines: subtitleLines,
-                                      selectedIndices: _selectedIndices.toList(),
-                                      newStartTime: startTimeController.text,
-                                      newEndTime: endTimeController.text,
-                                    );
-                                    
-                                    setState(() => isProcessing = false);
-                                    
-                                    if (context.mounted) {
-                                      Navigator.pop(context);
-                                      
-                                      if (result.success) {
-                                        _refreshSubtitleLines();
-                                        SnackbarHelper.showSuccess(context, 'Selected subtitles shifted successfully');
-                                      } else {
-                                        SnackbarHelper.showError(context, 'Error: ${result.message}');
-                                      }
-                                    }
-                                  },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.orange,
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: isProcessing
-                                ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                    ),
-                                  )
-                                : Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.check, size: 20, color: onSurfaceColor,),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        'Apply',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 15,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            )
+    final selectedIndices = _selectedIndices.toList()..sort();
+    final firstSelectedIndex = selectedIndices.first;
+    final lastSelectedIndex = selectedIndices.last;
+
+    showShiftSelectedTimesSheet(
+      context: context,
+      initialStartTime: subtitleLines[firstSelectedIndex].startTime,
+      initialEndTime: subtitleLines[lastSelectedIndex].endTime,
+      onApply: (newStartTime, newEndTime) async {
+        final result =
+            await SubtitleSyncOperations.shiftSelectedTimecodes(
+          subtitleId: widget.subtitleCollectionId,
+          allSubtitleLines: subtitleLines,
+          selectedIndices: selectedIndices,
+          newStartTime: newStartTime,
+          newEndTime: newEndTime,
+        );
+
+        if (!mounted) return true;
+
+        if (result.success) {
+          await _refreshSubtitleLines();
+          if (mounted) {
+            SnackbarHelper.showSuccess(
+              context,
+              'Selected subtitles shifted successfully',
+            );
+          }
+        } else {
+          SnackbarHelper.showError(
+            context,
+            'Unable to shift selected subtitles: ${result.message}',
           );
-        },
-      ),
+        }
+
+        return true;
+      },
     );
   }
-  
+
   // Show dialog to select subtitles by index range
   void _showSelectByIndexDialog() async {
     final range = await showSelectByIndexSheet(
