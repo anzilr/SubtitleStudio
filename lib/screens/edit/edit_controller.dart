@@ -6,6 +6,7 @@ import 'package:subtitle_studio/screens/edit/repositories/subtitle_repository.da
 import 'package:subtitle_studio/screens/edit/repositories/editor_preferences_repository.dart';
 import 'package:subtitle_studio/screens/edit/repositories/screen_repository.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
+import 'package:subtitle_studio/utils/subtitle_index.dart';
 import 'package:subtitle_studio/widgets/video_player_widget.dart';
 import 'package:subtitle_studio/utils/subtitle_parser.dart';
 import 'package:subtitle_studio/screens/edit/models/subtitle_entry.dart';
@@ -161,7 +162,7 @@ class EditController extends Notifier<EditState> {
         isVideoLoaded: isVideoLoaded,
         secondarySubtitles: secondarySubtitles,
         originalSecondarySubtitles: originalSecondarySubtitles,
-        highlightedIndex: lastEditedIndex,
+        highlightedIndex: cueNumberToListIndex(lastEditedIndex),
         floatingControlsEnabled: floatingControlsEnabled,
         isMsoneEnabled: isMsoneEnabled,
         isLayout1: layout == 'layout1',

@@ -2,8 +2,8 @@ part of '../../screen_edit.dart';
 
 extension _EditNavigation on _EditScreenState {
   Future<void> _scrollToIndexWithLoading(int cueNumber) async {
-    final index = cueNumber - 1;
-    if (index < 0 || index >= subtitleLines.length) return;
+    final index = cueNumberToListIndex(cueNumber);
+    if (index == null || index >= subtitleLines.length) return;
 
     IsolatedLoaderController.show(context);
 

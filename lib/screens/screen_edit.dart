@@ -24,6 +24,7 @@ import 'package:subtitle_studio/widgets/export_file_widget.dart';
 import 'package:subtitle_studio/widgets/project_settings_sheet.dart';
 import 'package:subtitle_studio/screens/edit_line/edit_line_host.dart'; // EditSubtitleScreenHost wrapper
 import 'package:subtitle_studio/utils/time_parser.dart';
+import 'package:subtitle_studio/utils/subtitle_index.dart';
 import 'package:subtitle_studio/utils/video_player_readiness.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
@@ -252,25 +253,29 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
       // Ensure video player gets subtitles after initialization
       _ensureVideoPlayerSubtitles();
       
-      if (widget.lastEditedIndex != null && widget.lastEditedIndex! > 0) {
+      final lastEditedCueNumber = widget.lastEditedIndex;
+      final lastEditedListIndex =
+          cueNumberToListIndex(lastEditedCueNumber);
+
+      if (lastEditedCueNumber != null &&
+          lastEditedListIndex != null &&
+          lastEditedListIndex < subtitles.length) {
         WidgetsBinding.instance.addPostFrameCallback((_) async {
           if (!mounted) return;
-          
-          await _scrollToIndexWithLoading(widget.lastEditedIndex!);
-          
-          // Initialize waveform playback position to last edited line
-          if (mounted && widget.lastEditedIndex! < subtitles.length) {
-            final startTime =
-                parseTimeString(subtitles[widget.lastEditedIndex!].startTime);
-            _lastVideoPosition = startTime;
-            ref
-                .read(waveformControllerProvider.notifier)
-                .dispatch(UpdatePlaybackPosition(startTime));
-          }
-          
+
+          await _scrollToIndexWithLoading(lastEditedCueNumber);
+
+          final startTime = parseTimeString(
+            subtitles[lastEditedListIndex].startTime,
+          );
+          _lastVideoPosition = startTime;
+          ref
+              .read(waveformControllerProvider.notifier)
+              .dispatch(UpdatePlaybackPosition(startTime));
+
           final player = await waitForVideoPlayerReady(_videoPlayerKey);
           if (mounted && player != null) {
-            _seekToSubtitle(widget.lastEditedIndex!);
+            _seekToSubtitle(lastEditedListIndex);
           }
         });
       }
