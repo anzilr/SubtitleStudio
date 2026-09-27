@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:subtitle_studio/themes/theme_provider.dart';
 import 'package:subtitle_studio/operations/subtitle_operations.dart';
 import 'package:subtitle_studio/widgets/positioning_buttons_widget.dart';
 import 'package:subtitle_studio/widgets/subtitle_effects_sheet.dart';
@@ -55,7 +53,7 @@ class SubtitleActionsMenu extends StatelessWidget {
       icon: Icon(
         Icons.movie_edit,
         size: 32,
-        color: Provider.of<ThemeProvider>(context).themeMode == ThemeMode.light
+        color: Theme.of(context).brightness == Brightness.light
             ? const Color.fromARGB(255, 0, 45, 54)
             : const Color.fromARGB(255, 233, 216, 166),
       ),
