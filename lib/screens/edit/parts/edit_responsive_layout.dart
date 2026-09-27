@@ -20,7 +20,7 @@ extension _EditResponsiveLayout on _EditScreenState {
                       color: Theme.of(context).colorScheme.surfaceContainer,
                       border: Border(
                         bottom: BorderSide(
-                          color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+                          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
                         ),
                       ),
                     ),
@@ -186,7 +186,7 @@ extension _EditResponsiveLayout on _EditScreenState {
                             Icon(
                               Icons.movie_outlined,
                               size: 80,
-                              color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+                              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
                             ),
                             const SizedBox(height: 16),
                             Text(
@@ -477,7 +477,7 @@ extension _EditResponsiveLayout on _EditScreenState {
                               Icon(
                                 Icons.movie_outlined,
                                 size: 60,
-                                color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+                                color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
                               ),
                               const SizedBox(height: 16),
                               Text(
