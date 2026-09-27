@@ -1904,9 +1904,9 @@ Future<void> _deleteSelectedSubtitles() async {
               // Close the modal first using the modal's context
               Navigator.of(modalContext).pop();
               
-              // Wait for modal close animation to complete
-              await Future.delayed(const Duration(milliseconds: 300));
-              
+              // Let the route removal/layout update settle before scrolling.
+              await WidgetsBinding.instance.endOfFrame;
+
               if (!mounted) return;
               
               // Navigate to the selected line
@@ -3675,8 +3675,7 @@ Future<void> _deleteSelectedSubtitles() async {
           // Refresh the collection reference as well
           subtitleCollection = (await fetchSubtitle(widget.subtitleCollectionId))!;
           
-          // After a short delay, scroll to the edited line
-          await Future.delayed(Duration(milliseconds: 300));
+          await WidgetsBinding.instance.endOfFrame;
           final lastIndex = await getLastEditedIndex(widget.sessionId);
           
           if (lastIndex != null && mounted) {
