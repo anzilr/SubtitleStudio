@@ -1,7 +1,7 @@
 import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/utils/subtitle_sorting.dart';
-import 'package:subtitle_studio/widgets/video_player_widget.dart';
+import 'package:subtitle_studio/widgets/video/subtitle.dart';
 import 'package:subtitle_studio/utils/subtitle_parser.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 import 'package:subtitle_studio/services/checkpoint_manager.dart';
