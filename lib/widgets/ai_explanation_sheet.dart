@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' show ConsumerStatefulWidget, ConsumerState;
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
-import 'package:provider/provider.dart';
 import 'package:flutter_gemini/flutter_gemini.dart';
 import 'package:subtitle_studio/features/ai_explanation/ai_explanation_controller.dart';
 import 'package:subtitle_studio/features/ai_explanation/ai_explanation_state.dart';
 import 'package:subtitle_studio/database/models/preferences_model.dart';
-import 'package:subtitle_studio/themes/theme_provider.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/services/gemini_models_service.dart';
 
@@ -374,7 +372,7 @@ class _AiExplanationSheetContentState extends ConsumerState<_AiExplanationSheetC
 
   @override
   Widget build(BuildContext context) {
-    final isLightTheme = Provider.of<ThemeProvider>(context, listen: false).themeMode == ThemeMode.light;
+    final isLightTheme = Theme.of(context).brightness == Brightness.light;
     final primaryColor = Theme.of(context).primaryColor;
     final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
     final mutedColor = onSurfaceColor.withValues(alpha: 0.6);
