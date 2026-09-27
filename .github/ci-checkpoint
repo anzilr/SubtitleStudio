@@ -1,19 +1,19 @@
-Riverpod/refactor quality checkpoint 13
+Riverpod migration checkpoint 14
 Date: 2026-09-27
 Checks:
 - flutter analyze
 - flutter test
 
-Scope since checkpoint 12:
-- Replaced Editor navigation sleeps with frame/controller readiness
-- Removed redundant post-transaction delays
-- Added shared video-player frame readiness helper
-- Removed timer-based fullscreen comment guard
-- Removed remaining Editor navigation delays
-- Awaited video comment persistence callbacks
-- Synced orientation transitions to rendered frames
-- Modernized CommentDialog keyboard/focus handling
-- Migrated feedback sharing to current SharePlus API
-- Guarded feedback async UI updates after disposal
+Scope since checkpoint 13:
+- Move active app theme from Provider/ChangeNotifier to Riverpod
+- Remove repository singleton constructors
+- Remove BLoC-era Source View state terminology
+- Unify duplicate SubtitleEntry models with tests and value equality
+- Reuse shared tolerant SRT parser in Source View
+- Guard Source View async initialization after disposal
+- Inject Isar into Home session repository
+- Fix EditLine repository helper self-recursion
+- Inject Isar into EditLine repository read/update paths
+- Redact Source View file paths and SAF URIs from logs
 
 Platform builds intentionally disabled.
