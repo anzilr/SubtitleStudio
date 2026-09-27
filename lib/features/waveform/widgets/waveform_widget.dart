@@ -215,7 +215,7 @@ class WaveformWidgetState extends riverpod.ConsumerState<WaveformWidget> {
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
           width: 1,
         ),
       ),
@@ -243,7 +243,7 @@ class WaveformWidgetState extends riverpod.ConsumerState<WaveformWidget> {
             Text(
               'Generating waveform...',
               style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
               ),
@@ -349,7 +349,7 @@ class WaveformWidgetState extends riverpod.ConsumerState<WaveformWidget> {
                       height: 40,
                       padding: EdgeInsets.symmetric(horizontal: isMobile ? 2 : 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surface.withOpacity(0.5),
+                        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.5),
                     border: Border(
                       bottom: BorderSide(
                         color: Theme.of(context).colorScheme.surface,
@@ -537,7 +537,7 @@ class WaveformWidgetState extends riverpod.ConsumerState<WaveformWidget> {
                 width: 48,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface.withOpacity(0.5),
+                  color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.5),
                   border: Border(
                     left: BorderSide(
                       color: Theme.of(context).colorScheme.surface,
@@ -709,7 +709,7 @@ class WaveformWidgetState extends riverpod.ConsumerState<WaveformWidget> {
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                               decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.6),
+                                color: Colors.black.withValues(alpha: 0.6),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
@@ -733,7 +733,7 @@ class WaveformWidgetState extends riverpod.ConsumerState<WaveformWidget> {
                 Container(
                   width: 48,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface.withOpacity(0.5),
+                    color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.5),
                     border: Border(
                       left: BorderSide(
                         color: Theme.of(context).colorScheme.surface,
@@ -807,10 +807,10 @@ class WaveformWidgetState extends riverpod.ConsumerState<WaveformWidget> {
     
     // Use a more vibrant contrasting color
     if (brightness == Brightness.dark) {
-      return Colors.amber.shade600.withOpacity(0.4);
+      return Colors.amber.shade600.withValues(alpha: 0.4);
     }
     
-    return Colors.orange.shade400.withOpacity(0.45);
+    return Colors.orange.shade400.withValues(alpha: 0.45);
   }
 
   void _handleScroll(PointerScrollEvent event, WaveformReady state) {

@@ -161,7 +161,7 @@ class WaveformPainter extends CustomPainter {
       fillPath.close();
 
       final fillPaint = Paint()
-        ..color = waveformColor.withOpacity(0.5)
+        ..color = waveformColor.withValues(alpha: 0.5)
         ..style = PaintingStyle.fill;
       canvas.drawPath(fillPath, fillPaint);
     }
@@ -200,7 +200,7 @@ class WaveformPainter extends CustomPainter {
   /// Draw subtitle overlays
   void _drawSubtitles(Canvas canvas, Size size) {
     final subtitlePaint = Paint()
-      ..color = subtitleColor.withOpacity(0.15)
+      ..color = subtitleColor.withValues(alpha: 0.15)
       ..style = PaintingStyle.fill;
 
     final subtitleBorderPaint = Paint()
@@ -210,7 +210,7 @@ class WaveformPainter extends CustomPainter {
     
     // Highlighted subtitle paint (same as list)
     final highlightedSubtitlePaint = Paint()
-      ..color = const Color.fromARGB(200, 244, 163, 97).withOpacity(0.3)
+      ..color = const Color.fromARGB(200, 244, 163, 97).withValues(alpha: 0.3)
       ..style = PaintingStyle.fill;
     
     final highlightedSubtitleBorderPaint = Paint()
@@ -220,7 +220,7 @@ class WaveformPainter extends CustomPainter {
     
     // Highlighted edit mode paint - dark colors
     final editHighlightPaint = Paint()
-      ..color = const Color(0xFF2E7D32).withOpacity(0.3) // Dark green
+      ..color = const Color(0xFF2E7D32).withValues(alpha: 0.3) // Dark green
       ..style = PaintingStyle.fill;
     
     final editBorderPaint = Paint()
@@ -338,7 +338,7 @@ class WaveformPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
     
     final handlePaint = Paint()
-      ..color = barColor.withOpacity(0.9)
+      ..color = barColor.withValues(alpha: 0.9)
       ..style = PaintingStyle.fill;
     
     // Get the current times being edited
@@ -487,7 +487,7 @@ class WaveformPainter extends CustomPainter {
     final rect = Rect.fromLTWH(left, topOffset, width, boxHeight);
     
     final overlayPaint = Paint()
-      ..color = const Color(0xFF00695C).withOpacity(0.3) // Dark teal
+      ..color = const Color(0xFF00695C).withValues(alpha: 0.3) // Dark teal
       ..style = PaintingStyle.fill;
     
     final borderPaint = Paint()
@@ -566,7 +566,7 @@ class WaveformPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
     
     final handlePaint = Paint()
-      ..color = barColor.withOpacity(0.9)
+      ..color = barColor.withValues(alpha: 0.9)
       ..style = PaintingStyle.fill;
     
     // Draw start bar

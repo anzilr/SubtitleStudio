@@ -398,8 +398,8 @@ class _AiExplanationButtonState extends ConsumerState<AiExplanationButton> {
             colors: isLoading
                 ? [Colors.grey.shade300, Colors.grey.shade400]
                 : [
-                    Colors.deepPurple.withOpacity(0.1),
-                    Colors.purple.withOpacity(0.1),
+                    Colors.deepPurple.withValues(alpha: 0.1),
+                    Colors.purple.withValues(alpha: 0.1),
                   ],
           ),
         ),
