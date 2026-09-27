@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:isar_community/isar.dart';
-import 'package:subtitle_studio/database/database_helper.dart';
+import 'package:subtitle_studio/database/database_helper.dart' as db;
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/database/models/preferences_model.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
@@ -203,7 +203,7 @@ class EditLineRepository {
     );
 
     try {
-      final success = await deleteSubtitleLineDB(collectionId, lineIndex);
+      final success = await db.deleteSubtitleLineDB(collectionId, lineIndex);
 
       if (success) {
         await logInfo(
@@ -241,7 +241,7 @@ class EditLineRepository {
     );
 
     try {
-      final success = await markSubtitleLine(collectionId, lineIndex, marked);
+      final success = await db.markSubtitleLine(collectionId, lineIndex, marked);
 
       if (success) {
         await logInfo(
@@ -279,7 +279,7 @@ class EditLineRepository {
     );
 
     try {
-      await updateSubtitleLineComment(collectionId, lineIndex, comment);
+      await db.updateSubtitleLineComment(collectionId, lineIndex, comment);
 
       await logInfo(
         'Successfully updated comment for line $lineIndex',
