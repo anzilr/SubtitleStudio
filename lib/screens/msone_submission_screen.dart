@@ -5,7 +5,6 @@ import 'package:subtitle_studio/database/models/preferences_model.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'dart:io';
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
 

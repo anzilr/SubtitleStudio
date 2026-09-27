@@ -577,7 +577,7 @@ class EditLineRepository {
   Future<void> saveColorHistory(List<Color> colors) async {
     try {
       final colorStrings = colors
-          .map((color) => '#${color.value.toRadixString(16).padLeft(8, '0')}')
+          .map((color) => '#${color.toARGB32().toRadixString(16).padLeft(8, '0')}')
           .toList();
       await PreferencesModel.saveColorHistory(colorStrings);
     } catch (e, stackTrace) {

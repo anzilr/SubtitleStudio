@@ -1424,7 +1424,7 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
       final selectedText = hasSelection ? selection.textInside(_textController.text) : '';
       
       effectConfig = {
-        'color': _karaokeColor.value.toRadixString(16).padLeft(8, '0'),
+        'color': _karaokeColor.toARGB32().toRadixString(16).padLeft(8, '0'),
         'endDelay': _endDelay,
         'effectType': _karaokeEffectType,
         // Add text selection information
@@ -1436,7 +1436,7 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
       };
     } else if (_selectedEffect == 'typewriter') {
       effectConfig = {
-        'color': _typewriterColor.value.toRadixString(16).padLeft(8, '0'),
+        'color': _typewriterColor.toARGB32().toRadixString(16).padLeft(8, '0'),
         'endDelay': _endDelay,
       };
     }
