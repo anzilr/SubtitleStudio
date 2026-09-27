@@ -61,6 +61,7 @@ import 'package:subtitle_studio/screens/edit/models/subtitle_entry.dart';
 import 'package:subtitle_studio/screens/edit/widgets/source_view_pane.dart';
 import 'package:subtitle_studio/screens/edit/widgets/edit_main_menu.dart';
 import 'package:subtitle_studio/screens/edit/widgets/edit_placeholders.dart';
+import 'package:subtitle_studio/screens/edit/widgets/subtitle_card.dart';
 import 'package:subtitle_studio/screens/edit/widgets/editor_custom_scrollbar.dart';
 import 'package:subtitle_studio/features/waveform/state/waveform_event.dart';
 import 'package:subtitle_studio/features/waveform/state/waveform_state.dart';
@@ -2640,226 +2641,60 @@ Future<void> _deleteSelectedSubtitles() async {
            '${milliseconds.toString().padLeft(3, '0')}';
   }
 
-  Widget _buildSubtitleCard(SubtitleLine line, int index, String textContent) {
-  final formattedStart = _formatDurationToThreeDigits(parseTimeString(line.startTime));
-  final formattedEnd = _formatDurationToThreeDigits(parseTimeString(line.endTime));
-  final isSelected = _selectedIndices.contains(index);
+  Widget _buildSubtitleCard(
+    SubtitleLine line,
+    int index,
+    String textContent,
+  ) {
+    final formattedStart = _formatDurationToThreeDigits(
+      parseTimeString(line.startTime),
+    );
+    final formattedEnd = _formatDurationToThreeDigits(
+      parseTimeString(line.endTime),
+    );
+    final isSelected = _selectedIndices.contains(index);
+    final isLightTheme =
+        Provider.of<ThemeProvider>(context).themeMode == ThemeMode.light;
 
-  return Dismissible(
-    key: ValueKey('subtitle_${line.index}_$index'), // Use ValueKey with unique identifier
-    direction: DismissDirection.horizontal,
-    background: Container(
-      alignment: Alignment.centerLeft,
-      padding: EdgeInsets.symmetric(horizontal: 20),
-      margin: EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(5),
-        color: Colors.green,
-      ),
-      child: Icon(Icons.edit, color: Colors.white, size: 30),
-    ),
-    secondaryBackground: Container(
-      alignment: Alignment.centerRight,
-      padding: EdgeInsets.symmetric(horizontal: 20),
-      margin: EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(5),
-        color: Colors.blue,
-      ),
-      child: Icon(Icons.select_all, color: Colors.white, size: 30),
-    ),
-    // confirmDismiss is used to trigger the navigation/selection without actually removing the widget.
-    confirmDismiss: (direction) async {
-      if (direction == DismissDirection.startToEnd && !_isSelectionMode) {
-        // Right swipe: Navigate to edit screen
+    return SubtitleCard(
+      line: line,
+      index: index,
+      textContent: textContent,
+      formattedStart: formattedStart,
+      formattedEnd: formattedEnd,
+      isSelected: isSelected,
+      isCardHighlighted: _highlightedIndex == index,
+      isCueHighlighted: _highlightedIndex == line.index - 1,
+      isSelectionMode: _isSelectionMode,
+      isRangeSelectionActive: _isRangeSelectionActive,
+      isLightTheme: isLightTheme,
+      onEdit: () async {
         if (_videoPlayerKey.currentState != null &&
             _videoPlayerKey.currentState!.isInitialized()) {
-          _videoPlayerKey.currentState!.pause(); // Pause the video
+          _videoPlayerKey.currentState!.pause();
         }
         await _navigateToEditSubtitleScreen(index);
-      } else if (direction == DismissDirection.endToStart) {
-        // Left swipe: Enter selection mode and select this item
+      },
+      onSelectRequested: () {
         if (!_isSelectionMode) {
           _controller.setSelectionMode(true);
         }
         _toggleSelection(index);
-      }
-      // Returning false prevents the card from being dismissed (removed)
-      return false;
-    },
-    child: Card(
-      color: isSelected 
-          ? Color(0xFF2A9D8F).withAlpha(77) // Selection color
-          : (_highlightedIndex == index ? (
-            Provider.of<ThemeProvider>(context)
-                                              .themeMode ==
-                                          ThemeMode.light ? Color(0xFF6c757d)
-                                          :Color(0xFF005F73)
-                                          ) : null),
-      margin: EdgeInsets.only(left: 8, right: 8, bottom: 8),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(5),
-      ),
-      child: Listener(
-        onPointerDown: (PointerDownEvent event) {
-          // Handle right-click (secondary button)
-          if (event.buttons == 2) {
-            if (_isSelectionMode || _isRangeSelectionActive) {
-              // In selection mode: show selection menu at click position
-              _showSelectionMenuModal(position: event.position);
-            } else {
-              // Normal mode: show subtitle action menu
-              _showBottomModalSheet(context, index, textContent);
-            }
-          }
-        },
-        child: InkWell(
-          onTap: () {
-            if (_isRangeSelectionActive) {
-              _handleRangeSelectionTap(index);
-            } else if (_isSelectionMode) {
-              _toggleSelection(index);
-            } else {
-              _highlightIndex(index);
-              _seekToSubtitle(index);
-            }
-          },
-          onDoubleTap: () async {
-            if (_isSelectionMode || _isRangeSelectionActive) return; // Disable double tap in selection mode
-            
-            if (_videoPlayerKey.currentState != null &&
-                _videoPlayerKey.currentState!.isInitialized()) {
-              _videoPlayerKey.currentState!.pause(); // Pause the video
-            }
-            await _navigateToEditSubtitleScreen(index);
-          },
-          onLongPress: () {
-            if (_isSelectionMode || _isRangeSelectionActive) return; // Disable long press in selection mode
-            _showBottomModalSheet(context, index, textContent);
-          },
-        child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Stack(
-            children: [
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '$formattedStart -> $formattedEnd',
-                        style: TextStyle(
-                          color: Provider.of<ThemeProvider>(context)
-                                      .themeMode ==
-                                  ThemeMode.light
-                              ? (_highlightedIndex == line.index - 1 ? Color.fromARGB(200, 244, 163, 97)
-                                  : Color.fromARGB(158, 0, 45, 54))
-                              : Color.fromARGB(158, 244, 163, 97),
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          fontFamily:
-                              GoogleFonts.spaceMono().fontFamily,
-                        ),
-                        textAlign: TextAlign.end,
-                      ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (line.marked) ...[
-                            Listener(
-                              onPointerDown: (PointerDownEvent event) {
-                                // Handle mouse right-click for comment dialog
-                                if (event.kind == PointerDeviceKind.mouse && 
-                                    event.buttons == kSecondaryMouseButton) {
-                                  _showCommentDialogForLine(index);
-                                }
-                              },
-                              child: GestureDetector(
-                                onLongPress: () {
-                                  // Show comment dialog for marked lines (touch devices)
-                                  _showCommentDialogForLine(index);
-                                },
-                                onTap: () {
-                                  // Optional: quick toggle mark status on tap
-                                  _toggleMarkLine(index);
-                                },
-                                child: Container(
-                                  padding: EdgeInsets.only(left: 8, right: 4), // Increase touch area
-                                  child: Icon(
-                                    Icons.bookmark_added,
-                                    color: Colors.red,
-                                    size: 16,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                          ],
-                          Text(
-                            '${line.index}',
-                            style: TextStyle(
-                              color: Provider.of<ThemeProvider>(context)
-                                          .themeMode ==
-                                      ThemeMode.light
-                                  ? (_highlightedIndex == line.index - 1 ? Color.fromARGB(200, 244, 163, 97)
-                                           : Color.fromARGB(158, 0, 45, 54))
-                                  
-                                  : Color.fromARGB(158, 244, 163, 97),
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: CustomHtmlText(
-                          htmlContent:
-                              textContent.replaceAll('\n', '<br>'),
-                          defaultStyle: TextStyle(
-                              color: Provider.of<ThemeProvider>(context)
-                                          .themeMode ==
-                                      ThemeMode.light
-                                  ? (_highlightedIndex == line.index - 1 ? Color.fromARGB(255, 255, 255, 255)
-                                      : Color.fromARGB(158, 0, 45, 54)
-                                    )
-                                  : Color.fromARGB(255, 255, 255, 255),
-                              fontSize: 14,
-                            ),
-                          textAlign: TextAlign.start,
-                          expanded: true,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              // Selection indicator
-              if (isSelected)
-                Positioned(
-                  right: 8,
-                  bottom: 8,
-                  child: Icon(
-                    Icons.check_circle,
-                    color: Color(0xFF3a86ff),
-                    size: 24,
-                  ),
-                ),
-            ],
-          ),
-        ), // Container
-        ), // InkWell
-      ), // Listener
-    ),
-  );
-}
+      },
+      onRangeSelectionTap: () => _handleRangeSelectionTap(index),
+      onToggleSelection: () => _toggleSelection(index),
+      onHighlightAndSeek: () {
+        _highlightIndex(index);
+        _seekToSubtitle(index);
+      },
+      onSelectionMenu: (position) =>
+          _showSelectionMenuModal(position: position),
+      onActionsMenu: () =>
+          _showBottomModalSheet(context, index, textContent),
+      onComment: () => _showCommentDialogForLine(index),
+      onToggleMark: () => _toggleMarkLine(index),
+    );
+  }
 
   // Copy the text of all selected subtitles
   void _copySelectedSubtitles() {
