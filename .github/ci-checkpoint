@@ -1,12 +1,13 @@
-Riverpod migration checkpoint 11b
+Riverpod migration checkpoint 11c
 Date: 2026-09-27
 Checks:
 - flutter analyze
 - flutter test
 
-Corrections since checkpoint 11:
-- Restored public Video track APIs after part-file split
-- Routed Video part state changes through safe state helper
-- Included fullscreen action extraction
+Corrections:
+- Public Video track APIs preserved
+- Public fullscreen API preserved
+- Video part state updates routed through safe helper
+- Edit-Line part state updates routed through safe helper
 
 Platform builds intentionally disabled.
