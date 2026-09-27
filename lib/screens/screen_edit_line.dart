@@ -52,6 +52,7 @@ import 'package:subtitle_studio/screens/edit_line/edit_line_controller.dart' hid
 import 'package:subtitle_studio/screens/edit_line/widgets/edit_text_field.dart';
 import 'package:subtitle_studio/screens/edit_line/widgets/time_component_field.dart';
 import 'package:subtitle_studio/screens/edit_line/widgets/edit_line_dialogs.dart';
+import 'package:subtitle_studio/screens/edit_line/widgets/edit_line_menu.dart';
 import 'package:subtitle_studio/widgets/ai_explanation_sheet.dart';
 
 // Edit subtitle line screen with video player integration
@@ -2113,254 +2114,23 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
     }
   }
 
-  // Helper method to build menu item rows with beautiful styling
-  Widget _buildMenuItemRow({
-    required IconData icon,
-    required String title,
-    required Color color,
-  }) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Icon(icon, color: Colors.white, size: 18),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            title,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // Show edit line menu modal with beautiful styling
+  // Show edit line menu modal
   void _showEditLineMenuModal() {
-    showMenu(
+    showEditLineMenu(
       context: context,
-      position: RelativeRect.fromLTRB(
-        MediaQuery.of(context).size.width - 10,
-        kToolbarHeight + 10,
-        10,
-        0,
-      ),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: Theme.of(context).cardColor,
-      elevation: 8,
-      items: <PopupMenuEntry<String>>[
-        // Settings
-        PopupMenuItem<String>(
-          value: 'settings',
-          child: _buildMenuItemRow(
-            icon: Icons.settings,
-            title: 'Settings',
-            color: Colors.blue,
-          ),
-        ),
-
-        // Video options for edit mode
-        if (_isEditMode || widget.isNewSubtitle) ...[
-          const PopupMenuDivider(),
-          if (!_isVideoLoaded)
-            PopupMenuItem<String>(
-              value: 'loadVideo',
-              child: _buildMenuItemRow(
-                icon: Icons.video_file,
-                title: 'Load Video',
-                color: Colors.purple,
-              ),
-            ),
-          if (_isVideoLoaded) ...[
-            PopupMenuItem<String>(
-              value: 'unloadVideo',
-              child: _buildMenuItemRow(
-                icon: Icons.video_camera_back,
-                title: 'Unload Video',
-                color: Colors.deepOrange,
-              ),
-            ),
-          ],
-        ],
-
-        // Secondary subtitle options (show if video is loaded)
-        if (_isVideoLoaded) ...[
-          const PopupMenuDivider(),
-          // Load secondary subtitle option
-          PopupMenuItem<String>(
-            value: 'loadSecondarySubtitle',
-            child: _buildMenuItemRow(
-              icon: Icons.subtitles,
-              title: 'Load Secondary Subtitle',
-              color: Colors.teal,
-            ),
-          ),
-          // Toggle secondary subtitle visibility (only if subtitles are loaded)
-          if (_secondarySubtitles.isNotEmpty)
-            PopupMenuItem<String>(
-              value: 'toggleSecondarySubtitle',
-              child: _buildMenuItemRow(
-                icon:
-                    _showSecondarySubtitles
-                        ? Icons.visibility
-                        : Icons.visibility_off,
-                title: _showSecondarySubtitles ? 'Hide Secondary' : 'Show Secondary',
-                color: Colors.cyan,
-              ),
-            ),
-        ],
-
-        // Auto resize on keyboard option (show if video is loaded and on mobile platform)
-        if (_isVideoLoaded && ResponsiveLayout.isMobilePlatform()) ...[
-          if (_secondarySubtitles.isEmpty)
-            const PopupMenuDivider(),
-          PopupMenuItem<String>(
-            value: 'autoResizeOnKeyboard',
-            child: _buildMenuItemRow(
-              icon:
-                  _autoResizeOnKeyboard
-                      ? Icons.check_box
-                      : Icons.check_box_outline_blank,
-              title: 'Resize Player on Keyboard',
-              color: Colors.green,
-            ),
-          ),
-        ],
-
-        // Translation mode specific options
-        if (!_isEditMode) ...[
-          const PopupMenuDivider(),
-          PopupMenuItem<String>(
-            value: 'showOriginal',
-            child: _buildMenuItemRow(
-              icon:
-                  _showOriginalLine
-                      ? Icons.check_box
-                      : Icons.check_box_outline_blank,
-              title: 'Show Original Line',
-              color: Colors.orange,
-            ),
-          ),
-
-          // Auto-save option (only when Show Original Line is enabled)
-          if (_showOriginalLine)
-            PopupMenuItem<String>(
-              value: 'autoSave',
-              child: Padding(
-                padding: const EdgeInsets.only(left: 20.0),
-                child: _buildMenuItemRow(
-                  icon:
-                      _autoSaveWithNavigation
-                          ? Icons.check_box
-                          : Icons.check_box_outline_blank,
-                  title: 'Auto-save with navigation',
-                  color: Colors.green,
-                ),
-              ),
-            ),
-        ],
-
-        // Divider before delete and mark options
-        // const PopupMenuDivider(),
-
-        // Show/Hide original text field
-        PopupMenuItem<String>(
-          value: 'toggleOriginalField',
-          child: _buildMenuItemRow(
-            icon:
-                _showOriginalTextField
-                    ? Icons.check_box
-                    : Icons.check_box_outline_blank,
-            title: 'Show Original Text Field',
-            color: Colors.blue,
-          ),
-        ),
-
-        // Formatted view toggle
-        PopupMenuItem<String>(
-          value: 'toggleFormatted',
-          child: _buildMenuItemRow(
-            icon:
-                isRawEnabled ? Icons.check_box : Icons.check_box_outline_blank,
-            title: 'Formatted View',
-            color: Colors.green,
-          ),
-        ),
-        const PopupMenuDivider(),
-
-        // Mark/Unmark line
-        PopupMenuItem<String>(
-          value: 'markLine',
-          child: _buildMenuItemRow(
-            icon:
-                (_subtitleLine?.marked ?? false)
-                    ? Icons.bookmark_remove
-                    : Icons.bookmark_add,
-            title:
-                (_subtitleLine?.marked ?? false) ? 'Unmark Line' : 'Mark Line',
-            color: (_subtitleLine?.marked ?? false) ? Colors.grey : Colors.red,
-          ),
-        ),
-
-        // Show marked lines
-        PopupMenuItem<String>(
-          value: 'showMarkedLines',
-          child: _buildMenuItemRow(
-            icon: Icons.bookmark,
-            title: 'Show in Marked Lines',
-            color: Colors.red,
-          ),
-        ),
-
-        // Edit History
-        PopupMenuItem<String>(
-          value: 'checkpointHistory',
-          child: _buildMenuItemRow(
-            icon: Icons.history,
-            title: 'Edit History',
-            color: Colors.deepPurple,
-          ),
-        ),
-
-        // Jump to line
-        PopupMenuItem<String>(
-          value: 'jumpToLine',
-          child: _buildMenuItemRow(
-            icon: Icons.arrow_upward_rounded,
-            title: 'Jump to Line',
-            color: Colors.orange,
-          ),
-        ),
-
-        // Delete subtitle line
-        PopupMenuItem<String>(
-          value: 'delete',
-          child: _buildMenuItemRow(
-            icon: Icons.delete,
-            title: 'Delete Subtitle Line',
-            color: Colors.red,
-          ),
-        ),
-
-        // Divider before help
-        const PopupMenuDivider(),
-
-        // Help & Documentation
-        PopupMenuItem<String>(
-          value: 'help',
-          child: _buildMenuItemRow(
-            icon: Icons.help_outline,
-            title: 'Help & Documentation',
-            color: Colors.purple,
-          ),
-        ),
-      ],
-    ).then((value) => _handleEditLineMenuSelection(value));
+      isEditMode: _isEditMode,
+      isNewSubtitle: widget.isNewSubtitle,
+      isVideoLoaded: _isVideoLoaded,
+      hasSecondarySubtitles: _secondarySubtitles.isNotEmpty,
+      showSecondarySubtitles: _showSecondarySubtitles,
+      autoResizeOnKeyboard: _autoResizeOnKeyboard,
+      isMobilePlatform: ResponsiveLayout.isMobilePlatform(),
+      showOriginalLine: _showOriginalLine,
+      autoSaveWithNavigation: _autoSaveWithNavigation,
+      showOriginalTextField: _showOriginalTextField,
+      isFormattedView: isRawEnabled,
+      isMarked: _subtitleLine?.marked ?? false,
+    ).then(_handleEditLineMenuSelection);
   }
 
   // Handle edit line menu selection
