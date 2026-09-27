@@ -7,10 +7,9 @@ import 'package:subtitle_studio/screens/source_view/source_view_state.dart';
 import 'package:subtitle_studio/utils/app_logger.dart';
 import 'package:subtitle_studio/utils/saf_file_handler.dart';
 
-/// Cubit for managing the Source View Screen state
+/// Riverpod controller for Source View state
 /// 
-/// This Cubit encapsulates all business logic for the source view screen,
-/// following the BLoC pattern for state management. It handles:
+/// Encapsulates Source View business logic and state transitions. It handles:
 /// - File loading with encoding detection
 /// - Content editing and change tracking
 /// - Save operations with multiple fallback strategies
@@ -38,7 +37,7 @@ class SourceViewConfig {
   });
 }
 
-/// Configuration is overridden by SourceViewScreenBloc's nested ProviderScope
+/// Configuration is overridden by SourceViewScreenHost's nested ProviderScope
 /// so each opened source file receives an isolated controller instance.
 final sourceViewConfigProvider = Provider<SourceViewConfig>((ref) {
   throw StateError(
@@ -68,9 +67,7 @@ class SourceViewController extends Notifier<SourceViewState> {
     );
   }
 
-  /// Compatibility helper used during the mechanical Cubit migration.
-  /// It keeps state transitions identical while replacing Bloc's emit API.
-  void emit(SourceViewState nextState) {
+  void _setState(SourceViewState nextState) {
     state = nextState;
   }
 
@@ -91,7 +88,7 @@ class SourceViewController extends Notifier<SourceViewState> {
       final storedSafUri = prefs.getString(key);
       
       if (storedSafUri != null) {
-        emit(state.copyWith(safUri: storedSafUri));
+        _setState(state.copyWith(safUri: storedSafUri));
         await AppLogger.instance.info('Found existing SAF URI in preferences: $storedSafUri');
       } else if (state.safUri != null) {
         await AppLogger.instance.info('Using SAF URI from constructor parameter: ${state.safUri}');
@@ -125,7 +122,7 @@ class SourceViewController extends Notifier<SourceViewState> {
   /// Load file content from storage with encoding detection
   Future<void> _loadFileContent(String? preloadedContent) async {
     try {
-      emit(state.toLoading());
+      _setState(state.toLoading());
 
       String content;
       Encoding encoding = utf8;
@@ -195,11 +192,11 @@ class SourceViewController extends Notifier<SourceViewState> {
       final entries = _parseSrtContent(content);
       await AppLogger.instance.info('Parsed ${entries.length} subtitle entries');
       
-      emit(state.toLoaded(entries: entries, encoding: encoding));
+      _setState(state.toLoaded(entries: entries, encoding: encoding));
       await AppLogger.instance.info('Loaded source view for file: ${state.filePath}');
       
     } catch (e) {
-      emit(state.toError('Could not load this subtitle file.'));
+      _setState(state.toError('Could not load this subtitle file.'));
       await AppLogger.instance.error(
         'Error loading file in source view: $e',
         context: 'SourceViewController._loadFileContent',
@@ -246,7 +243,7 @@ class SourceViewController extends Notifier<SourceViewState> {
     final updatedEntries = List<SubtitleEntry>.from(state.subtitleEntries);
     updatedEntries[index] = updatedEntry;
     
-    emit(state.toContentChanged(entries: updatedEntries));
+    _setState(state.toContentChanged(entries: updatedEntries));
   }
 
   /// Handle changes to subtitle entry index
@@ -280,10 +277,10 @@ class SourceViewController extends Notifier<SourceViewState> {
   /// Simple method to mark content as changed (for performance optimization)
   /// Used by direct object mutation approach like EditScreen
   void markContentChanged() {
-    // Simply emit the current state with hasUnsavedChanges = true
-    // This is much more performant than complex BLoC updates
+    // Simply update the current state with hasUnsavedChanges = true
+    // This is much more performant than unnecessary full-list processing
     if (!state.hasUnsavedChanges) {
-      emit(state.toContentChanged(entries: state.subtitleEntries));
+      _setState(state.toContentChanged(entries: state.subtitleEntries));
     }
   }
 
@@ -295,7 +292,7 @@ class SourceViewController extends Notifier<SourceViewState> {
   /// Save current file content back to storage with original encoding
   Future<void> saveFile() async {
     try {
-      emit(state.toSaving());
+      _setState(state.toSaving());
       
       final content = state.toSrtContent();
       
@@ -365,15 +362,15 @@ class SourceViewController extends Notifier<SourceViewState> {
           successMessage = 'File saved successfully';
         }
         
-        emit(state.toSaveSuccess(successMessage));
+        _setState(state.toSaveSuccess(successMessage));
         await AppLogger.instance.info('=== SAVE COMPLETED SUCCESSFULLY ===');
       } else {
         await AppLogger.instance.warning('All save strategies failed');
-        emit(state.toSaveError('Unable to save file. All save strategies failed.'));
+        _setState(state.toSaveError('Unable to save file. All save strategies failed.'));
       }
       
     } catch (e) {
-      emit(state.toSaveError('Could not save the subtitle file.'));
+      _setState(state.toSaveError('Could not save the subtitle file.'));
       await AppLogger.instance.error(
         'Error saving file in source view: $e',
         context: 'SourceViewController.saveFile',
@@ -385,7 +382,7 @@ class SourceViewController extends Notifier<SourceViewState> {
   /// Save file to a new location using SAF
   Future<void> saveAsFile() async {
     try {
-      emit(state.toSaving());
+      _setState(state.toSaving());
       
       // Get the current file name as a default
       final currentFileName = state.filePath.split('/').last;
@@ -411,7 +408,7 @@ class SourceViewController extends Notifier<SourceViewState> {
       if (safInfo == null) {
         // User cancelled the save dialog
         await AppLogger.instance.info('Save As cancelled by user');
-        emit(state.copyWith(isSaving: false));
+        _setState(state.copyWith(isSaving: false));
         return;
       }
       
@@ -420,7 +417,7 @@ class SourceViewController extends Notifier<SourceViewState> {
       final content = state.toSrtContent();
       
       if (content.isEmpty) {
-        emit(state.toSaveError('No content to save. The file appears to be empty.'));
+        _setState(state.toSaveError('No content to save. The file appears to be empty.'));
         await AppLogger.instance.warning('Save As aborted: no content available');
         return;
       }
@@ -435,13 +432,13 @@ class SourceViewController extends Notifier<SourceViewState> {
       
       if (writeResult) {
         await AppLogger.instance.info('Save As successful to: ${safInfo.displayPath}');
-        emit(state.toSaveSuccess('File saved to: ${safInfo.displayPath}'));
+        _setState(state.toSaveSuccess('File saved to: ${safInfo.displayPath}'));
       } else {
-        emit(state.toSaveError('Failed to write file content'));
+        _setState(state.toSaveError('Failed to write file content'));
       }
       
     } catch (e) {
-      emit(state.toSaveError('Could not save the subtitle file to that location.'));
+      _setState(state.toSaveError('Could not save the subtitle file to that location.'));
       await AppLogger.instance.error(
         'Error saving file as in source view: $e',
         context: 'SourceViewController.saveAsFile',
@@ -452,7 +449,7 @@ class SourceViewController extends Notifier<SourceViewState> {
 
   /// Clear any error or save messages
   void clearMessages() {
-    emit(state.copyWith(
+    _setState(state.copyWith(
       errorMessage: null,
       saveMessage: null,
     ));
