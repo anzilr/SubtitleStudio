@@ -1,10 +1,10 @@
-Riverpod migration checkpoint 7c
+Riverpod migration checkpoint 7d
 Date: 2026-09-28
 Checks:
 - flutter analyze
 - flutter test
 
-Correction after checkpoint 7b:
-- Imported Flutter ScrollCacheExtent rendering type for the migrated ListView cache API
+Correction after checkpoint 7c:
+- Updated Home last-opened sorting tests for persisted activity timestamps and deterministic legacy fallback
 
 Platform builds intentionally disabled.
