@@ -199,6 +199,47 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
     });
   }
 
+  // Video subtitle cache invalidation flag. This must remain real State
+  // storage because extensions cannot own instance fields.
+  bool _needSubtitleRegeneration = true;
+
+  void _markSubtitlesForRegeneration() {
+    _needSubtitleRegeneration = true;
+  }
+
+  /// Public bridge used by the repeat-range dialog.
+  List<Subtitle> get subtitles => _subtitles;
+
+  bool get isRepeatModeEnabled => _isRepeatModeEnabled;
+
+  void setCustomRepeatRange(int startIndex, int endIndex) {
+    if (startIndex <= endIndex &&
+        startIndex >= 0 &&
+        endIndex < _subtitles.length) {
+      _isCustomRangeMode = true;
+      _customRangeStartIndex = startIndex;
+      _customRangeEndIndex = endIndex;
+
+      if (_isRepeatModeEnabled) {
+        _startRepeatPlayback();
+      }
+    }
+  }
+
+  void clearCustomRepeatRange() {
+    _isCustomRangeMode = false;
+    _customRangeStartIndex = null;
+    _customRangeEndIndex = null;
+
+    if (_isRepeatModeEnabled) {
+      _startRepeatPlayback();
+    }
+  }
+
+  void toggleRepeatMode() => _toggleRepeatMode();
+
+  void startRepeatPlayback() => _startRepeatPlayback();
+
   @override
   void initState() {
     super.initState();
