@@ -763,7 +763,7 @@ class _MalayalamNormalizationSheetState extends State<MalayalamNormalizationShee
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
                             itemCount: _previewResults.length,
-                            scrollCacheExtent: 1000, // Cache more items for smoother scrolling
+                            scrollCacheExtent: const ScrollCacheExtent.pixels(1000), // Cache more items for smoother scrolling
                             addAutomaticKeepAlives: false, // Don't keep all items alive
                             addRepaintBoundaries: true, // Optimize repainting
                             itemBuilder: (context, index) {
