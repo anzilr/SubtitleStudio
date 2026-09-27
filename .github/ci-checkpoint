@@ -1,20 +1,13 @@
-Riverpod migration checkpoint 8
+Riverpod migration checkpoint 8b
 Date: 2026-09-27
 Checks:
 - flutter analyze
 - flutter test
 
-Scope since checkpoint 7:
-- Make Editor boolean preferences Riverpod-owned
-- Type Waveform widget-state access and remove dynamic calls
-- Decouple Isar handle from main.dart
-- Pin Git dependencies to exact validated revisions
-- Redact local paths and credential-shaped values from logs
-- Align README platform/architecture/support documentation
-- Sanitize Riverpod controller error messages
-- Rename Riverpod compatibility wrappers from *Bloc to *Host
-- Move Waveform event/state out of bloc folder
-- Remove dead Editor migration remnants
-- Persist validated pubspec.lock without retriggering Actions
+Corrections since checkpoint 8:
+- Restored data-layer access to shared Isar handle
+- Repaired SourceView facade after host rename
+- Updated SessionSelectionSheet to EditScreenHost
+- Decoupled project_manager, import_comments_sheet, and subtitle_effect_operations from main.dart
 
 Platform builds intentionally disabled.
