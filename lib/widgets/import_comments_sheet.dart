@@ -3,7 +3,7 @@ import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
 import 'package:subtitle_studio/utils/platform_file_handler.dart';
 import 'package:subtitle_studio/database/models/models.dart';
-import 'package:subtitle_studio/main.dart';
+import 'package:subtitle_studio/database/database_instance.dart';
 import 'dart:convert';
 import 'dart:io';
 
