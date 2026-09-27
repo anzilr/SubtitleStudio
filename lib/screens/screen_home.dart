@@ -52,7 +52,6 @@ import 'package:subtitle_studio/widgets/create_subtitle_sheet.dart'; // New proj
 import 'package:subtitle_studio/widgets/import_project_sheet.dart'; // Project import
 import 'package:subtitle_studio/widgets/subtitle_import_options_sheet.dart'; // Import workflow
 import 'package:subtitle_studio/widgets/subtitle_extract_options_sheet.dart'; // Video extraction
-import 'package:subtitle_studio/database/database_helper.dart'; // Database operations
 import 'package:subtitle_studio/utils/logging_helpers.dart';    // Logging utilities
 import 'package:subtitle_studio/utils/snackbar_helper.dart';    // User notifications
 import 'package:subtitle_studio/utils/update_manager.dart';     // In-app update functionality

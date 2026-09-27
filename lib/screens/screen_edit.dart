@@ -17,7 +17,6 @@ import 'package:subtitle_studio/widgets/video_player_widget.dart';
 import 'package:subtitle_studio/screens/edit/widgets/editor_video_pane.dart';
 import 'package:subtitle_studio/screens/screen_help.dart';
 import 'package:subtitle_studio/utils/responsive_layout.dart';
-import 'package:subtitle_studio/database/database_helper.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/themes/theme_switcher_button.dart';
 import 'package:subtitle_studio/utils/project_manager.dart';
@@ -234,7 +233,7 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
     // Listen to scroll position changes to update custom scrollbar
     _itemPositionsListener.itemPositions.addListener(_updateScrollbarPosition);
     
-    updateLastEditedSession(widget.sessionId);
+    unawaited(_controller.updateLastEditedSession());
     _loadResizeRatio(); // Load saved resize ratio
     _loadMobileResizeRatio(); // Load saved mobile resize ratio
     _registerHotkeyShortcuts(); // Register hotkey shortcuts
