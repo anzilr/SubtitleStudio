@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/services.dart';
@@ -53,13 +54,19 @@ final sourceViewControllerProvider =
 
 class SourceViewController extends Notifier<SourceViewState> {
   late File _file;
+  bool _disposed = false;
 
   @override
   SourceViewState build() {
     final config = ref.watch(sourceViewConfigProvider);
     _file = File(config.filePath);
+    _disposed = false;
 
-    Future.microtask(() => _initialize(config.fileContent));
+    ref.onDispose(() {
+      _disposed = true;
+    });
+
+    unawaited(Future.microtask(() => _initialize(config.fileContent)));
 
     return SourceViewState.initial(
       filePath: config.filePath,
@@ -69,13 +76,19 @@ class SourceViewController extends Notifier<SourceViewState> {
   }
 
   void _setState(SourceViewState nextState) {
-    state = nextState;
+    if (!_disposed) {
+      state = nextState;
+    }
   }
 
   /// Initialize the source view controller
   Future<void> _initialize(String? preloadedContent) async {
-    await AppLogger.instance.info('SourceViewController: Initializing for file: ${state.filePath}');
+    await AppLogger.instance.info('SourceViewController: Initializing');
+    if (_disposed) return;
+
     await _checkForExistingSafUri();
+    if (_disposed) return;
+
     await _loadFileContent(preloadedContent);
   }
 
