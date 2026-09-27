@@ -2256,7 +2256,7 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
         SnackbarHelper.showError(context, 'Failed to update mark status - check debug log for details');
       }
     } catch (e) {
-      SnackbarHelper.showError(context, 'Error updating mark status: $e');
+      SnackbarHelper.showError(context, 'Could not update mark status. Please try again.');
     }
   }
 
@@ -2383,7 +2383,7 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
             );
           }
         } catch (e) {
-          SnackbarHelper.showError(context, 'Failed to update comment: $e');
+          SnackbarHelper.showError(context, 'Could not update the comment. Please try again.');
         }
       },
       onCommentDeleted: () async {
@@ -2428,7 +2428,7 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
             );
           }
         } catch (e) {
-          SnackbarHelper.showError(context, 'Failed to delete comment: $e');
+          SnackbarHelper.showError(context, 'Could not delete the comment. Please try again.');
         }
       },
     ).then((_) {
@@ -2496,7 +2496,7 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
                     SnackbarHelper.showSuccess(context, 
                       comment != null ? 'Comment updated' : 'Comment deleted');
                   } catch (e) {
-                    SnackbarHelper.showError(context, 'Failed to update comment: $e');
+                    SnackbarHelper.showError(context, 'Could not update the comment. Please try again.');
                   }
                 },
             onResolvedUpdated: (index, resolved) async {
@@ -2520,7 +2520,7 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
                 SnackbarHelper.showSuccess(context, 
                   resolved ? 'Comment marked as resolved' : 'Comment marked as unresolved');
               } catch (e) {
-                SnackbarHelper.showError(context, 'Failed to update resolved status: $e');
+                SnackbarHelper.showError(context, 'Could not update comment status. Please try again.');
               }
             },
             onTextEdited: (index, newText) async {
@@ -2557,14 +2557,14 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
                   SnackbarHelper.showSuccess(context, 'Subtitle text updated');
                 }
               } catch (e) {
-                SnackbarHelper.showError(context, 'Failed to update subtitle text: $e');
+                SnackbarHelper.showError(context, 'Could not update subtitle text. Please try again.');
               }
             },
               ),
         ),
       );
     } catch (e) {
-      SnackbarHelper.showError(context, 'Error loading marked lines: $e');
+      SnackbarHelper.showError(context, 'Could not load marked lines. Please try again.');
     }
   }
 
@@ -2817,7 +2817,7 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
         SnackbarHelper.showError(context, 'Failed to update mark status - check debug log for details');
       }
     } catch (e) {
-      SnackbarHelper.showError(context, 'Error updating mark status: $e');
+      SnackbarHelper.showError(context, 'Could not update mark status. Please try again.');
     }
   }
 
@@ -2872,7 +2872,7 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
                               SnackbarHelper.showSuccess(context, 
                                 comment != null ? 'Comment updated' : 'Comment deleted');
                             } catch (e) {
-                              SnackbarHelper.showError(context, 'Failed to update comment: $e');
+                              SnackbarHelper.showError(context, 'Could not update the comment. Please try again.');
                             }
                           },
                         ),
@@ -3006,7 +3006,7 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
                           SnackbarHelper.showSuccess(context, 
                             comment != null ? 'Comment updated' : 'Comment deleted');
                         } catch (e) {
-                          SnackbarHelper.showError(context, 'Failed to update comment: $e');
+                          SnackbarHelper.showError(context, 'Could not update the comment. Please try again.');
                         }
                       },
                       onPlayStateChanged: (isPlaying) {
@@ -3138,7 +3138,7 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
             SnackbarHelper.showSuccess(context, 
               comment != null ? 'Comment updated' : 'Comment deleted');
           } catch (e) {
-            SnackbarHelper.showError(context, 'Failed to update comment: $e');
+            SnackbarHelper.showError(context, 'Could not update the comment. Please try again.');
           }
         },
         onPlayStateChanged: (isPlaying) {
@@ -3796,7 +3796,7 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
                                         SnackbarHelper.showSuccess(context, 
                                           comment != null ? 'Comment updated' : 'Comment deleted');
                                       } catch (e) {
-                                        SnackbarHelper.showError(context, 'Failed to update comment: $e');
+                                        SnackbarHelper.showError(context, 'Could not update the comment. Please try again.');
                                       }
                                     },
                                     onPlayStateChanged: (isPlaying) {
@@ -4991,7 +4991,7 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
       }
     } catch (e) {
       if (!mounted) return;
-      SnackbarHelper.showError(context, 'Error: $e');
+      SnackbarHelper.showError(context, 'Could not add the subtitle line. Please try again.');
     }
   }
 
@@ -5212,7 +5212,7 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
                 if (mounted) {
                   ScaffoldMessenger.of(contxt).showSnackBar(
                     SnackBar(
-                      content: Text('Failed to write file: $e'),
+                      content: const Text('Could not write the subtitle file to that location.'),
                       backgroundColor: Colors.orange,
                       behavior: SnackBarBehavior.floating,
                       duration: const Duration(seconds: 3),
@@ -5258,7 +5258,7 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
           if (mounted) {
             ScaffoldMessenger.of(contxt).showSnackBar(
               SnackBar(
-                content: Text('Failed to save file to new location: $e'),
+                content: const Text('Could not save the subtitle file to the new location.'),
                 backgroundColor: Colors.orange,
                 behavior: SnackBarBehavior.floating,
                 duration: const Duration(seconds: 3),
