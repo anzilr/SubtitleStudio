@@ -98,60 +98,7 @@ extension _EditLineInitialization on EditSubtitleScreenState {
         });
       }
     }
-  } // Performance optimization: Track if subtitles need regeneration
-
-  bool _needSubtitleRegeneration = true;
-
-  // Method to mark subtitles as needing regeneration
-  void _markSubtitlesForRegeneration() {
-    _needSubtitleRegeneration = true;
   }
-
-  /// Toggle repeat playback mode for current subtitle
-  /// Start repeat playback for current subtitle or custom range
-  /// Stop repeat playback and reset custom range
-  /// Update repeat timing for current subtitle without changing play/pause state
-  /// Set custom repeat range
-  void setCustomRepeatRange(int startIndex, int endIndex) {
-    if (startIndex <= endIndex &&
-        startIndex >= 0 &&
-        endIndex < _subtitles.length) {
-      _isCustomRangeMode = true;
-      _customRangeStartIndex = startIndex;
-      _customRangeEndIndex = endIndex;
-
-      // If repeat mode is already enabled, restart with new range
-      if (_isRepeatModeEnabled) {
-        _startRepeatPlayback();
-      }
-    }
-  }
-
-  /// Clear custom repeat range and switch to normal repeat mode
-  void clearCustomRepeatRange() {
-    _isCustomRangeMode = false;
-    _customRangeStartIndex = null;
-    _customRangeEndIndex = null;
-
-    // If repeat mode is enabled, restart with normal mode
-    if (_isRepeatModeEnabled) {
-      _startRepeatPlayback();
-    }
-  }
-
-  // Public interface methods for video player widget
-
-  /// Get subtitles list for external access
-  List<Subtitle> get subtitles => _subtitles;
-
-  /// Get repeat mode enabled state
-  bool get isRepeatModeEnabled => _isRepeatModeEnabled;
-
-  /// Toggle repeat mode (public method)
-  void toggleRepeatMode() => _toggleRepeatMode();
-
-  /// Start repeat playback (public method)
-  void startRepeatPlayback() => _startRepeatPlayback();
 
   // Load video file for edit mode
   // Unload video (optimized single setState)
