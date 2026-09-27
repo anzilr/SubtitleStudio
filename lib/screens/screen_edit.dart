@@ -93,6 +93,11 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
   // temporarily while the Editor migration is completed incrementally.
   EditController get _controller => ref.read(editControllerProvider.notifier);
   EditState get _editState => ref.read(editControllerProvider);
+  void _setEditorState(VoidCallback update) {
+    if (!mounted) return;
+    setState(update);
+  }
+
   
   Set<int> get _selectedIndices => _editState.selectedIndices;
   bool get _isSelectionMode => _editState.isSelectionMode;

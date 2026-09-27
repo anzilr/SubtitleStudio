@@ -100,6 +100,11 @@ class EditSubtitleScreen extends riverpod.ConsumerStatefulWidget {
 }
 
 class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen> {
+  void _setEditLineState(VoidCallback update) {
+    if (!mounted) return;
+    setState(update);
+  }
+
   late TextEditingController _originalController;
   late TextEditingController _editedController;
   late TextEditingController _startTimeController;
