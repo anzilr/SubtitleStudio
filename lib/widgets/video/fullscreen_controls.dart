@@ -739,8 +739,8 @@ class _FullscreenControlsWidgetState extends State<_FullscreenControlsWidget> {
         DeviceOrientation.portraitDown,
       ]);
       
-      // Give a small delay for orientation change to complete
-      await Future.delayed(const Duration(milliseconds: 300));
+      // Wait for the first frame rendered with the new orientation.
+      await WidgetsBinding.instance.endOfFrame;
     }
 
     // Create overlay entry for the bottom modal sheet to ensure it appears above fullscreen
@@ -774,8 +774,8 @@ class _FullscreenControlsWidgetState extends State<_FullscreenControlsWidget> {
       final orientationsToRestore = originalOrientations;
       if (orientationsToRestore != null) {
         try {
-          // Add a small delay to ensure overlay removal completes first
-          await Future.delayed(const Duration(milliseconds: 150));
+          // Let overlay removal render before restoring the prior orientation.
+          await WidgetsBinding.instance.endOfFrame;
           await SystemChrome.setPreferredOrientations(orientationsToRestore);
           debugPrint('Restored original orientation after comment dialog');
         } catch (e) {

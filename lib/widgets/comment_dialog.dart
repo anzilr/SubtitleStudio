@@ -66,8 +66,8 @@ class CommentDialog extends StatefulWidget {
         DeviceOrientation.portraitDown,
       ]);
       
-      // Give a small delay for orientation change to complete
-      await Future.delayed(const Duration(milliseconds: 300));
+      // Wait for the first frame rendered with the new orientation.
+      await WidgetsBinding.instance.endOfFrame;
     }
     
     try {
