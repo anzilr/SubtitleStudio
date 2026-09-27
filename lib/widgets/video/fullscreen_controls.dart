@@ -747,7 +747,7 @@ class _FullscreenControlsWidgetState extends State<_FullscreenControlsWidget> {
     OverlayEntry? dialogOverlay;
     
     // Helper function to safely remove overlay and restore orientation
-    void safeRemoveOverlay() async {
+    Future<void> safeRemoveOverlay() async {
       try {
         dialogOverlay?.remove();
         dialogOverlay = null;
@@ -791,7 +791,7 @@ class _FullscreenControlsWidgetState extends State<_FullscreenControlsWidget> {
           // Handle escape key to close the comment dialog
           if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
             debugPrint('Escape key pressed - dismissing fullscreen comment dialog');
-            safeRemoveOverlay();
+            unawaited(safeRemoveOverlay());
             return KeyEventResult.handled;
           }
           return KeyEventResult.ignored;
@@ -802,7 +802,7 @@ class _FullscreenControlsWidgetState extends State<_FullscreenControlsWidget> {
             onTap: () {
               // Dismiss dialog when tapping outside
               debugPrint('Dismissing comment dialog via background tap');
-              safeRemoveOverlay();
+              unawaited(safeRemoveOverlay());
             },
             child: Container(
               color: Colors.black54, // Semi-transparent background
@@ -848,9 +848,9 @@ class _FullscreenControlsWidgetState extends State<_FullscreenControlsWidget> {
                         if (mounted && !subtitle.marked && widget.onSubtitleMarked != null) {
                           try {
                             debugPrint('  ► Marking subtitle before saving comment');
-                            widget.onSubtitleMarked!(subtitle.index, true);
-                            // Small delay to ensure mark operation completes
-                            await Future.delayed(const Duration(milliseconds: 50));
+                            await _awaitCallbackResult(
+                              widget.onSubtitleMarked!(subtitle.index, true),
+                            );
                           } catch (e) {
                             debugPrint('  ► ERROR marking subtitle: $e');
                           }
@@ -863,8 +863,13 @@ class _FullscreenControlsWidgetState extends State<_FullscreenControlsWidget> {
                             debugPrint('    - Index parameter: ${subtitle.index}');
                             debugPrint('    - Comment parameter: "$comment"');
                             
-                            widget.onSubtitleCommentUpdated!(subtitle.index, comment);
-                            
+                            await _awaitCallbackResult(
+                              widget.onSubtitleCommentUpdated!(
+                                subtitle.index,
+                                comment,
+                              ),
+                            );
+
                             debugPrint('  ► Parent callback completed successfully');
                           } catch (e) {
                             debugPrint('  ► ERROR in parent callback: $e');
@@ -874,34 +879,36 @@ class _FullscreenControlsWidgetState extends State<_FullscreenControlsWidget> {
                         }
                         debugPrint('═══════════════════════════════════');
                         
-                        // Close the overlay with a slight delay to allow callback completion
-                        Future.delayed(const Duration(milliseconds: 100), () {
-                          debugPrint('Closing comment dialog overlay after save');
-                          safeRemoveOverlay();
-                        });
+                        debugPrint('Closing comment dialog overlay after save');
+                        await safeRemoveOverlay();
                       },
-                      onCommentDeleted: () {
-                        debugPrint('Comment delete initiated: subtitleIndex=${subtitle.index}');
-                        
-                        // Remove subtitle comment immediately
+                      onCommentDeleted: () async {
+                        debugPrint(
+                          'Comment delete initiated: subtitleIndex=${subtitle.index}',
+                        );
+
                         if (mounted && widget.onSubtitleCommentUpdated != null) {
                           try {
-                            widget.onSubtitleCommentUpdated!(subtitle.index, null);
-                            debugPrint('Fullscreen comment deleted successfully from database');
+                            await _awaitCallbackResult(
+                              widget.onSubtitleCommentUpdated!(
+                                subtitle.index,
+                                null,
+                              ),
+                            );
+                            debugPrint(
+                              'Fullscreen comment deleted successfully from database',
+                            );
                           } catch (e) {
                             debugPrint('Error deleting subtitle comment: $e');
                           }
                         }
-                        
-                        // Close the overlay with a slight delay to allow callback completion
-                        Future.delayed(const Duration(milliseconds: 100), () {
-                          debugPrint('Closing comment dialog overlay after delete');
-                          safeRemoveOverlay();
-                        });
+
+                        debugPrint('Closing comment dialog overlay after delete');
+                        await safeRemoveOverlay();
                       },
                       onCancelled: () {
                         debugPrint('Comment dialog cancelled by user');
-                        safeRemoveOverlay();
+                        unawaited(safeRemoveOverlay());
                       },
                     ),
                   ),

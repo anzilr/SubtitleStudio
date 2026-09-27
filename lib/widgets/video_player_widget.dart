@@ -61,6 +61,12 @@ part 'video/custom_video_controls.dart';
 part 'video/fullscreen_controls.dart';
 part 'video/player_control_widgets.dart';
 
+Future<void> _awaitCallbackResult(dynamic result) async {
+  if (result is Future) {
+    await result;
+  }
+}
+
 /// Advanced video player widget with integrated subtitle overlay system
 /// 
 /// This widget combines video playback with sophisticated subtitle rendering:
@@ -2069,52 +2075,46 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> with AutomaticKeep
         if (!subtitle.marked && widget.onSubtitleMarked != null) {
           try {
             debugPrint('Marking subtitle before saving comment in normal mode');
-            widget.onSubtitleMarked!(subtitle.index, true);
-            // Small delay to ensure mark operation completes
-            await Future.delayed(const Duration(milliseconds: 50));
+            await _awaitCallbackResult(
+              widget.onSubtitleMarked!(subtitle.index, true),
+            );
           } catch (e) {
             debugPrint('Error marking subtitle: $e');
           }
         }
         
-        // Schedule callback for next frame to avoid unmounted widget issues
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          // Check if widget is still mounted before calling callback
-          if (mounted && widget.onSubtitleCommentUpdated != null) {
-            try {
-              widget.onSubtitleCommentUpdated!(subtitle.index, comment);
-            } catch (e) {
-              debugPrint('Error updating subtitle comment: $e');
-            }
+        if (mounted && widget.onSubtitleCommentUpdated != null) {
+          try {
+            await _awaitCallbackResult(
+              widget.onSubtitleCommentUpdated!(subtitle.index, comment),
+            );
+          } catch (e) {
+            debugPrint('Error updating subtitle comment: $e');
           }
-          
-          // Resume video if it was playing before dialog opened and not already resumed
-          if (wasPlaying && mounted && !hasResumed) {
-            hasResumed = true;
-            _player.play();
-            debugPrint('Resumed video after comment save');
-          }
-        });
+        }
+
+        if (wasPlaying && mounted && !hasResumed) {
+          hasResumed = true;
+          _player.play();
+          debugPrint('Resumed video after comment save');
+        }
       },
-      onCommentDeleted: () {
-        // Schedule callback for next frame to avoid unmounted widget issues
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          // Check if widget is still mounted before calling callback
-          if (mounted && widget.onSubtitleCommentUpdated != null) {
-            try {
-              widget.onSubtitleCommentUpdated!(subtitle.index, null);
-            } catch (e) {
-              debugPrint('Error deleting subtitle comment: $e');
-            }
+      onCommentDeleted: () async {
+        if (mounted && widget.onSubtitleCommentUpdated != null) {
+          try {
+            await _awaitCallbackResult(
+              widget.onSubtitleCommentUpdated!(subtitle.index, null),
+            );
+          } catch (e) {
+            debugPrint('Error deleting subtitle comment: $e');
           }
-          
-          // Resume video if it was playing before dialog opened and not already resumed
-          if (wasPlaying && mounted && !hasResumed) {
-            hasResumed = true;
-            _player.play();
-            debugPrint('Resumed video after comment delete');
-          }
-        });
+        }
+
+        if (wasPlaying && mounted && !hasResumed) {
+          hasResumed = true;
+          _player.play();
+          debugPrint('Resumed video after comment delete');
+        }
       },
     ).then((_) {
       // This executes when the dialog is dismissed (by canceling without save/delete)
