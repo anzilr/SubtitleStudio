@@ -60,6 +60,7 @@ import 'package:subtitle_studio/screens/edit/edit_state.dart';
 import 'package:subtitle_studio/screens/edit/models/subtitle_entry.dart';
 import 'package:subtitle_studio/screens/edit/widgets/source_view_pane.dart';
 import 'package:subtitle_studio/screens/edit/widgets/edit_main_menu.dart';
+import 'package:subtitle_studio/screens/edit/widgets/edit_placeholders.dart';
 import 'package:subtitle_studio/screens/edit/widgets/editor_custom_scrollbar.dart';
 import 'package:subtitle_studio/features/waveform/state/waveform_event.dart';
 import 'package:subtitle_studio/features/waveform/state/waveform_state.dart';
@@ -4299,17 +4300,6 @@ Future<void> _deleteSelectedSubtitles() async {
     await _loadSavedSecondarySubtitle(subtitleLines);
   }
 
-  List<String> _getEditInstructions() {
-    return [
-      'Tap any subtitle line to seek video to that exact time.',
-      'Double-tap or swipe a line to the right to edit the subtitle text.',
-      'Long press a line to enter selection mode for batch operations.',
-      'Use the menu (⋮) in the top right corner to access video loading, save, search & replace, and more features.',
-      'The app does not save the changes to the file. Use the "Save" or "Save File As" option in the menu to save your changes to file.',
-      'Selected lines can be copied, deleted, or have their timecodes shifted together.',
-    ];
-  }
-
   // Keyboard shortcut handlers
   void _handlePlayPauseShortcut() {
     if (_isVideoLoaded && _videoPlayerKey.currentState != null) {
@@ -4577,7 +4567,7 @@ Future<void> _deleteSelectedSubtitles() async {
       },
         child: FirstTimeInstructions(
           screenName: 'edit',
-          instructions: _getEditInstructions(),
+          instructions: editScreenInstructions,
           child: Stack(
           children: [
           Scaffold(
@@ -4718,7 +4708,7 @@ Future<void> _deleteSelectedSubtitles() async {
                   } else if (snapshot.hasError) {
                     return Center(child: Text('Error: ${snapshot.error}'));
                   } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return _buildEmptySubtitleView(context);
+                    return EditorEmptySubtitleView(onAddSubtitle: _addInitialSubtitleLine);
                   }
                   
                   // Switch between source view and timeline view
@@ -4768,55 +4758,6 @@ Future<void> _deleteSelectedSubtitles() async {
       ),
     ),
   );
-  }
-
-  // New method to build the empty state view
-  Widget _buildEmptySubtitleView(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(
-            Icons.subtitles_outlined,
-            size: 80,
-            color: Color(0xFF0A9396),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            "No subtitles yet",
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            "Get started by adding your first subtitle line",
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey,
-            ),
-          ),
-          const SizedBox(height: 32),
-          ElevatedButton.icon(
-            onPressed: _addInitialSubtitleLine,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color.fromARGB(255, 1, 54, 64),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            ),
-            icon: const Icon(Icons.add, color: Colors.white),
-            label: const Text(
-              "Add Subtitle Line",
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   // Method to add the initial subtitle line
