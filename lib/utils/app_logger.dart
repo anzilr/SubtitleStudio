@@ -215,7 +215,24 @@ class AppLogger {
         final windowsInfo = await deviceInfo.windowsInfo;
         deviceData['platform'] = 'Windows';
         deviceData['numberOfCores'] = windowsInfo.numberOfCores;
-        deviceData['systemMemoryInMegabytes'] = windowsInfo.systemMemoryInMegabytes;
+        deviceData['systemMemoryInMegabytes'] =
+            windowsInfo.systemMemoryInMegabytes;
+      } else if (Platform.isMacOS) {
+        final macInfo = await deviceInfo.macOsInfo;
+        deviceData['platform'] = 'macOS';
+        deviceData['model'] = macInfo.model;
+        deviceData['modelName'] = macInfo.modelName;
+        deviceData['arch'] = macInfo.arch;
+        deviceData['osRelease'] = macInfo.osRelease;
+        deviceData['activeCPUs'] = macInfo.activeCPUs;
+        deviceData['memorySize'] = macInfo.memorySize;
+      } else if (Platform.isLinux) {
+        final linuxInfo = await deviceInfo.linuxInfo;
+        deviceData['platform'] = 'Linux';
+        deviceData['name'] = linuxInfo.name;
+        deviceData['version'] = linuxInfo.version;
+        deviceData['prettyName'] = linuxInfo.prettyName;
+        deviceData['versionId'] = linuxInfo.versionId;
       }
       
       _deviceInfo = jsonEncode(deviceData);
