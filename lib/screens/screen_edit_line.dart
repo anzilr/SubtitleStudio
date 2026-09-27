@@ -54,6 +54,7 @@ import 'package:subtitle_studio/screens/edit_line/widgets/edit_line_dialogs.dart
 import 'package:subtitle_studio/screens/edit_line/widgets/edit_line_menu.dart';
 import 'package:subtitle_studio/screens/edit_line/widgets/edit_line_placeholders.dart';
 import 'package:subtitle_studio/screens/edit_line/widgets/dictionary_sheets.dart';
+import 'package:subtitle_studio/screens/edit_line/services/ai_context_builder.dart';
 import 'package:subtitle_studio/widgets/ai_explanation_sheet.dart';
 
 // Edit subtitle line screen with video player integration
@@ -2754,75 +2755,27 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
 
   // Show AI Explanation - triggers the AI explanation feature
   Future<void> _showAiExplanation() async {
-    // Get current text to explain
-    final currentText = _editedController.text.isEmpty 
-        ? _originalController.text 
+    final currentText = _editedController.text.isEmpty
+        ? _originalController.text
         : _editedController.text;
 
-    // Get context lines (current mode - original or edited based on _isEditMode)
-    final previousLines = <String>[];
-    if (_subtitleLine != null && _subtitle != null) {
-      final currentIndex = _subtitleLine!.index - 1;
-      for (int i = currentIndex - 1; i >= 0 && i >= currentIndex - 3; i--) {
-        final line = _subtitle!.lines[i];
-        final text = _isEditMode 
-            ? (line.edited?.isNotEmpty == true ? line.edited! : line.original)
-            : line.original;
-        previousLines.insert(0, text);
-      }
-    }
-    
-    final nextLines = <String>[];
-    if (_subtitleLine != null && _subtitle != null) {
-      final currentIndex = _subtitleLine!.index - 1;
-      for (int i = currentIndex + 1; i < _subtitle!.lines.length && i <= currentIndex + 3; i++) {
-        final line = _subtitle!.lines[i];
-        final text = _isEditMode 
-            ? (line.edited?.isNotEmpty == true ? line.edited! : line.original)
-            : line.original;
-        nextLines.add(text);
-      }
-    }
+    final aiContext = EditLineAiContextBuilder.build(
+      lines: _subtitle?.lines ?? const <SubtitleLine>[],
+      currentIndex: (_subtitleLine?.index ?? 1) - 1,
+      useEditedText: _isEditMode,
+      contextRadius: 3,
+    );
 
-    // Get all lines for context adjustment (current mode)
-    final allLines = <String>[];
-    if (_subtitle != null) {
-      for (final line in _subtitle!.lines) {
-        final text = _isEditMode 
-            ? (line.edited?.isNotEmpty == true ? line.edited! : line.original)
-            : line.original;
-        allLines.add(text);
-      }
-    }
-
-    // Get original lines for context selector
-    final originalAllLines = <String>[];
-    if (_subtitle != null) {
-      for (final line in _subtitle!.lines) {
-        originalAllLines.add(line.original);
-      }
-    }
-
-    // Get edited lines for context selector
-    final editedAllLines = <String>[];
-    if (_subtitle != null) {
-      for (final line in _subtitle!.lines) {
-        final text = line.edited?.isNotEmpty == true ? line.edited! : line.original;
-        editedAllLines.add(text);
-      }
-    }
-
-    // Use the AI Explanation Sheet widget
     if (!mounted) return;
     AiExplanationSheet.show(
       context: context,
       currentText: currentText,
-      previousLines: previousLines,
-      nextLines: nextLines,
-      allLines: allLines,
-      currentIndex: _subtitleLine?.index != null ? _subtitleLine!.index - 1 : 0,
-      originalAllLines: originalAllLines,
-      editedAllLines: editedAllLines,
+      previousLines: aiContext.previousLines,
+      nextLines: aiContext.nextLines,
+      allLines: aiContext.allLines,
+      currentIndex: aiContext.currentIndex,
+      originalAllLines: aiContext.originalAllLines,
+      editedAllLines: aiContext.editedAllLines,
     );
   }
 
