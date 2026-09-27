@@ -222,7 +222,7 @@ extension _EditSubtitleActions on _EditScreenState {
 
   Future<void> _handleVideoPlayerMarkToggle(int subtitleIndex, bool isMarked) async {
     try {
-      final success = await markSubtitleLine(widget.subtitleCollectionId, subtitleIndex, isMarked);
+      final success = await _controller.setLineMarked(subtitleIndex, isMarked);
       if (success) {
         // Update the subtitle line in the list
         if (subtitleIndex < subtitleLines.length) {

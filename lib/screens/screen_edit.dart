@@ -205,7 +205,8 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
     
     _onSubtitleCommentUpdatedStable = (subtitleIndex, comment) async {
       try {
-        await updateSubtitleLineComment(widget.subtitleCollectionId, subtitleIndex, comment);
+        final success = await _controller.updateComment(subtitleIndex, comment);
+        if (!success) throw StateError('Comment update failed');
         if (subtitleIndex < subtitleLines.length) {
           setState(() {
             subtitleLines[subtitleIndex].comment = comment;

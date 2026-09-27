@@ -146,7 +146,8 @@ extension _EditResponsiveLayout on _EditScreenState {
                               debugPrint('    - lineIndex: $subtitleIndex');
                               debugPrint('    - comment: "$comment"');
                               
-                              await updateSubtitleLineComment(widget.subtitleCollectionId, subtitleIndex, comment);
+                              final success = await _controller.updateComment(subtitleIndex, comment);
+        if (!success) throw StateError('Comment update failed');
                               debugPrint('  - Database update successful');
                               
                               // Refresh the subtitle line in UI
@@ -280,7 +281,8 @@ extension _EditResponsiveLayout on _EditScreenState {
                   onSubtitleCommentUpdated: (subtitleIndex, comment) async {
                     // Update comment in database and refresh UI
                     try {
-                      await updateSubtitleLineComment(widget.subtitleCollectionId, subtitleIndex, comment);
+                      final success = await _controller.updateComment(subtitleIndex, comment);
+        if (!success) throw StateError('Comment update failed');
                       // Refresh the subtitle line in UI
                       if (subtitleIndex < subtitleLines.length) {
                         _setEditorState(() {
@@ -399,7 +401,8 @@ extension _EditResponsiveLayout on _EditScreenState {
                         onSubtitleCommentUpdated: (subtitleIndex, comment) async {
                           // Update comment in database and refresh UI
                           try {
-                            await updateSubtitleLineComment(widget.subtitleCollectionId, subtitleIndex, comment);
+                            final success = await _controller.updateComment(subtitleIndex, comment);
+        if (!success) throw StateError('Comment update failed');
                             // Refresh the subtitle line in UI
                             if (subtitleIndex < subtitleLines.length) {
                               _setEditorState(() {
@@ -571,7 +574,8 @@ extension _EditResponsiveLayout on _EditScreenState {
                     onSubtitleCommentUpdated: (subtitleIndex, comment) async {
                       // Update comment in database and refresh UI
                       try {
-                        await updateSubtitleLineComment(widget.subtitleCollectionId, subtitleIndex, comment);
+                        final success = await _controller.updateComment(subtitleIndex, comment);
+        if (!success) throw StateError('Comment update failed');
                         // Refresh the subtitle line in UI
                         if (subtitleIndex < subtitleLines.length) {
                           _setEditorState(() {

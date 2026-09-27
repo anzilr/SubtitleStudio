@@ -120,6 +120,45 @@ class SubtitleRepository {
     }
   }
 
+  /// Clear mark/comment state for a subtitle line in one transaction.
+  Future<bool> unmarkLine(int collectionId, int index) async {
+    return _isar.writeTxn(() async {
+      final collection = await _isar.subtitleCollections.get(collectionId);
+      if (collection == null ||
+          index < 0 ||
+          index >= collection.lines.length) {
+        return false;
+      }
+
+      final line = collection.lines[index];
+      line.marked = false;
+      line.comment = null;
+      line.resolved = false;
+      await _isar.subtitleCollections.put(collection);
+      return true;
+    });
+  }
+
+  /// Update the resolved state attached to a subtitle comment.
+  Future<bool> updateResolved(
+    int collectionId,
+    int index,
+    bool resolved,
+  ) async {
+    return _isar.writeTxn(() async {
+      final collection = await _isar.subtitleCollections.get(collectionId);
+      if (collection == null ||
+          index < 0 ||
+          index >= collection.lines.length) {
+        return false;
+      }
+
+      collection.lines[index].resolved = resolved;
+      await _isar.subtitleCollections.put(collection);
+      return true;
+    });
+  }
+
   /// Delete a single subtitle line
   Future<bool> deleteLine(int collectionId, int index) async {
     logInfo('SubtitleRepository: Deleting line $index from collection $collectionId');

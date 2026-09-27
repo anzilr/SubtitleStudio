@@ -266,17 +266,19 @@ class EditController extends Notifier<EditState> {
     }
   }
 
-  /// Mark a subtitle line (toggle marked status)
-  Future<void> markLine(int index) async {
+  /// Set a subtitle line's mark state explicitly.
+  Future<bool> setLineMarked(int index, bool marked) async {
+    if (index < 0 || index >= state.subtitleLines.length) return false;
+
     try {
-      logInfo('EditController: Marking line at index $index');
+      final success = await _subtitleRepo.markLine(
+        subtitleCollectionId,
+        index,
+        marked,
+      );
+      if (!success) return false;
 
       final line = state.subtitleLines[index];
-      final newMarkedStatus = !line.marked;
-
-      await _subtitleRepo.markLine(subtitleCollectionId, index, newMarkedStatus);
-
-      // Update local state
       final updatedLines = List<SubtitleLine>.from(state.subtitleLines);
       updatedLines[index] = SubtitleLine()
         ..index = line.index
@@ -284,33 +286,42 @@ class EditController extends Notifier<EditState> {
         ..endTime = line.endTime
         ..original = line.original
         ..edited = line.edited
-        ..marked = newMarkedStatus
+        ..marked = marked
         ..comment = line.comment
         ..resolved = line.resolved;
 
       _setState(state.copyWith(subtitleLines: updatedLines));
-
-      logInfo('EditController: Line marked status: $newMarkedStatus');
+      return true;
     } catch (e, stackTrace) {
       logError(
-        'EditController: Error marking line',
-        context: 'markLine',
+        'EditController: Error setting line mark state',
+        context: 'setLineMarked',
         error: e,
         stackTrace: stackTrace,
       );
+      return false;
     }
   }
 
-  /// Update comment for a subtitle line
-  Future<void> updateComment(int index, String? comment) async {
+  /// Toggle a subtitle line's marked status.
+  Future<bool> markLine(int index) async {
+    if (index < 0 || index >= state.subtitleLines.length) return false;
+    return setLineMarked(index, !state.subtitleLines[index].marked);
+  }
+
+  /// Update comment for a subtitle line.
+  Future<bool> updateComment(int index, String? comment) async {
+    if (index < 0 || index >= state.subtitleLines.length) return false;
+
     try {
-      logInfo('EditController: Updating comment for line at index $index');
+      final success = await _subtitleRepo.updateComment(
+        subtitleCollectionId,
+        index,
+        comment,
+      );
+      if (!success) return false;
 
       final line = state.subtitleLines[index];
-
-      await _subtitleRepo.updateComment(subtitleCollectionId, index, comment);
-
-      // Update local state
       final updatedLines = List<SubtitleLine>.from(state.subtitleLines);
       updatedLines[index] = SubtitleLine()
         ..index = line.index
@@ -323,8 +334,7 @@ class EditController extends Notifier<EditState> {
         ..resolved = line.resolved;
 
       _setState(state.copyWith(subtitleLines: updatedLines));
-
-      logInfo('EditController: Comment updated');
+      return true;
     } catch (e, stackTrace) {
       logError(
         'EditController: Error updating comment',
@@ -332,6 +342,80 @@ class EditController extends Notifier<EditState> {
         error: e,
         stackTrace: stackTrace,
       );
+      return false;
+    }
+  }
+
+  /// Unmark a line and clear its associated comment/resolved state.
+  Future<bool> unmarkLine(int index) async {
+    if (index < 0 || index >= state.subtitleLines.length) return false;
+
+    try {
+      final success = await _subtitleRepo.unmarkLine(
+        subtitleCollectionId,
+        index,
+      );
+      if (!success) return false;
+
+      final line = state.subtitleLines[index];
+      final updatedLines = List<SubtitleLine>.from(state.subtitleLines);
+      updatedLines[index] = SubtitleLine()
+        ..index = line.index
+        ..startTime = line.startTime
+        ..endTime = line.endTime
+        ..original = line.original
+        ..edited = line.edited
+        ..marked = false
+        ..comment = null
+        ..resolved = false;
+
+      _setState(state.copyWith(subtitleLines: updatedLines));
+      return true;
+    } catch (e, stackTrace) {
+      logError(
+        'EditController: Error unmarking subtitle line',
+        context: 'unmarkLine',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
+  }
+
+  /// Update a subtitle comment's resolved status.
+  Future<bool> updateResolved(int index, bool resolved) async {
+    if (index < 0 || index >= state.subtitleLines.length) return false;
+
+    try {
+      final success = await _subtitleRepo.updateResolved(
+        subtitleCollectionId,
+        index,
+        resolved,
+      );
+      if (!success) return false;
+
+      final line = state.subtitleLines[index];
+      final updatedLines = List<SubtitleLine>.from(state.subtitleLines);
+      updatedLines[index] = SubtitleLine()
+        ..index = line.index
+        ..startTime = line.startTime
+        ..endTime = line.endTime
+        ..original = line.original
+        ..edited = line.edited
+        ..marked = line.marked
+        ..comment = line.comment
+        ..resolved = resolved;
+
+      _setState(state.copyWith(subtitleLines: updatedLines));
+      return true;
+    } catch (e, stackTrace) {
+      logError(
+        'EditController: Error updating resolved state',
+        context: 'updateResolved',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return false;
     }
   }
 

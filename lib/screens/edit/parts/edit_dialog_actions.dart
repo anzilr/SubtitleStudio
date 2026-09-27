@@ -189,7 +189,8 @@ extension _EditDialogActions on _EditScreenState {
             onCommentUpdated: (index, comment) async {
               // Update comment in database and refresh UI
               try {
-                await updateSubtitleLineComment(widget.subtitleCollectionId, index, comment);
+                final success = await _controller.updateComment(index, comment);
+                if (!success) throw StateError('Comment update failed');
                 // Refresh the subtitle line in UI
                 if (index < subtitleLines.length) {
                   _setEditorState(() {
@@ -211,7 +212,8 @@ extension _EditDialogActions on _EditScreenState {
             onLineUnmarked: (index) async {
               // Unmark line and delete comment
               try {
-                await unmarkSubtitleLine(widget.subtitleCollectionId, index);
+                final success = await _controller.unmarkLine(index);
+                if (!success) throw StateError('Unmark failed');
                 // Refresh the subtitle line in UI
                 if (index < subtitleLines.length) {
                   _setEditorState(() {
@@ -234,7 +236,8 @@ extension _EditDialogActions on _EditScreenState {
             onResolvedUpdated: (index, resolved) async {
               // Update resolved status in database
               try {
-                await updateSubtitleLineResolved(widget.subtitleCollectionId, index, resolved);
+                final success = await _controller.updateResolved(index, resolved);
+                if (!success) throw StateError('Resolved-state update failed');
                 // Refresh the subtitle line in UI
                 if (index < subtitleLines.length) {
                   _setEditorState(() {
@@ -327,7 +330,8 @@ extension _EditDialogActions on _EditScreenState {
             onCommentUpdated: (index, comment) async {
               // Update comment in database
               try {
-                await updateSubtitleLineComment(widget.subtitleCollectionId, index, comment);
+                final success = await _controller.updateComment(index, comment);
+                if (!success) throw StateError('Comment update failed');
                 // Refresh the subtitle line in UI
                 if (index < subtitleLines.length) {
                   _setEditorState(() {
@@ -349,7 +353,8 @@ extension _EditDialogActions on _EditScreenState {
             onLineUnmarked: (index) async {
               // Unmark line and delete comment
               try {
-                await unmarkSubtitleLine(widget.subtitleCollectionId, index);
+                final success = await _controller.unmarkLine(index);
+                if (!success) throw StateError('Unmark failed');
                 // Refresh the subtitle line in UI
                 if (index < subtitleLines.length) {
                   _setEditorState(() {
@@ -372,7 +377,8 @@ extension _EditDialogActions on _EditScreenState {
             onResolvedUpdated: (index, resolved) async {
               // Update resolved status in database
               try {
-                await updateSubtitleLineResolved(widget.subtitleCollectionId, index, resolved);
+                final success = await _controller.updateResolved(index, resolved);
+                if (!success) throw StateError('Resolved-state update failed');
                 // Refresh the subtitle line in UI
                 if (index < subtitleLines.length) {
                   _setEditorState(() {
