@@ -15,7 +15,7 @@
 //
 // Architecture:
 // - Uses StatefulWidget with TickerProviderStateMixin for animations
-// - Provider pattern for theme management
+// - Riverpod for application state and Provider for legacy theme wiring
 // - Database integration for session management
 // - Custom floating action buttons for primary actions
 // - Material Design with custom animations
@@ -24,7 +24,7 @@
 // - Replace Material Design with iOS native components
 // - Convert FloatingActionButton to iOS action sheets or toolbars
 // - Use iOS navigation patterns (tab bar, navigation controller)
-// - Replace Provider with ObservableObject/Combine
+// - Map Riverpod state to platform-appropriate observable state if ported natively
 // - Implement iOS-specific file handling and document picker
 // - Adapt animations to iOS conventions (UIView animations)
 
@@ -85,7 +85,7 @@ part 'home/parts/home_confirmation_dialogs.dart';
 /// - First-time user guidance system
 /// 
 /// **Technical Implementation:**
-/// - State management using Cubit (BLoC pattern)
+/// - State management using Riverpod
 /// - Clean architecture with repository pattern
 /// - Comprehensive logging throughout
 /// - File association handling for external app integration
@@ -137,7 +137,7 @@ class HomeScreen extends StatelessWidget {
 /// Internal content widget for the home screen
 /// 
 /// This widget handles the actual UI rendering and user interactions,
-/// while HomeScreen above provides the BLoC provider.
+/// while HomeScreen above keeps route/input concerns separate.
 class _HomeScreenContent extends ConsumerStatefulWidget {
   final String? initialFilePath;
   final String? initialFileName;
