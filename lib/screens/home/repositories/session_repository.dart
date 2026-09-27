@@ -237,4 +237,22 @@ class SessionRepository {
     return summary.isMsoneSubtitle;
   }
 
+
+  /// Reads the persisted Home session sort preference.
+  Future<SessionSortOption> getSessionSortOption() async {
+    final preferences = await _isar.preferences.where().findFirst();
+    return preferences?.sessionSortOption ?? SessionSortOption.lastOpened;
+  }
+
+  /// Persists the Home session sort preference without global database access.
+  Future<void> setSessionSortOption(SessionSortOption value) async {
+    final existing = await _isar.preferences.where().findFirst();
+    final preferences = existing ?? Preferences(autoSave: true);
+    preferences.sessionSortOption = value;
+
+    await _isar.writeTxn(() async {
+      await _isar.preferences.put(preferences);
+    });
+  }
+
 }

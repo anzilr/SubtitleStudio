@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/database/models/models.dart';
-import 'package:subtitle_studio/database/models/preferences_model.dart';
 import 'package:subtitle_studio/screens/home/home_state.dart';
 import 'package:subtitle_studio/screens/home/models/session_summary.dart';
 import 'package:subtitle_studio/screens/home/services/session_activity_store.dart';
@@ -44,7 +43,7 @@ class HomeController extends Notifier<HomeState> {
 
       final sessions = await _repository.fetchAllSessions();
       final lastEditedId = await _repository.getLastEditedSessionId();
-      final sortOption = await PreferencesModel.getSessionSortOption();
+      final sortOption = await _repository.getSessionSortOption();
       final sessionSummaries = await _repository.fetchSessionSummaries(sessions);
 
       final validSessionIds = sessions.map((session) => session.id).toSet();
@@ -118,7 +117,7 @@ class HomeController extends Notifier<HomeState> {
       logInfo('HomeController: Changing sort option to: $sortOption');
 
       state = state.copyWith(sortOption: sortOption);
-      await PreferencesModel.setSessionSortOption(sortOption);
+      await _repository.setSessionSortOption(sortOption);
 
       logInfo(
         'HomeController: Successfully changed sort option to: $sortOption',
