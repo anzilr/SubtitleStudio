@@ -1,104 +1,111 @@
 part of '../../screen_edit_line.dart';
 
 extension _EditLinePreferences on EditSubtitleScreenState {
-  // Sync with current video position and find nearest subtitle
-  // Find the nearest subtitle index based on video position
-  // Optimized settings loading with single setState
+  Future<EditLinePreferences> _loadPreferenceSnapshot() {
+    return _editLineController.loadPreferencesSnapshot();
+  }
+
+  void _applyPreferenceSnapshot(EditLinePreferences preferences) {
+    if (!mounted) return;
+
+    _setEditLineState(() {
+      _isMsoneEnabled = preferences.isMsoneEnabled;
+      _showOriginalLine = preferences.showOriginalLine;
+      _autoSaveWithNavigation = preferences.showOriginalLine
+          ? preferences.autoSaveWithNavigation
+          : true;
+      _isSaveToFileEnabled = preferences.saveToFileEnabled;
+      _autoResizeOnKeyboard = preferences.autoResizeOnKeyboard;
+      _showOriginalTextField = preferences.showOriginalTextField;
+      _resizeRatio = preferences.resizeRatio;
+      _isResizeRatioLoaded = true;
+      _mobileVideoResizeRatio = preferences.mobileVideoResizeRatio;
+      _isMobileResizeRatioLoaded = true;
+      _layoutPreference = preferences.layoutPreference;
+
+      _colorHistory
+        ..clear()
+        ..addAll(preferences.colorHistory);
+
+      if ((_isEditMode || widget.isNewSubtitle) &&
+          preferences.videoPath != null) {
+        _selectedVideoPath = preferences.videoPath;
+        _isVideoVisible = true;
+        _isVideoLoaded = true;
+      }
+    });
+
+    _applyShowOriginalLine();
+  }
+
+  Future<void> _loadAllUiPreferences() async {
+    final preferences = await _loadPreferenceSnapshot();
+    _applyPreferenceSnapshot(preferences);
+  }
+
   Future<void> _loadMsoneStatus() async {
-    final msoneEnabled = await PreferencesModel.getMsoneEnabled();
-    if (mounted) {
-      _setEditLineState(() {
-        _isMsoneEnabled = msoneEnabled;
-      });
-    }
+    final preferences = await _loadPreferenceSnapshot();
+    if (!mounted) return;
+    _setEditLineState(() {
+      _isMsoneEnabled = preferences.isMsoneEnabled;
+    });
   }
 
-  // Optimized settings reload with single setState
   Future<void> _reloadAllSettings() async {
-    final results = await Future.wait([
-      PreferencesModel.getMsoneEnabled(),
-      PreferencesModel.getSaveToFileEnabled(),
-      PreferencesModel.getAutoResizeOnKeyboard(),
-      PreferencesModel.getMaxLineLength(),
-    ]);
-
-    if (mounted) {
-      _setEditLineState(() {
-        _isMsoneEnabled = results[0] as bool;
-        _isSaveToFileEnabled = results[1] as bool;
-        _autoResizeOnKeyboard = results[2] as bool;
-        // results[3] was _maxLineLength - no longer needed (handled by Bloc)
-      });
-
-      // Character counts will be recalculated by Cubit when text changes
-    }
+    final preferences = await _loadPreferenceSnapshot();
+    _applyPreferenceSnapshot(preferences);
   }
 
-  // Optimized color history loading
   Future<void> _loadColorHistory() async {
-    final colorStrings = await PreferencesModel.getColorHistory();
-    if (mounted) {
-      _setEditLineState(() {
-        _colorHistory.clear();
-        _colorHistory.addAll(
-          colorStrings.map((color) => Color(int.parse(color))),
-        );
-      });
-    }
+    final preferences = await _loadPreferenceSnapshot();
+    if (!mounted) return;
+    _setEditLineState(() {
+      _colorHistory
+        ..clear()
+        ..addAll(preferences.colorHistory);
+    });
   }
 
   Future<void> _saveColorHistory() async {
-    final colorStrings =
-        _colorHistory
-            .map(
-              (color) =>
-                  '${(color.a * 255).round() << 24 | (color.r * 255).round() << 16 | (color.g * 255).round() << 8 | (color.b * 255).round()}',
-            )
-            .toList();
-    await PreferencesModel.saveColorHistory(colorStrings);
+    await _editLineController.saveColorHistory(
+      List<Color>.unmodifiable(_colorHistory),
+    );
   }
 
   Future<void> _loadShowOriginalLine() async {
-    final showOriginalLine = await PreferencesModel.getShowOriginalLine();
+    final preferences = await _loadPreferenceSnapshot();
+    if (!mounted) return;
     _setEditLineState(() {
-      _showOriginalLine = showOriginalLine;
+      _showOriginalLine = preferences.showOriginalLine;
     });
+    _applyShowOriginalLine();
   }
 
   Future<void> _saveShowOriginalLine(bool value) async {
     _setEditLineState(() {
       _showOriginalLine = value;
-      // When enabling Show Original Line, default auto-save to false
-      if (value) {
-        _autoSaveWithNavigation = false;
-      } else {
-        _autoSaveWithNavigation =
-            true; // Always true when Show Original Line is disabled
-      }
+      _autoSaveWithNavigation = !value;
     });
 
-    await PreferencesModel.setShowOriginalLine(value);
-    // Update the auto-save setting in preferences
-    if (value) {
-      await PreferencesModel.setAutoSaveWithNavigation(false);
-    } else {
-      await PreferencesModel.setAutoSaveWithNavigation(true);
-    }
+    await Future.wait([
+      _editLineController.savePreference('showOriginalLine', value),
+      _editLineController.savePreference(
+        'autoSaveWithNavigation',
+        !value,
+      ),
+    ]);
 
     _applyShowOriginalLine();
   }
 
   Future<void> _loadAutoSaveWithNavigation() async {
-    final autoSave = await PreferencesModel.getAutoSaveWithNavigation();
-    final showOriginal = await PreferencesModel.getShowOriginalLine();
+    final preferences = await _loadPreferenceSnapshot();
+    if (!mounted) return;
 
     _setEditLineState(() {
-      // Auto-save is true by default unless Show Original Line is enabled
-      if (showOriginal) {
-        _autoSaveWithNavigation = autoSave;
-      } else {
-        _autoSaveWithNavigation = true; // Always true in normal mode
-      }
+      _autoSaveWithNavigation = preferences.showOriginalLine
+          ? preferences.autoSaveWithNavigation
+          : true;
     });
   }
 
@@ -106,44 +113,50 @@ extension _EditLinePreferences on EditSubtitleScreenState {
     _setEditLineState(() {
       _autoSaveWithNavigation = value;
     });
-    await PreferencesModel.setAutoSaveWithNavigation(value);
+    await _editLineController.savePreference(
+      'autoSaveWithNavigation',
+      value,
+    );
   }
 
   Future<void> _loadSaveToFileEnabled() async {
-    final saveToFileEnabled =
-        await PreferencesModel.getSaveToFileEnabled();
+    final preferences = await _loadPreferenceSnapshot();
+    if (!mounted) return;
     _setEditLineState(() {
-      _isSaveToFileEnabled = saveToFileEnabled;
+      _isSaveToFileEnabled = preferences.saveToFileEnabled;
     });
   }
 
   Future<void> _loadAutoResizeOnKeyboard() async {
-    final autoResizeOnKeyboard = await PreferencesModel.getAutoResizeOnKeyboard();
+    final preferences = await _loadPreferenceSnapshot();
+    if (!mounted) return;
     _setEditLineState(() {
-      _autoResizeOnKeyboard = autoResizeOnKeyboard;
+      _autoResizeOnKeyboard = preferences.autoResizeOnKeyboard;
     });
   }
 
-  // Load show original text field setting
   Future<void> _loadShowOriginalTextField() async {
     try {
-      final showOriginalTextField =
-          await PreferencesModel.getShowOriginalTextField();
+      final preferences = await _loadPreferenceSnapshot();
+      if (!mounted) return;
       _setEditLineState(() {
-        _showOriginalTextField = showOriginalTextField;
+        _showOriginalTextField = preferences.showOriginalTextField;
       });
     } catch (e) {
-      // Default to true if loading fails
+      if (!mounted) return;
       _setEditLineState(() {
         _showOriginalTextField = true;
       });
     }
   }
 
-  // Save show original text field setting
   Future<void> _saveShowOriginalTextField(bool value) async {
     try {
-      await PreferencesModel.setShowOriginalTextField(value);
+      await _editLineController.savePreference(
+        'showOriginalTextField',
+        value,
+      );
+      if (!mounted) return;
       _setEditLineState(() {
         _showOriginalTextField = value;
       });
@@ -156,45 +169,39 @@ extension _EditLinePreferences on EditSubtitleScreenState {
     }
   }
 
-  // Load saved video path for edit mode
   Future<void> _loadSavedVideoPath() async {
-    if (_isEditMode || widget.isNewSubtitle) {
-      final savedPath = await PreferencesModel.getVideoPath(
-        widget.subtitleId,
-      );
-      if (savedPath != null && mounted) {
-        _setEditLineState(() {
-          _selectedVideoPath = savedPath;
-          _isVideoVisible = true;
-          _isVideoLoaded = true;
-        });
-      }
-    }
+    if (!_isEditMode && !widget.isNewSubtitle) return;
+
+    final preferences = await _loadPreferenceSnapshot();
+    final savedPath = preferences.videoPath;
+    if (savedPath == null || !mounted) return;
+
+    _setEditLineState(() {
+      _selectedVideoPath = savedPath;
+      _isVideoVisible = true;
+      _isVideoLoaded = true;
+    });
   }
 
-  // Load resize ratio preference
   Future<void> _loadResizeRatio() async {
-    final ratio = await PreferencesModel.getEditLineResizeRatio();
+    final preferences = await _loadPreferenceSnapshot();
+    final ratio = preferences.resizeRatio;
+
     await logInfo(
       'Loading resize ratio: $ratio',
       context: 'EditSubtitleScreen._loadResizeRatio',
     );
-    if (mounted) {
-      _setEditLineState(() {
-        _resizeRatio = ratio;
-        _isResizeRatioLoaded = true;
-      });
-      await logInfo(
-        'Updated _resizeRatio to: $_resizeRatio, loaded: $_isResizeRatioLoaded',
-        context: 'EditSubtitleScreen._loadResizeRatio',
-      );
-    }
+
+    if (!mounted) return;
+    _setEditLineState(() {
+      _resizeRatio = ratio;
+      _isResizeRatioLoaded = true;
+    });
   }
 
-  // Save resize ratio preference with debouncing
   Future<void> _saveResizeRatio(double ratio) async {
-    // Only log when ratio changes significantly
-    if (_lastLoggedRatio == null || (ratio - _lastLoggedRatio!).abs() > 0.05) {
+    if (_lastLoggedRatio == null ||
+        (ratio - _lastLoggedRatio!).abs() > 0.05) {
       await logInfo(
         '_saveResizeRatio called with: $ratio',
         context: 'EditSubtitleScreen._saveResizeRatio',
@@ -206,95 +213,87 @@ extension _EditLinePreferences on EditSubtitleScreenState {
       _resizeRatio = ratio;
     });
 
-    // Cancel any existing timer
     _resizeRatioSaveTimer?.cancel();
-
-    // Start a new timer to save after a short delay
-    _resizeRatioSaveTimer = Timer(const Duration(milliseconds: 300), () async {
-      await logInfo(
-        'Timer saving ratio to SharedPreferences: $ratio',
-        context: 'EditSubtitleScreen._saveResizeRatio',
-      );
-      await PreferencesModel.setEditLineResizeRatio(ratio);
-      await logInfo(
-        'Save completed - verification: ${await PreferencesModel.getEditLineResizeRatio()}',
-        context: 'EditSubtitleScreen._saveResizeRatio',
-      );
-    });
+    _resizeRatioSaveTimer = Timer(
+      const Duration(milliseconds: 300),
+      () async {
+        await _editLineController.savePreference('resizeRatio', ratio);
+      },
+    );
   }
 
-  /// Load mobile video resize ratio from preferences
   Future<void> _loadMobileResizeRatio() async {
     if (!mounted) return;
-    
+
     try {
-      final ratio = await PreferencesModel.getMobileVideoResizeRatio();
-      if (mounted) {
-        _setEditLineState(() {
-          _mobileVideoResizeRatio = ratio;
-          _isMobileResizeRatioLoaded = true;
-        });
-      }
+      final preferences = await _loadPreferenceSnapshot();
+      if (!mounted) return;
+
+      _setEditLineState(() {
+        _mobileVideoResizeRatio = preferences.mobileVideoResizeRatio;
+        _isMobileResizeRatioLoaded = true;
+      });
     } catch (e) {
       logError(
         'Error loading mobile resize ratio',
         error: e,
         context: 'EditSubtitleScreen._loadMobileResizeRatio',
       );
-      if (mounted) {
-        _setEditLineState(() {
-          _mobileVideoResizeRatio = 0.4; // Default fallback
-          _isMobileResizeRatioLoaded = true;
-        });
-      }
-    }
-  }
 
-  /// Save mobile video resize ratio with debouncing
-  void _saveMobileResizeRatio(double ratio) {
-    // Cancel any existing timer
-    _mobileResizeRatioSaveTimer?.cancel();
-    
-    // Set up a new timer with 500ms delay
-    _mobileResizeRatioSaveTimer = Timer(Duration(milliseconds: 500), () async {
-      try {
-        await PreferencesModel.setMobileVideoResizeRatio(ratio);
-      } catch (e) {
-        logError(
-          'Error saving mobile resize ratio',
-          error: e,
-          context: 'EditSubtitleScreen._saveMobileResizeRatio',
-        );
-      }
-    });
-  }
-
-  /// Load layout preference for desktop layout switching
-  Future<void> _loadLayoutPreference() async {
-    final layout = await PreferencesModel.getSwitchLayout();
-    if (mounted) {
+      if (!mounted) return;
       _setEditLineState(() {
-        _layoutPreference = layout;
+        _mobileVideoResizeRatio = 0.4;
+        _isMobileResizeRatioLoaded = true;
       });
     }
+  }
+
+  void _saveMobileResizeRatio(double ratio) {
+    _mobileResizeRatioSaveTimer?.cancel();
+    _mobileResizeRatioSaveTimer = Timer(
+      const Duration(milliseconds: 500),
+      () async {
+        try {
+          await _editLineController.savePreference(
+            'mobileVideoResizeRatio',
+            ratio,
+          );
+        } catch (e) {
+          logError(
+            'Error saving mobile resize ratio',
+            error: e,
+            context: 'EditSubtitleScreen._saveMobileResizeRatio',
+          );
+        }
+      },
+    );
+  }
+
+  Future<void> _loadLayoutPreference() async {
+    final preferences = await _loadPreferenceSnapshot();
+    if (!mounted) return;
+    _setEditLineState(() {
+      _layoutPreference = preferences.layoutPreference;
+    });
   }
 
   Future<void> _saveAutoResizeOnKeyboard(bool value) async {
     _setEditLineState(() {
       _autoResizeOnKeyboard = value;
     });
-    await PreferencesModel.setAutoResizeOnKeyboard(value);
+    await _editLineController.savePreference(
+      'autoResizeOnKeyboard',
+      value,
+    );
   }
 
   void _applyShowOriginalLine() {
     if (_showOriginalLine &&
-        (_editedController.text.isEmpty || _editedController.text == '') &&
+        _editedController.text.isEmpty &&
         _originalController.text.isNotEmpty) {
       _setEditLineState(() {
         _editedController.text = _originalController.text;
       });
     }
   }
-
-
 }

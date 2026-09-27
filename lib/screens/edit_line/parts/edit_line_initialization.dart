@@ -3,20 +3,10 @@ part of '../../screen_edit_line.dart';
 extension _EditLineInitialization on EditSubtitleScreenState {
   Future<void> _initializeAsyncData() async {
     try {
-      // Run all independent async operations in parallel
+      // Preferences are loaded once through the injected repository instead of
+      // issuing many independent global preference reads.
       final futures = <Future>[
-        _loadColorHistory(),
-        _loadMsoneStatus(),
-        _loadShowOriginalLine(),
-        _loadAutoSaveWithNavigation(),
-        _loadSaveToFileEnabled(),
-        _loadAutoResizeOnKeyboard(),
-        // _loadMaxLineLength() removed - maxLineLength now handled by EditLineRepository
-        _loadShowOriginalTextField(),
-        _loadResizeRatio(), // Load resize ratio
-        _loadMobileResizeRatio(), // Load mobile resize ratio
-        _loadLayoutPreference(), // Load layout preference
-        if (_isEditMode) _loadSavedVideoPath(),
+        _loadAllUiPreferences(),
         _fetchSubtitleLine(widget.subtitleId, widget.index - 1),
       ];
 
@@ -109,7 +99,7 @@ extension _EditLineInitialization on EditSubtitleScreenState {
       _isVideoLoaded = false;
     });
 
-    await PreferencesModel.removeVideoPath(widget.subtitleId);
+    await _editLineController.removeVideoPath();
     SnackbarHelper.showInfo(
       context,
       'Video unloaded',

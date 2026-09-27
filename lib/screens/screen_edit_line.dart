@@ -19,7 +19,6 @@ import 'package:subtitle_studio/widgets/custom_text_render.dart';
 import 'package:subtitle_studio/widgets/formatting_menu.dart';
 
 import 'package:subtitle_studio/widgets/subtitle_actions_menu.dart';
-import 'package:subtitle_studio/database/models/preferences_model.dart';
 import 'package:subtitle_studio/screens/screen_help.dart';
 import 'package:subtitle_studio/widgets/settings_sheet.dart';
 import 'package:subtitle_studio/widgets/first_time_instructions.dart';

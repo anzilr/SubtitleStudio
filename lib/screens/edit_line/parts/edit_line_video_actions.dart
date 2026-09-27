@@ -76,7 +76,7 @@ extension _EditLineVideoActions on EditSubtitleScreenState {
       });
 
       // Save video path to preferences for this subtitle collection
-      await PreferencesModel.saveVideoPath(widget.subtitleId, filePath);
+      await _editLineController.saveVideoPath(filePath);
 
       // Generate subtitles for video player
       _markSubtitlesForRegeneration();

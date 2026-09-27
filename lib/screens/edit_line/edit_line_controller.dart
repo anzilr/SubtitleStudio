@@ -691,6 +691,29 @@ class EditLineController extends Notifier<EditLineState> {
     _setState(state.copyWith(clearErrorMessage: true));
   }
 
+  /// Load the current Edit-Line preference snapshot through the injected
+  /// repository. UI compatibility helpers may use this while local widget
+  /// state is gradually removed.
+  Future<EditLinePreferences> loadPreferencesSnapshot() async {
+    return _repository.loadAllPreferences(_subtitleCollectionId);
+  }
+
+  Future<void> savePreference(String key, dynamic value) {
+    return _repository.savePreference(key, value);
+  }
+
+  Future<void> saveColorHistory(List<Color> colors) {
+    return _repository.saveColorHistory(colors);
+  }
+
+  Future<void> saveVideoPath(String path) {
+    return _repository.saveVideoPath(_subtitleCollectionId, path);
+  }
+
+  Future<void> removeVideoPath() {
+    return _repository.removeVideoPath(_subtitleCollectionId);
+  }
+
   /// Reload all preferences
   Future<void> reloadPreferences() async {
     try {
