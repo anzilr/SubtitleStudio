@@ -30,6 +30,7 @@ import 'package:subtitle_studio/widgets/export_file_widget.dart';
 import 'package:subtitle_studio/widgets/project_settings_sheet.dart';
 import 'package:subtitle_studio/screens/edit_line/edit_line_host.dart'; // EditSubtitleScreenHost wrapper
 import 'package:subtitle_studio/utils/time_parser.dart';
+import 'package:subtitle_studio/utils/video_player_readiness.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:subtitle_studio/widgets/bottom_modal_sheet.dart';
@@ -252,12 +253,9 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
                 .dispatch(UpdatePlaybackPosition(startTime));
           }
           
-          // Wait for video player to be ready
-          if (mounted && _videoPlayerKey.currentState != null) {
-            await Future.delayed(Duration(milliseconds: 500));
-            if (mounted) {
-              _seekToSubtitle(widget.lastEditedIndex!);
-            }
+          final player = await waitForVideoPlayerReady(_videoPlayerKey);
+          if (mounted && player != null) {
+            _seekToSubtitle(widget.lastEditedIndex!);
           }
         });
       }
@@ -284,32 +282,17 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
     }
   }
 
-  // Ensure video player gets subtitles after widget initialization
+  // Ensure video player gets subtitles after widget initialization.
   void _ensureVideoPlayerSubtitles() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Try to update video player subtitles once the widget tree is built
-      _updateVideoPlayerSubtitles();
-      
-      // Set up a periodic check to ensure subtitles are loaded if video player takes time to initialize
-      int attempts = 0;
-      const maxAttempts = 10;
-      const interval = Duration(milliseconds: 500);
-      
-      void checkAndUpdate() {
-        if (attempts >= maxAttempts) return;
-        
-        if (_videoPlayerKey.currentState != null && 
-            _videoPlayerKey.currentState!.isInitialized() &&
-            _subtitles.isNotEmpty) {
-          _updateVideoPlayerSubtitles();
-        } else {
-          attempts++;
-          Future.delayed(interval, checkAndUpdate);
-        }
-      }
-      
-      checkAndUpdate();
+      unawaited(_updateVideoPlayerWhenReady());
     });
+  }
+
+  Future<void> _updateVideoPlayerWhenReady() async {
+    final player = await waitForVideoPlayerReady(_videoPlayerKey);
+    if (!mounted || player == null || _subtitles.isEmpty) return;
+    _updateVideoPlayerSubtitles();
   }
 
   // Helper method to update video player subtitles
@@ -766,6 +749,13 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
     
     // Ensure video player gets subtitles after video is loaded
     _ensureVideoPlayerSubtitles();
+  }
+
+  Future<void> _restoreVideoPositionWhenReady() async {
+    final player = await waitForVideoPlayerReady(_videoPlayerKey);
+    if (!mounted || player == null || !_isVideoVisible) return;
+    player.seekTo(_lastVideoPosition);
+    _updateVideoPlayerSubtitles();
   }
 
   Future<void> _pickVideoFile() async {
@@ -3529,18 +3519,9 @@ Future<void> _deleteSelectedSubtitles() async {
                           _isVideoVisible = !_isVideoVisible;
                         });
                         
-                        // If making the video visible again, restore position
                         if (_isVideoVisible) {
-                          // Give time for video player to initialize
                           WidgetsBinding.instance.addPostFrameCallback((_) {
-                            Future.delayed(Duration(milliseconds: 300), () {
-                              if (_videoPlayerKey.currentState != null &&
-                                  _videoPlayerKey.currentState!.isInitialized()) {
-                                _videoPlayerKey.currentState!.seekTo(_lastVideoPosition);
-                                // Ensure subtitles are updated when video becomes visible
-                                _updateVideoPlayerSubtitles();
-                              }
-                            });
+                            unawaited(_restoreVideoPositionWhenReady());
                           });
                         }
                       },

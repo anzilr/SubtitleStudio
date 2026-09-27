@@ -36,6 +36,7 @@ import 'package:subtitle_studio/widgets/checkpoint_sheet.dart';
 import 'package:subtitle_studio/widgets/comment_dialog.dart';
 import 'package:subtitle_studio/widgets/goto_line_sheet.dart';
 import 'package:subtitle_studio/utils/time_parser.dart';
+import 'package:subtitle_studio/utils/video_player_readiness.dart';
 import 'package:subtitle_studio/utils/text_formatting.dart';
 import 'package:subtitle_studio/utils/subtitle_parser.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
@@ -286,13 +287,19 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
       _generateSubtitles();
     }
 
-    // Sync video player state after a short delay to ensure video player is loaded
     if (_isVideoLoaded) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        Future.delayed(const Duration(milliseconds: 500), () {
-          _syncVideoPlayerState();
-        });
+        unawaited(_syncVideoPlayerWhenReady());
       });
+    }
+  }
+
+  Future<void> _seekWhenVideoPlayerReady(Duration position) async {
+    final player = await waitForVideoPlayerReady(_videoPlayerKey);
+    if (!mounted || player == null) return;
+    player.seekTo(position);
+    if (_isRepeatModeEnabled) {
+      player.pause();
     }
   }
 
@@ -334,6 +341,12 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
           // Paste original shortcut
           onPasteOriginal: _handlePasteOriginalShortcut,
         );
+  }
+
+  Future<void> _syncVideoPlayerWhenReady() async {
+    final player = await waitForVideoPlayerReady(_videoPlayerKey);
+    if (!mounted || player == null) return;
+    _syncVideoPlayerState();
   }
 
   /// Sync the play/pause button state with the actual video player state
@@ -403,18 +416,8 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
           _videoPlayerKey.currentState!.pause();
         }
       } else {
-        // Wait for video player to initialize, then seek
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          Future.delayed(const Duration(milliseconds: 500), () {
-            if (_videoPlayerKey.currentState != null &&
-                _videoPlayerKey.currentState!.isInitialized()) {
-              _videoPlayerKey.currentState!.seekTo(seekPosition);
-              // Pause video if repeat mode is enabled to prevent autoplay on navigation
-              if (_isRepeatModeEnabled) {
-                _videoPlayerKey.currentState!.pause();
-              }
-            }
-          });
+          unawaited(_seekWhenVideoPlayerReady(seekPosition));
         });
       }
     }
@@ -3532,20 +3535,13 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
                           _isVideoVisible = !_isVideoVisible;
                         });
 
-                        // If making the video visible again, seek to current subtitle start time
                         if (_isVideoVisible && _subtitleLine != null) {
-                          // Give time for video player to initialize
+                          final startTime =
+                              parseTimeString(_subtitleLine!.startTime);
                           WidgetsBinding.instance.addPostFrameCallback((_) {
-                            Future.delayed(Duration(milliseconds: 1000), () {
-                              if (_videoPlayerKey.currentState != null &&
-                                  _videoPlayerKey.currentState!
-                                      .isInitialized()) {
-                                final startTime = parseTimeString(
-                                  _subtitleLine!.startTime,
-                                );
-                                _videoPlayerKey.currentState!.seekTo(startTime);
-                              }
-                            });
+                            unawaited(
+                              _seekWhenVideoPlayerReady(startTime),
+                            );
                           });
                         }
                       },
