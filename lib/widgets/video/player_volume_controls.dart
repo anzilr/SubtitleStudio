@@ -80,7 +80,9 @@ class _VolumeSliderButtonState extends State<_VolumeSliderButton> with TickerPro
           _overlayEntry!.markNeedsBuild();
         }
         // Save volume to preferences
-        await _preferencesRepository.setVideoVolume(volume);
+        if (videoPlayerState != null && videoPlayerState.mounted) {
+          await videoPlayerState._preferencesRepository.setVideoVolume(volume);
+        }
       }
     } catch (e) {
       debugPrint('Volume slider error in _setVolume: $e');
@@ -443,7 +445,9 @@ class _FullscreenVolumeSliderButtonState extends State<_FullscreenVolumeSliderBu
       if (_overlayEntry != null && mounted) {
         _overlayEntry!.markNeedsBuild();
       }
-      await _preferencesRepository.setVideoVolume(volume);
+      if (videoPlayerState != null && videoPlayerState.mounted) {
+        await videoPlayerState._preferencesRepository.setVideoVolume(volume);
+      }
     } catch (e) {
       debugPrint('Fullscreen volume slider error in _setVolume: $e');
     }
