@@ -1271,7 +1271,7 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.08)),
+        border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1282,7 +1282,7 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
               const SizedBox(width: 8),
               Text('Preview', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
               const Spacer(),
-              Text(_formatDuration(_lineDuration), style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6))),
+              Text(_formatDuration(_lineDuration), style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))),
             ],
           ),
           const SizedBox(height: 12),
@@ -1292,7 +1292,7 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
             width: double.infinity,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Theme.of(context).brightness == Brightness.dark ? Theme.of(context).colorScheme.onSurface.withOpacity(0.03) : Colors.grey.shade50,
+              color: Theme.of(context).brightness == Brightness.dark ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.03) : Colors.grey.shade50,
               borderRadius: BorderRadius.circular(8),
             ),
             child: _selectedEffect == 'karaoke' ? _karaokePreview(text) : _typewriterPreview(text),
@@ -1406,7 +1406,7 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
         style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 16),
         children: [
           TextSpan(text: visible, style: TextStyle(color: _typewriterColor)),
-          TextSpan(text: remaining, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6))),
+          TextSpan(text: remaining, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))),
         ],
       ),
     );

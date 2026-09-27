@@ -183,7 +183,7 @@ class CustomVideoControlsState extends State<CustomVideoControls> {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Colors.black.withOpacity(0.7),
+                  Colors.black.withValues(alpha: 0.7),
                   Colors.transparent,
                 ],
               ),
@@ -211,7 +211,7 @@ class CustomVideoControlsState extends State<CustomVideoControls> {
                 begin: Alignment.bottomCenter,
                 end: Alignment.topCenter,
                 colors: [
-                  Colors.black.withOpacity(0.7),
+                  Colors.black.withValues(alpha: 0.7),
                   Colors.transparent,
                 ],
               ),
@@ -342,7 +342,7 @@ class CustomVideoControlsState extends State<CustomVideoControls> {
             return SliderTheme(
               data: SliderTheme.of(context).copyWith(
                 activeTrackColor: Colors.blue,
-                inactiveTrackColor: Colors.white.withOpacity(0.3),
+                inactiveTrackColor: Colors.white.withValues(alpha: 0.3),
                 thumbColor: Colors.blue,
                 thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
                 overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
@@ -490,7 +490,7 @@ class _CenterControlButtonState extends State<_CenterControlButton> {
           padding: const EdgeInsets.all(12.0),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: _isHovered ? Colors.white.withOpacity(0.1) : Colors.transparent,
+            color: _isHovered ? Colors.white.withValues(alpha: 0.1) : Colors.transparent,
           ),
           child: Icon(
             widget.icon,
@@ -498,18 +498,18 @@ class _CenterControlButtonState extends State<_CenterControlButton> {
             size: widget.size,
             shadows: widget.extraShadows ? [
               Shadow(
-                color: Colors.black.withOpacity(0.7),
+                color: Colors.black.withValues(alpha: 0.7),
                 blurRadius: 8.0,
                 offset: const Offset(0, 2),
               ),
               Shadow(
-                color: Colors.black.withOpacity(0.3),
+                color: Colors.black.withValues(alpha: 0.3),
                 blurRadius: 4.0,
                 offset: const Offset(0, 1),
               ),
             ] : [
               Shadow(
-                color: Colors.black.withOpacity(0.5),
+                color: Colors.black.withValues(alpha: 0.5),
                 blurRadius: 4.0,
                 offset: const Offset(0, 2),
               ),

@@ -531,10 +531,10 @@ class _FullscreenControlsWidgetState extends State<_FullscreenControlsWidget> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: widget.currentSpeed != 1.0 ? Theme.of(context).primaryColor.withOpacity(0.08) : Colors.transparent,
+          color: widget.currentSpeed != 1.0 ? Theme.of(context).primaryColor.withValues(alpha: 0.08) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: Theme.of(context).primaryColor.withOpacity(0.2),
+            color: Theme.of(context).primaryColor.withValues(alpha: 0.2),
             width: 1,
           ),
         ),
@@ -1093,9 +1093,9 @@ class _RepeatButtonState extends State<_RepeatButton> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: _isLongPressing 
-                  ? Colors.orange.withOpacity(0.3) 
+                  ? Colors.orange.withValues(alpha: 0.3) 
                   : _isHovered 
-                    ? Colors.white.withOpacity(0.2) 
+                    ? Colors.white.withValues(alpha: 0.2) 
                     : Colors.transparent,
               ),
               alignment: Alignment.center,

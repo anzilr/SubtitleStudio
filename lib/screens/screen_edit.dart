@@ -660,7 +660,7 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
                              Container(
                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                decoration: BoxDecoration(
-                                 color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                                 color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                                  borderRadius: BorderRadius.circular(8),
                                ),
                                child: Text(
@@ -717,7 +717,7 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
                       onPressed: _toggleWaveform,
                       icon: Icon(
                         _isWaveformVisible ? Icons.graphic_eq : Icons.graphic_eq_outlined,
-                        color: Colors.white.withOpacity(_isWaveformVisible ? 1.0 : 0.5),
+                        color: Colors.white.withValues(alpha: _isWaveformVisible ? 1.0 : 0.5),
                       ),
                     ),
                   IconButton(

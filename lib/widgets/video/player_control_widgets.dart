@@ -598,12 +598,12 @@ class _VolumeSliderButtonState extends State<_VolumeSliderButton> with TickerPro
                 width: 50,
                 height: 150,
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.9), // Higher opacity for better visibility
+                  color: Colors.black.withValues(alpha: 0.9), // Higher opacity for better visibility
                   borderRadius: BorderRadius.circular(25),
-                  border: Border.all(color: Colors.white.withOpacity(0.5), width: 1.5),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.5), width: 1.5),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
+                      color: Colors.black.withValues(alpha: 0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -634,7 +634,7 @@ class _VolumeSliderButtonState extends State<_VolumeSliderButton> with TickerPro
                           child: SliderTheme(
                             data: SliderTheme.of(context).copyWith(
                               activeTrackColor: Colors.white,
-                              inactiveTrackColor: Colors.white.withOpacity(0.3),
+                              inactiveTrackColor: Colors.white.withValues(alpha: 0.3),
                               thumbColor: Colors.white,
                               thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
                               overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
@@ -701,7 +701,7 @@ class _VolumeSliderButtonState extends State<_VolumeSliderButton> with TickerPro
                 height: 32,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: (_showSlider || _isSliding) ? Colors.white.withOpacity(0.2) : Colors.transparent,
+                  color: (_showSlider || _isSliding) ? Colors.white.withValues(alpha: 0.2) : Colors.transparent,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Icon(
@@ -932,9 +932,9 @@ class _FullscreenVolumeSliderButtonState extends State<_FullscreenVolumeSliderBu
                 width: 50,
                 height: 150,
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.8),
+                  color: Colors.black.withValues(alpha: 0.8),
                   borderRadius: BorderRadius.circular(25),
-                  border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1),
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -955,7 +955,7 @@ class _FullscreenVolumeSliderButtonState extends State<_FullscreenVolumeSliderBu
                         child: SliderTheme(
                           data: SliderTheme.of(context).copyWith(
                             activeTrackColor: Colors.white,
-                            inactiveTrackColor: Colors.white.withOpacity(0.3),
+                            inactiveTrackColor: Colors.white.withValues(alpha: 0.3),
                             thumbColor: Colors.white,
                             thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
                             overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
@@ -1011,7 +1011,7 @@ class _FullscreenVolumeSliderButtonState extends State<_FullscreenVolumeSliderBu
                 height: 32,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: (_showSlider || _isSliding) ? Colors.white.withOpacity(0.2) : Colors.transparent,
+                  color: (_showSlider || _isSliding) ? Colors.white.withValues(alpha: 0.2) : Colors.transparent,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Icon(
@@ -1108,7 +1108,7 @@ class _SubtitleToggleButtonState extends State<_SubtitleToggleButton> with Widge
           height: 32, // Increased size for better usability
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: _isHovered ? Colors.white.withOpacity(0.2) : Colors.transparent,
+            color: _isHovered ? Colors.white.withValues(alpha: 0.2) : Colors.transparent,
           ),
           alignment: Alignment.center,
           child: Icon(
@@ -1154,7 +1154,7 @@ class _SettingsButtonState extends State<_SettingsButton> {
           height: 32, // Increased size for better usability
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: _isHovered ? Colors.white.withOpacity(0.1) : Colors.transparent,
+            color: _isHovered ? Colors.white.withValues(alpha: 0.1) : Colors.transparent,
             borderRadius: BorderRadius.circular(16),
           ),
           child: Icon(
@@ -1976,7 +1976,7 @@ class _FullscreenButtonState extends State<_FullscreenButton> {
           height: 32, // Increased size for better usability
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: _isHovered ? Colors.white.withOpacity(0.2) : Colors.transparent,
+            color: _isHovered ? Colors.white.withValues(alpha: 0.2) : Colors.transparent,
           ),
           alignment: Alignment.center,
           child: Icon(
