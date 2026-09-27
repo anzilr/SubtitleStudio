@@ -187,6 +187,11 @@ class VideoPlayerWidget extends StatefulWidget {
 /// - Error handling and recovery
 /// - Performance optimization for smooth playback
 class VideoPlayerWidgetState extends State<VideoPlayerWidget> with AutomaticKeepAliveClientMixin {
+  void _setVideoState(VoidCallback update) {
+    if (!mounted) return;
+    setState(update);
+  }
+
   // Media Kit player instances for video playback
   late final Player _player;           // Core media player
   late final VideoController _controller; // Video-specific controller
