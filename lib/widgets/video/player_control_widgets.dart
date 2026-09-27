@@ -1653,7 +1653,7 @@ class _SettingsButtonState extends State<_SettingsButton> {
                                         videoPlayerState._fullscreenOverlay
                                             ?.markNeedsBuild();
                                       },
-                                      activeColor: primaryColor,
+                                      activeThumbColor: primaryColor,
                                     ),
                                   ],
                                 ),
