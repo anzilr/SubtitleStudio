@@ -1,4 +1,4 @@
-import 'package:subtitle_studio/database/database_helper.dart';
+import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/screens/home/models/session_summary.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
@@ -21,7 +21,9 @@ import 'package:subtitle_studio/utils/logging_helpers.dart';
 /// - Consistent error handling and logging
 /// - Easy to mock for testing
 class SessionRepository {
-  SessionRepository();
+  final Isar _isar;
+
+  SessionRepository(this._isar);
   
   /// Fetches all sessions from the database in reverse chronological order
   /// 
@@ -31,7 +33,7 @@ class SessionRepository {
     try {
       await logInfo('SessionRepository: Fetching all sessions from database');
       
-      final sessions = await getAllSessions();
+      final sessions = await _isar.sessions.where().findAll();
       final reversedSessions = sessions.reversed.toList();
       
       await logInfo('SessionRepository: Successfully fetched ${reversedSessions.length} sessions');
@@ -54,7 +56,8 @@ class SessionRepository {
     try {
       await logInfo('SessionRepository: Fetching last edited session ID');
       
-      final lastEditedId = await getLastEditedSession();
+      final preferences = await _isar.preferences.where().findFirst();
+      final lastEditedId = preferences?.lastEditedSession;
       
       if (lastEditedId != null) {
         await logInfo('SessionRepository: Last edited session ID: $lastEditedId');
@@ -118,7 +121,10 @@ class SessionRepository {
         context: 'removeSession',
       );
       
-      await deleteSession(session.subtitleCollectionId, session.id);
+      await _isar.writeTxn(() async {
+        await _isar.subtitleCollections.delete(session.subtitleCollectionId);
+        await _isar.sessions.delete(session.id);
+      });
       
       await logInfo(
         'SessionRepository: Successfully deleted session: ${session.fileName}',
@@ -146,7 +152,17 @@ class SessionRepository {
         context: 'setLastEditedSession',
       );
       
-      await updateLastEditedSession(sessionId);
+      if (sessionId <= 0) {
+        throw ArgumentError.value(sessionId, 'sessionId', 'Must be positive');
+      }
+
+      await _isar.writeTxn(() async {
+        final preferences =
+            await _isar.preferences.where().findFirst() ??
+            Preferences(autoSave: true);
+        preferences.lastEditedSession = sessionId;
+        await _isar.preferences.put(preferences);
+      });
       
       await logInfo(
         'SessionRepository: Successfully updated last edited session',
@@ -173,7 +189,7 @@ class SessionRepository {
       final collectionIds = sessions
           .map((session) => session.subtitleCollectionId)
           .toList(growable: false);
-      final collections = await fetchSubtitleCollectionsByIds(collectionIds);
+      final collections = await _isar.subtitleCollections.getAll(collectionIds);
 
       final summaries = <int, SessionSummary>{};
       for (int i = 0; i < sessions.length; i++) {

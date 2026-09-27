@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/database/models/preferences_model.dart';
 import 'package:subtitle_studio/screens/home/home_state.dart';
@@ -8,7 +9,7 @@ import 'package:subtitle_studio/utils/logging_helpers.dart';
 
 /// Provides the session repository used by the Riverpod Home controller.
 final sessionRepositoryProvider = Provider<SessionRepository>(
-  (ref) => SessionRepository(),
+  (ref) => SessionRepository(ref.watch(isarProvider)),
 );
 
 /// Riverpod controller for Home screen state and session workflows.
