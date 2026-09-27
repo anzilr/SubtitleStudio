@@ -6,7 +6,7 @@ import 'package:subtitle_studio/database/database_helper.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/utils/project_manager.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
-import 'package:subtitle_studio/screens/edit/edit_screen_bloc.dart';
+import 'package:subtitle_studio/screens/edit/edit_screen_host.dart';
 import 'package:subtitle_studio/main.dart';
 import 'package:subtitle_studio/utils/srt_compiler.dart';
 import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
@@ -506,7 +506,7 @@ class _SessionSelectionSheetState extends State<SessionSelectionSheet> {
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(
-              builder: (context) => EditScreenBloc(
+              builder: (context) => EditScreenHost(
                 subtitleCollectionId: session.subtitleCollectionId,
                 sessionId: session.id,
                 lastEditedIndex: session.lastEditedIndex,
@@ -658,7 +658,7 @@ class _SessionSelectionSheetState extends State<SessionSelectionSheet> {
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(
-            builder: (context) => EditScreenBloc(
+            builder: (context) => EditScreenHost(
               subtitleCollectionId: session.subtitleCollectionId,
               sessionId: session.id,
               lastEditedIndex: session.lastEditedIndex,
