@@ -484,6 +484,66 @@ class EditLineController extends Notifier<EditLineState> {
         currentEnd != _initialEndTime;
   }
 
+  Future<SubtitleCollection?> loadSubtitleCollection() {
+    return _repository.fetchSubtitleCollection(_subtitleCollectionId);
+  }
+
+  Future<List<SubtitleLine>> getMarkedSubtitleLines() {
+    return _repository.getMarkedSubtitleLines(_subtitleCollectionId);
+  }
+
+  Future<bool> setLineMarked(int zeroBasedIndex, bool marked) {
+    return _repository.markSubtitleLine(
+      _subtitleCollectionId,
+      zeroBasedIndex,
+      marked,
+    );
+  }
+
+  Future<bool> updateLineComment(int zeroBasedIndex, String? comment) {
+    return _repository.updateSubtitleLineComment(
+      _subtitleCollectionId,
+      zeroBasedIndex,
+      comment,
+    );
+  }
+
+  Future<bool> updateLineResolved(int zeroBasedIndex, bool resolved) {
+    return _repository.updateSubtitleLineResolved(
+      _subtitleCollectionId,
+      zeroBasedIndex,
+      resolved,
+    );
+  }
+
+  Future<bool> saveCompleteLine(
+    SubtitleLine line, {
+    SubtitleLine? beforeLine,
+  }) {
+    return _repository.saveSubtitleLineChanges(
+      collectionId: _subtitleCollectionId,
+      updatedLine: line,
+      sessionId: state.sessionId,
+      beforeLine: beforeLine,
+    );
+  }
+
+  Future<bool> addLine(SubtitleLine line, int insertIndex) {
+    return _repository.addSubtitleLine(
+      _subtitleCollectionId,
+      line,
+      insertIndex,
+    );
+  }
+
+  Future<bool> saveCollection(SubtitleCollection collection) {
+    return _repository.updateSubtitleCollection(collection);
+  }
+
+  Future<void> updateLastEditedIndex(int index) {
+    return _repository.updateLastEditedIndex(state.sessionId, index);
+  }
+
   /// Save subtitle line to database
   Future<bool> saveSubtitle() async {
     try {

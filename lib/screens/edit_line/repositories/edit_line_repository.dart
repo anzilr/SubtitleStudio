@@ -9,6 +9,7 @@ import 'package:subtitle_studio/utils/logging_helpers.dart';
 import 'package:subtitle_studio/widgets/video_player_widget.dart'; // For Subtitle
 import 'package:subtitle_studio/utils/subtitle_parser.dart'; // For SimpleSubtitleLine
 import 'package:subtitle_studio/utils/platform_file_handler.dart';
+import 'package:subtitle_studio/services/checkpoint_manager.dart';
 
 /// Repository layer for EditLineScreen operations
 /// 
@@ -195,6 +196,126 @@ class EditLineRepository {
     }
   }
 
+  /// Persist a complete line while preserving legacy checkpoint and timing
+  /// reorder semantics.
+  Future<bool> saveSubtitleLineChanges({
+    required Id collectionId,
+    required SubtitleLine updatedLine,
+    required int sessionId,
+    SubtitleLine? beforeLine,
+  }) async {
+    SubtitleLine? lineBeforeChanges;
+    var shouldCreateCheckpoint = false;
+
+    try {
+      final saved = await _isar.writeTxn(() async {
+        final collection = await _isar.subtitleCollections.get(collectionId);
+        if (collection == null) return false;
+
+        final arrayIndex = updatedLine.index - 1;
+        if (arrayIndex < 0 || arrayIndex >= collection.lines.length) {
+          return false;
+        }
+
+        lineBeforeChanges = beforeLine ?? collection.lines[arrayIndex];
+        final timingChanged =
+            lineBeforeChanges!.startTime != updatedLine.startTime ||
+            lineBeforeChanges!.endTime != updatedLine.endTime;
+
+        shouldCreateCheckpoint =
+            timingChanged ||
+            lineBeforeChanges!.original != updatedLine.original ||
+            lineBeforeChanges!.edited != updatedLine.edited;
+
+        collection.lines[arrayIndex] = updatedLine;
+        if (timingChanged) {
+          collection.lines = sortAndReindexSubtitleLines(collection.lines);
+        }
+
+        await _isar.subtitleCollections.put(collection);
+        return true;
+      });
+
+      if (saved && shouldCreateCheckpoint && lineBeforeChanges != null) {
+        await CheckpointManager.createEditCheckpoint(
+          sessionId: sessionId,
+          subtitleCollectionId: collectionId,
+          beforeLine: lineBeforeChanges!,
+          afterLine: updatedLine,
+        );
+      }
+
+      return saved;
+    } catch (e, stackTrace) {
+      await logError(
+        'Failed to save complete subtitle line',
+        error: e,
+        stackTrace: stackTrace,
+        context: 'EditLineRepository.saveSubtitleLineChanges',
+      );
+      return false;
+    }
+  }
+
+  Future<bool> addSubtitleLine(
+    Id collectionId,
+    SubtitleLine line,
+    int insertIndex,
+  ) async {
+    try {
+      return await _isar.writeTxn(() async {
+        final collection = await _isar.subtitleCollections.get(collectionId);
+        if (collection == null ||
+            insertIndex < 0 ||
+            insertIndex > collection.lines.length) {
+          return false;
+        }
+
+        final lines = List<SubtitleLine>.from(collection.lines)
+          ..insert(insertIndex, line);
+        collection.lines = sortAndReindexSubtitleLines(lines);
+        await _isar.subtitleCollections.put(collection);
+        return true;
+      });
+    } catch (e, stackTrace) {
+      await logError(
+        'Failed to add subtitle line',
+        error: e,
+        stackTrace: stackTrace,
+        context: 'EditLineRepository.addSubtitleLine',
+      );
+      return false;
+    }
+  }
+
+  Future<bool> updateSubtitleCollection(
+    SubtitleCollection collection,
+  ) async {
+    try {
+      await _isar.writeTxn(() async {
+        await _isar.subtitleCollections.put(collection);
+      });
+      return true;
+    } catch (e, stackTrace) {
+      await logError(
+        'Failed to update subtitle collection',
+        error: e,
+        stackTrace: stackTrace,
+        context: 'EditLineRepository.updateSubtitleCollection',
+      );
+      return false;
+    }
+  }
+
+  Future<void> updateLastEditedIndex(int sessionId, int index) async {
+    await _isar.writeTxn(() async {
+      final session = await _isar.sessions.get(sessionId);
+      if (session == null) return;
+      session.lastEditedIndex = index;
+      await _isar.sessions.put(session);
+    });
+  }
+
   /// Delete a subtitle line from the collection
   Future<bool> deleteSubtitleLine(Id collectionId, int lineIndex) async {
     await logInfo(
@@ -338,6 +459,55 @@ class EditLineRepository {
         context: 'EditLineRepository.updateSubtitleLineComment',
       );
       return false;
+    }
+  }
+
+  Future<bool> updateSubtitleLineResolved(
+    Id collectionId,
+    int lineIndex,
+    bool resolved,
+  ) async {
+    try {
+      return await _isar.writeTxn(() async {
+        final collection = await _isar.subtitleCollections.get(collectionId);
+        if (collection == null ||
+            lineIndex < 0 ||
+            lineIndex >= collection.lines.length) {
+          return false;
+        }
+
+        collection.lines[lineIndex].resolved = resolved;
+        await _isar.subtitleCollections.put(collection);
+        return true;
+      });
+    } catch (e, stackTrace) {
+      await logError(
+        'Failed to update resolved status',
+        error: e,
+        stackTrace: stackTrace,
+        context: 'EditLineRepository.updateSubtitleLineResolved',
+      );
+      return false;
+    }
+  }
+
+  Future<List<SubtitleLine>> getMarkedSubtitleLines(
+    Id collectionId,
+  ) async {
+    try {
+      final collection = await _isar.subtitleCollections.get(collectionId);
+      return collection?.lines
+              .where((line) => line.marked)
+              .toList(growable: false) ??
+          const <SubtitleLine>[];
+    } catch (e, stackTrace) {
+      await logError(
+        'Failed to load marked subtitle lines',
+        error: e,
+        stackTrace: stackTrace,
+        context: 'EditLineRepository.getMarkedSubtitleLines',
+      );
+      return const <SubtitleLine>[];
     }
   }
 
