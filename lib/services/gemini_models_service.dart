@@ -84,14 +84,16 @@ class GeminiModelsService {
 
   /// Format model name for display
   static String _formatModelName(String modelName) {
-    // Remove 'models/' prefix
-    final name = modelName.replaceFirst('models/', '');
-    
-    // Convert to title case and add spaces
-    return name
+    final name = modelName.replaceFirst('models/', '').trim();
+    if (name.isEmpty) return 'Unknown model';
+
+    final words = name
         .split('-')
+        .where((word) => word.isNotEmpty)
         .map((word) => word[0].toUpperCase() + word.substring(1))
-        .join(' ');
+        .toList(growable: false);
+
+    return words.isEmpty ? 'Unknown model' : words.join(' ');
   }
 
   /// Get default models as fallback
