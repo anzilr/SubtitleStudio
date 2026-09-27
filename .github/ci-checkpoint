@@ -1,19 +1,10 @@
-Riverpod migration checkpoint 13
+Riverpod migration checkpoint 13b
 Date: 2026-09-28
 Checks:
 - flutter analyze
 - flutter test
 
-Scope since checkpoint 12b:
-- Await fullscreen repeat-range dialog lifecycle instead of fixed delays
-- Make Gemini model discovery credential-explicit and credential-aware
-- Sequence Settings initialization before AI model discovery
-- Debounce Gemini API key persistence and flush pending writes on close
-- Reinitialize Gemini SDK when credentials change
-- Make manual Gemini model refresh bypass cache
-- Isolate destructive application-data maintenance behind injected repository
-- Sanitize destructive reset failure messaging
-- Harden Gemini model display-name formatting with tests
-- Cancel pending Gemini key writes before settings/data resets
+Correction:
+- AI explanation sheet now passes the current saved Gemini API key explicitly to credential-aware model discovery.
 
 Platform builds intentionally disabled.
