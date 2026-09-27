@@ -81,6 +81,20 @@ class SourceViewController extends Notifier<SourceViewState> {
     }
   }
 
+  String get _logFileName {
+    final displayName = state.displayName?.trim();
+    if (displayName != null && displayName.isNotEmpty) {
+      return displayName;
+    }
+    final segments = _file.uri.pathSegments;
+    return segments.isEmpty ? 'subtitle-file' : segments.last;
+  }
+
+  Map<String, dynamic> get _safeLogContext => {
+        'fileName': _logFileName,
+        'hasSafUri': state.safUri?.isNotEmpty == true,
+      };
+
   /// Initialize the source view controller
   Future<void> _initialize(String? preloadedContent) async {
     await AppLogger.instance.info('SourceViewController: Initializing');
@@ -95,7 +109,7 @@ class SourceViewController extends Notifier<SourceViewState> {
   /// Check shared preferences for existing SAF URI information for this file path
   Future<void> _checkForExistingSafUri() async {
     try {
-      await AppLogger.instance.info('Checking shared preferences for existing SAF URI for file: ${state.filePath}');
+      await AppLogger.instance.info('Checking saved SAF access for $_logFileName');
       
       final prefs = await SharedPreferences.getInstance();
       final key = 'saf_uri_${state.filePath}';
@@ -103,15 +117,18 @@ class SourceViewController extends Notifier<SourceViewState> {
       
       if (storedSafUri != null) {
         _setState(state.copyWith(safUri: storedSafUri));
-        await AppLogger.instance.info('Found existing SAF URI in preferences: $storedSafUri');
+        await AppLogger.instance.info('Found saved SAF access for $_logFileName');
       } else if (state.safUri != null) {
-        await AppLogger.instance.info('Using SAF URI from constructor parameter: ${state.safUri}');
+        await AppLogger.instance.info('Using provided SAF access for $_logFileName');
         // Store this SAF URI in preferences for future use
         await _storeSafUriInPreferences();
       }
       
     } catch (e) {
-      await AppLogger.instance.error('Error checking for existing SAF URI: $e');
+      await AppLogger.instance.error(
+        'Error checking saved SAF access',
+        extra: {'errorType': e.runtimeType.toString(), ..._safeLogContext},
+      );
       // Continue with provided SAF URI or null
     }
   }
@@ -127,9 +144,12 @@ class SourceViewController extends Notifier<SourceViewState> {
       final key = 'saf_uri_${state.filePath}';
       await prefs.setString(key, state.safUri!);
       
-      await AppLogger.instance.info('SAF URI stored in preferences for file: ${state.filePath}');
+      await AppLogger.instance.info('Saved SAF access metadata for $_logFileName');
     } catch (e) {
-      await AppLogger.instance.error('Error storing SAF URI in preferences: $e');
+      await AppLogger.instance.error(
+        'Error storing SAF access metadata',
+        extra: {'errorType': e.runtimeType.toString(), ..._safeLogContext},
+      );
     }
   }
 
@@ -153,7 +173,7 @@ class SourceViewController extends Notifier<SourceViewState> {
         if (state.safUri != null && Platform.isAndroid) {
           // For SAF files, try reading using the intent handler method
           try {
-            await AppLogger.instance.info('Reading SAF URI content using intent handler: ${state.safUri}');
+            await AppLogger.instance.info('Reading subtitle through SAF intent handler');
             
             // Use IntentHandler to read the content URI
             const MethodChannel channel = MethodChannel('org.malayalamsubtitles.studio/intent');
@@ -173,7 +193,10 @@ class SourceViewController extends Notifier<SourceViewState> {
               }
             }
           } catch (e) {
-            await AppLogger.instance.error('Error reading SAF URI: $e');
+            await AppLogger.instance.error(
+              'Error reading subtitle through SAF',
+              extra: {'errorType': e.runtimeType.toString(), ..._safeLogContext},
+            );
             // Final fallback: try reading from cached file path
             if (await _file.exists()) {
               bytes = await _file.readAsBytes();
@@ -207,14 +230,14 @@ class SourceViewController extends Notifier<SourceViewState> {
       await AppLogger.instance.info('Parsed ${entries.length} subtitle entries');
       
       _setState(state.toLoaded(entries: entries, encoding: encoding));
-      await AppLogger.instance.info('Loaded source view for file: ${state.filePath}');
+      await AppLogger.instance.info('Loaded source view for $_logFileName');
       
     } catch (e) {
       _setState(state.toError('Could not load this subtitle file.'));
       await AppLogger.instance.error(
         'Error loading file in source view: $e',
         context: 'SourceViewController._loadFileContent',
-        extra: {'filePath': state.filePath, 'safUri': state.safUri},
+        extra: _safeLogContext,
       );
     }
   }
@@ -317,8 +340,8 @@ class SourceViewController extends Notifier<SourceViewState> {
       await AppLogger.instance.info('=== SOURCE VIEW SAVE DEBUG ===');
       await AppLogger.instance.info('Content length: ${content.length} chars');
       await AppLogger.instance.info('Encoded bytes length: ${bytes.length}');
-      await AppLogger.instance.info('SAF URI: ${state.safUri}');
-      await AppLogger.instance.info('File path: ${state.filePath}');
+      await AppLogger.instance.info('SAF access available: ${state.safUri?.isNotEmpty == true}');
+      await AppLogger.instance.info('File name: $_logFileName');
       await AppLogger.instance.info('File exists: ${await _file.exists()}');
       
       bool saveSuccessful = false;
@@ -389,7 +412,7 @@ class SourceViewController extends Notifier<SourceViewState> {
       await AppLogger.instance.error(
         'Error saving file in source view: $e',
         context: 'SourceViewController.saveFile',
-        extra: {'filePath': state.filePath, 'safUri': state.safUri},
+        extra: _safeLogContext,
       );
     }
   }
@@ -427,7 +450,7 @@ class SourceViewController extends Notifier<SourceViewState> {
         return;
       }
       
-      await AppLogger.instance.info('Save As location: ${safInfo.displayPath}');
+      await AppLogger.instance.info('Save As location selected');
       
       final content = state.toSrtContent();
       
@@ -446,7 +469,7 @@ class SourceViewController extends Notifier<SourceViewState> {
       final writeResult = await SafFileHandler.writeSafUri(safInfo.uri, Uint8List.fromList(bytes));
       
       if (writeResult) {
-        await AppLogger.instance.info('Save As successful to: ${safInfo.displayPath}');
+        await AppLogger.instance.info('Save As completed successfully');
         _setState(state.toSaveSuccess('File saved to: ${safInfo.displayPath}'));
       } else {
         _setState(state.toSaveError('Failed to write file content'));
@@ -457,7 +480,7 @@ class SourceViewController extends Notifier<SourceViewState> {
       await AppLogger.instance.error(
         'Error saving file as in source view: $e',
         context: 'SourceViewController.saveAsFile',
-        extra: {'filePath': state.filePath},
+        extra: _safeLogContext,
       );
     }
   }
