@@ -20,7 +20,6 @@ import 'package:subtitle_studio/operations/subtitle_sync_operations.dart';
 import 'package:subtitle_studio/operations/subtitle_operations.dart';
 import 'package:subtitle_studio/widgets/custom_text_render.dart';
 import 'package:subtitle_studio/widgets/formatting_menu.dart';
-import 'package:subtitle_studio/widgets/colour_picker_widget.dart';
 
 import 'package:subtitle_studio/widgets/subtitle_actions_menu.dart';
 import 'package:subtitle_studio/database/models/preferences_model.dart';
@@ -48,6 +47,7 @@ import 'package:subtitle_studio/screens/edit_line/edit_line_controller.dart';
 import 'package:subtitle_studio/screens/edit_line/widgets/edit_text_field.dart';
 import 'package:subtitle_studio/screens/edit_line/widgets/time_component_field.dart';
 import 'package:subtitle_studio/screens/edit_line/widgets/edit_line_video_pane.dart';
+import 'package:subtitle_studio/screens/edit_line/widgets/edit_line_color_picker_sheet.dart';
 import 'package:subtitle_studio/screens/edit_line/widgets/edit_line_dialogs.dart';
 import 'package:subtitle_studio/screens/edit_line/widgets/edit_line_menu.dart';
 import 'package:subtitle_studio/screens/edit_line/widgets/edit_line_placeholders.dart';
@@ -3265,77 +3265,11 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
   }
 
   void _handleColorPickerShortcut() {
-    // Open the ColorPickerWithTextEditing as a bottom sheet using the same pattern as FormattingMenu
-    final colorPickerKey = GlobalKey<ColorPickerWithTextEditingState>();
-    showModalBottomSheet(
+    showEditLineColorPickerSheet(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (BuildContext context) {
-        return Scaffold(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          appBar: AppBar(
-            title: const Text(
-              'Text Color Editor',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-            centerTitle: true,
-            leading: IconButton(
-              onPressed: () => Navigator.of(context).pop(),
-              icon: const Icon(Icons.close),
-            ),
-            elevation: 1,
-          ),
-          body: Padding(
-            padding: const EdgeInsets.only(
-              left: 16,
-              right: 16,
-              top: 16,
-              bottom: 80, // Space for floating button
-            ),
-            child: ColorPickerWithTextEditing(
-              key: colorPickerKey,
-              controller: _editedController,
-              initialSelection: _editedController.selection,
-              initialColor: Colors.white,
-              colorHistory: _colorHistory,
-              showApplyButton: false, // Hide the apply button from the widget
-            ),
-          ),
-          floatingActionButton: Container(
-            width: MediaQuery.of(context).size.width - 32,
-            height: 56,
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            child: FloatingActionButton.extended(
-              onPressed: () {
-                // Apply the color changes
-                colorPickerKey.currentState?.applyChanges();
-                _saveColorHistory();
-                Navigator.of(context).pop(true);
-              },
-              backgroundColor: const Color(0xFF4A90E2),
-              foregroundColor: Colors.white,
-              elevation: 6,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              label: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.check, size: 24),
-                  SizedBox(width: 12),
-                  Text(
-                    "Apply Color",
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          floatingActionButtonLocation:
-              FloatingActionButtonLocation.centerFloat,
-        );
-      },
+      controller: _editedController,
+      colorHistory: _colorHistory,
+      onApply: _saveColorHistory,
     );
   }
 
