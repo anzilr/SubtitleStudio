@@ -1,13 +1,12 @@
-Riverpod migration checkpoint 11
+Riverpod migration checkpoint 11b
 Date: 2026-09-27
 Checks:
 - flutter analyze
 - flutter test
 
-Scope:
-- Continued Video Player file splitting
-- Continued Home screen file splitting
-- Preserved Riverpod state flow
-- No platform build jobs
+Corrections since checkpoint 11:
+- Restored public Video track APIs after part-file split
+- Routed Video part state changes through safe state helper
+- Included fullscreen action extraction
 
 Platform builds intentionally disabled.
