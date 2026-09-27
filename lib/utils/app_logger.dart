@@ -67,7 +67,7 @@ enum LogLevel {
 /// 
 /// **System Integration:**
 /// - Flutter error handler override for crash logging
-/// - Device information collection (OS, device model, etc.)
+/// - Coarse device information collection (platform, model, OS version)
 /// - App version and build information logging
 /// - Performance timing and monitoring
 /// 
@@ -205,9 +205,6 @@ class AppLogger {
         deviceData['version'] = androidInfo.version.release;
         deviceData['sdkInt'] = androidInfo.version.sdkInt;
         deviceData['brand'] = androidInfo.brand;
-        deviceData['device'] = androidInfo.device;
-        deviceData['hardware'] = androidInfo.hardware;
-        deviceData['product'] = androidInfo.product;
       } else if (Platform.isIOS) {
         final iosInfo = await deviceInfo.iosInfo;
         deviceData['platform'] = 'iOS';
@@ -236,7 +233,6 @@ class AppLogger {
         'packageName': packageInfo.packageName,
         'version': packageInfo.version,
         'buildNumber': packageInfo.buildNumber,
-        'buildSignature': packageInfo.buildSignature,
       };
       
       _appInfo = jsonEncode(appData);
