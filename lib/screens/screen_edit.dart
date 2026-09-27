@@ -18,6 +18,7 @@ import 'package:subtitle_studio/utils/subtitle_processor.dart';
 import 'package:subtitle_studio/widgets/goto_line_sheet.dart';
 import 'package:subtitle_studio/widgets/video_player_widget.dart';
 import 'package:subtitle_studio/screens/edit/widgets/video_player_section.dart';
+import 'package:subtitle_studio/screens/edit/widgets/editor_video_pane.dart';
 import 'package:subtitle_studio/screens/screen_help.dart';
 import 'package:subtitle_studio/utils/responsive_layout.dart';
 import 'package:subtitle_studio/database/database_helper.dart';
@@ -429,136 +430,38 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
 
   // Build video player interface
   Widget _buildVideoPlayerInterface(List<SubtitleLine> subtitleLines) {
-    return Column(
-      children: [
-        if (_isVideoVisible && _selectedVideoPath != null) ...[
-          // Video player takes most of the available space
-          Expanded(
-            child: Column(
-              children: [
-                // Video player - takes all available space, waveform is added below
-                if (!_isWaveformVisible)
-                  Expanded(
-                    child: VideoPlayerSection(
-                      videoPlayerKey: _videoPlayerKey,
-                      videoPath: _selectedVideoPath!,
-                      subtitleCollectionId: widget.subtitleCollectionId,
-                      subtitles: _subtitles,
-                      secondarySubtitles: _secondarySubtitles,
-                      subtitleVersion: _subtitleVersion,
-                      onPositionChanged: _onVideoPositionChanged,
-                      onActiveSubtitleChanged: _onActiveSubtitleChangedStable,
-                      onSubtitlesUpdated: _onSubtitlesUpdatedStable,
-                      onFullscreenExited: _onFullscreenExitedStable,
-                      onSubtitleMarked: _onSubtitleMarkedStable,
-                      onSubtitleCommentUpdated: _onSubtitleCommentUpdatedStable,
-                    ),
-                  )
-                else
-                  // When waveform is visible, use LayoutBuilder to get available space
-                  Expanded(
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        // Calculate video player height (available space minus waveform height)
-                        // Use taller waveform on desktop for better visibility
-                        final waveformHeight = Platform.isWindows || Platform.isMacOS || Platform.isLinux 
-                            ? 240.0 
-                            : 180.0;
-                        final videoHeight = constraints.maxHeight - waveformHeight - 1; // -1 for divider
-                        
-                        return Column(
-                          children: [
-                            // Video player with calculated height
-                            SizedBox(
-                              height: videoHeight > 0 ? videoHeight : constraints.maxHeight * 0.7,
-                              child: VideoPlayerSection(
-                                videoPlayerKey: _videoPlayerKey,
-                                videoPath: _selectedVideoPath!,
-                                subtitleCollectionId: widget.subtitleCollectionId,
-                                subtitles: _subtitles,
-                                secondarySubtitles: _secondarySubtitles,
-                                subtitleVersion: _subtitleVersion,
-                                onPositionChanged: _onVideoPositionChanged,
-                                onActiveSubtitleChanged: _onActiveSubtitleChangedStable,
-                                onSubtitlesUpdated: _onSubtitlesUpdatedStable,
-                                onFullscreenExited: _onFullscreenExitedStable,
-                                onSubtitleMarked: _onSubtitleMarkedStable,
-                                onSubtitleCommentUpdated: _onSubtitleCommentUpdatedStable,
-                              ),
-                            ),
-                            // Waveform section with fixed height
-                            const Divider(height: 1),
-                            SizedBox(
-                              height: waveformHeight,
-                              child: WaveformWidget(
-                                  key: _waveformKey,
-                                  subtitles: subtitleLines,
-                                  playbackPosition: _lastVideoPosition,
-                                  subtitleCollectionId: widget.subtitleCollectionId,
-                                  sessionId: widget.sessionId,
-                                  highlightedSubtitleIndex: _highlightedIndex,
-                                  onSeek: (Duration position) {
-                                    // Seek video to the selected position
-                                    if (_videoPlayerKey.currentState != null) {
-                                      _videoPlayerKey.currentState!.seekTo(position);
-                                    }
-                                  },
-                                  onSubtitleHighlight: (int index) {
-                                    // Scroll to and highlight the subtitle in the list
-                                    _scrollToIndexWithLoading(index);
-                                    setState(() {
-                                      _highlightedIndex = index;
-                                    });
-                                  },
-                                  onSubtitlesUpdated: () async {
-                                    // Refresh subtitle lines from database
-                                    await _refreshSubtitleLines();
-                                  },
-                                  onAddLineConfirmed: (Duration startTime, Duration endTime) {
-                                    // Open add line sheet with selected times
-                                    _openAddLineSheetWithTimes(startTime, endTime);
-                                  },
-                                ),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ] else ...[
-          // Placeholder when no video is loaded
-          Expanded(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.movie_outlined,
-                    size: 80,
-                    color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No video loaded',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.outline,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  ElevatedButton.icon(
-                    onPressed: _pickVideoFile,
-                    icon: const Icon(Icons.video_file),
-                    label: const Text('Load Video'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ],
+    return EditorVideoPane(
+      isVideoVisible: _isVideoVisible,
+      videoPath: _selectedVideoPath,
+      isWaveformVisible: _isWaveformVisible,
+      videoPlayerKey: _videoPlayerKey,
+      waveformKey: _waveformKey,
+      subtitleCollectionId: widget.subtitleCollectionId,
+      sessionId: widget.sessionId,
+      subtitles: _subtitles,
+      secondarySubtitles: _secondarySubtitles,
+      subtitleLines: subtitleLines,
+      subtitleVersion: _subtitleVersion,
+      playbackPosition: _lastVideoPosition,
+      highlightedSubtitleIndex: _highlightedIndex,
+      onPositionChanged: _onVideoPositionChanged,
+      onActiveSubtitleChanged: _onActiveSubtitleChangedStable,
+      onSubtitlesUpdated: _onSubtitlesUpdatedStable,
+      onFullscreenExited: _onFullscreenExitedStable,
+      onSubtitleMarked: _onSubtitleMarkedStable,
+      onSubtitleCommentUpdated: _onSubtitleCommentUpdatedStable,
+      onLoadVideo: _pickVideoFile,
+      onSeek: (position) {
+        _videoPlayerKey.currentState?.seekTo(position);
+      },
+      onSubtitleHighlight: (index) {
+        _scrollToIndexWithLoading(index);
+        setState(() {
+          _highlightedIndex = index;
+        });
+      },
+      onWaveformSubtitlesUpdated: _refreshSubtitleLines,
+      onAddLineConfirmed: _openAddLineSheetWithTimes,
     );
   }
 
