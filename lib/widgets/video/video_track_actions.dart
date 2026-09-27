@@ -1,6 +1,6 @@
 part of '../video_player_widget.dart';
 
-extension _VideoTrackActions on VideoPlayerWidgetState {
+extension VideoPlayerTrackActions on VideoPlayerWidgetState {
   // Audio track management methods
   
   /// Save selected audio track to preferences
@@ -60,7 +60,7 @@ extension _VideoTrackActions on VideoPlayerWidgetState {
     } finally {
       _audioTrackRestoreInProgress = false;
       if (mounted) {
-        setState(() {
+        _setVideoState(() {
           _isInitializingTracks = false;
         });
       }

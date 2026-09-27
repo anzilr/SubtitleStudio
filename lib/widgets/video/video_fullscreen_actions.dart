@@ -7,14 +7,14 @@ extension _VideoFullscreenActions on VideoPlayerWidgetState {
     // Store original context for dialogs
     _originalContext = context;
     
-    setState(() {
+    _setVideoState(() {
       _isCustomFullscreen = true;
     });
   
     // Force a refresh of the widget state to ensure proper marked status display
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        setState(() {
+        _setVideoState(() {
           // This refresh ensures all subtitle states are correctly synchronized in fullscreen
         });
       }
@@ -72,7 +72,7 @@ extension _VideoFullscreenActions on VideoPlayerWidgetState {
     
     // Update state only if widget is still mounted
     if (mounted) {
-      setState(() {
+      _setVideoState(() {
         _isCustomFullscreen = false;
       });
       
@@ -210,7 +210,7 @@ extension _VideoFullscreenActions on VideoPlayerWidgetState {
                   secondarySubtitles: _currentSecondarySubtitles,
                   onExitFullscreen: _exitCustomFullscreen,
                   onToggleSubtitles: () {
-                    setState(() {
+                    _setVideoState(() {
                       _areSubtitlesEnabled = !_areSubtitlesEnabled;
                     });
                     if (_fullscreenOverlay != null) {

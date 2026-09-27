@@ -5,13 +5,13 @@ extension _VideoPlaybackNavigation on VideoPlayerWidgetState {
   void toggleMute() async {
     if (_currentVolume > 0) {
       _player.setVolume(0);
-      setState(() {
+      _setVideoState(() {
         _currentVolume = 0;
       });
       await PreferencesModel.setVideoVolume(0);
     } else {
       _player.setVolume(100);
-      setState(() {
+      _setVideoState(() {
         _currentVolume = 100;
       });
       await PreferencesModel.setVideoVolume(100);
