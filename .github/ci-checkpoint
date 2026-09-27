@@ -1,13 +1,19 @@
-Riverpod migration checkpoint 14b
+Riverpod migration checkpoint 7
 Date: 2026-09-27
 Checks:
 - flutter analyze
 - flutter test
 
-Corrections after checkpoint 14:
-- Imported shared SubtitleEntry into Source View controller/host
-- Fixed feedback logger call signatures
-- Removed stale Editor import
-- Removed unused theme FontLoader field
+Scope since checkpoint 6b:
+- Fix nullable EditState copyWith semantics with regression tests
+- Move range selection fully into Riverpod
+- Reduce identifying diagnostic metadata
+- Remove hot-path interaction INFO logs
+- Split Editor dialog actions into a Dart part file
+- Split responsive Editor layout into a Dart part file
+- Repair and verify Editor part extraction from known-good source
+- Split project/save actions into a Dart part file
+- Split subtitle mutation/edit actions into a Dart part file
+- Reduce screen_edit.dart from ~4,372 lines to ~2,500 lines
 
 Platform builds intentionally disabled.
