@@ -34,16 +34,16 @@ extension _WaveformInteractions on WaveformWidgetState {
       
       // If pan starts near a bar, enable bar dragging mode
       if ((panX - startPixel).abs() < barTolerance) {
-        setState(() => _isDraggingStartBar = true);
+        _mutateLocalState(() => _isDraggingStartBar = true);
         return;
       } else if ((panX - endPixel).abs() < barTolerance) {
-        setState(() => _isDraggingEndBar = true);
+        _mutateLocalState(() => _isDraggingEndBar = true);
         return;
       }
       
       // Check if pan starts inside the overlay (for moving entire overlay)
       if (panX >= startPixel && panX <= endPixel) {
-        setState(() {
+        _mutateLocalState(() {
           _isMovingEditOverlay = true;
           _overlayDragStartX = panX;
           _overlayDragOriginalStart = startTime;
@@ -60,16 +60,16 @@ extension _WaveformInteractions on WaveformWidgetState {
       
       // If pan starts near a bar, enable bar dragging mode
       if ((panX - startPixel).abs() < barTolerance) {
-        setState(() => _isDraggingAddLineStartBar = true);
+        _mutateLocalState(() => _isDraggingAddLineStartBar = true);
         return;
       } else if ((panX - endPixel).abs() < barTolerance) {
-        setState(() => _isDraggingAddLineEndBar = true);
+        _mutateLocalState(() => _isDraggingAddLineEndBar = true);
         return;
       }
       
       // Check if pan starts inside the overlay (for moving entire overlay)
       if (panX >= startPixel && panX <= endPixel) {
-        setState(() {
+        _mutateLocalState(() {
           _isMovingAddLineOverlay = true;
           _overlayDragStartX = panX;
           _overlayDragOriginalStart = state.addLineStartTime;
@@ -235,7 +235,7 @@ extension _WaveformInteractions on WaveformWidgetState {
     if (_isMovingEditOverlay || _isMovingAddLineOverlay || 
         _isDraggingStartBar || _isDraggingEndBar ||
         _isDraggingAddLineStartBar || _isDraggingAddLineEndBar) {
-      setState(() {
+      _mutateLocalState(() {
         _isMovingEditOverlay = false;
         _isMovingAddLineOverlay = false;
         _isDraggingStartBar = false;
@@ -264,10 +264,10 @@ extension _WaveformInteractions on WaveformWidgetState {
       
       if ((position.dx - playheadX).abs() <= 16) {
         // Click on playhead - check for double-click
-        if (_staticLastMouseClickTime != null &&
-            _staticLastMouseClickPosition != null &&
-            now.difference(_staticLastMouseClickTime!) < const Duration(milliseconds: 500) &&
-            (position - _staticLastMouseClickPosition!).distance < 20) {
+        if (WaveformWidgetState._staticLastMouseClickTime != null &&
+            WaveformWidgetState._staticLastMouseClickPosition != null &&
+            now.difference(WaveformWidgetState._staticLastMouseClickTime!) < const Duration(milliseconds: 500) &&
+            (position - WaveformWidgetState._staticLastMouseClickPosition!).distance < 20) {
           // Double-click on playhead - enter add line mode with 2-second default duration
           // Use viewport center time (where playhead visually appears)
           final startTime = _getViewportCenterTime(state);
@@ -276,15 +276,15 @@ extension _WaveformInteractions on WaveformWidgetState {
           ref.read(waveformControllerProvider.notifier).dispatch(const EnterAddLineMode());
           ref.read(waveformControllerProvider.notifier).dispatch(UpdateAddLineStartTime(startTime));
           ref.read(waveformControllerProvider.notifier).dispatch(UpdateAddLineEndTime(endTime));
-          _staticLastMouseClickTime = null;
-          _staticLastMouseClickPosition = null;
-          _staticLastMouseClickSubtitleIndex = null;
+          WaveformWidgetState._staticLastMouseClickTime = null;
+          WaveformWidgetState._staticLastMouseClickPosition = null;
+          WaveformWidgetState._staticLastMouseClickSubtitleIndex = null;
           return;
         } else {
           // Single click - remember for potential double-click
-          _staticLastMouseClickTime = now;
-          _staticLastMouseClickPosition = position;
-          _staticLastMouseClickSubtitleIndex = null;
+          WaveformWidgetState._staticLastMouseClickTime = now;
+          WaveformWidgetState._staticLastMouseClickPosition = position;
+          WaveformWidgetState._staticLastMouseClickSubtitleIndex = null;
           return;
         }
       }
@@ -294,11 +294,11 @@ extension _WaveformInteractions on WaveformWidgetState {
     final subtitleIndex = _getSubtitleAtPosition(position, state);
     
     // Check for double-click (within 500ms, at similar position, and on same subtitle)
-    if (_staticLastMouseClickTime != null &&
-        _staticLastMouseClickPosition != null &&
-        now.difference(_staticLastMouseClickTime!) < const Duration(milliseconds: 500) &&
-        (position - _staticLastMouseClickPosition!).distance < 20 &&
-        subtitleIndex == _staticLastMouseClickSubtitleIndex) {
+    if (WaveformWidgetState._staticLastMouseClickTime != null &&
+        WaveformWidgetState._staticLastMouseClickPosition != null &&
+        now.difference(WaveformWidgetState._staticLastMouseClickTime!) < const Duration(milliseconds: 500) &&
+        (position - WaveformWidgetState._staticLastMouseClickPosition!).distance < 20 &&
+        subtitleIndex == WaveformWidgetState._staticLastMouseClickSubtitleIndex) {
       // Double-click detected
       
       if (subtitleIndex != null) {
@@ -324,14 +324,14 @@ extension _WaveformInteractions on WaveformWidgetState {
       }
       
       // Reset for next potential double-click
-      _staticLastMouseClickTime = null;
-      _staticLastMouseClickPosition = null;
-      _staticLastMouseClickSubtitleIndex = null;
+      WaveformWidgetState._staticLastMouseClickTime = null;
+      WaveformWidgetState._staticLastMouseClickPosition = null;
+      WaveformWidgetState._staticLastMouseClickSubtitleIndex = null;
     } else {
       // Single click - just remember for potential double-click
-      _staticLastMouseClickTime = now;
-      _staticLastMouseClickPosition = position;
-      _staticLastMouseClickSubtitleIndex = subtitleIndex;
+      WaveformWidgetState._staticLastMouseClickTime = now;
+      WaveformWidgetState._staticLastMouseClickPosition = position;
+      WaveformWidgetState._staticLastMouseClickSubtitleIndex = subtitleIndex;
     }
   }
 
@@ -444,7 +444,7 @@ extension _WaveformInteractions on WaveformWidgetState {
       if ((localPosition.dx - playheadX).abs() <= 16) {
         // Tap on playhead - check for double tap
         if (_lastPlayheadTapTime != null &&
-            now.difference(_lastPlayheadTapTime!) < _doubleTapDuration) {
+            now.difference(_lastPlayheadTapTime!) < WaveformWidgetState._doubleTapDuration) {
           // Double tap on playhead - enter add line mode with 2-second default duration
           // Use viewport center time (where playhead visually appears)
           final startTime = _getViewportCenterTime(state);
@@ -465,7 +465,7 @@ extension _WaveformInteractions on WaveformWidgetState {
     
     // Regular waveform double tap logic
     if (_lastWaveformTapTime != null &&
-        now.difference(_lastWaveformTapTime!) < _doubleTapDuration) {
+        now.difference(_lastWaveformTapTime!) < WaveformWidgetState._doubleTapDuration) {
       // Double tap on waveform
       if (state.isEditMode) {
         // Exit edit mode if we're in it
@@ -538,7 +538,7 @@ extension _WaveformInteractions on WaveformWidgetState {
     // Check for double tap to seek and highlight
     if (_lastTappedSubtitleIndex == subtitleIndex &&
         _lastTapTime != null &&
-        now.difference(_lastTapTime!) < _doubleTapDuration) {
+        now.difference(_lastTapTime!) < WaveformWidgetState._doubleTapDuration) {
       // Double tap - seek to subtitle start and highlight in list
       widget.onSeek?.call(startTime);
       ref.read(waveformControllerProvider.notifier).dispatch(SeekToTime(startTime));

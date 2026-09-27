@@ -254,7 +254,7 @@ extension _WaveformEditing on WaveformWidgetState {
       }
       
       // Update internal cache
-      setState(() {
+      _mutateLocalState(() {
         _currentSubtitles[subtitleIndex] = subtitle;
       });
       

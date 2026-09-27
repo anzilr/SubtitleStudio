@@ -33,7 +33,7 @@ class EditorPreferencesRepository {
     });
   }
 
-  Future<VideoPreferences> _getVideoPreferences(
+  Future<VideoPreferences> getVideoPreferences(
     int subtitleCollectionId,
   ) async {
     final existing = await _isar.videoPreferences
@@ -71,7 +71,7 @@ class EditorPreferencesRepository {
   }
 
   Future<String?> getVideoPath(int subtitleCollectionId) async {
-    return (await _getVideoPreferences(subtitleCollectionId)).videoPath;
+    return (await getVideoPreferences(subtitleCollectionId)).videoPath;
   }
 
   Future<void> saveVideoPath(
@@ -103,7 +103,7 @@ class EditorPreferencesRepository {
   Future<String?> getSecondarySubtitlePath(
     int subtitleCollectionId,
   ) async {
-    return (await _getVideoPreferences(subtitleCollectionId))
+    return (await getVideoPreferences(subtitleCollectionId))
         .secondarySubtitlePath;
   }
 
@@ -127,7 +127,7 @@ class EditorPreferencesRepository {
   }
 
   Future<bool> getSecondaryIsOriginal(int subtitleCollectionId) async {
-    return (await _getVideoPreferences(subtitleCollectionId))
+    return (await getVideoPreferences(subtitleCollectionId))
         .secondaryIsOriginal;
   }
 

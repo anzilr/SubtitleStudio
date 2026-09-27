@@ -154,6 +154,11 @@ class WaveformWidgetState extends riverpod.ConsumerState<WaveformWidget> {
     }
   }
 
+  void _mutateLocalState(VoidCallback mutation) {
+    if (!mounted) return;
+    setState(mutation);
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(waveformControllerProvider);
