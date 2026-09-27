@@ -49,7 +49,6 @@ import 'package:subtitle_studio/utils/saf_path_converter.dart';   // SAF path co
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 // FontLoader is available via flutter services import above
-import 'package:subtitle_studio/database/models/preferences_model.dart';
 import 'package:subtitle_studio/widgets/video/video_player_preferences_repository.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/utils/responsive_layout.dart'; // Import responsive layout utilities
