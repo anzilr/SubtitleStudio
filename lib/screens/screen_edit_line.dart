@@ -53,6 +53,7 @@ import 'package:subtitle_studio/screens/edit_line/widgets/time_component_field.d
 import 'package:subtitle_studio/screens/edit_line/widgets/edit_line_dialogs.dart';
 import 'package:subtitle_studio/screens/edit_line/widgets/edit_line_menu.dart';
 import 'package:subtitle_studio/screens/edit_line/widgets/edit_line_placeholders.dart';
+import 'package:subtitle_studio/screens/edit_line/widgets/dictionary_sheets.dart';
 import 'package:subtitle_studio/widgets/ai_explanation_sheet.dart';
 
 // Edit subtitle line screen with video player integration
@@ -2674,101 +2675,43 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
     );
   }
 
-  // Show Olam Dictionary modal
+  String _selectedOrFullOriginalText() {
+    final selection = _originalController.selection;
+    if (selection.isValid && !selection.isCollapsed) {
+      return _originalController.text.substring(
+        selection.start,
+        selection.end,
+      );
+    }
+    return _originalController.text;
+  }
+
   void _showOlamDictionary() {
-    showModalBottomSheet(
+    showOlamDictionarySheet(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16.0)),
-      ),
-      builder: (BuildContext context) {
-        // Get selected text or use full text as fallback
-        String searchText = _originalController.text;
-        if (_originalController.selection.isValid &&
-            _originalController.selection.start !=
-                _originalController.selection.end) {
-          searchText = _originalController.text.substring(
-            _originalController.selection.start,
-            _originalController.selection.end,
-          );
-        }
-
-        return OlamDictionaryWidget(
-          onSelectTranslation: (text) {
-            // Insert selected text into edited field
-            _editedController.text = text;
-            Navigator.pop(context);
-          },
-          initialSearchTerm: searchText,
-        );
+      initialSearchTerm: _selectedOrFullOriginalText(),
+      onSelectTranslation: (text) {
+        _editedController.text = text;
       },
     );
   }
 
-  // Show Urban Dictionary modal
   void _showUrbanDictionary() {
-    showModalBottomSheet(
+    showUrbanDictionarySheet(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16.0)),
-      ),
-      builder: (BuildContext context) {
-        // Get selected text or use full text as fallback
-        String searchText = _originalController.text;
-        if (_originalController.selection.isValid &&
-            _originalController.selection.start !=
-                _originalController.selection.end) {
-          searchText = _originalController.text.substring(
-            _originalController.selection.start,
-            _originalController.selection.end,
-          );
-        }
-
-        return UrbanDictionaryWidget(
-          onSelectTranslation: (text) {
-            // Insert selected text into edited field
-            _editedController.text = text;
-            Navigator.pop(context);
-          },
-          initialSearchTerm: searchText,
-        );
+      initialSearchTerm: _selectedOrFullOriginalText(),
+      onSelectTranslation: (text) {
+        _editedController.text = text;
       },
     );
   }
 
-  // Show MSone Dictionary modal
   void _showMsoneDictionary() {
-    showModalBottomSheet(
+    showMsoneDictionarySheet(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16.0)),
-      ),
-      builder: (BuildContext context) {
-        // Get selected text or use full text as fallback
-        String searchText = _originalController.text;
-        if (_originalController.selection.isValid &&
-            _originalController.selection.start !=
-                _originalController.selection.end) {
-          searchText = _originalController.text.substring(
-            _originalController.selection.start,
-            _originalController.selection.end,
-          );
-        }
-
-        return FractionallySizedBox(
-          heightFactor: 0.95, // 95% of screen height
-          child: DictionarySearchWidget(
-            onSelectTranslation: (text) {
-              // Insert selected text into edited field
-              _editedController.text = text;
-              Navigator.pop(context);
-            },
-            initialSearchTerm: searchText,
-          ),
-        );
+      initialSearchTerm: _selectedOrFullOriginalText(),
+      onSelectTranslation: (text) {
+        _editedController.text = text;
       },
     );
   }
