@@ -36,7 +36,7 @@ extension _SettingsDestructiveSection on _SettingsSheetState {
                 );
                 
                 if (result == true) {
-                  await PreferencesModel.clearAllPreferences();
+                  await _preferencesRepository.clearAllPreferences();
                   await _loadSettings(); // Reload settings after clearing
                   if (widget.onSettingsChanged != null) {
                     widget.onSettingsChanged!();

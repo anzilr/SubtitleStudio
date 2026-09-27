@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:subtitle_studio/database/models/preferences_model.dart';
+import 'package:subtitle_studio/app/providers/core_providers.dart';
+import 'package:subtitle_studio/app/repositories/app_preferences_repository.dart';
 import 'package:subtitle_studio/database/database_helper.dart'; // Add this import for clearAllApplicationData
 import 'package:subtitle_studio/utils/app_info.dart'; // Add this import
 import 'package:subtitle_studio/utils/update_manager.dart'; // Add this import
@@ -32,6 +33,9 @@ class SettingsSheet extends ConsumerStatefulWidget {
 }
 
 class _SettingsSheetState extends ConsumerState<SettingsSheet> {
+  AppPreferencesRepository get _preferencesRepository =>
+      ref.read(appPreferencesRepositoryProvider);
+
   void _setSettingsState(VoidCallback update) {
     if (!mounted) return;
     setState(update);
@@ -171,7 +175,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                         trailing: Switch(
                           value: _isMsoneEnabled,
                           onChanged: (bool value) async {
-                            await PreferencesModel.setMsoneEnabled(value);
+                            await _preferencesRepository.setMsoneEnabled(value);
                             setState(() {
                               _isMsoneEnabled = value;
                             });
@@ -190,7 +194,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                         trailing: Switch(
                   value: _isSaveToFileEnabled,
                   onChanged: (bool value) async {
-                    await PreferencesModel.setSaveToFileEnabled(value);
+                    await _preferencesRepository.setSaveToFileEnabled(value);
                     setState(() {
                       _isSaveToFileEnabled = value;
                     });
@@ -220,7 +224,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                     onFieldSubmitted: (value) async {
                       final newLength = int.tryParse(value);
                       if (newLength != null && newLength > 0 && newLength <= 200) {
-                        await PreferencesModel.setMaxLineLength(newLength);
+                        await _preferencesRepository.setMaxLineLength(newLength);
                         setState(() {
                           _maxLineLength = newLength;
                         });
@@ -257,7 +261,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                     onFieldSubmitted: (value) async {
                       final newDuration = int.tryParse(value);
                       if (newDuration != null && newDuration > 0 && newDuration <= 60) {
-                        await PreferencesModel.setSkipDurationSeconds(newDuration);
+                        await _preferencesRepository.setSkipDurationSeconds(newDuration);
                         setState(() {
                           _skipDurationSeconds = newDuration;
                         });
@@ -288,7 +292,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                     value: _editLineLayout == 'layout2',
                     onChanged: (bool value) async {
                       final newLayout = value ? 'layout2' : 'layout1';
-                      await PreferencesModel.setSwitchLayout(newLayout);
+                      await _preferencesRepository.setSwitchLayout(newLayout);
                       setState(() {
                         _editLineLayout = newLayout;
                       });
@@ -321,7 +325,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                   ],
                   onChanged: (value) async {
                     if (value != null) {
-                      await PreferencesModel.setMaxCheckpoints(value);
+                      await _preferencesRepository.setMaxCheckpoints(value);
                       setState(() {
                         _maxCheckpoints = value;
                       });
@@ -352,7 +356,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                     onFieldSubmitted: (value) async {
                       final newInterval = int.tryParse(value);
                       if (newInterval != null && newInterval >= 1 && newInterval <= 100) {
-                        await PreferencesModel.setSnapshotInterval(newInterval);
+                        await _preferencesRepository.setSnapshotInterval(newInterval);
                         setState(() {
                           _snapshotInterval = newInterval;
                           _snapshotIntervalController.text = newInterval.toString();
@@ -483,7 +487,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                       );
                       
                       if (confirmed == true) {
-                        await PreferencesModel.setCheckpointStrategy(value);
+                        await _preferencesRepository.setCheckpointStrategy(value);
                         setState(() {
                           _checkpointStrategy = value;
                         });

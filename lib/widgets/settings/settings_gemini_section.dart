@@ -29,7 +29,7 @@ extension _SettingsGeminiSection on _SettingsSheetState {
                           icon: const Icon(Icons.clear),
                           onPressed: () async {
                             _geminiApiKeyController.clear();
-                            await PreferencesModel.setGeminiApiKey(null);
+                            await _preferencesRepository.setGeminiApiKey(null);
                             _setSettingsState(() {
                               _geminiApiKey = null;
                             });
@@ -48,7 +48,7 @@ extension _SettingsGeminiSection on _SettingsSheetState {
                 ),
                 obscureText: true,
                 onChanged: (value) async {
-                  await PreferencesModel.setGeminiApiKey(value.isEmpty ? null : value);
+                  await _preferencesRepository.setGeminiApiKey(value.isEmpty ? null : value);
                   _setSettingsState(() {
                     _geminiApiKey = value.isEmpty ? null : value;
                   });
@@ -174,7 +174,7 @@ extension _SettingsGeminiSection on _SettingsSheetState {
                             }).toList(),
                             onChanged: (value) async {
                               if (value != null) {
-                                await PreferencesModel.setGeminiModel(value);
+                                await _preferencesRepository.setGeminiModel(value);
                                 _setSettingsState(() {
                                   _geminiModel = value;
                                 });

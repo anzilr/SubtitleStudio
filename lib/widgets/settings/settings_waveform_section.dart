@@ -51,7 +51,7 @@ extension _SettingsWaveformSection on _SettingsSheetState {
                   onFieldSubmitted: (value) async {
                     final newValue = int.tryParse(value);
                     if (newValue != null && newValue >= 100000 && newValue <= 5000000) {
-                      await PreferencesModel.setWaveformMaxPixels(newValue);
+                      await _preferencesRepository.setWaveformMaxPixels(newValue);
                       _setSettingsState(() {
                         _waveformMaxPixels = newValue;
                       });
@@ -86,7 +86,7 @@ extension _SettingsWaveformSection on _SettingsSheetState {
                   onFieldSubmitted: (value) async {
                     final newValue = int.tryParse(value);
                     if (newValue != null && newValue >= 1 && newValue <= 64) {
-                      await PreferencesModel.setWaveformSampleRateFactor(newValue);
+                      await _preferencesRepository.setWaveformSampleRateFactor(newValue);
                       _setSettingsState(() {
                         _waveformSampleRateFactor = newValue;
                       });
@@ -121,7 +121,7 @@ extension _SettingsWaveformSection on _SettingsSheetState {
                   onFieldSubmitted: (value) async {
                     final newValue = double.tryParse(value);
                     if (newValue != null && newValue >= 1.1 && newValue <= 3.0) {
-                      await PreferencesModel.setWaveformZoomMultiplier(newValue);
+                      await _preferencesRepository.setWaveformZoomMultiplier(newValue);
                       _setSettingsState(() {
                         _waveformZoomMultiplier = newValue;
                       });
@@ -155,9 +155,7 @@ extension _SettingsWaveformSection on _SettingsSheetState {
             ElevatedButton.icon(
               onPressed: () async {
                 // Reset to default values
-                await PreferencesModel.setWaveformMaxPixels(500000);
-                await PreferencesModel.setWaveformSampleRateFactor(16);
-                await PreferencesModel.setWaveformZoomMultiplier(1.35);
+                await _preferencesRepository.resetWaveformSettings();
                 
                 _setSettingsState(() {
                   _waveformMaxPixels = 500000;

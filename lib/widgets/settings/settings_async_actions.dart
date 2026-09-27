@@ -13,46 +13,36 @@ extension _SettingsAsyncActions on _SettingsSheetState {
   }
   
   Future<void> _loadSettings() async {
-    final msoneEnabled = await PreferencesModel.getMsoneEnabled();
-    final saveToFileEnabled = await PreferencesModel.getSaveToFileEnabled(); // Load save-to-file setting
-    final maxLineLength = await PreferencesModel.getMaxLineLength(); // Load max line length setting
-    final skipDurationSeconds = await PreferencesModel.getSkipDurationSeconds(); // Load skip duration setting
-    final editLineLayout = await PreferencesModel.getSwitchLayout(); // Load switch layout preference
-    final maxCheckpoints = await PreferencesModel.getMaxCheckpoints();
-    final snapshotInterval = await PreferencesModel.getSnapshotInterval();
-    final checkpointStrategy = await PreferencesModel.getCheckpointStrategy();
-    final geminiApiKey = await PreferencesModel.getGeminiApiKey();
-    final geminiModel = await PreferencesModel.getGeminiModel();
-    final waveformMaxPixels = await PreferencesModel.getWaveformMaxPixels();
-    final waveformSampleRateFactor = await PreferencesModel.getWaveformSampleRateFactor();
-    final waveformZoomMultiplier = await PreferencesModel.getWaveformZoomMultiplier();
-    
+    final snapshot = await _preferencesRepository.loadSettings();
+    if (!mounted) return;
+
     _setSettingsState(() {
-      _isMsoneEnabled = msoneEnabled;
-      _isSaveToFileEnabled = saveToFileEnabled;
-      _maxLineLength = maxLineLength;
-      _skipDurationSeconds = skipDurationSeconds;
-      _editLineLayout = editLineLayout;
-      _maxCheckpoints = maxCheckpoints;
-      _snapshotInterval = snapshotInterval;
-      _checkpointStrategy = checkpointStrategy;
-      _geminiApiKey = geminiApiKey;
-      _geminiModel = geminiModel;
-      _waveformMaxPixels = waveformMaxPixels;
-      _waveformSampleRateFactor = waveformSampleRateFactor;
-      _waveformZoomMultiplier = waveformZoomMultiplier;
+      _isMsoneEnabled = snapshot.msoneEnabled;
+      _isSaveToFileEnabled = snapshot.saveToFileEnabled;
+      _maxLineLength = snapshot.maxLineLength;
+      _skipDurationSeconds = snapshot.skipDurationSeconds;
+      _editLineLayout = snapshot.switchLayout;
+      _maxCheckpoints = snapshot.maxCheckpoints;
+      _snapshotInterval = snapshot.snapshotInterval;
+      _checkpointStrategy = snapshot.checkpointStrategy;
+      _geminiApiKey = snapshot.geminiApiKey;
+      _geminiModel = snapshot.geminiModel;
+      _waveformMaxPixels = snapshot.waveformMaxPixels;
+      _waveformSampleRateFactor = snapshot.waveformSampleRateFactor;
+      _waveformZoomMultiplier = snapshot.waveformZoomMultiplier;
     });
-    
-    // Update the controller text to reflect the loaded values
+
     _maxLineLengthController.text = _maxLineLength.toString();
     _skipDurationController.text = _skipDurationSeconds.toString();
     _snapshotIntervalController.text = _snapshotInterval.toString();
     _geminiApiKeyController.text = _geminiApiKey ?? '';
     _waveformMaxPixelsController.text = _waveformMaxPixels.toString();
-    _waveformSampleRateFactorController.text = _waveformSampleRateFactor.toString();
-    _waveformZoomMultiplierController.text = _waveformZoomMultiplier.toStringAsFixed(2);
+    _waveformSampleRateFactorController.text =
+        _waveformSampleRateFactor.toString();
+    _waveformZoomMultiplierController.text =
+        _waveformZoomMultiplier.toStringAsFixed(2);
   }
-  
+
   /// Fetch available Gemini models from API
   Future<void> _fetchAvailableModels() async {
     _setSettingsState(() {
@@ -81,13 +71,13 @@ extension _SettingsAsyncActions on _SettingsSheetState {
           if (!currentModelExists) {
             // Set to first available model
             final newModel = _availableModels.first.name ?? 'models/gemini-2.5-flash';
-            await PreferencesModel.setGeminiModel(newModel);
+            await _preferencesRepository.setGeminiModel(newModel);
             _setSettingsState(() {
               _geminiModel = newModel;
             });
           } else if (_geminiModel != normalizedCurrentModel) {
             // Update to normalized format
-            await PreferencesModel.setGeminiModel(normalizedCurrentModel);
+            await _preferencesRepository.setGeminiModel(normalizedCurrentModel);
             _setSettingsState(() {
               _geminiModel = normalizedCurrentModel;
             });

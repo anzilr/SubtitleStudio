@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
-import 'package:subtitle_studio/database/models/preferences_model.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
 
-class MsoneSubmissionScreen extends StatefulWidget {
+class MsoneSubmissionScreen extends ConsumerStatefulWidget {
   final String submissionType; // 'main' or 'fresher'
   final int subtitleCollectionId;
 
@@ -19,10 +20,10 @@ class MsoneSubmissionScreen extends StatefulWidget {
   });
 
   @override
-  State<MsoneSubmissionScreen> createState() => _MsoneSubmissionScreenState();
+  ConsumerState<MsoneSubmissionScreen> createState() => _MsoneSubmissionScreenState();
 }
 
-class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
+class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
   final PageController _pageController = PageController();
   int _currentStep = 0;
   
@@ -73,25 +74,27 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
   }
 
   Future<void> _loadSavedData() async {
-    final name = await PreferencesModel.getTranslatorName();
-    final email = await PreferencesModel.getTranslatorEmail();
-    final contactId = await PreferencesModel.getTranslatorContactId();
-    
-    if (mounted) {
-      setState(() {
-        _nameController.text = name ?? '';
-        _emailController.text = email ?? '';
-        _contactIdController.text = contactId ?? '';
-      });
-    }
+    final profile = await ref
+        .read(appPreferencesRepositoryProvider)
+        .loadTranslatorProfile();
+
+    if (!mounted) return;
+
+    setState(() {
+      _nameController.text = profile.name ?? '';
+      _emailController.text = profile.email ?? '';
+      _contactIdController.text = profile.contactId ?? '';
+    });
   }
 
   Future<void> _saveTranslatorData() async {
-    if (_saveForFuture) {
-      await PreferencesModel.setTranslatorName(_nameController.text);
-      await PreferencesModel.setTranslatorEmail(_emailController.text);
-      await PreferencesModel.setTranslatorContactId(_contactIdController.text);
-    }
+    if (!_saveForFuture) return;
+
+    await ref.read(appPreferencesRepositoryProvider).saveTranslatorProfile(
+      name: _nameController.text,
+      email: _emailController.text,
+      contactId: _contactIdController.text,
+    );
   }
 
   String? _validateEmail(String? value) {

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar_community/isar.dart';
+import 'package:subtitle_studio/app/repositories/app_preferences_repository.dart';
 
 /// Root database dependency for Riverpod-managed code.
 ///
@@ -16,4 +17,9 @@ final isarProvider = Provider<Isar>((ref) {
     'isarProvider must be overridden with the initialized Isar instance '
     'at application bootstrap.',
   );
+});
+
+final appPreferencesRepositoryProvider =
+    Provider<AppPreferencesRepository>((ref) {
+  return AppPreferencesRepository(ref.watch(isarProvider));
 });
