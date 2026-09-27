@@ -7,7 +7,7 @@ extension VideoPlayerTrackActions on VideoPlayerWidgetState {
   Future<void> _saveAudioTrackSelection(AudioTrack track) async {
     try {
       debugPrint('Saving audio track for collection ${widget.subtitleCollectionId}: ${track.title} (${track.language}) [ID: ${track.id}]');
-      await PreferencesModel.saveSelectedAudioTrack(
+      await _preferencesRepository.saveSelectedAudioTrack(
         widget.subtitleCollectionId,
         trackId: track.id,
         trackTitle: track.title,
@@ -32,12 +32,12 @@ extension VideoPlayerTrackActions on VideoPlayerWidgetState {
     _audioTrackRestoreInProgress = true;
   
     try {
-      final savedTrack = await PreferencesModel.getSelectedAudioTrack(
+      final savedTrack = await _preferencesRepository.getSelectedAudioTrack(
         widget.subtitleCollectionId,
       );
       if (!mounted) return;
   
-      final savedTrackId = savedTrack['id'];
+      final savedTrackId = savedTrack.id;
       if (savedTrackId == null) {
         debugPrint('No saved audio track found, using default');
         return;

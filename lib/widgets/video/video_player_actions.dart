@@ -40,7 +40,7 @@ extension VideoPlayerActions on VideoPlayerWidgetState {
     
     // Clear audio track selection when video changes
     try {
-      await PreferencesModel.clearSelectedAudioTrack(widget.subtitleCollectionId);
+      await _preferencesRepository.clearSelectedAudioTrack(widget.subtitleCollectionId);
       debugPrint('Cleared audio track selection for new video');
     } catch (e) {
       debugPrint('Error clearing audio track selection: $e');
