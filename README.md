@@ -178,9 +178,8 @@ lib/
 Subtitle Studio is being incrementally modernized while keeping the application
 usable throughout the migration:
 
-- **Riverpod** is the primary application/editor state-management system.
-- **Provider** remains for a small amount of legacy theme/UI state and is being
-  reduced incrementally.
+- **Riverpod** is the application state-management system for root, Home,
+  Editor, Edit Line, Source View, theme and waveform state.
 - **Isar** provides local persistence for sessions, preferences and subtitle
   data.
 - Large editor/video widgets are being split by feature boundary to improve

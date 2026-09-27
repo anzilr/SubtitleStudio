@@ -117,7 +117,7 @@ class _LogManagementWidgetState extends State<LogManagementWidget> {
       
       if (mounted) {
         _showSnackBar(
-          'Failed to load log statistics: $e',
+          'Could not load log information. Please try again.',
           Colors.red,
         );
       }
