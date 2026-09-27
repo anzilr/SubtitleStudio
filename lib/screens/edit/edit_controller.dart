@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/screens/edit/edit_state.dart';
 import 'package:subtitle_studio/screens/edit/repositories/subtitle_repository.dart';
@@ -26,7 +27,7 @@ final editConfigurationProvider = Provider<EditConfiguration>((ref) {
 });
 
 final subtitleRepositoryProvider = Provider<SubtitleRepository>((ref) {
-  return SubtitleRepository();
+  return SubtitleRepository(ref.watch(isarProvider));
 });
 
 final videoRepositoryProvider = Provider<VideoRepository>((ref) {

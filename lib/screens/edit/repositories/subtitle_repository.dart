@@ -1,11 +1,11 @@
-import 'package:subtitle_studio/database/database_helper.dart';
+import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/database/models/models.dart';
+import 'package:subtitle_studio/utils/subtitle_sorting.dart';
 import 'package:subtitle_studio/widgets/video_player_widget.dart';
 import 'package:subtitle_studio/utils/subtitle_parser.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 import 'package:subtitle_studio/services/checkpoint_manager.dart';
 import 'package:subtitle_studio/utils/time_parser.dart';
-import 'package:subtitle_studio/database/database_instance.dart';
 import 'package:subtitle_studio/screens/edit/models/subtitle_entry.dart';
 import 'package:subtitle_studio/screens/edit/services/source_view_reconciler.dart';
 
@@ -22,14 +22,19 @@ import 'package:subtitle_studio/screens/edit/services/source_view_reconciler.dar
 /// - Source view synchronization
 /// - Generate subtitles for video player
 class SubtitleRepository {
-  SubtitleRepository();
+  final Isar _isar;
+
+  SubtitleRepository(this._isar);
 
   /// Fetch all subtitle lines for a collection
   Future<List<SubtitleLine>> fetchLines(int collectionId) async {
     logInfo('SubtitleRepository: Fetching subtitle lines for collection $collectionId');
     try {
-      final subtitles = await fetchSubtitleLines(collectionId); // Use database_helper function
-      logInfo('SubtitleRepository: Successfully fetched ${subtitles.length} subtitle lines');
+      final collection = await _isar.subtitleCollections.get(collectionId);
+      final subtitles = collection?.lines ?? const <SubtitleLine>[];
+      logInfo(
+        'SubtitleRepository: Successfully fetched ${subtitles.length} subtitle lines',
+      );
       return subtitles;
     } catch (e) {
       logError('SubtitleRepository: Failed to fetch subtitle lines: $e');
@@ -41,7 +46,7 @@ class SubtitleRepository {
   Future<SubtitleCollection?> fetchSubtitleCollection(int id) async {
     logInfo('SubtitleRepository: Fetching subtitle collection $id');
     try {
-      final collection = await fetchSubtitle(id);
+      final collection = await _isar.subtitleCollections.get(id);
       if (collection != null) {
         logInfo('SubtitleRepository: Successfully fetched collection "${collection.fileName}"');
       } else {
@@ -58,7 +63,18 @@ class SubtitleRepository {
   Future<bool> markLine(int collectionId, int index, bool marked) async {
     logInfo('SubtitleRepository: Marking line $index in collection $collectionId as $marked');
     try {
-      final success = await markSubtitleLine(collectionId, index, marked); // Use database_helper function
+      final success = await _isar.writeTxn(() async {
+        final collection = await _isar.subtitleCollections.get(collectionId);
+        if (collection == null ||
+            index < 0 ||
+            index >= collection.lines.length) {
+          return false;
+        }
+
+        collection.lines[index].marked = marked;
+        await _isar.subtitleCollections.put(collection);
+        return true;
+      });
       if (success) {
         logInfo('SubtitleRepository: Successfully marked line $index');
       } else {
@@ -75,9 +91,29 @@ class SubtitleRepository {
   Future<bool> updateComment(int collectionId, int index, String? comment) async {
     logInfo('SubtitleRepository: Updating comment for line $index in collection $collectionId');
     try {
-      await updateSubtitleLineComment(collectionId, index, comment);
-      logInfo('SubtitleRepository: Successfully updated comment for line $index');
-      return true;
+      final success = await _isar.writeTxn(() async {
+        final collection = await _isar.subtitleCollections.get(collectionId);
+        if (collection == null ||
+            index < 0 ||
+            index >= collection.lines.length) {
+          return false;
+        }
+
+        collection.lines[index].comment = comment;
+        await _isar.subtitleCollections.put(collection);
+        return true;
+      });
+
+      if (success) {
+        logInfo(
+          'SubtitleRepository: Successfully updated comment for line $index',
+        );
+      } else {
+        logWarning(
+          'SubtitleRepository: Could not update comment for invalid line $index',
+        );
+      }
+      return success;
     } catch (e) {
       logError('SubtitleRepository: Error updating comment for line $index: $e');
       rethrow;
@@ -88,7 +124,20 @@ class SubtitleRepository {
   Future<bool> deleteLine(int collectionId, int index) async {
     logInfo('SubtitleRepository: Deleting line $index from collection $collectionId');
     try {
-      final success = await deleteSubtitleLineDB(collectionId, index); // Use database_helper function
+      final success = await _isar.writeTxn(() async {
+        final collection = await _isar.subtitleCollections.get(collectionId);
+        if (collection == null ||
+            index < 0 ||
+            index >= collection.lines.length) {
+          return false;
+        }
+
+        final remaining = List<SubtitleLine>.from(collection.lines)
+          ..removeAt(index);
+        collection.lines = sortAndReindexSubtitleLines(remaining);
+        await _isar.subtitleCollections.put(collection);
+        return true;
+      });
       if (success) {
         logInfo('SubtitleRepository: Successfully deleted line $index');
       } else {
@@ -117,7 +166,44 @@ class SubtitleRepository {
     );
 
     try {
-      final result = await deleteSubtitleLinesDB(collectionId, indices);
+      final requested = indices.toSet();
+      if (requested.isEmpty) {
+        return const {'success': 0, 'failed': 0};
+      }
+
+      final result = await _isar.writeTxn(() async {
+        final collection = await _isar.subtitleCollections.get(collectionId);
+        if (collection == null) {
+          return {
+            'success': 0,
+            'failed': requested.length,
+          };
+        }
+
+        final valid = requested
+            .where(
+              (index) =>
+                  index >= 0 && index < collection.lines.length,
+            )
+            .toSet();
+
+        final remaining = <SubtitleLine>[];
+        for (int index = 0; index < collection.lines.length; index++) {
+          if (!valid.contains(index)) {
+            remaining.add(collection.lines[index]);
+          }
+        }
+
+        if (valid.isNotEmpty) {
+          collection.lines = sortAndReindexSubtitleLines(remaining);
+          await _isar.subtitleCollections.put(collection);
+        }
+
+        return {
+          'success': valid.length,
+          'failed': requested.length - valid.length,
+        };
+      });
 
       logInfo(
         'SubtitleRepository: Batch delete completed - '
@@ -135,7 +221,10 @@ class SubtitleRepository {
   Future<List<SubtitleLine>> getMarkedLines(int collectionId) async {
     logInfo('SubtitleRepository: Fetching marked lines for collection $collectionId');
     try {
-      final markedLines = await getMarkedSubtitleLines(collectionId);
+      final collection = await _isar.subtitleCollections.get(collectionId);
+      final markedLines =
+          collection?.lines.where((line) => line.marked).toList() ??
+              const <SubtitleLine>[];
       logInfo('SubtitleRepository: Found ${markedLines.length} marked lines');
       return markedLines;
     } catch (e) {
@@ -148,8 +237,14 @@ class SubtitleRepository {
   Future<List<SubtitleLine>> getLinesWithComments(int collectionId) async {
     logInfo('SubtitleRepository: Fetching lines with comments for collection $collectionId');
     try {
-      final linesWithComments = await getAllSubtitleLinesWithComments(collectionId);
-      logInfo('SubtitleRepository: Found ${linesWithComments.length} lines with comments');
+      final collection = await _isar.subtitleCollections.get(collectionId);
+      final linesWithComments = collection?.lines
+              .where((line) => line.comment?.trim().isNotEmpty == true)
+              .toList() ??
+          const <SubtitleLine>[];
+      logInfo(
+        'SubtitleRepository: Found ${linesWithComments.length} lines with comments',
+      );
       return linesWithComments;
     } catch (e) {
       logError('SubtitleRepository: Error fetching lines with comments: $e');
@@ -228,7 +323,7 @@ class SubtitleRepository {
     );
 
     try {
-      final collection = await isar.subtitleCollections.get(collectionId);
+      final collection = await _isar.subtitleCollections.get(collectionId);
       if (collection == null) {
         throw Exception('Subtitle collection $collectionId not found');
       }
@@ -238,9 +333,9 @@ class SubtitleRepository {
         entries: entries,
       );
 
-      await isar.writeTxn(() async {
+      await _isar.writeTxn(() async {
         collection.lines = reconciled;
-        await isar.subtitleCollections.put(collection);
+        await _isar.subtitleCollections.put(collection);
       });
 
       logInfo(
@@ -298,7 +393,20 @@ class SubtitleRepository {
   Future<void> updateLastEditedSession(int sessionId) async {
     logInfo('SubtitleRepository: Updating last edited session to $sessionId');
     try {
-      await updateLastEditedSession(sessionId);
+      if (sessionId <= 0) {
+        throw ArgumentError.value(
+          sessionId,
+          'sessionId',
+          'Session ID must be positive.',
+        );
+      }
+
+      await _isar.writeTxn(() async {
+        final preferences = await _isar.preferences.where().findFirst() ??
+            Preferences(autoSave: true);
+        preferences.lastEditedSession = sessionId;
+        await _isar.preferences.put(preferences);
+      });
       logInfo('SubtitleRepository: Successfully updated last edited session');
     } catch (e) {
       logError('SubtitleRepository: Error updating last edited session: $e');
@@ -310,7 +418,8 @@ class SubtitleRepository {
   Future<bool> getSessionEditMode(int sessionId) async {
     logInfo('SubtitleRepository: Fetching edit mode for session $sessionId');
     try {
-      final editMode = await getSessionEditMode(sessionId);
+      final session = await _isar.sessions.get(sessionId);
+      final editMode = session?.editMode ?? false;
       logInfo('SubtitleRepository: Session $sessionId edit mode: $editMode');
       return editMode;
     } catch (e) {
