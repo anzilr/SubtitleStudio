@@ -26,17 +26,13 @@ Avoid commits that combine file moves, reformatting, state-management replacemen
 
 ## Platform gate
 
-Every migration step should remain compilable for:
+The migration must preserve Android, iOS, macOS, Windows, and Linux support.
 
-- Android
-- iOS
-- macOS
-- Windows
-- Linux
-
-Android/Windows/Linux can be tested locally where available. iOS/macOS compilation is checked by GitHub Actions on macOS runners.
-
-A migration PR is not considered stable while a platform compilation job is failing.
+During active refactoring, GitHub Actions intentionally runs only analyzer and
+unit/regression tests to conserve Actions minutes. Android/Windows/Linux can be
+smoke-tested locally when convenient. A full cross-platform compilation gate
+will be run deliberately before the refactor is proposed for integration; it
+is not run on ordinary checkpoint commits.
 
 ## State-management target
 
@@ -52,7 +48,11 @@ Do not route high-frequency playback/playhead updates through broad application 
 
 ## Large-file split policy
 
-Split large files by responsibility using normal Dart imports. Do not use `part` files merely to reduce visible file length.
+Split large files by responsibility. Prefer normal Dart imports for independent
+widgets, services, models, and controllers. A `part` file is acceptable for
+private extensions or private UI helpers that intentionally remain in the same
+library and require access to the owning State object's private members; it
+must represent a real responsibility boundary, not just arbitrary line counts.
 
 Examples:
 
@@ -60,7 +60,8 @@ Examples:
 - video surface / controls / tracks / fullscreen / subtitle overlay;
 - waveform data / viewport / editing / rendering.
 
-When a tracked file is moved, prefer a move-only commit before changing its contents so Git can detect history cleanly.
+When a tracked file is moved, prefer a move-only commit before changing its
+contents so Git can detect history cleanly.
 
 ## Compatibility shims
 
@@ -76,17 +77,25 @@ The Isar schema/data migration requires its own compatibility plan, backup/resto
 
 ## Baseline CI
 
-To conserve GitHub Actions minutes during the migration, ordinary refactor commits do **not** run the full cross-platform matrix.
+To conserve GitHub Actions minutes, ordinary refactor commits do not trigger
+Actions. Updating `.github/ci-checkpoint` (or manually using
+`workflow_dispatch`) runs one Ubuntu quality job containing:
 
-The matrix runs only when:
+- `flutter pub get`;
+- `flutter analyze --no-fatal-infos --no-fatal-warnings`;
+- `flutter test` when committed tests exist.
 
-- `.github/ci-checkpoint` is deliberately updated; or
-- the workflow is started manually with `workflow_dispatch`.
+Use a checkpoint roughly every 10 commits or after a major migration milestone.
+Do not trigger a checkpoint for tiny file moves, comments, or intermediate
+extractions.
 
-Use a checkpoint roughly every 10 commits or after a major migration milestone. Do not trigger the full matrix for tiny file moves, comment changes, or intermediate extraction commits.
+`pubspec.lock` is committed to the repository, so the quality workflow is
+read-only and does not create bot commits or upload temporary lock artifacts.
 
-The cross-platform workflow intentionally copies `.env.example` to `.env` because the current `pubspec.yaml` declares `.env` as an asset.
+The former `.env` Flutter asset and client-side privileged credentials have
+been removed. CI no longer creates an `.env` file. Any future feature that
+requires privileged credentials must use a trusted server-side service or a
+user-owned credential stored with an appropriate platform-secure mechanism.
 
-This is a temporary compatibility measure. The application should later be changed so `.env` is genuinely optional and privileged secrets are never packaged in the client.
-
-The workflow also skips `flutter test` only when no committed test files exist. Once regression tests are added, tests become a normal required check.
+A full Android/iOS/macOS/Windows/Linux compilation matrix is deferred until a
+deliberate pre-integration gate.
