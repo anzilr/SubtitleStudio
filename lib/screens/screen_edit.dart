@@ -3289,7 +3289,8 @@ Future<void> _deleteSelectedSubtitles() async {
             ..original = originalLine.original
             ..edited = originalLine.edited
             ..marked = originalLine.marked
-            ..comment = originalLine.comment;
+            ..comment = originalLine.comment
+            ..resolved = originalLine.resolved;
           
           final delta = SubtitleLineDelta()
             ..changeType = 'delete'
@@ -3308,7 +3309,8 @@ Future<void> _deleteSelectedSubtitles() async {
               ..original = originalLine.original
               ..edited = originalLine.edited
               ..marked = originalLine.marked
-              ..comment = originalLine.comment;
+              ..comment = originalLine.comment
+              ..resolved = originalLine.resolved;
             
             final afterCopy = SubtitleLine()
               ..index = cleanedLine.index
@@ -3317,7 +3319,8 @@ Future<void> _deleteSelectedSubtitles() async {
               ..original = cleanedLine.original
               ..edited = cleanedLine.edited
               ..marked = cleanedLine.marked
-              ..comment = cleanedLine.comment;
+              ..comment = cleanedLine.comment
+              ..resolved = cleanedLine.resolved;
             
             final delta = SubtitleLineDelta()
               ..changeType = 'modify'
