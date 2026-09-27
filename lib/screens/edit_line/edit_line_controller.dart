@@ -258,7 +258,7 @@ class EditLineController extends Notifier<EditLineState> {
 
       _setState(state.copyWith(
         isLoading: false,
-        errorMessage: 'Failed to initialize: $e',
+        errorMessage: 'Could not open this subtitle line. Please try again.',
       ));
     }
   }

@@ -199,7 +199,7 @@ class SourceViewController extends Notifier<SourceViewState> {
       await AppLogger.instance.info('Loaded source view for file: ${state.filePath}');
       
     } catch (e) {
-      emit(state.toError('Failed to load file: $e'));
+      emit(state.toError('Could not load this subtitle file.'));
       await AppLogger.instance.error(
         'Error loading file in source view: $e',
         context: 'SourceViewController._loadFileContent',
@@ -373,7 +373,7 @@ class SourceViewController extends Notifier<SourceViewState> {
       }
       
     } catch (e) {
-      emit(state.toSaveError('Failed to save file: $e'));
+      emit(state.toSaveError('Could not save the subtitle file.'));
       await AppLogger.instance.error(
         'Error saving file in source view: $e',
         context: 'SourceViewController.saveFile',
@@ -441,7 +441,7 @@ class SourceViewController extends Notifier<SourceViewState> {
       }
       
     } catch (e) {
-      emit(state.toSaveError('Failed to save file as: $e'));
+      emit(state.toSaveError('Could not save the subtitle file to that location.'));
       await AppLogger.instance.error(
         'Error saving file as in source view: $e',
         context: 'SourceViewController.saveAsFile',

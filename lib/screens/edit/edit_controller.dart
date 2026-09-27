@@ -172,7 +172,7 @@ class EditController extends Notifier<EditState> {
 
       _setState(state.copyWith(
         isLoading: false,
-        errorMessage: 'Failed to initialize: $e',
+        errorMessage: 'Could not open the editor. Please try again.',
       ));
     }
   }
@@ -346,7 +346,7 @@ class EditController extends Notifier<EditState> {
       );
 
       _setState(state.copyWith(
-        errorMessage: 'Failed to delete line: $e',
+        errorMessage: 'Could not delete the subtitle line. Please try again.',
       ));
     }
   }
@@ -385,7 +385,7 @@ class EditController extends Notifier<EditState> {
       );
 
       _setState(state.copyWith(
-        errorMessage: 'Failed to delete selected lines: $e',
+        errorMessage: 'Could not delete the selected subtitles. Please try again.',
       ));
     }
   }
@@ -499,7 +499,7 @@ class EditController extends Notifier<EditState> {
       );
 
       _setState(state.copyWith(
-        errorMessage: 'Failed to load video: $e',
+        errorMessage: 'Could not load the selected video. Please try another file.',
       ));
     }
   }
@@ -573,7 +573,7 @@ class EditController extends Notifier<EditState> {
       );
 
       _setState(state.copyWith(
-        errorMessage: 'Failed to load secondary subtitle: $e',
+        errorMessage: 'Could not load the secondary subtitle file.',
       ));
     }
   }
@@ -614,7 +614,7 @@ class EditController extends Notifier<EditState> {
       );
 
       _setState(state.copyWith(
-        errorMessage: 'Failed to use original as secondary: $e',
+        errorMessage: 'Could not use the original subtitle as secondary.',
       ));
     }
   }
@@ -715,7 +715,7 @@ class EditController extends Notifier<EditState> {
       );
 
       _setState(state.copyWith(
-        errorMessage: 'Failed to sync source view: $e',
+        errorMessage: 'Could not save Source View changes. Please try again.',
       ));
     }
   }

@@ -85,7 +85,7 @@ class HomeController extends Notifier<HomeState> {
 
       state = state.copyWith(
         isLoading: false,
-        errorMessage: 'Failed to load sessions: $e',
+        errorMessage: 'Could not load recent sessions. Please try again.',
       );
     }
   }
@@ -169,7 +169,7 @@ class HomeController extends Notifier<HomeState> {
       );
 
       state = state.copyWith(
-        errorMessage: 'Failed to delete session: $e',
+        errorMessage: 'Could not delete the session. Please try again.',
       );
 
       rethrow;
