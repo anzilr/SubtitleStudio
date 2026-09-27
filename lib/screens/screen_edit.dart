@@ -113,8 +113,8 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
   late TextEditingController _goToController;  bool _showSecondarySubtitles = true; // Add this field
   bool _isRangeSelectionActive = false;
   int? _rangeStartIndex;
-  bool _floatingControlsEnabled = false; // Track floating controls state
-  bool _isMsoneEnabled = false; // Track MSone features status
+  bool get _floatingControlsEnabled => _editState.floatingControlsEnabled;
+  bool get _isMsoneEnabled => _editState.isMsoneEnabled;
   double _resizeRatio = 0.35; // Track the resize ratio for desktop layout
   Timer? _resizeRatioSaveTimer; // Timer for debouncing resize ratio saves
   bool _isResizeRatioLoaded = false; // Track if resize ratio has been loaded from preferences
@@ -149,7 +149,7 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
   final ScrollController _sourceScrollController = ScrollController(); // Separate scroll controller for source view
 
   // Layout switching support
-  bool _isLayout1 = true; // Track layout preference (layout1 = default, layout2 = swapped)
+  bool get _isLayout1 => _editState.isLayout1;
   
   // Waveform support
   bool _isWaveformVisible = false; // Track if waveform is visible
@@ -220,9 +220,6 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
     _itemPositionsListener.itemPositions.addListener(_updateScrollbarPosition);
     
     updateLastEditedSession(widget.sessionId);
-    _loadFloatingControlsPreference();
-    _loadMsonePreference();
-    _loadLayoutPreference(); // Load layout preference
     _loadResizeRatio(); // Load saved resize ratio
     _loadMobileResizeRatio(); // Load saved mobile resize ratio
     _registerHotkeyShortcuts(); // Register hotkey shortcuts
@@ -351,46 +348,6 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
     if (_waveformKey.currentState != null) {
       (_waveformKey.currentState as dynamic).updateSubtitles(subtitleLines);
     }
-  }
-
-  // Load floating controls preference
-  Future<void> _loadFloatingControlsPreference() async {
-    // Migrated to BLoC - floating controls already loaded by cubit.initialize()
-    // Just sync local state from controller state
-    final state = _editState;
-    if (!mounted) return;
-    
-    setState(() {
-      _floatingControlsEnabled = state.floatingControlsEnabled;
-    });
-  }
-
-  // Load MSone features preference
-  Future<void> _loadMsonePreference() async {
-    // Migrated to BLoC - MSone preference already loaded by cubit.initialize()
-    // Just sync local state from controller state
-    final state = _editState;
-    if (!mounted) return;
-    
-    setState(() {
-      _isMsoneEnabled = state.isMsoneEnabled;
-    });
-  }
-
-  // Load layout preference
-  Future<void> _loadLayoutPreference() async {
-    // Migrated to BLoC - layout preference already loaded by cubit.initialize()
-    // Just sync local state from controller state
-    final state = _editState;
-    if (!mounted) return;
-    
-    if (kDebugMode) {
-      print('DEBUG: Layout preference loaded from cubit: ${state.isLayout1 ? 'layout1' : 'layout2'}');
-    }
-    
-    setState(() {
-      _isLayout1 = state.isLayout1;
-    });
   }
 
   // Build subtitle list interface
@@ -747,16 +704,7 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
 
   // Toggle floating controls
   void _toggleFloatingControls(bool value) {
-    // Migrated to BLoC - delegate to cubit
     _controller.updateFloatingControls(value);
-    
-    // Update local state from cubit
-    if (mounted) {
-      final state = _editState;
-      setState(() {
-        _floatingControlsEnabled = state.floatingControlsEnabled;
-      });
-    }
   }
 
   /// Toggle waveform visibility
@@ -4976,24 +4924,24 @@ Future<void> _deleteSelectedSubtitles() async {
   Widget build(BuildContext context) {
     ref.watch(
       editControllerProvider.select(
-        (state) => (state.selectedIndices, state.isSelectionMode),
+        (state) => (
+          state.selectedIndices,
+          state.isSelectionMode,
+          state.floatingControlsEnabled,
+          state.isMsoneEnabled,
+          state.isLayout1,
+        ),
       ),
     );
 
     ref.listen<EditState>(editControllerProvider, (previous, next) {
-      final preferencesChanged =
-          _floatingControlsEnabled != next.floatingControlsEnabled ||
-          _isMsoneEnabled != next.isMsoneEnabled ||
-          _isLayout1 != next.isLayout1 ||
+      final resizeChanged =
           _resizeRatio != next.resizeRatio ||
           _mobileVideoResizeRatio != next.mobileVideoResizeRatio;
 
-      if (!preferencesChanged || !mounted) return;
+      if (!resizeChanged || !mounted) return;
 
       setState(() {
-        _floatingControlsEnabled = next.floatingControlsEnabled;
-        _isMsoneEnabled = next.isMsoneEnabled;
-        _isLayout1 = next.isLayout1;
         _resizeRatio = next.resizeRatio;
         _mobileVideoResizeRatio = next.mobileVideoResizeRatio;
       });
