@@ -103,7 +103,6 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
   List<SimpleSubtitleLine> _originalSecondarySubtitles = []; // Store original format for passing to EditSubtitleScreen
   final ItemScrollController _itemScrollController = ItemScrollController();
   final ItemPositionsListener _itemPositionsListener = ItemPositionsListener.create();
-  final ScrollController _scrollbarController = ScrollController(); // For custom scrollbar
   final ValueNotifier<double> _scrollbarThumbOffset = ValueNotifier<double>(0.0);
   bool _isDraggingScrollbar = false;
   int? _highlightedIndex;  final GlobalKey<VideoPlayerWidgetState> _videoPlayerKey = GlobalKey();
@@ -268,7 +267,6 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
     });
 
     // Check if tutorial should be shown
-    _checkTutorial();
   }
   
   /// Creates initial checkpoint snapshot for accurate restoration
@@ -783,7 +781,6 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
     hotkey.MSoneHotkeyManager.instance.unregisterMainEditScreenShortcuts();
     
     _sourceScrollController.dispose(); // Dispose source view scroll controller
-    _scrollbarController.dispose(); // Dispose custom scrollbar controller
     _scrollbarThumbOffset.dispose();
     _goToController.dispose();
     super.dispose();
@@ -4692,11 +4689,6 @@ Future<void> _deleteSelectedSubtitles() async {
     // Reload secondary subtitles after returning from EditSubtitleScreen
     // This ensures any changes made in EditSubtitleScreen are reflected here
     await _loadSavedSecondarySubtitle(subtitleLines);
-  }
-
-  // Tutorial methods
-  Future<void> _checkTutorial() async {
-    // This is now handled by FirstTimeInstructions widget
   }
 
   List<String> _getEditInstructions() {
