@@ -4,11 +4,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart' as fp;
 import 'package:subtitle_studio/database/models/models.dart';
+import 'package:subtitle_studio/database/database_instance.dart';
 import 'package:subtitle_studio/utils/platform_file_handler.dart';
 import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/widgets/session_selection_sheet.dart';
-import 'package:subtitle_studio/main.dart';
 import 'package:subtitle_studio/services/checkpoint_manager.dart';
 
 /// Project Manager for .msone files
