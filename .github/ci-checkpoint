@@ -1,16 +1,17 @@
-Riverpod migration checkpoint 8
+Riverpod migration checkpoint 9
 Date: 2026-09-27
 Checks:
 - flutter analyze
 - flutter test
 
-Scope since checkpoint 7:
-- Split Edit-Line dialog/menu actions into a Dart part file
-- Split Edit-Line persistence/update/save actions into a Dart part file
-- Split Edit-Line responsive layout into a Dart part file
-- Split Edit-Line repeat engine into a Dart part file
-- Split Edit-Line video/secondary-subtitle actions into a Dart part file
-- Split Edit-Line navigation/seek actions into a Dart part file
-- Reduce screen_edit_line.dart from ~5,119 lines to ~2,770 lines
+Scope since checkpoint 8:
+- Safe State helper usage across extracted Editor parts
+- Removed legacy Provider theme lookups from both editors
+- Replaced initial-file fixed delay with frame readiness
+- Split Edit-Line preferences into part file
+- Split Edit-Line time helpers into part file
+- Split Edit-Line shortcut handlers into part file
+- Split Edit-Line initialization/readiness helpers into part file
+- Split Edit-Line line actions into part file
 
 Platform builds intentionally disabled.
