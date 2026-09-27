@@ -647,10 +647,22 @@ List<SubtitleLine> removeHearingImpairedText(List<SubtitleLine> subtitles) {
     // Rejoin lines with newlines to preserve formatting
     final finalText = cleanedLines.join('\n').trim();
 
-    // Only include subtitles that have meaningful content after cleaning
+    // Only include subtitles that have meaningful content after cleaning.
+    // Return a new embedded object instead of mutating the caller's line. This
+    // is important for checkpoint/delta generation, which needs the original
+    // pre-cleanup object to remain unchanged for undo.
     if (finalText.isNotEmpty && !_isOnlySpecialCharacters(finalText)) {
-      subtitle.original = finalText;
-      cleanedSubtitles.add(subtitle);
+      cleanedSubtitles.add(
+        SubtitleLine()
+          ..index = subtitle.index
+          ..startTime = subtitle.startTime
+          ..endTime = subtitle.endTime
+          ..original = finalText
+          ..edited = subtitle.edited
+          ..marked = subtitle.marked
+          ..comment = subtitle.comment
+          ..resolved = subtitle.resolved,
+      );
     }
   }
 
