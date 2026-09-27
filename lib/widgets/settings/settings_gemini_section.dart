@@ -175,7 +175,9 @@ extension _SettingsGeminiSection on _SettingsSheetState {
                   Expanded(
                     child: _availableModels.isEmpty
                         ? OutlinedButton.icon(
-                            onPressed: _fetchAvailableModels,
+                            onPressed: () => _fetchAvailableModels(
+                              forceRefresh: true,
+                            ),
                             icon: const Icon(Icons.refresh),
                             label: const Text('Refresh Models'),
                           )

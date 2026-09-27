@@ -50,7 +50,7 @@ extension _SettingsAsyncActions on _SettingsSheetState {
   }
 
   /// Fetch available Gemini models from API
-  Future<void> _fetchAvailableModels() async {
+  Future<void> _fetchAvailableModels({bool forceRefresh = false}) async {
     _setSettingsState(() {
       _isLoadingModels = true;
     });
@@ -58,6 +58,7 @@ extension _SettingsAsyncActions on _SettingsSheetState {
     try {
       final models = await GeminiModelsService.fetchAvailableModels(
         apiKey: _geminiApiKey,
+        forceRefresh: forceRefresh,
       );
       if (mounted) {
         _setSettingsState(() {
