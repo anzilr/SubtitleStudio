@@ -1,10 +1,16 @@
-Riverpod migration checkpoint 7d
+Riverpod migration checkpoint 8
 Date: 2026-09-28
 Checks:
 - flutter analyze
 - flutter test
 
-Correction after checkpoint 7c:
-- Updated Home last-opened sorting tests for persisted activity timestamps and deterministic legacy fallback
+Scope since checkpoint 7d:
+- Keep migration quality workflow read-only
+- Update migration safety documentation to current analyzer/test cadence
+- Migrate audio-track and playback-speed selectors to RadioGroup
+- Replace remaining app-source withOpacity deprecations
+- Add coarse Linux/macOS logger diagnostics without machine identifiers
+- Harden session activity store edge-case tests
+- Remove stale README legacy state-management note
 
 Platform builds intentionally disabled.
