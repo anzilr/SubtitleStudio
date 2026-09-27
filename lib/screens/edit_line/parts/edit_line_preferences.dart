@@ -43,42 +43,15 @@ extension _EditLinePreferences on EditSubtitleScreenState {
     _applyPreferenceSnapshot(preferences);
   }
 
-  Future<void> _loadMsoneStatus() async {
-    final preferences = await _loadPreferenceSnapshot();
-    if (!mounted) return;
-    _setEditLineState(() {
-      _isMsoneEnabled = preferences.isMsoneEnabled;
-    });
-  }
-
   Future<void> _reloadAllSettings() async {
     final preferences = await _loadPreferenceSnapshot();
     _applyPreferenceSnapshot(preferences);
-  }
-
-  Future<void> _loadColorHistory() async {
-    final preferences = await _loadPreferenceSnapshot();
-    if (!mounted) return;
-    _setEditLineState(() {
-      _colorHistory
-        ..clear()
-        ..addAll(preferences.colorHistory);
-    });
   }
 
   Future<void> _saveColorHistory() async {
     await _editLineController.saveColorHistory(
       List<Color>.unmodifiable(_colorHistory),
     );
-  }
-
-  Future<void> _loadShowOriginalLine() async {
-    final preferences = await _loadPreferenceSnapshot();
-    if (!mounted) return;
-    _setEditLineState(() {
-      _showOriginalLine = preferences.showOriginalLine;
-    });
-    _applyShowOriginalLine();
   }
 
   Future<void> _saveShowOriginalLine(bool value) async {
@@ -98,17 +71,6 @@ extension _EditLinePreferences on EditSubtitleScreenState {
     _applyShowOriginalLine();
   }
 
-  Future<void> _loadAutoSaveWithNavigation() async {
-    final preferences = await _loadPreferenceSnapshot();
-    if (!mounted) return;
-
-    _setEditLineState(() {
-      _autoSaveWithNavigation = preferences.showOriginalLine
-          ? preferences.autoSaveWithNavigation
-          : true;
-    });
-  }
-
   Future<void> _saveAutoSaveWithNavigation(bool value) async {
     _setEditLineState(() {
       _autoSaveWithNavigation = value;
@@ -117,37 +79,6 @@ extension _EditLinePreferences on EditSubtitleScreenState {
       'autoSaveWithNavigation',
       value,
     );
-  }
-
-  Future<void> _loadSaveToFileEnabled() async {
-    final preferences = await _loadPreferenceSnapshot();
-    if (!mounted) return;
-    _setEditLineState(() {
-      _isSaveToFileEnabled = preferences.saveToFileEnabled;
-    });
-  }
-
-  Future<void> _loadAutoResizeOnKeyboard() async {
-    final preferences = await _loadPreferenceSnapshot();
-    if (!mounted) return;
-    _setEditLineState(() {
-      _autoResizeOnKeyboard = preferences.autoResizeOnKeyboard;
-    });
-  }
-
-  Future<void> _loadShowOriginalTextField() async {
-    try {
-      final preferences = await _loadPreferenceSnapshot();
-      if (!mounted) return;
-      _setEditLineState(() {
-        _showOriginalTextField = preferences.showOriginalTextField;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      _setEditLineState(() {
-        _showOriginalTextField = true;
-      });
-    }
   }
 
   Future<void> _saveShowOriginalTextField(bool value) async {
@@ -167,36 +98,6 @@ extension _EditLinePreferences on EditSubtitleScreenState {
         context: 'EditSubtitleScreen._saveShowOriginalTextField',
       );
     }
-  }
-
-  Future<void> _loadSavedVideoPath() async {
-    if (!_isEditMode && !widget.isNewSubtitle) return;
-
-    final preferences = await _loadPreferenceSnapshot();
-    final savedPath = preferences.videoPath;
-    if (savedPath == null || !mounted) return;
-
-    _setEditLineState(() {
-      _selectedVideoPath = savedPath;
-      _isVideoVisible = true;
-      _isVideoLoaded = true;
-    });
-  }
-
-  Future<void> _loadResizeRatio() async {
-    final preferences = await _loadPreferenceSnapshot();
-    final ratio = preferences.resizeRatio;
-
-    await logInfo(
-      'Loading resize ratio: $ratio',
-      context: 'EditSubtitleScreen._loadResizeRatio',
-    );
-
-    if (!mounted) return;
-    _setEditLineState(() {
-      _resizeRatio = ratio;
-      _isResizeRatioLoaded = true;
-    });
   }
 
   Future<void> _saveResizeRatio(double ratio) async {
@@ -222,32 +123,6 @@ extension _EditLinePreferences on EditSubtitleScreenState {
     );
   }
 
-  Future<void> _loadMobileResizeRatio() async {
-    if (!mounted) return;
-
-    try {
-      final preferences = await _loadPreferenceSnapshot();
-      if (!mounted) return;
-
-      _setEditLineState(() {
-        _mobileVideoResizeRatio = preferences.mobileVideoResizeRatio;
-        _isMobileResizeRatioLoaded = true;
-      });
-    } catch (e) {
-      logError(
-        'Error loading mobile resize ratio',
-        error: e,
-        context: 'EditSubtitleScreen._loadMobileResizeRatio',
-      );
-
-      if (!mounted) return;
-      _setEditLineState(() {
-        _mobileVideoResizeRatio = 0.4;
-        _isMobileResizeRatioLoaded = true;
-      });
-    }
-  }
-
   void _saveMobileResizeRatio(double ratio) {
     _mobileResizeRatioSaveTimer?.cancel();
     _mobileResizeRatioSaveTimer = Timer(
@@ -267,14 +142,6 @@ extension _EditLinePreferences on EditSubtitleScreenState {
         }
       },
     );
-  }
-
-  Future<void> _loadLayoutPreference() async {
-    final preferences = await _loadPreferenceSnapshot();
-    if (!mounted) return;
-    _setEditLineState(() {
-      _layoutPreference = preferences.layoutPreference;
-    });
   }
 
   Future<void> _saveAutoResizeOnKeyboard(bool value) async {

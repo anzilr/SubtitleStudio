@@ -40,6 +40,7 @@ import 'package:subtitle_studio/utils/unicode_text_input_formatter.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
 import 'package:subtitle_studio/screens/edit_line/edit_line_controller.dart';
+import 'package:subtitle_studio/screens/edit_line/repositories/edit_line_repository.dart';
 import 'package:subtitle_studio/screens/edit_line/widgets/edit_text_field.dart';
 import 'package:subtitle_studio/screens/edit_line/widgets/time_component_field.dart';
 import 'package:subtitle_studio/screens/edit_line/widgets/edit_line_video_pane.dart';
