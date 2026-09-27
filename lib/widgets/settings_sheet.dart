@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/app/repositories/app_preferences_repository.dart';
-import 'package:subtitle_studio/database/database_helper.dart'; // Add this import for clearAllApplicationData
 import 'package:subtitle_studio/utils/app_info.dart'; // Add this import
 import 'package:subtitle_studio/utils/update_manager.dart'; // Add this import
 import 'package:subtitle_studio/screens/screen_help.dart';

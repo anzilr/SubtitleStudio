@@ -193,7 +193,9 @@ extension _SettingsDestructiveSection on _SettingsSheetState {
                   
                   try {
                     // Clear all application data
-                    await clearAllApplicationData();
+                    await ref
+                        .read(appDataMaintenanceRepositoryProvider)
+                        .clearAllApplicationData();
                     
                     if (!mounted) return;
                     
@@ -232,8 +234,10 @@ extension _SettingsDestructiveSection on _SettingsSheetState {
                     
                     // Show error message
                     scaffoldMessenger.showSnackBar(
-                      SnackBar(
-                        content: Text('Failed to clear data: ${e.toString()}'),
+                      const SnackBar(
+                        content: Text(
+                          'Could not clear all application data. Please try again.',
+                        ),
                         backgroundColor: Colors.red,
                       ),
                     );
