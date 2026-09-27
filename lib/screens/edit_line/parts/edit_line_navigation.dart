@@ -165,7 +165,7 @@ extension _EditLineNavigation on EditSubtitleScreenState {
     }
 
     // Navigate to the specified subtitle line
-    setState(() {
+    _setEditLineState(() {
       _fetchSubtitleLine(subtitleId, lineIndex);
     });
 

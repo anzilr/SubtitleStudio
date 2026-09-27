@@ -40,7 +40,7 @@ extension _EditLineResponsiveLayout on EditSubtitleScreenState {
                               
                               // Update current line if it matches
                               if (_subtitleLine != null && _subtitleLine!.index == subtitleIndex + 1) {
-                                setState(() {
+                                _setEditLineState(() {
                                   _subtitleLine!.comment = comment;
                                 });
                               }
@@ -154,7 +154,7 @@ extension _EditLineResponsiveLayout on EditSubtitleScreenState {
                         _subtitleUpdateTimer = Timer(const Duration(milliseconds: 100), () {
                           WidgetsBinding.instance.addPostFrameCallback((_) {
                             if (mounted) {
-                              setState(() {
+                              _setEditLineState(() {
                                 _markSubtitlesForRegeneration();
                                 _generateSubtitles();
                               });
@@ -174,7 +174,7 @@ extension _EditLineResponsiveLayout on EditSubtitleScreenState {
                           
                           // Update current line if it matches
                           if (_subtitleLine != null && _subtitleLine!.index == subtitleIndex + 1) {
-                            setState(() {
+                            _setEditLineState(() {
                               _subtitleLine!.comment = comment;
                             });
                           }
@@ -192,7 +192,7 @@ extension _EditLineResponsiveLayout on EditSubtitleScreenState {
                       onPlayStateChanged: (isPlaying) {
                         // Only update if the state actually changed to avoid unnecessary rebuilds
                         if (mounted && _isVideoPlaying != isPlaying) {
-                          setState(() {
+                          _setEditLineState(() {
                             _isVideoPlaying = isPlaying;
                           });
                         }

@@ -33,7 +33,7 @@ extension _EditLineDialogActions on EditSubtitleScreenState {
         _saveShowOriginalTextField(!_showOriginalTextField);
         break;
       case 'toggleFormatted':
-        setState(() {
+        _setEditLineState(() {
           isRawEnabled = !isRawEnabled;
         });
         break;
@@ -147,7 +147,7 @@ extension _EditLineDialogActions on EditSubtitleScreenState {
     bool hasResumed = false;
     
     // Mark dialog as open
-    setState(() => _isCommentDialogOpen = true);
+    _setEditLineState(() => _isCommentDialogOpen = true);
     
     // Normal mode or fallback - use the standard comment dialog
     CommentDialog.show(
@@ -171,7 +171,7 @@ extension _EditLineDialogActions on EditSubtitleScreenState {
           );
           
           if (success) {
-            setState(() {
+            _setEditLineState(() {
               _subtitleLine!.comment = comment;
             });
             
@@ -215,7 +215,7 @@ extension _EditLineDialogActions on EditSubtitleScreenState {
           );
           
           if (success) {
-            setState(() {
+            _setEditLineState(() {
               _subtitleLine!.comment = null;
             });
             
@@ -246,7 +246,7 @@ extension _EditLineDialogActions on EditSubtitleScreenState {
     ).then((_) {
       // Mark dialog as closed when dismissed
       if (mounted) {
-        setState(() => _isCommentDialogOpen = false);
+        _setEditLineState(() => _isCommentDialogOpen = false);
       }
       
       // This executes when the dialog is dismissed (by canceling without save/delete)
@@ -295,7 +295,7 @@ extension _EditLineDialogActions on EditSubtitleScreenState {
                 
                 // Update current line if it matches
                 if (_subtitleLine != null && _subtitleLine!.index == index + 1) {
-                      setState(() {
+                      _setEditLineState(() {
                         _subtitleLine!.comment = comment;
                       });
                     }
@@ -319,7 +319,7 @@ extension _EditLineDialogActions on EditSubtitleScreenState {
                 
                 // Update current line if it matches
                 if (_subtitleLine != null && _subtitleLine!.index == index + 1) {
-                  setState(() {
+                  _setEditLineState(() {
                     _subtitleLine!.resolved = resolved;
                   });
                 }
@@ -356,7 +356,7 @@ extension _EditLineDialogActions on EditSubtitleScreenState {
                   
                   // Update current line if it matches
                   if (_subtitleLine != null && _subtitleLine!.index == index + 1) {
-                    setState(() {
+                    _setEditLineState(() {
                       _subtitleLine!.edited = newText;
                     });
                   }
@@ -403,7 +403,7 @@ extension _EditLineDialogActions on EditSubtitleScreenState {
                   // Re-fetch the current subtitle line to get updated data
                   final currentIndex = _subtitleLine!.index - 1;
                   if (currentIndex >= 0 && currentIndex < _subtitle!.lines.length) {
-                    setState(() {
+                    _setEditLineState(() {
                       _subtitleLine = _subtitle!.lines[currentIndex];
                       _originalController.text = _subtitleLine!.original;
                       _editedController.text = _subtitleLine!.edited ?? '';
@@ -437,7 +437,7 @@ extension _EditLineDialogActions on EditSubtitleScreenState {
                 // Re-fetch the current subtitle line to get updated data
                 final currentIndex = _subtitleLine!.index - 1;
                 if (currentIndex >= 0 && currentIndex < _subtitle!.lines.length) {
-                  setState(() {
+                  _setEditLineState(() {
                     _subtitleLine = _subtitle!.lines[currentIndex];
                     _originalController.text = _subtitleLine!.original;
                     _editedController.text = _subtitleLine!.edited ?? '';

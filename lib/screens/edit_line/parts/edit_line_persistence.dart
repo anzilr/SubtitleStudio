@@ -3,7 +3,7 @@ part of '../../screen_edit_line.dart';
 extension _EditLinePersistence on EditSubtitleScreenState {
   Future<void> _fetchSubtitleLine(subtitleId, lineIndex) async {
     // Clear any existing validation errors when loading a new line
-    setState(() {
+    _setEditLineState(() {
       _startTimeError = null;
       _endTimeError = null;
       _timeOrderError = null;
@@ -16,7 +16,7 @@ extension _EditLinePersistence on EditSubtitleScreenState {
     if (widget.index > _subtitle!.lines.length) {
       if (widget.isNewSubtitle || _isEditMode) {
         // Create an empty subtitle line when in edit mode or creating a new subtitle
-        setState(() {
+        _setEditLineState(() {
           _subtitleLine =
               SubtitleLine()
                 ..index =
@@ -55,7 +55,7 @@ extension _EditLinePersistence on EditSubtitleScreenState {
         lineIndex >= 0 &&
         lineIndex < _subtitle!.lines.length) {
       _subtitleLine = _subtitle?.lines[lineIndex];
-      setState(() {
+      _setEditLineState(() {
         _originalController.text = _subtitleLine!.original;
         // Only set edited text if it exists, otherwise leave it empty
         _editedController.text =
@@ -155,7 +155,7 @@ extension _EditLinePersistence on EditSubtitleScreenState {
           _timeOrderError != null) {
         // Expand time section and highlight errors
         if (!_isTimeVisible) {
-          setState(() {
+          _setEditLineState(() {
             _isTimeVisible = true;
           });
 
@@ -297,7 +297,7 @@ extension _EditLinePersistence on EditSubtitleScreenState {
         _storeInitialValues();
 
         // Clear validation errors after successful save
-        setState(() {
+        _setEditLineState(() {
           _startTimeError = null;
           _endTimeError = null;
           _timeOrderError = null;
@@ -353,7 +353,7 @@ extension _EditLinePersistence on EditSubtitleScreenState {
           _timeOrderError != null) {
         // Expand time section and highlight errors
         if (!_isTimeVisible) {
-          setState(() {
+          _setEditLineState(() {
             _isTimeVisible = true;
           });
 
@@ -456,7 +456,7 @@ extension _EditLinePersistence on EditSubtitleScreenState {
 
         // Clear validation errors after successful save
         if (mounted) {
-          setState(() {
+          _setEditLineState(() {
             _startTimeError = null;
             _endTimeError = null;
             _timeOrderError = null;
@@ -765,7 +765,7 @@ extension _EditLinePersistence on EditSubtitleScreenState {
   }
 
   Future<void> _addInitialSubtitleLine() async {
-    setState(() {
+    _setEditLineState(() {
       _isEditMode = true; // Switch to edit mode
       _isTimeVisible = true; // Show time fields
     });

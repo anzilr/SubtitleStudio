@@ -10,7 +10,7 @@ extension _EditLineRepeatEngine on EditSubtitleScreenState {
       return;
     }
 
-    setState(() {
+    _setEditLineState(() {
       _isRepeatModeEnabled = !_isRepeatModeEnabled;
     });
 

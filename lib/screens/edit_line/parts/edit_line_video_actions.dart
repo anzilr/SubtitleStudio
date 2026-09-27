@@ -51,7 +51,7 @@ extension _EditLineVideoActions on EditSubtitleScreenState {
             );
           }).toList();
 
-      setState(() {
+      _setEditLineState(() {
         _subtitles = newSubtitles;
         _needSubtitleRegeneration = false;
       });
@@ -69,7 +69,7 @@ extension _EditLineVideoActions on EditSubtitleScreenState {
     );
 
     if (filePath != null) {
-      setState(() {
+      _setEditLineState(() {
         _selectedVideoPath = filePath;
         _isVideoVisible = true;
         _isVideoLoaded = true;
@@ -247,7 +247,7 @@ extension _EditLineVideoActions on EditSubtitleScreenState {
   }
 
   void _generateSecondarySubtitles() {
-    setState(() {
+    _setEditLineState(() {
       _secondarySubtitlesForPlayer =
           _secondarySubtitles.asMap().entries.map((entry) {
             final index =
@@ -274,7 +274,7 @@ extension _EditLineVideoActions on EditSubtitleScreenState {
 
   void _toggleSecondarySubtitles() {
     // Toggle visibility
-    setState(() {
+    _setEditLineState(() {
       _showSecondarySubtitles = !_showSecondarySubtitles;
     });
 
@@ -320,7 +320,7 @@ extension _EditLineVideoActions on EditSubtitleScreenState {
           subtitleCollectionId: widget.subtitleId,
           videoPlayerState: _videoPlayerKey.currentState,
           onSecondarySubtitlesLoaded: (secondarySubtitles) {
-            setState(() {
+            _setEditLineState(() {
               _secondarySubtitles = secondarySubtitles;
               _showSecondarySubtitles = true;
               _generateSecondarySubtitles();
@@ -353,7 +353,7 @@ extension _EditLineVideoActions on EditSubtitleScreenState {
         // Update the current subtitle line if it matches
         // Note: _subtitleLine.index is 1-based, so we need to check subtitleIndex + 1
         if (_subtitleLine != null && _subtitleLine!.index == subtitleIndex + 1) {
-          setState(() {
+          _setEditLineState(() {
             _subtitleLine!.marked = isMarked;
           });
         }
@@ -391,7 +391,7 @@ extension _EditLineVideoActions on EditSubtitleScreenState {
       onSubtitlesUpdated: () {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted) return;
-          setState(() {
+          _setEditLineState(() {
             _markSubtitlesForRegeneration();
             _generateSubtitles();
           });
@@ -401,7 +401,7 @@ extension _EditLineVideoActions on EditSubtitleScreenState {
       onSubtitleCommentUpdated: _handleVideoPlayerCommentUpdated,
       onPlayStateChanged: (isPlaying) {
         if (!mounted) return;
-        setState(() {
+        _setEditLineState(() {
           _isVideoPlaying = isPlaying;
         });
       },
@@ -428,7 +428,7 @@ extension _EditLineVideoActions on EditSubtitleScreenState {
 
       if (_subtitleLine != null &&
           _subtitleLine!.index == subtitleIndex + 1) {
-        setState(() {
+        _setEditLineState(() {
           _subtitleLine!.comment = comment;
         });
       }
