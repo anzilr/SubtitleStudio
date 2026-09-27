@@ -13,7 +13,7 @@
 //
 // Architecture Overview:
 // - Uses Isar database for local data persistence
-// - Provider pattern for state management (theme, preferences)
+// - Riverpod for application state management
 // - Media Kit for video playback functionality
 // - Custom logging system for debugging and error tracking
 // - Modular widget structure for reusable components
