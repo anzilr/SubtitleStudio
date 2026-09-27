@@ -217,27 +217,37 @@ Future<void> saveSubtitleChangesToDatabase(
   await isar.writeTxn(() async {
     final existingSubtitle = await isar.subtitleCollections.get(subtitleId);
     if (existingSubtitle != null) {
-      // Get the line before changes for checkpoint
-      lineBeforeChanges = beforeLine ?? existingSubtitle.lines[updatedLine.index - 1];
-      
-      // Check if anything has changed (before we modify anything)
-      if (sessionId != null && lineBeforeChanges != null) {
-        shouldCreateCheckpoint = 
-            lineBeforeChanges!.startTime != updatedLine.startTime ||
-            lineBeforeChanges!.endTime != updatedLine.endTime ||
+      final listIndex = updatedLine.index - 1;
+      if (listIndex < 0 || listIndex >= existingSubtitle.lines.length) {
+        throw RangeError.index(
+          listIndex,
+          existingSubtitle.lines,
+          'updatedLine.index',
+        );
+      }
+
+      lineBeforeChanges = beforeLine ?? existingSubtitle.lines[listIndex];
+
+      final timingChanged =
+          lineBeforeChanges!.startTime != updatedLine.startTime ||
+          lineBeforeChanges!.endTime != updatedLine.endTime;
+
+      if (sessionId != null) {
+        shouldCreateCheckpoint =
+            timingChanged ||
             lineBeforeChanges!.original != updatedLine.original ||
             lineBeforeChanges!.edited != updatedLine.edited;
       }
-      
-      // Update the specific line based on the index
-      int index = updatedLine.index;
-      existingSubtitle.lines[index - 1] = updatedLine;
 
-      // Sort the lines intelligently (preserves overlaps, handles positioning tags)
-      // This uses enhanced sorting: time -> index -> tag priority
-      existingSubtitle.lines = sortAndReindexSubtitleLines(existingSubtitle.lines);
+      existingSubtitle.lines[listIndex] = updatedLine;
 
-      // Save the updated subtitle collection
+      // Text-only edits do not affect ordering. Re-sort only when timing moved
+      // the cue relative to neighboring cues.
+      if (timingChanged) {
+        existingSubtitle.lines =
+            sortAndReindexSubtitleLines(existingSubtitle.lines);
+      }
+
       await isar.subtitleCollections.put(existingSubtitle);
     }
   });
