@@ -34,7 +34,6 @@ import 'package:subtitle_studio/database/models/preferences_model.dart';
 import 'package:subtitle_studio/database/database_helper.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
-import 'package:subtitle_studio/main.dart'; // For isar global instance
 
 /// Dictionary widget for Olam offline dictionary lookup
 class OlamDictionaryWidget extends StatefulWidget {
