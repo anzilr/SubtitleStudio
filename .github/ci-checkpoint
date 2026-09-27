@@ -1,16 +1,18 @@
-Riverpod migration checkpoint 8
+Riverpod migration checkpoint 9
 Date: 2026-09-28
 Checks:
 - flutter analyze
 - flutter test
 
-Scope since checkpoint 7d:
-- Keep migration quality workflow read-only
-- Update migration safety documentation to current analyzer/test cadence
-- Migrate audio-track and playback-speed selectors to RadioGroup
-- Replace remaining app-source withOpacity deprecations
-- Add coarse Linux/macOS logger diagnostics without machine identifiers
-- Harden session activity store edge-case tests
-- Remove stale README legacy state-management note
+Scope since checkpoint 8:
+- Split video player controls by responsibility
+- Split Waveform rendering/interactions/editing helpers
+- Move Waveform loader into rendering part
+- Chain existing global Flutter/platform error handlers
+- Exclude generated Isar sources from analyzer noise
+- Self-heal corrupt Home session activity metadata
+- Inject Waveform subtitle persistence repository
+- Inject Editor video/preferences persistence repository
+- Remove static PreferencesModel dependency from VideoRepository
 
 Platform builds intentionally disabled.
