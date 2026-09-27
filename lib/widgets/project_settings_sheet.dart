@@ -10,7 +10,6 @@ import 'package:subtitle_studio/utils/saf_path_converter.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/utils/subtitle_parser.dart';
 import 'package:subtitle_studio/widgets/marked_lines_sheet.dart';
-import 'package:subtitle_studio/main.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';
 import 'dart:async';
