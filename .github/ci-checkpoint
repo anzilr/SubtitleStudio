@@ -1,20 +1,13 @@
-Riverpod migration checkpoint 7
-Date: 2026-09-27
+Riverpod migration checkpoint 7b
+Date: 2026-09-28
 Checks:
 - flutter analyze
 - flutter test
 
-Scope since checkpoint 6b:
-- Inject Isar into active Editor SubtitleRepository
-- Fix recursive updateLastEditedSession/getSessionEditMode repository bugs
-- Align README with Riverpod-only application state
-- Hide remaining raw log-load exception text from users
-- Modernize AI/Waveform/UI color APIs
-- Modernize Color serialization and unnecessary imports
-- Track real per-session last-opened timestamps without Isar schema changes
-- Update DropdownButtonFormField initialization API
-- Update scroll-cache and switch color APIs
-- Migrate Gemini explanation request to prompt API
-- Migrate karaoke selector to RadioGroup
+Corrections after checkpoint 7:
+- Removed remaining Provider/ThemeProvider references
+- Switched legacy theme reads to inherited ThemeData brightness
+- Migrated ListView scrollCacheExtent to ScrollCacheExtent.pixels
+- Moved active subtitle cache fields out of Dart extension into State
 
 Platform builds intentionally disabled.
