@@ -108,7 +108,7 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
   Set<int> get _selectedIndices => _editState.selectedIndices;
   bool get _isSelectionMode => _editState.isSelectionMode;
   SubtitleCollection? subtitleCollection; // Make nullable to avoid late initialization error
-  List<SubtitleLine> subtitleLines = []; // Initialize with empty list
+  List<SubtitleLine> get subtitleLines => _editState.subtitleLines;
   late String fileName;
   late Future<List<SubtitleLine>> subtitleLinesFuture;
   String? _selectedVideoPath;
@@ -243,7 +243,6 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
     _createInitialCheckpoint();
     
     subtitleLinesFuture = _fetchSubtitleLines().then((subtitles) async {
-      _controller.replaceSubtitleLinesLocally(subtitles);
       subtitleCollection = (await _controller.loadSubtitleCollection())!;
       
   await _loadSavedVideoPath();

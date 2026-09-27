@@ -57,15 +57,8 @@ extension _EditSelectionActions on _EditScreenState {
   final result = await _controller.deleteSelectedLines();
   final successCount = result['success'] ?? 0;
   final failCount = result['failed'] ?? 0;
-
-  // Update local state from controller state
-  final state = _editState;
-  _setEditorState(() {
-    subtitleLines = state.subtitleLines;
-  });
-
-  // Update controller with all new lines
-  _controller.replaceSubtitleLinesLocally(subtitleLines);
+  // Repaint from the controller-owned subtitle state.
+  _setEditorState(() {});
 
   // Regenerate subtitles for video player and update version
   _updateSubtitlesWithVersion(subtitleLines);
@@ -87,18 +80,12 @@ extension _EditSelectionActions on _EditScreenState {
     // Riverpod migration - delegate to the Riverpod controller
     await _controller.refreshSubtitleLines();
     
-    // Update local state from controller state
-    final state = _editState;
-    final updatedSubtitles = state.subtitleLines;
-    
-    _controller.replaceSubtitleLinesLocally(updatedSubtitles);
+    final updatedSubtitles = subtitleLines;
     final newGeneratedSubtitles = _generateSubtitles(updatedSubtitles);
 
     if (!mounted) return;
-    
-    // Update the state with new data
+
     _setEditorState(() {
-      subtitleLines = updatedSubtitles;
       _subtitles = newGeneratedSubtitles;
     });
 

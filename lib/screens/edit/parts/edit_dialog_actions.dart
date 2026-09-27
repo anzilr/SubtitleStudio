@@ -83,18 +83,8 @@ extension _EditDialogActions on _EditScreenState {
         
         // Riverpod migration - delegate to the Riverpod controller which handles all business logic
         await _controller.updateComment(index, comment);
-        
-        // Update local state from controller state
-        final state = _editState;
-        _setEditorState(() {
-          subtitleLines = state.subtitleLines;
-        });
-        
-        // Update controller
-        if (index >= 0 && index < subtitleLines.length) {
-          _controller.updateSubtitleLineLocally(index, subtitleLines[index]);
-        }
-        
+        // Repaint from the controller-owned subtitle state.
+        _setEditorState(() {});
         // Update all subtitle displays (video + waveform)
         _updateAllSubtitleDisplays();
         
@@ -112,18 +102,8 @@ extension _EditDialogActions on _EditScreenState {
       onCommentDeleted: line.comment?.isNotEmpty == true ? () async {
         // Riverpod migration - delegate to the Riverpod controller which handles all business logic
         await _controller.updateComment(index, null);
-        
-        // Update local state from controller state
-        final state = _editState;
-        _setEditorState(() {
-          subtitleLines = state.subtitleLines;
-        });
-        
-        // Update controller
-        if (index >= 0 && index < subtitleLines.length) {
-          _controller.updateSubtitleLineLocally(index, subtitleLines[index]);
-        }
-        
+        // Repaint from the controller-owned subtitle state.
+        _setEditorState(() {});
         // Update all subtitle displays (video + waveform)
         _updateAllSubtitleDisplays();
         
@@ -258,23 +238,25 @@ extension _EditDialogActions on _EditScreenState {
               try {
                 // Update the subtitle line
                 if (index < subtitleLines.length) {
-                  final updatedLine = subtitleLines[index];
-                  updatedLine.edited = newText;
-                  
-                  // Save to database
-                  await _controller.saveLineChanges(updatedLine);
-                  
-                  // Update UI
-                  _setEditorState(() {
-                    subtitleLines[index] = updatedLine;
-                  });
-                  
-                  // Update controller
-                  _controller.updateSubtitleLineLocally(index, updatedLine);
-                  
-                  // Update all subtitle displays (video + waveform)
+                  final currentLine = subtitleLines[index];
+                  final updatedLine = SubtitleLine()
+                    ..index = currentLine.index
+                    ..startTime = currentLine.startTime
+                    ..endTime = currentLine.endTime
+                    ..original = currentLine.original
+                    ..edited = newText
+                    ..marked = currentLine.marked
+                    ..comment = currentLine.comment
+                    ..resolved = currentLine.resolved;
+
+                  await _controller.saveLineChanges(
+                    updatedLine,
+                    beforeLine: currentLine,
+                  );
+
+                  _setEditorState(() {});
                   _updateAllSubtitleDisplays();
-                  
+
                   SnackbarHelper.showSuccess(context, 'Subtitle text updated');
                 }
               } catch (e) {
@@ -385,23 +367,25 @@ extension _EditDialogActions on _EditScreenState {
               try {
                 // Update the subtitle line
                 if (index < subtitleLines.length) {
-                  final updatedLine = subtitleLines[index];
-                  updatedLine.edited = newText;
-                  
-                  // Save to database
-                  await _controller.saveLineChanges(updatedLine);
-                  
-                  // Update UI
-                  _setEditorState(() {
-                    subtitleLines[index] = updatedLine;
-                  });
-                  
-                  // Update controller
-                  _controller.updateSubtitleLineLocally(index, updatedLine);
-                  
-                  // Update all subtitle displays (video + waveform)
+                  final currentLine = subtitleLines[index];
+                  final updatedLine = SubtitleLine()
+                    ..index = currentLine.index
+                    ..startTime = currentLine.startTime
+                    ..endTime = currentLine.endTime
+                    ..original = currentLine.original
+                    ..edited = newText
+                    ..marked = currentLine.marked
+                    ..comment = currentLine.comment
+                    ..resolved = currentLine.resolved;
+
+                  await _controller.saveLineChanges(
+                    updatedLine,
+                    beforeLine: currentLine,
+                  );
+
+                  _setEditorState(() {});
                   _updateAllSubtitleDisplays();
-                  
+
                   SnackbarHelper.showSuccess(context, 'Subtitle text updated');
                 }
               } catch (e) {
@@ -433,19 +417,12 @@ extension _EditDialogActions on _EditScreenState {
               sessionId: widget.sessionId,
               subtitleCollectionId: widget.subtitleCollectionId,
               onCheckpointRestored: () async {
-                // Reload subtitle lines after checkpoint restoration
+                await _controller.refreshSubtitleLines();
+                final lines = subtitleLines;
                 _setEditorState(() {
-                  subtitleLinesFuture = _controller.loadSubtitleLines();
+                  subtitleLinesFuture = Future.value(lines);
                 });
-                
-                // Wait for the future to complete and update the UI
-                final lines = await subtitleLinesFuture;
-                _setEditorState(() {
-                  subtitleLines = lines;
-                  _controller.replaceSubtitleLinesLocally(lines);
-                });
-                
-                // Update all subtitle displays (video + waveform)
+
                 _updateAllSubtitleDisplays();
               },
             ),
@@ -461,20 +438,13 @@ extension _EditDialogActions on _EditScreenState {
             sessionId: widget.sessionId,
             subtitleCollectionId: widget.subtitleCollectionId,
             onCheckpointRestored: () async {
-              // Reload subtitle lines after checkpoint restoration
-              _setEditorState(() {
-                subtitleLinesFuture = _controller.loadSubtitleLines();
-              });
-              
-              // Wait for the future to complete and update the UI
-              final lines = await subtitleLinesFuture;
-              _setEditorState(() {
-                subtitleLines = lines;
-                _controller.replaceSubtitleLinesLocally(lines);
-              });
-              
-              // Update all subtitle displays (video + waveform)
-              _updateAllSubtitleDisplays();
+              await _controller.refreshSubtitleLines();
+                final lines = subtitleLines;
+                _setEditorState(() {
+                  subtitleLinesFuture = Future.value(lines);
+                });
+
+                _updateAllSubtitleDisplays();
             },
           ),
         ),

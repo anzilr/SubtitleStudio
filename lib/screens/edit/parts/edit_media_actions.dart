@@ -37,14 +37,14 @@ extension _EditMediaActions on _EditScreenState {
 
   Future<List<SubtitleLine>> _fetchSubtitleLines() async {
     final subtitles = await _controller.loadSubtitleLines();
+    _controller.replaceSubtitleLinesLocally(subtitles);
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _setEditorState(() {
-          subtitleLines = subtitles;
           _subtitles = _generateSubtitles(subtitles);
         });
-        
-        // Ensure video player gets the updated subtitles
+
         if (_isVideoLoaded) {
           _updateVideoPlayerSubtitles();
         }

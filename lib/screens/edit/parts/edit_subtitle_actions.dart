@@ -183,18 +183,10 @@ extension _EditSubtitleActions on _EditScreenState {
     // Riverpod migration - delegate to the Riverpod controller which handles all business logic
     await _controller.markLine(index);
     
-    // Update local state from controller state
-    final state = _editState;
     _setEditorState(() {
-      subtitleLines = state.subtitleLines;
-      // Restore the highlighted index to prevent unwanted scrolling
+      // Restore the highlighted index to prevent unwanted scrolling.
       _highlightedIndex = previousHighlightedIndex;
     });
-    
-    // Update the controller
-    if (index >= 0 && index < subtitleLines.length) {
-      _controller.updateSubtitleLineLocally(index, subtitleLines[index]);
-    }
     
     // Regenerate subtitles for video player
     _updateSubtitlesWithVersion(subtitleLines);
@@ -362,18 +354,13 @@ extension _EditSubtitleActions on _EditScreenState {
         debugPrint('DEBUG: Hotkey re-registration complete (new subtitle path)');
 
         if (result == true) {
-          // Force complete refresh of the subtitle data
-          final updatedSubtitles = await _controller.loadSubtitleLines();
-          
+          await _controller.refreshSubtitleLines();
+          final updatedSubtitles = subtitleLines;
+
           if (!mounted) return;
-          
-          // Update state with new data
+
           _setEditorState(() {
-            subtitleLines = updatedSubtitles;
-            _controller.replaceSubtitleLinesLocally(updatedSubtitles);
             _subtitles = _generateSubtitles(updatedSubtitles);
-            
-            // Recreate the FutureBuilder's future to force it to rebuild
             subtitleLinesFuture = Future.value(updatedSubtitles);
           });
           
