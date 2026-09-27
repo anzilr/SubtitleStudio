@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/database/models/preferences_model.dart';
 import 'package:subtitle_studio/database/database_helper.dart'; // Add this import for clearAllApplicationData
 import 'package:subtitle_studio/utils/app_info.dart'; // Add this import
@@ -9,23 +10,22 @@ import 'package:subtitle_studio/utils/responsive_layout.dart';
 import 'feedback_widget.dart';
 import 'log_management_widget.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:provider/provider.dart';
-import '../themes/theme_provider.dart';
+import '../themes/theme_controller.dart';
 import 'package:flutter_gemini/flutter_gemini.dart';
 import 'package:subtitle_studio/services/gemini_models_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class SettingsSheet extends StatefulWidget {
+class SettingsSheet extends ConsumerStatefulWidget {
   final Function? onSettingsChanged;
   final String? initialSection;
 
   const SettingsSheet({super.key, this.onSettingsChanged, this.initialSection});
 
   @override
-  State<SettingsSheet> createState() => _SettingsSheetState();
+  ConsumerState<SettingsSheet> createState() => _SettingsSheetState();
 }
 
-class _SettingsSheetState extends State<SettingsSheet> {
+class _SettingsSheetState extends ConsumerState<SettingsSheet> {
   bool _isMsoneEnabled = false;
   bool _isSaveToFileEnabled = false; // New variable for save to file toggle
   int _maxLineLength = 32; // Variable for max line length setting
@@ -234,9 +234,10 @@ class _SettingsSheetState extends State<SettingsSheet> {
   }
 
   Widget _buildFontSection() {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final currentFontName = themeProvider.customFontName;
-    
+    final themeState = ref.watch(themeControllerProvider);
+    final themeController = ref.read(themeControllerProvider.notifier);
+    final currentFontName = themeState.customFontName;
+
     return ListTile(
       leading: const Icon(Icons.font_download, color: Colors.indigo),
       title: const Text('Custom App Font'),
@@ -249,7 +250,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
           if (currentFontName != null)
             IconButton(
               icon: const Icon(Icons.clear),
-              onPressed: () => themeProvider.setCustomFont(null),
+              onPressed: () => themeController.setCustomFont(null),
             ),
           IconButton(
             icon: const Icon(Icons.folder_open),
@@ -260,7 +261,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
               );
               
               if (result != null) {
-                await themeProvider.setCustomFont(result.files.single.path);
+                await themeController.setCustomFont(result.files.single.path);
               }
             },
           ),
