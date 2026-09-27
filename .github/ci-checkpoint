@@ -1,11 +1,11 @@
 Riverpod migration checkpoint 6b
-Date: 2026-09-26
+Date: 2026-09-27
 Checks:
 - flutter analyze
 - flutter test
 
 Corrections after checkpoint 6:
-- Fixed Dart directive order after video part-file extraction
-- Removed stale log export-path field/helper references
+- Fixed Dart export/part directive ordering after video file splits
+- Removed stale Log Management export-path state after Telegram client removal
 
 Platform builds intentionally disabled.
