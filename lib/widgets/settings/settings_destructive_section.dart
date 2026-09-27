@@ -36,6 +36,10 @@ extension _SettingsDestructiveSection on _SettingsSheetState {
                 );
                 
                 if (result == true) {
+                  _geminiApiKeySaveTimer?.cancel();
+                  _geminiApiKeySaveTimer = null;
+                  GeminiModelsService.clearCache();
+
                   await _preferencesRepository.clearAllPreferences();
                   await _loadSettings(); // Reload settings after clearing
                   if (widget.onSettingsChanged != null) {
@@ -172,6 +176,10 @@ extension _SettingsDestructiveSection on _SettingsSheetState {
                 );
                 
                 if (result == true && mounted) {
+                  _geminiApiKeySaveTimer?.cancel();
+                  _geminiApiKeySaveTimer = null;
+                  GeminiModelsService.clearCache();
+
                   // Store navigator for safe navigation after async
                   final navigator = Navigator.of(context);
                   final scaffoldMessenger = ScaffoldMessenger.of(context);
