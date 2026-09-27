@@ -4,13 +4,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 import 'package:subtitle_studio/features/waveform/providers/waveform_controller.dart';
 import 'package:subtitle_studio/features/waveform/state/waveform_state.dart';
 import 'package:subtitle_studio/features/waveform/state/waveform_event.dart';
 import 'package:subtitle_studio/features/waveform/widgets/waveform_painter.dart';
 import 'package:subtitle_studio/database/models/models.dart';
-import 'package:subtitle_studio/themes/theme_provider.dart';
 import 'package:subtitle_studio/widgets/settings_sheet.dart';
 import 'package:subtitle_studio/utils/time_parser.dart';
 import 'package:subtitle_studio/database/database_helper.dart' as db_helper;
@@ -201,11 +199,9 @@ class WaveformWidgetState extends riverpod.ConsumerState<WaveformWidget> {
   }
 
   Widget _buildLoadingState(WaveformLoading state) {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final brightness = Theme.of(context).brightness;
-    
-    // Use white for dark/classic themes, primary color for light theme
-    final loaderColor = (brightness == Brightness.dark || themeProvider.themeMode == ThemeMode.system)
+
+    final loaderColor = brightness == Brightness.dark
         ? Colors.white
         : Theme.of(context).colorScheme.primary;
     
@@ -789,11 +785,9 @@ class WaveformWidgetState extends riverpod.ConsumerState<WaveformWidget> {
 
   /// Get waveform color based on current theme
   Color _getWaveformColor(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final brightness = Theme.of(context).brightness;
-    
-    // For dark mode or classic theme, use blue
-    if (brightness == Brightness.dark || themeProvider.themeMode == ThemeMode.system) {
+
+    if (brightness == Brightness.dark) {
       return Colors.blue.shade400;
     }
     
