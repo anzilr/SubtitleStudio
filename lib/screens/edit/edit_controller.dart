@@ -3,6 +3,7 @@ import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/screens/edit/edit_state.dart';
 import 'package:subtitle_studio/screens/edit/repositories/subtitle_repository.dart';
+import 'package:subtitle_studio/screens/edit/repositories/editor_preferences_repository.dart';
 import 'package:subtitle_studio/screens/edit/repositories/screen_repository.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 import 'package:subtitle_studio/widgets/video_player_widget.dart';
@@ -30,8 +31,15 @@ final subtitleRepositoryProvider = Provider<SubtitleRepository>((ref) {
   return SubtitleRepository(ref.watch(isarProvider));
 });
 
+final editorPreferencesRepositoryProvider =
+    Provider<EditorPreferencesRepository>((ref) {
+  return EditorPreferencesRepository(ref.watch(isarProvider));
+});
+
 final videoRepositoryProvider = Provider<VideoRepository>((ref) {
-  return VideoRepository();
+  return VideoRepository(
+    ref.watch(editorPreferencesRepositoryProvider),
+  );
 });
 
 final editControllerProvider = NotifierProvider<EditController, EditState>(

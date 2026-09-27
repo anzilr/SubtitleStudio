@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:subtitle_studio/database/models/preferences_model.dart';
+import 'package:subtitle_studio/screens/edit/repositories/editor_preferences_repository.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 import 'package:subtitle_studio/utils/subtitle_parser.dart';
 
@@ -14,15 +14,15 @@ import 'package:subtitle_studio/utils/subtitle_parser.dart';
 /// - Secondary subtitle management
 /// - Video-related preference loading
 class VideoRepository {
-  static final VideoRepository _instance = VideoRepository._internal();
-  factory VideoRepository() => _instance;
-  VideoRepository._internal();
+  final EditorPreferencesRepository _preferences;
+
+  const VideoRepository(this._preferences);
 
   /// Get saved video path for a subtitle collection
   Future<String?> getSavedVideoPath(int collectionId) async {
     logInfo('VideoRepository: Fetching saved video path for collection $collectionId');
     try {
-      final path = await PreferencesModel.getVideoPath(collectionId);
+      final path = await _preferences.getVideoPath(collectionId);
       if (path != null) {
         logInfo('VideoRepository: Found saved video path: $path');
       } else {
@@ -39,7 +39,7 @@ class VideoRepository {
   Future<void> saveVideoPath(int collectionId, String path) async {
     logInfo('VideoRepository: Saving video path for collection $collectionId: $path');
     try {
-      await PreferencesModel.saveVideoPath(collectionId, path);
+      await _preferences.saveVideoPath(collectionId, path);
       logInfo('VideoRepository: Successfully saved video path');
     } catch (e) {
       logError('VideoRepository: Error saving video path: $e');
@@ -51,7 +51,7 @@ class VideoRepository {
   Future<void> removeVideoPath(int collectionId) async {
     logInfo('VideoRepository: Removing video path for collection $collectionId');
     try {
-      await PreferencesModel.removeVideoPath(collectionId);
+      await _preferences.removeVideoPath(collectionId);
       logInfo('VideoRepository: Successfully removed video path');
     } catch (e) {
       logError('VideoRepository: Error removing video path: $e');
@@ -64,8 +64,8 @@ class VideoRepository {
   Future<SecondarySubtitleData?> loadSavedSecondarySubtitle(int collectionId) async {
     logInfo('VideoRepository: Loading saved secondary subtitle for collection $collectionId');
     try {
-      final secondaryPath = await PreferencesModel.getSecondarySubtitlePath(collectionId);
-      final useOriginalAsSecondary = await PreferencesModel.getSecondaryIsOriginal(collectionId);
+      final secondaryPath = await _preferences.getSecondarySubtitlePath(collectionId);
+      final useOriginalAsSecondary = await _preferences.getSecondaryIsOriginal(collectionId);
       
       if (useOriginalAsSecondary) {
         logInfo('VideoRepository: Using original text as secondary subtitle');
@@ -117,9 +117,9 @@ class VideoRepository {
       int collectionId, String path) async {
     logInfo('VideoRepository: Saving and loading secondary subtitle for collection $collectionId: $path');
     try {
-      await PreferencesModel.saveSecondarySubtitlePath(collectionId, path);
+      await _preferences.saveSecondarySubtitlePath(collectionId, path);
       // Clear the "use original as secondary" flag
-      await PreferencesModel.setSecondaryIsOriginal(collectionId, false);
+      await _preferences.setSecondaryIsOriginal(collectionId, false);
       
       // Parse the subtitle file
       final subtitles = await _parseSubtitleFile(path);
@@ -140,10 +140,10 @@ class VideoRepository {
   Future<void> setUseOriginalAsSecondary(int collectionId, bool use) async {
     logInfo('VideoRepository: Setting use original as secondary for collection $collectionId: $use');
     try {
-      await PreferencesModel.setSecondaryIsOriginal(collectionId, use);
+      await _preferences.setSecondaryIsOriginal(collectionId, use);
       if (use) {
         // Clear external path when using original
-        await PreferencesModel.removeSecondarySubtitlePath(collectionId);
+        await _preferences.removeSecondarySubtitlePath(collectionId);
       }
       logInfo('VideoRepository: Successfully set use original as secondary');
     } catch (e) {
@@ -156,8 +156,8 @@ class VideoRepository {
   Future<void> clearSecondarySubtitle(int collectionId) async {
     logInfo('VideoRepository: Clearing secondary subtitle for collection $collectionId');
     try {
-      await PreferencesModel.removeSecondarySubtitlePath(collectionId);
-      await PreferencesModel.setSecondaryIsOriginal(collectionId, false);
+      await _preferences.removeSecondarySubtitlePath(collectionId);
+      await _preferences.setSecondaryIsOriginal(collectionId, false);
       logInfo('VideoRepository: Successfully cleared secondary subtitle');
     } catch (e) {
       logError('VideoRepository: Error clearing secondary subtitle: $e');
@@ -169,7 +169,7 @@ class VideoRepository {
   Future<bool> getFloatingControlsEnabled() async {
     logInfo('VideoRepository: Fetching floating controls preference');
     try {
-      final enabled = await PreferencesModel.getFloatingControlsEnabled();
+      final enabled = await _preferences.getFloatingControlsEnabled();
       logInfo('VideoRepository: Floating controls enabled: $enabled');
       return enabled;
     } catch (e) {
@@ -182,7 +182,7 @@ class VideoRepository {
   Future<void> saveFloatingControlsEnabled(bool enabled) async {
     logInfo('VideoRepository: Saving floating controls preference: $enabled');
     try {
-      await PreferencesModel.setFloatingControlsEnabled(enabled);
+      await _preferences.setFloatingControlsEnabled(enabled);
       logInfo('VideoRepository: Successfully saved floating controls preference');
     } catch (e) {
       logError('VideoRepository: Error saving floating controls preference: $e');
@@ -194,7 +194,7 @@ class VideoRepository {
   Future<bool> getMsoneEnabled() async {
     logInfo('VideoRepository: Fetching MSone features preference');
     try {
-      final enabled = await PreferencesModel.getMsoneEnabled();
+      final enabled = await _preferences.getMsoneEnabled();
       logInfo('VideoRepository: MSone features enabled: $enabled');
       return enabled;
     } catch (e) {
@@ -207,7 +207,7 @@ class VideoRepository {
   Future<void> saveMsoneEnabled(bool enabled) async {
     logInfo('VideoRepository: Saving MSone features preference: $enabled');
     try {
-      await PreferencesModel.setMsoneEnabled(enabled);
+      await _preferences.setMsoneEnabled(enabled);
       logInfo('VideoRepository: Successfully saved MSone features preference');
     } catch (e) {
       logError('VideoRepository: Error saving MSone features preference: $e');
@@ -219,7 +219,7 @@ class VideoRepository {
   Future<String> getLayoutPreference() async {
     logInfo('VideoRepository: Fetching layout preference');
     try {
-      final layout = await PreferencesModel.getSwitchLayout();
+      final layout = await _preferences.getSwitchLayout();
       logInfo('VideoRepository: Layout preference: $layout');
       return layout;
     } catch (e) {
@@ -232,7 +232,7 @@ class VideoRepository {
   Future<void> saveLayoutPreference(String layout) async {
     logInfo('VideoRepository: Saving layout preference: $layout');
     try {
-      await PreferencesModel.setSwitchLayout(layout);
+      await _preferences.setSwitchLayout(layout);
       logInfo('VideoRepository: Successfully saved layout preference');
     } catch (e) {
       logError('VideoRepository: Error saving layout preference: $e');
@@ -244,7 +244,7 @@ class VideoRepository {
   Future<double> getEditScreenResizeRatio() async {
     logInfo('VideoRepository: Fetching edit screen resize ratio');
     try {
-      final ratio = await PreferencesModel.getEditScreenResizeRatio();
+      final ratio = await _preferences.getEditScreenResizeRatio();
       logInfo('VideoRepository: Edit screen resize ratio: $ratio');
       return ratio;
     } catch (e) {
@@ -257,7 +257,7 @@ class VideoRepository {
   Future<void> saveEditScreenResizeRatio(double ratio) async {
     logInfo('VideoRepository: Saving edit screen resize ratio: $ratio');
     try {
-      await PreferencesModel.setEditScreenResizeRatio(ratio);
+      await _preferences.setEditScreenResizeRatio(ratio);
       logInfo('VideoRepository: Successfully saved resize ratio');
     } catch (e) {
       logError('VideoRepository: Error saving resize ratio: $e');
@@ -269,7 +269,7 @@ class VideoRepository {
   Future<double> getMobileVideoResizeRatio() async {
     logInfo('VideoRepository: Fetching mobile video resize ratio');
     try {
-      final ratio = await PreferencesModel.getMobileVideoResizeRatio();
+      final ratio = await _preferences.getMobileVideoResizeRatio();
       logInfo('VideoRepository: Mobile video resize ratio: $ratio');
       return ratio;
     } catch (e) {
@@ -282,7 +282,7 @@ class VideoRepository {
   Future<void> saveMobileVideoResizeRatio(double ratio) async {
     logInfo('VideoRepository: Saving mobile video resize ratio: $ratio');
     try {
-      await PreferencesModel.setMobileVideoResizeRatio(ratio);
+      await _preferences.setMobileVideoResizeRatio(ratio);
       logInfo('VideoRepository: Successfully saved mobile resize ratio');
     } catch (e) {
       logError('VideoRepository: Error saving mobile resize ratio: $e');
