@@ -1,19 +1,19 @@
-Riverpod/refactor quality checkpoint 12
+Riverpod/refactor quality checkpoint 13
 Date: 2026-09-27
 Checks:
 - flutter analyze
 - flutter test
 
-Scope since checkpoint 11:
-- Restored Edit Line TimeValidator import and cleaned stale imports
-- Extracted Editor video/waveform pane
-- Extracted Edit Line video pane
-- Unified formatting menu + hotkey formatting with tests
-- Consolidated duplicate no-video layout filtering
-- Extracted Editor utility tool sheets
-- Extracted Edit Line color picker sheet
-- Extracted save-location sheet
-- Extracted hearing-impaired cleanup service with tests
-- Updated stale BLoC/Cubit architecture comments
+Scope since checkpoint 12:
+- Replaced Editor navigation sleeps with frame/controller readiness
+- Removed redundant post-transaction delays
+- Added shared video-player frame readiness helper
+- Removed timer-based fullscreen comment guard
+- Removed remaining Editor navigation delays
+- Awaited video comment persistence callbacks
+- Synced orientation transitions to rendered frames
+- Modernized CommentDialog keyboard/focus handling
+- Migrated feedback sharing to current SharePlus API
+- Guarded feedback async UI updates after disposal
 
 Platform builds intentionally disabled.
