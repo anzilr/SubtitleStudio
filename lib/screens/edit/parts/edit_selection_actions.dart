@@ -53,19 +53,10 @@ extension _EditSelectionActions on _EditScreenState {
     }
   }
 
-  // Riverpod migration - use repository through the Riverpod controller for deletion
-  int successCount = 0;
-  int failCount = 0;
-
-  for (final index in sortedIndices) {
-    try {
-      await _controller.deleteLine(index);
-      successCount++;
-    } catch (e) {
-      failCount++;
-      if (kDebugMode) print('Error deleting index $index: $e');
-    }
-  }
+  // Delete all selected cues with one Isar transaction and one refresh.
+  final result = await _controller.deleteSelectedLines();
+  final successCount = result['success'] ?? 0;
+  final failCount = result['failed'] ?? 0;
 
   // Update local state from controller state
   final state = _editState;

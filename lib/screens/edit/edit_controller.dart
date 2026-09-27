@@ -360,31 +360,44 @@ class EditController extends Notifier<EditState> {
     }
   }
 
-  /// Delete multiple selected lines with checkpoint
-  Future<void> deleteSelectedLines() async {
-    try {
-      logInfo('EditController: Deleting ${state.selectedIndices.length} selected lines');
+  /// Delete all currently selected lines in one repository transaction.
+  ///
+  /// Returns the repository success/failure counts so the UI can report the
+  /// actual result without issuing one delete/refresh cycle per selected cue.
+  Future<Map<String, int>> deleteSelectedLines() async {
+    final selectedCount = state.selectedIndices.length;
 
-      if (state.selectedIndices.isEmpty) {
+    try {
+      logInfo(
+        'EditController: Deleting $selectedCount selected lines',
+      );
+
+      if (selectedCount == 0) {
         logWarning('EditController: No lines selected for deletion');
-        return;
+        return const {'success': 0, 'failed': 0};
       }
 
-      // Convert selected indices to list
-      final indices = state.selectedIndices.toList();
+      final indices = state.selectedIndices.toList(growable: false);
+      final result = await _subtitleRepo.batchDeleteLines(
+        subtitleCollectionId,
+        indices,
+      );
 
-      await _subtitleRepo.batchDeleteLines(subtitleCollectionId, indices);
-
-      // Clear selection and refresh
-      _setState(state.copyWith(
-        selectedIndices: {},
-        isSelectionMode: false,
-        isRangeSelectionActive: false,
-      ));
+      _setState(
+        state.copyWith(
+          selectedIndices: {},
+          isSelectionMode: false,
+          isRangeSelectionActive: false,
+        ),
+      );
 
       await refreshSubtitleLines();
 
-      logInfo('EditController: Selected lines deleted');
+      logInfo(
+        'EditController: Batch delete completed - '
+        'success: ${result['success']}, failed: ${result['failed']}',
+      );
+      return result;
     } catch (e, stackTrace) {
       logError(
         'EditController: Error deleting selected lines',
@@ -393,9 +406,17 @@ class EditController extends Notifier<EditState> {
         stackTrace: stackTrace,
       );
 
-      _setState(state.copyWith(
-        errorMessage: 'Could not delete the selected subtitles. Please try again.',
-      ));
+      _setState(
+        state.copyWith(
+          errorMessage:
+              'Could not delete the selected subtitles. Please try again.',
+        ),
+      );
+
+      return {
+        'success': 0,
+        'failed': selectedCount,
+      };
     }
   }
 
