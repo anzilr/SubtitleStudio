@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/utils/subtitle_sorting.dart';
-import 'package:subtitle_studio/database/models/preferences_model.dart';
+import 'package:subtitle_studio/screens/edit_line/repositories/edit_line_preferences_repository.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 import 'package:subtitle_studio/widgets/video_player_widget.dart'; // For Subtitle
 import 'package:subtitle_studio/utils/subtitle_parser.dart'; // For SimpleSubtitleLine
@@ -30,8 +30,9 @@ import 'package:subtitle_studio/utils/platform_file_handler.dart';
 /// - File I/O abstracted from UI concerns
 class EditLineRepository {
   final Isar _isar;
+  final EditLinePreferencesRepository _preferences;
 
-  EditLineRepository(this._isar);
+  EditLineRepository(this._isar, this._preferences);
 
   /// Fetch a single subtitle line by collection ID and index
   /// 
@@ -454,39 +455,24 @@ class EditLineRepository {
       return await logPerformance(
         'Load all edit line preferences',
         () async {
-          // Load all preferences in parallel for maximum performance
-          final results = await Future.wait([
-            PreferencesModel.getMsoneEnabled(),
-            PreferencesModel.getShowOriginalLine(),
-            PreferencesModel.getAutoSaveWithNavigation(),
-            PreferencesModel.getSaveToFileEnabled(),
-            PreferencesModel.getAutoResizeOnKeyboard(),
-            PreferencesModel.getMaxLineLength(),
-            PreferencesModel.getShowOriginalTextField(),
-            PreferencesModel.getVideoPath(collectionId),
-            PreferencesModel.getEditLineResizeRatio(),
-            PreferencesModel.getMobileVideoResizeRatio(),
-            PreferencesModel.getSwitchLayout(),
-            PreferencesModel.getColorHistory(),
-          ]);
+          final stored = await _preferences.load(collectionId);
 
           final preferences = EditLinePreferences(
-            isMsoneEnabled: results[0] as bool,
-            showOriginalLine: results[1] as bool,
-            autoSaveWithNavigation: results[2] as bool,
-            saveToFileEnabled: results[3] as bool,
-            autoResizeOnKeyboard: results[4] as bool,
-            maxLineLength: results[5] as int,
-            showOriginalTextField: results[6] as bool,
-            videoPath: results[7] as String?,
-            resizeRatio: results[8] as double,
-            mobileVideoResizeRatio: results[9] as double,
-            layoutPreference: results[10] as String,
-            colorHistory: (results[11] as List<String>)
-                .map((hex) => _parseColorFromHex(hex))
-                .where((color) => color != null)
-                .cast<Color>()
-                .toList(),
+            isMsoneEnabled: stored.msoneEnabled,
+            showOriginalLine: stored.showOriginalLine,
+            autoSaveWithNavigation: stored.autoSaveWithNavigation,
+            saveToFileEnabled: stored.saveToFileEnabled,
+            autoResizeOnKeyboard: stored.autoResizeOnKeyboard,
+            maxLineLength: stored.maxLineLength,
+            showOriginalTextField: stored.showOriginalTextField,
+            videoPath: stored.videoPath,
+            resizeRatio: stored.editLineResizeRatio,
+            mobileVideoResizeRatio: stored.mobileVideoResizeRatio,
+            layoutPreference: stored.switchLayout,
+            colorHistory: stored.colorHistory
+                .map(_parseColorFromHex)
+                .whereType<Color>()
+                .toList(growable: false),
           );
 
           await logInfo(
@@ -506,7 +492,6 @@ class EditLineRepository {
         context: 'EditLineRepository.loadAllPreferences',
       );
 
-      // Return default preferences on error
       return EditLinePreferences.defaults();
     }
   }
@@ -523,42 +508,12 @@ class EditLineRepository {
   /// Save individual preference
   Future<void> savePreference(String key, dynamic value) async {
     try {
-      switch (key) {
-        case 'msoneEnabled':
-          await PreferencesModel.setMsoneEnabled(value as bool);
-          break;
-        case 'showOriginalLine':
-          await PreferencesModel.setShowOriginalLine(value as bool);
-          break;
-        case 'autoSaveWithNavigation':
-          await PreferencesModel.setAutoSaveWithNavigation(value as bool);
-          break;
-        case 'saveToFileEnabled':
-          await PreferencesModel.setSaveToFileEnabled(value as bool);
-          break;
-        case 'autoResizeOnKeyboard':
-          await PreferencesModel.setAutoResizeOnKeyboard(value as bool);
-          break;
-        case 'maxLineLength':
-          await PreferencesModel.setMaxLineLength(value as int);
-          break;
-        case 'showOriginalTextField':
-          await PreferencesModel.setShowOriginalTextField(value as bool);
-          break;
-        case 'resizeRatio':
-          await PreferencesModel.setEditLineResizeRatio(value as double);
-          break;
-        case 'mobileVideoResizeRatio':
-          await PreferencesModel.setMobileVideoResizeRatio(value as double);
-          break;
-        case 'layoutPreference':
-          await PreferencesModel.setSwitchLayout(value as String);
-          break;
-        default:
-          await logWarning(
-            'Unknown preference key: $key',
-            context: 'EditLineRepository.savePreference',
-          );
+      final handled = await _preferences.savePreference(key, value);
+      if (!handled) {
+        await logWarning(
+          'Unknown preference key: $key',
+          context: 'EditLineRepository.savePreference',
+        );
       }
     } catch (e, stackTrace) {
       await logError(
@@ -578,7 +533,7 @@ class EditLineRepository {
     );
 
     try {
-      await PreferencesModel.saveVideoPath(collectionId, path);
+      await _preferences.saveVideoPath(collectionId, path);
       await logInfo(
         'Successfully saved video path',
         context: 'EditLineRepository.saveVideoPath',
@@ -601,7 +556,7 @@ class EditLineRepository {
     );
 
     try {
-      await PreferencesModel.removeVideoPath(collectionId);
+      await _preferences.removeVideoPath(collectionId);
       await logInfo(
         'Successfully removed video path',
         context: 'EditLineRepository.removeVideoPath',
@@ -622,7 +577,7 @@ class EditLineRepository {
       final colorStrings = colors
           .map((color) => '#${color.toARGB32().toRadixString(16).padLeft(8, '0')}')
           .toList();
-      await PreferencesModel.saveColorHistory(colorStrings);
+      await _preferences.saveColorHistory(colorStrings);
     } catch (e, stackTrace) {
       await logError(
         'Failed to save color history',

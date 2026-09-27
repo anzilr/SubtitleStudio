@@ -4,6 +4,7 @@ import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/screens/edit_line/edit_line_state.dart';
 import 'package:subtitle_studio/screens/edit_line/repositories/edit_line_repository.dart';
+import 'package:subtitle_studio/screens/edit_line/repositories/edit_line_preferences_repository.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 import 'package:subtitle_studio/widgets/video_player_widget.dart';
 import 'package:subtitle_studio/utils/subtitle_parser.dart';
@@ -41,8 +42,16 @@ final editLineConfigurationProvider = Provider<EditLineConfiguration>((ref) {
   );
 });
 
+final editLinePreferencesRepositoryProvider =
+    Provider<EditLinePreferencesRepository>((ref) {
+  return EditLinePreferencesRepository(ref.watch(isarProvider));
+});
+
 final editLineRepositoryProvider = Provider<EditLineRepository>((ref) {
-  return EditLineRepository(ref.watch(isarProvider));
+  return EditLineRepository(
+    ref.watch(isarProvider),
+    ref.watch(editLinePreferencesRepositoryProvider),
+  );
 });
 
 final editLineControllerProvider =
