@@ -65,6 +65,8 @@ import 'package:subtitle_studio/features/waveform/state/waveform_state.dart';
 import 'package:subtitle_studio/features/waveform/providers/waveform_controller.dart';
 import 'package:subtitle_studio/features/waveform/widgets/waveform_widget.dart';
 
+part 'edit/parts/edit_dialog_actions.dart';
+
 enum _SourceLeaveChoice { save, discard, cancel }
 
 class EditScreen extends riverpod.ConsumerStatefulWidget {
@@ -1213,36 +1215,7 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
         },
         onShowInMarkedLines: isMarked ? () {
           Navigator.pop(context);
-          _showMarkedLinesModalWithHighlight(subtitleLines[index].index);
-        } : null,
-        isMarked: isMarked,
-      ),
-    );
-  }
-
-  void _showEffectsForSingleLine(int index) {
-    final currentLine = subtitleLines[index];
-    final lineText = currentLine.edited ?? currentLine.original;
-    
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return SubtitleEffectsSheet(
-          selectedIndices: [index], // Convert to 0-based index
-          onApplyEffect: (effectType, effectConfig) {
-            _applyEffectToSingleLineFromBottomSheet(context, index, effectType, effectConfig);
-          },
-          subtitleLines: [currentLine], // Pass the current line
-          lineText: lineText, // Pass the line text
-        );
-      },
-    );
-  }
-
+        
   Future<void> _applyEffectToSingleLineFromBottomSheet(BuildContext context, int index, String effectType, Map<String, dynamic> effectConfig) async {
     try {
       final currentLine = subtitleLines[index];
@@ -2571,124 +2544,7 @@ Future<void> _deleteSelectedSubtitles() async {
         _showFindReplaceModal();
         break;
       case 'marked_lines':
-        _showMarkedLinesModal();
-        break;
-      case 'checkpoint_history':
-        _showCheckpointHistoryModal();
-        break;
-      case 'import_comments':
-        _showImportCommentsModal();
-        break;
-      case 'secondary_subtitle':
-        _showSecondarySubtitleModal();
-        break;
-      case 'toggle_secondary':
-        _toggleSecondarySubtitles(!_showSecondarySubtitles);
-        break;
-      case 'sync':
-        _showSyncModal();
-        break;
-      case 'remove_hearing_impaired':
-        _removeHearingImpairedLines();
-        break;
-      case 'banners':
-        _showInsertBannersModal();
-        break;
-      case 'malayalam_normalize':
-        _showMalayalamNormalizationModal();
-        break;
-      case 'submit_msone':
-        _showSubmitToMsoneModal();
-        break;
-      case 'settings':
-        _showSettingsModal();
-        break;
-      case 'help':
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const HelpScreen()),
-        );
-        break;
-    }
-  }
-
-  // Selection menu popup
-  void _showSelectionMenuModal({Offset? position}) {
-    showEditSelectionMenu(
-      context: context,
-      position: position,
-    ).then(_handleSelectionMenuSelection);
-  }
-
-  // Handle selection menu selection
-  void _handleSelectionMenuSelection(String? value) {
-    if (value == null) return;
-
-    switch (value) {
-      case 'copy':
-        _copySelectedSubtitles();
-        break;
-      case 'shift_times':
-        _showShiftSelectedTimesDialog();
-        break;
-      case 'delete':
-        _showBatchDeleteConfirmation();
-        break;
-      case 'select_by_index':
-        _showSelectByIndexDialog();
-        break;
-      case 'range_selection':
-        _toggleRangeSelectionMode();
-        break;
-    }
-  }
-
-  // Helper methods for menu actions
-  void _showGoToLineModal() {
-    showGotToLineModal(
-      context: context,
-      initialValue: '',
-      hintText: subtitleLines.length,
-      title: 'Go to line',
-      onSubmitted: (value) async {
-        final lineNumber = int.tryParse(value.trim());
-        if (lineNumber == null ||
-            lineNumber < 1 ||
-            lineNumber > subtitleLines.length) {
-          SnackbarHelper.showError(
-            context,
-            'Enter a line number between 1 and ${subtitleLines.length}',
-          );
-          return;
-        }
-
-        await _scrollToIndexWithLoading(lineNumber);
-        _highlightIndex(lineNumber - 1);
-
-        if (_isVideoLoaded) {
-          _seekToSubtitle(lineNumber - 1);
-        }
-      },
-    );
-  }
-
-  Future<void> _handleSave() async {
-    try {
-      if (_isSourceView) {
-        await _syncSourceViewToDatabase();
-      }
-
-      final subtitleCollection = await isar.subtitleCollections.get(widget.subtitleCollectionId);
-      if (subtitleCollection == null) {
-        if (mounted) SnackbarHelper.showError(context, 'Failed to load subtitle data');
-        return;
-      }
-
-      final currentLines = await fetchSubtitleLines(widget.subtitleCollectionId);
-      final srtContent = SrtCompiler.generateSrtContent(currentLines);
-      bool saveSuccessful = false;
-
-      // Attempt to save directly
+      mpt to save directly
       try {
         if (Platform.isMacOS) {
           final srtBookmark = subtitleCollection.macOsSrtBookmark;
@@ -3237,13 +3093,7 @@ Future<void> _deleteSelectedSubtitles() async {
     }
 
     // Always show comment dialog - marking happens when user presses 'Add' button
-    _showCommentDialogForLine(targetIndex);
-  }
-
-  void _handleFindReplaceShortcut() {
-    _showFindReplaceModal();
-  }
-
+  
   void _handleGotoLineShortcut() {
     _showGoToLineModal();
   }
