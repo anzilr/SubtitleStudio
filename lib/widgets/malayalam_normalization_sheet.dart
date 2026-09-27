@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/database/database_helper.dart';
 import 'package:subtitle_studio/utils/malayalam_normalizer.dart';
