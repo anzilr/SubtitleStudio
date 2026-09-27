@@ -603,43 +603,47 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
                 ],
               ),
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: RadioListTile<String>(
-                      title: Text(
-                        "Word",
-                        style: TextStyle(color: onSurfaceColor),
+              RadioGroup<String>(
+                groupValue: _karaokeEffectType,
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() => _karaokeEffectType = value);
+                  }
+                },
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: RadioListTile<String>(
+                        title: Text(
+                          "Word",
+                          style: TextStyle(color: onSurfaceColor),
+                        ),
+                        subtitle: Text(
+                          "Highlight word by word",
+                          style: TextStyle(color: mutedColor, fontSize: 12),
+                        ),
+                        value: 'word',
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
                       ),
-                      subtitle: Text(
-                        "Highlight word by word",
-                        style: TextStyle(color: mutedColor, fontSize: 12),
-                      ),
-                      value: 'word',
-                      groupValue: _karaokeEffectType,
-                      onChanged: (value) => setState(() => _karaokeEffectType = value!),
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
                     ),
-                  ),
-                  Expanded(
-                    child: RadioListTile<String>(
-                      title: Text(
-                        "Character",
-                        style: TextStyle(color: onSurfaceColor),
+                    Expanded(
+                      child: RadioListTile<String>(
+                        title: Text(
+                          "Character",
+                          style: TextStyle(color: onSurfaceColor),
+                        ),
+                        subtitle: Text(
+                          "Highlight character by character",
+                          style: TextStyle(color: mutedColor, fontSize: 12),
+                        ),
+                        value: 'character',
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
                       ),
-                      subtitle: Text(
-                        "Highlight character by character",
-                        style: TextStyle(color: mutedColor, fontSize: 12),
-                      ),
-                      value: 'character',
-                      groupValue: _karaokeEffectType,
-                      onChanged: (value) => setState(() => _karaokeEffectType = value!),
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
