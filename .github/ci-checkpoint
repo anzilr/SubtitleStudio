@@ -1,13 +1,10 @@
-Riverpod migration checkpoint 7b
+Riverpod migration checkpoint 7c
 Date: 2026-09-28
 Checks:
 - flutter analyze
 - flutter test
 
-Corrections after checkpoint 7:
-- Removed remaining Provider/ThemeProvider references
-- Switched legacy theme reads to inherited ThemeData brightness
-- Migrated ListView scrollCacheExtent to ScrollCacheExtent.pixels
-- Moved active subtitle cache fields out of Dart extension into State
+Correction after checkpoint 7b:
+- Imported Flutter ScrollCacheExtent rendering type for the migrated ListView cache API
 
 Platform builds intentionally disabled.
