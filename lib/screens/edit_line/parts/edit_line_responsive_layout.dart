@@ -215,7 +215,7 @@ extension _EditLineResponsiveLayout on EditSubtitleScreenState {
                         Icon(
                           Icons.movie_outlined,
                           size: 60,
-                          color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+                          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
                         ),
                         const SizedBox(height: 16),
                         Text(
