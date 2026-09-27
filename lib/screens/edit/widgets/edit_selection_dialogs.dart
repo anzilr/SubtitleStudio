@@ -398,3 +398,257 @@ class _SelectByIndexSheetState extends State<_SelectByIndexSheet> {
     );
   }
 }
+
+
+Future<void> showShiftSelectedTimesSheet({
+  required BuildContext context,
+  required String initialStartTime,
+  required String initialEndTime,
+  required Future<bool> Function(
+    String newStartTime,
+    String newEndTime,
+  ) onApply,
+}) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (_) => _ShiftSelectedTimesSheet(
+      initialStartTime: initialStartTime,
+      initialEndTime: initialEndTime,
+      onApply: onApply,
+    ),
+  );
+}
+
+class _ShiftSelectedTimesSheet extends StatefulWidget {
+  final String initialStartTime;
+  final String initialEndTime;
+  final Future<bool> Function(String, String) onApply;
+
+  const _ShiftSelectedTimesSheet({
+    required this.initialStartTime,
+    required this.initialEndTime,
+    required this.onApply,
+  });
+
+  @override
+  State<_ShiftSelectedTimesSheet> createState() =>
+      _ShiftSelectedTimesSheetState();
+}
+
+class _ShiftSelectedTimesSheetState
+    extends State<_ShiftSelectedTimesSheet> {
+  late final TextEditingController _startController;
+  late final TextEditingController _endController;
+  bool _isProcessing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _startController =
+        TextEditingController(text: widget.initialStartTime);
+    _endController =
+        TextEditingController(text: widget.initialEndTime);
+  }
+
+  @override
+  void dispose() {
+    _startController.dispose();
+    _endController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _apply() async {
+    if (_isProcessing) return;
+    setState(() => _isProcessing = true);
+
+    final shouldClose = await widget.onApply(
+      _startController.text,
+      _endController.text,
+    );
+
+    if (!mounted) return;
+    if (shouldClose) {
+      Navigator.pop(context);
+      return;
+    }
+    setState(() => _isProcessing = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final muted = colors.onSurface.withValues(alpha: 0.6);
+    final border = colors.onSurface.withValues(alpha: 0.12);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius:
+            const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+          left: 24,
+          right: 24,
+          top: 24,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.timer,
+                      color: Colors.orange,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Shift Selected Subtitles',
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Adjust timing for selected subtitle lines',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: muted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Enter new timecodes for the first and last selected subtitles. Only selected lines will be affected.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: muted,
+                ),
+              ),
+              const SizedBox(height: 24),
+              _timeField(
+                controller: _startController,
+                label: 'First selected subtitle starts at:',
+                isDark: isDark,
+                borderColor: border,
+              ),
+              const SizedBox(height: 16),
+              _timeField(
+                controller: _endController,
+                label: 'Last selected subtitle ends at:',
+                isDark: isDark,
+                borderColor: border,
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 50,
+                      child: OutlinedButton(
+                        onPressed: _isProcessing
+                            ? null
+                            : () => Navigator.pop(context),
+                        child: const Text('Cancel'),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: SizedBox(
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: _isProcessing ? null : _apply,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: _isProcessing
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text('Apply'),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _timeField({
+    required TextEditingController controller,
+    required String label,
+    required bool isDark,
+    required Color borderColor,
+  }) {
+    final colors = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: isDark
+                ? colors.onSurface.withValues(alpha: 0.05)
+                : Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: borderColor),
+          ),
+          child: TextField(
+            controller: controller,
+            decoration: InputDecoration(
+              hintText: '00:00:00,000',
+              prefixIcon: Icon(
+                Icons.access_time,
+                color: Theme.of(context).primaryColor,
+              ),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 16,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
