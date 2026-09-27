@@ -375,10 +375,12 @@ $emailBody''';
       
       // Share with files if available, otherwise just text
       if (files.isNotEmpty) {
-        await Share.shareXFiles(
-          files,
-          text: emailContent,
-          subject: 'Subtitle Studio - $_selectedCategory',
+        await SharePlus.instance.share(
+          ShareParams(
+            files: files,
+            text: emailContent,
+            subject: 'Subtitle Studio - $_selectedCategory',
+          ),
         );
         
         // Log the feedback submission
@@ -393,17 +395,28 @@ $emailBody''';
           duration: 6,
         );
       } else {
-        await Share.share(
-          emailContent,
-          subject: 'Subtitle Studio - $_selectedCategory',
+        await SharePlus.instance.share(
+          ShareParams(
+            text: emailContent,
+            subject: 'Subtitle Studio - $_selectedCategory',
+          ),
         );
         
         _showSnackBar('Feedback shared successfully!', Colors.green);
       }
       
       _clearForm();
-    } catch (e) {
-      _showSnackBar('Failed to share feedback: $e', Colors.red);
+    } catch (e, stackTrace) {
+      await AppLogger.instance.error(
+        'Failed to share feedback',
+        error: e,
+        stackTrace: stackTrace,
+        context: 'FeedbackWidget._shareWithAttachments',
+      );
+      _showSnackBar(
+        'Could not share feedback. Please try again.',
+        Colors.red,
+      );
     }
   }
 
