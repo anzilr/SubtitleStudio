@@ -1,13 +1,15 @@
-Riverpod migration checkpoint 11c
+Riverpod migration checkpoint 12
 Date: 2026-09-27
 Checks:
 - flutter analyze
 - flutter test
 
-Corrections:
-- Public Video track APIs preserved
-- Public fullscreen API preserved
-- Video part state updates routed through safe helper
-- Edit-Line part state updates routed through safe helper
+Scope:
+- Removed final legacy Provider state layer
+- Settings custom font state migrated to Riverpod
+- Video Player reduced below 600 lines via focused part files
+- Settings sheet reduced below 600 lines via focused part files
+- Obsolete .env scaffolding removed
+- Riverpod documented as the single app state-management system
 
 Platform builds intentionally disabled.
