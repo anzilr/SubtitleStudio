@@ -530,13 +530,13 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
 
   // Load resize ratio preference
   Future<void> _loadResizeRatio() async {
-    // Migrated to BLoC - resize ratio already loaded by cubit.initialize()
+    // Riverpod migration - resize ratio already loaded by controller initialization
     // Just sync local state from controller state
     final state = _editState;
     if (!mounted) return;
     
     if (kDebugMode) {
-      print('DEBUG: EditScreen - Loading resize ratio from cubit: ${state.resizeRatio}');
+      print('DEBUG: EditScreen - Loading resize ratio from controller: ${state.resizeRatio}');
     }
     
     setState(() {
@@ -562,7 +562,7 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
     
     // Start a new timer to save after a short delay
     _resizeRatioSaveTimer = Timer(const Duration(milliseconds: 300), () async {
-      // Migrated to BLoC - delegate to cubit
+      // Riverpod migration - delegate to the Riverpod controller
       if (mounted) {
         await _controller.updateResizeRatio(ratio);
       }
@@ -571,7 +571,7 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
 
   /// Load mobile video resize ratio from preferences
   Future<void> _loadMobileResizeRatio() async {
-    // Migrated to BLoC - mobile resize ratio already loaded by cubit.initialize()
+    // Riverpod migration - mobile resize ratio already loaded by controller initialization
     // Just sync local state from controller state
     final state = _editState;
     if (!mounted) return;
@@ -595,7 +595,7 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
     
     // Set up a new timer with 500ms delay
     _mobileResizeRatioSaveTimer = Timer(Duration(milliseconds: 500), () async {
-      // Migrated to BLoC - delegate to cubit
+      // Riverpod migration - delegate to the Riverpod controller
       if (mounted) {
         await _controller.updateMobileResizeRatio(ratio);
       }
@@ -755,7 +755,7 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
   }
 
   Future<void> _loadSavedVideoPath() async {
-    // Migrated to BLoC - video path already loaded by cubit.initialize()
+    // Riverpod migration - video path already loaded by controller initialization
     // Just sync local state from controller state
     final state = _editState;
     if (!mounted) return;
@@ -781,7 +781,7 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
         _isWaveformVisible = false;
       });
       
-      // Migrated to BLoC - delegate to cubit
+      // Riverpod migration - delegate to the Riverpod controller
       await _controller.loadVideo(filePath);
       
       // Update local state from controller state
@@ -799,7 +799,7 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
     }
   }
   Future<void> _unloadVideo() async {
-    // Migrated to BLoC - delegate to cubit
+    // Riverpod migration - delegate to the Riverpod controller
     await _controller.unloadVideo();
     
     // Update local state from controller state
@@ -815,10 +815,10 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
 
   // Source view methods
   void _switchToSourceView() {
-    // Migrated to BLoC - delegate to cubit
+    // Riverpod migration - delegate to the Riverpod controller
     _controller.switchToSourceView();
     
-    // Update local state from cubit
+    // Update local state from controller
     final state = _editState;
     setState(() {
       _isSourceView = state.isSourceView;
@@ -940,7 +940,7 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
   /// Sync source view entries back to the database
   Future<void> _syncSourceViewToDatabase() async {
     try {
-      // Migrated to BLoC - delegate to cubit
+      // Riverpod migration - delegate to the Riverpod controller
       await _controller.syncSourceViewToDatabase(_sourceViewEntries);
 
       await _refreshSubtitleLines();
@@ -1529,13 +1529,13 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
   }
 
     void _toggleSelection(int index) {
-    // Migrated to BLoC - delegate to cubit
+    // Riverpod migration - delegate to the Riverpod controller
     // Riverpod listener handles state synchronization automatically
     _controller.toggleSelection(index);
   }
 
   void _clearSelection() {
-    // Migrated to BLoC - delegate to cubit
+    // Riverpod migration - delegate to the Riverpod controller
     // Riverpod listener handles state synchronization automatically
     _controller.clearSelection();
   }
@@ -1597,7 +1597,7 @@ Future<void> _deleteSelectedSubtitles() async {
     }
   }
   
-  // Migrated to BLoC - use repository through cubit for deletion
+  // Riverpod migration - use repository through the Riverpod controller for deletion
   int successCount = 0;
   int failCount = 0;
   
@@ -1637,7 +1637,7 @@ Future<void> _deleteSelectedSubtitles() async {
 }
 
   Future<void> _refreshSubtitleLines() async {
-    // Migrated to BLoC - delegate to cubit
+    // Riverpod migration - delegate to the Riverpod controller
     await _controller.refreshSubtitleLines();
     
     // Update local state from controller state
@@ -1762,7 +1762,7 @@ Future<void> _deleteSelectedSubtitles() async {
     // Store the current highlighted index to maintain scroll position
     final previousHighlightedIndex = _highlightedIndex;
     
-    // Migrated to BLoC - delegate to cubit which handles all business logic
+    // Riverpod migration - delegate to the Riverpod controller which handles all business logic
     await _controller.markLine(index);
     
     // Update local state from controller state
@@ -1878,7 +1878,7 @@ Future<void> _deleteSelectedSubtitles() async {
           await Future.delayed(const Duration(milliseconds: 50));
         }
         
-        // Migrated to BLoC - delegate to cubit which handles all business logic
+        // Riverpod migration - delegate to the Riverpod controller which handles all business logic
         await _controller.updateComment(index, comment);
         
         // Update local state from controller state
@@ -1907,7 +1907,7 @@ Future<void> _deleteSelectedSubtitles() async {
         }
       },
       onCommentDeleted: line.comment?.isNotEmpty == true ? () async {
-        // Migrated to BLoC - delegate to cubit which handles all business logic
+        // Riverpod migration - delegate to the Riverpod controller which handles all business logic
         await _controller.updateComment(index, null);
         
         // Update local state from controller state
@@ -2549,8 +2549,7 @@ Future<void> _deleteSelectedSubtitles() async {
 
   // Add this method to toggle secondary subtitle visibility
   void _toggleSecondarySubtitles(bool value) {
-    // For now, keep simple state management here since cubit only has toggle
-    // TODO: Add setSecondarySubtitlesVisible(bool) to cubit for direct state setting
+    // Visibility is transient presentation state; subtitle data itself remains Riverpod-owned.
     setState(() {
       _showSecondarySubtitles = value;
       if (_videoPlayerKey.currentState != null) {
@@ -3017,7 +3016,7 @@ Future<void> _deleteSelectedSubtitles() async {
     // Load saved secondary subtitle (external path or original flag)
     // baseSubtitles can be provided (the freshly fetched subtitles) to ensure original-text restoration uses the right data
     Future<void> _loadSavedSecondarySubtitle([List<SubtitleLine>? baseSubtitles]) async {
-      // Migrated to BLoC - secondary subtitles already loaded by cubit.initialize()
+      // Riverpod migration - secondary subtitles already loaded by controller initialization
       // Just sync local state from controller state
       final state = _editState;
       if (!mounted) return;

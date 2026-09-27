@@ -5,7 +5,7 @@ import 'package:subtitle_studio/screens/home/models/session_summary.dart';
 /// Represents the state of the Home Screen
 /// 
 /// This is an immutable state class that uses Equatable for value equality.
-/// The state is managed by HomeCubit and drives the UI rendering.
+/// The state is managed by HomeController through Riverpod and drives the UI rendering.
 /// 
 /// State Properties:
 /// - [isLoading]: Whether the screen is in loading state

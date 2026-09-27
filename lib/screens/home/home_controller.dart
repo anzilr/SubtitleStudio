@@ -6,19 +6,12 @@ import 'package:subtitle_studio/screens/home/models/session_summary.dart';
 import 'package:subtitle_studio/screens/home/repositories/session_repository.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 
-/// Provides the existing session repository while Home is migrated to Riverpod.
-///
-/// The repository itself is intentionally unchanged in this step so the state
-/// management migration does not alter persistence behavior at the same time.
+/// Provides the session repository used by the Riverpod Home controller.
 final sessionRepositoryProvider = Provider<SessionRepository>(
   (ref) => SessionRepository.instance,
 );
 
-/// Riverpod replacement for HomeCubit.
-///
-/// This controller intentionally mirrors the existing Cubit's behavior. Logic
-/// improvements (for example persisted session summaries and real timestamps)
-/// are handled in later, separately reviewable commits.
+/// Riverpod controller for Home screen state and session workflows.
 final homeControllerProvider = NotifierProvider<HomeController, HomeState>(
   HomeController.new,
 );

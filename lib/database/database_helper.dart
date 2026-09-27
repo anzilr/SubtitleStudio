@@ -11,7 +11,7 @@
 // - Performance optimization for large subtitle files
 //
 // Architecture Notes:
-// - Uses global Isar instance from main.dart
+// - Uses the shared Isar handle from database_instance.dart
 // - All operations wrapped in transactions for consistency
 // - Comprehensive logging for debugging database issues
 // - Error handling with graceful fallbacks
