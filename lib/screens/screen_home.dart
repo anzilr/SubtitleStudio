@@ -32,7 +32,6 @@ import 'package:flutter/foundation.dart';     // Flutter debugging and platform 
 import 'package:flutter/material.dart';      // Material Design components
 import 'package:flutter/services.dart';      // Hardware services and keyboard support
 import 'dart:convert';                        // For encoding/decoding file content
-import 'package:flutter_svg/flutter_svg.dart'; // SVG asset support
 import 'package:flutter_riverpod/flutter_riverpod.dart'; // Riverpod state management
 import 'package:subtitle_studio/screens/edit_line/edit_line_host.dart'; // EditSubtitleScreenHost wrapper
 import 'package:subtitle_studio/screens/screen_help.dart';      // Help documentation
