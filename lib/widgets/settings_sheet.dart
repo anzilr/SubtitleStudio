@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/app/providers/core_providers.dart';
@@ -58,6 +59,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
   
   // Gemini AI settings
   String? _geminiApiKey;
+  Timer? _geminiApiKeySaveTimer;
   String _geminiModel = 'models/gemini-2.5-flash';
   List<GeminiModel> _availableModels = [];
   bool _isLoadingModels = false;
@@ -83,8 +85,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
     _waveformMaxPixelsController = TextEditingController();
     _waveformSampleRateFactorController = TextEditingController();
     _waveformZoomMultiplierController = TextEditingController();
-    _loadSettings();
-    _fetchAvailableModels();
+    unawaited(_initializeSettings());
     
     // Scroll to section if specified
     if (widget.initialSection == 'waveform') {
@@ -556,6 +557,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
 
   @override
   void dispose() {
+    _geminiApiKeySaveTimer?.cancel();
     _maxLineLengthController.dispose();
     _skipDurationController.dispose();
     _snapshotIntervalController.dispose();

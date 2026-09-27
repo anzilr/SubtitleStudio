@@ -1,6 +1,12 @@
 part of '../settings_sheet.dart';
 
 extension _SettingsAsyncActions on _SettingsSheetState {
+  Future<void> _initializeSettings() async {
+    await _loadSettings();
+    if (!mounted) return;
+    await _fetchAvailableModels();
+  }
+
   void _scrollToWaveformSection() {
     final context = _waveformSectionKey.currentContext;
     if (context != null) {

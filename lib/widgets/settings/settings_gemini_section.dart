@@ -1,6 +1,42 @@
 part of '../settings_sheet.dart';
 
 extension _SettingsGeminiSection on _SettingsSheetState {
+  void _scheduleGeminiApiKeySave(String value) {
+    final normalized = value.trim();
+    final key = normalized.isEmpty ? null : normalized;
+
+    _geminiApiKeySaveTimer?.cancel();
+    _setSettingsState(() {
+      _geminiApiKey = key;
+      if (key == null) {
+        _availableModels = [];
+        _isLoadingModels = false;
+      }
+    });
+
+    _geminiApiKeySaveTimer = Timer(
+      const Duration(milliseconds: 700),
+      () async {
+        try {
+          await _preferencesRepository.setGeminiApiKey(key);
+          GeminiModelsService.clearCache();
+          widget.onSettingsChanged?.call();
+
+          if (key != null && mounted) {
+            await _fetchAvailableModels();
+          }
+        } catch (_) {
+          if (mounted) {
+            SnackbarHelper.showError(
+              context,
+              'Could not save the Gemini API key. Please try again.',
+            );
+          }
+        }
+      },
+    );
+  }
+
   Widget _buildGeminiSettingsSection() {
     return Column(
       children: [
@@ -28,14 +64,16 @@ extension _SettingsGeminiSection on _SettingsSheetState {
                       ? IconButton(
                           icon: const Icon(Icons.clear),
                           onPressed: () async {
+                            _geminiApiKeySaveTimer?.cancel();
                             _geminiApiKeyController.clear();
                             await _preferencesRepository.setGeminiApiKey(null);
+                            GeminiModelsService.clearCache();
                             _setSettingsState(() {
                               _geminiApiKey = null;
+                              _availableModels = [];
+                              _isLoadingModels = false;
                             });
-                            if (widget.onSettingsChanged != null) {
-                              widget.onSettingsChanged!();
-                            }
+                            widget.onSettingsChanged?.call();
                             if (mounted) {
                               SnackbarHelper.showSuccess(
                                 context,
@@ -47,19 +85,8 @@ extension _SettingsGeminiSection on _SettingsSheetState {
                       : null,
                 ),
                 obscureText: true,
-                onChanged: (value) async {
-                  await _preferencesRepository.setGeminiApiKey(value.isEmpty ? null : value);
-                  _setSettingsState(() {
-                    _geminiApiKey = value.isEmpty ? null : value;
-                  });
-                  if (widget.onSettingsChanged != null) {
-                    widget.onSettingsChanged!();
-                  }
-                  // Refresh available models when API key changes
-                  if (value.isNotEmpty) {
-                    GeminiModelsService.clearCache();
-                    _fetchAvailableModels();
-                  }
+                onChanged: (value) {
+                  _scheduleGeminiApiKeySave(value);
                 },
               ),
               const SizedBox(height: 8),
