@@ -1,19 +1,13 @@
-Riverpod migration checkpoint 14
+Riverpod migration checkpoint 14b
 Date: 2026-09-27
 Checks:
 - flutter analyze
 - flutter test
 
-Scope since checkpoint 13:
-- Move active app theme from Provider/ChangeNotifier to Riverpod
-- Remove repository singleton constructors
-- Remove BLoC-era Source View state terminology
-- Unify duplicate SubtitleEntry models with tests and value equality
-- Reuse shared tolerant SRT parser in Source View
-- Guard Source View async initialization after disposal
-- Inject Isar into Home session repository
-- Fix EditLine repository helper self-recursion
-- Inject Isar into EditLine repository read/update paths
-- Redact Source View file paths and SAF URIs from logs
+Corrections after checkpoint 14:
+- Imported shared SubtitleEntry into Source View controller/host
+- Fixed feedback logger call signatures
+- Removed stale Editor import
+- Removed unused theme FontLoader field
 
 Platform builds intentionally disabled.
