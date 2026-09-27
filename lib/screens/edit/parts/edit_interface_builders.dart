@@ -11,7 +11,7 @@ extension _EditInterfaceBuilders on _EditScreenState {
             color: Theme.of(context).colorScheme.surfaceContainer,
             border: Border(
               bottom: BorderSide(
-                color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+                color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
               ),
             ),
           ),
@@ -125,7 +125,7 @@ extension _EditInterfaceBuilders on _EditScreenState {
   //           color: Theme.of(context).colorScheme.surfaceContainer,
   //           border: Border(
   //             bottom: BorderSide(
-  //               color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+  //               color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
   //             ),
   //           ),
   //         ),
@@ -155,7 +155,7 @@ extension _EditInterfaceBuilders on _EditScreenState {
   //               Icon(
   //                 Icons.edit_note,
   //                 size: 80,
-  //                 color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+  //                 color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
   //               ),
   //               const SizedBox(height: 16),
   //               Text(
@@ -169,7 +169,7 @@ extension _EditInterfaceBuilders on _EditScreenState {
   //                 'This is where your custom editing interface would go',
   //                 textAlign: TextAlign.center,
   //                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-  //                   color: Theme.of(context).colorScheme.outline.withOpacity(0.6),
+  //                   color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.6),
   //                 ),
   //               ),
   //             ],
