@@ -32,9 +32,6 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Prepare optional environment file
-        run: cp .env.example .env
-
       - name: Resolve dependencies
         run: flutter pub get
 
