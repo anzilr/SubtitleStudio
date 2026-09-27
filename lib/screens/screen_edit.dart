@@ -54,7 +54,6 @@ import 'package:subtitle_studio/widgets/import_comments_sheet.dart';
 import 'package:subtitle_studio/operations/subtitle_effect_operations.dart';
 import 'package:subtitle_studio/utils/macos_bookmark_manager.dart';
 import 'package:subtitle_studio/utils/msone_hotkey_manager.dart' as hotkey;
-import 'package:subtitle_studio/main.dart';
 import 'msone_submission_screen.dart';
 import 'package:subtitle_studio/screens/edit/edit_controller.dart';
 import 'package:subtitle_studio/screens/edit/edit_state.dart';
