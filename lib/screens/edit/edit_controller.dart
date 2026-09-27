@@ -298,6 +298,23 @@ class EditController extends Notifier<EditState> {
     return success;
   }
 
+  Future<bool> saveLineChanges(
+    SubtitleLine updatedLine, {
+    SubtitleLine? beforeLine,
+  }) async {
+    final saved = await _subtitleRepo.saveLineChanges(
+      subtitleCollectionId,
+      updatedLine,
+      sessionId: sessionId,
+      beforeLine: beforeLine,
+    );
+
+    if (saved) {
+      await refreshSubtitleLines();
+    }
+    return saved;
+  }
+
   Future<bool> saveSubtitleCollection(SubtitleCollection collection) {
     return _subtitleRepo.updateCollection(collection);
   }

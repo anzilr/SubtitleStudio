@@ -59,6 +59,61 @@ class SubtitleRepository {
     }
   }
 
+  /// Persist one edited subtitle line and create an edit checkpoint when
+  /// text or timing changed.
+  Future<bool> saveLineChanges(
+    int collectionId,
+    SubtitleLine updatedLine, {
+    required int sessionId,
+    SubtitleLine? beforeLine,
+  }) async {
+    SubtitleLine? lineBeforeChanges;
+    var shouldCreateCheckpoint = false;
+
+    final saved = await _isar.writeTxn(() async {
+      final collection = await _isar.subtitleCollections.get(collectionId);
+      if (collection == null) return false;
+
+      final listIndex = updatedLine.index - 1;
+      if (listIndex < 0 || listIndex >= collection.lines.length) {
+        return false;
+      }
+
+      lineBeforeChanges = beforeLine ?? collection.lines[listIndex];
+
+      final timingChanged =
+          lineBeforeChanges!.startTime != updatedLine.startTime ||
+          lineBeforeChanges!.endTime != updatedLine.endTime;
+
+      shouldCreateCheckpoint =
+          timingChanged ||
+          lineBeforeChanges!.original != updatedLine.original ||
+          lineBeforeChanges!.edited != updatedLine.edited;
+
+      collection.lines[listIndex] = updatedLine;
+
+      if (timingChanged) {
+        collection.lines = sortAndReindexSubtitleLines(collection.lines);
+      }
+
+      await _isar.subtitleCollections.put(collection);
+      return true;
+    });
+
+    if (saved &&
+        shouldCreateCheckpoint &&
+        lineBeforeChanges != null) {
+      await CheckpointManager.createEditCheckpoint(
+        sessionId: sessionId,
+        subtitleCollectionId: collectionId,
+        beforeLine: lineBeforeChanges!,
+        afterLine: updatedLine,
+      );
+    }
+
+    return saved;
+  }
+
   /// Mark a subtitle line
   Future<bool> markLine(int collectionId, int index, bool marked) async {
     logInfo('SubtitleRepository: Marking line $index in collection $collectionId as $marked');
