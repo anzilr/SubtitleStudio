@@ -38,7 +38,7 @@ class EditLineAiContextBuilder {
       );
     }
 
-    final safeIndex = currentIndex.clamp(0, lines.length - 1);
+    final safeIndex = currentIndex.clamp(0, lines.length - 1).toInt();
     final radius = contextRadius < 0 ? 0 : contextRadius;
 
     String rendered(SubtitleLine line) {
@@ -54,9 +54,11 @@ class EditLineAiContextBuilder {
           : line.original;
     }
 
-    final previousStart = (safeIndex - radius).clamp(0, safeIndex);
-    final nextEnd =
-        (safeIndex + radius + 1).clamp(safeIndex + 1, lines.length);
+    final previousStart =
+        (safeIndex - radius).clamp(0, safeIndex).toInt();
+    final nextEnd = (safeIndex + radius + 1)
+        .clamp(safeIndex + 1, lines.length)
+        .toInt();
 
     return EditLineAiContext(
       previousLines: [
