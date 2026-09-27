@@ -419,6 +419,45 @@ class EditController extends Notifier<EditState> {
     }
   }
 
+  void toggleRangeSelectionMode() {
+    final enabled = !state.isRangeSelectionActive;
+    _setState(
+      state.copyWith(
+        isRangeSelectionActive: enabled,
+        clearRangeStartIndex: true,
+      ),
+    );
+  }
+
+  void setRangeSelectionStart(int index) {
+    if (index < 0 || index >= state.subtitleLines.length) {
+      logWarning(
+        'EditController: Ignoring invalid range start index $index',
+      );
+      return;
+    }
+
+    _setState(
+      state.copyWith(
+        isRangeSelectionActive: true,
+        rangeStartIndex: index,
+      ),
+    );
+  }
+
+  void cancelRangeSelection() {
+    if (!state.isRangeSelectionActive && state.rangeStartIndex == null) {
+      return;
+    }
+
+    _setState(
+      state.copyWith(
+        isRangeSelectionActive: false,
+        clearRangeStartIndex: true,
+      ),
+    );
+  }
+
   /// Replace the selected set with a contiguous zero-based range.
   void selectRange(int startIndex, int endIndex) {
     if (startIndex < 0 ||
@@ -439,6 +478,8 @@ class EditController extends Notifier<EditState> {
       state.copyWith(
         selectedIndices: selected,
         isSelectionMode: selected.isNotEmpty,
+        isRangeSelectionActive: false,
+        clearRangeStartIndex: true,
       ),
     );
   }

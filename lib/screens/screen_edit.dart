@@ -111,8 +111,8 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
   final bool _isLoading = false;
   Duration _lastVideoPosition = Duration.zero; // Add this to store video position
   late TextEditingController _goToController;  bool _showSecondarySubtitles = true; // Add this field
-  bool _isRangeSelectionActive = false;
-  int? _rangeStartIndex;
+  bool get _isRangeSelectionActive => _editState.isRangeSelectionActive;
+  int? get _rangeStartIndex => _editState.rangeStartIndex;
   bool get _floatingControlsEnabled => _editState.floatingControlsEnabled;
   bool get _isMsoneEnabled => _editState.isMsoneEnabled;
   double _resizeRatio = 0.35; // Track the resize ratio for desktop layout
@@ -2451,34 +2451,34 @@ Future<void> _deleteSelectedSubtitles() async {
 
   // Toggle range selection mode
   void _toggleRangeSelectionMode() {
-    setState(() {
-      _isRangeSelectionActive = !_isRangeSelectionActive;
-      _rangeStartIndex = null;
-      
-      if (_isRangeSelectionActive) {
-        SnackbarHelper.showInfo(context, 'Tap on the first subtitle, then tap on the last subtitle', duration: const Duration(seconds: 5));
-      }
-    });
+    _controller.toggleRangeSelectionMode();
+
+    if (_isRangeSelectionActive) {
+      SnackbarHelper.showInfo(
+        context,
+        'Tap on the first subtitle, then tap on the last subtitle',
+        duration: const Duration(seconds: 5),
+      );
+    }
   }
   
   // Process tap during range selection mode
   void _handleRangeSelectionTap(int index) {
-    if (_rangeStartIndex == null) {
-      setState(() {
-        _rangeStartIndex = index;
-      });
-      SnackbarHelper.showInfo(context, 'Now tap on the last subtitle to select the range', duration: const Duration(seconds: 3));
-    } else {
-      final start = min(_rangeStartIndex!, index);
-      final end = max(_rangeStartIndex!, index);
-      
-      _controller.selectRange(start, end);
+    final rangeStart = _rangeStartIndex;
 
-      setState(() {
-        _isRangeSelectionActive = false;
-        _rangeStartIndex = null;
-      });
+    if (rangeStart == null) {
+      _controller.setRangeSelectionStart(index);
+      SnackbarHelper.showInfo(
+        context,
+        'Now tap on the last subtitle to select the range',
+        duration: const Duration(seconds: 3),
+      );
+      return;
     }
+
+    final start = min(rangeStart, index);
+    final end = max(rangeStart, index);
+    _controller.selectRange(start, end);
   }
 
   // Add this method to toggle secondary subtitle visibility
@@ -3370,6 +3370,7 @@ Future<void> _deleteSelectedSubtitles() async {
         (state) => (
           state.selectedIndices,
           state.isSelectionMode,
+          state.isRangeSelectionActive,
           state.floatingControlsEnabled,
           state.isMsoneEnabled,
           state.isLayout1,
@@ -3400,11 +3401,7 @@ Future<void> _deleteSelectedSubtitles() async {
         }
         
         if (_isRangeSelectionActive) {
-          // Exit range selection mode first
-          setState(() {
-            _isRangeSelectionActive = false;
-            _rangeStartIndex = null;
-          });
+          _controller.cancelRangeSelection();
         } else if (_isSelectionMode) {
           // Handle selection mode back press
           _clearSelection();
@@ -3429,10 +3426,7 @@ Future<void> _deleteSelectedSubtitles() async {
                   icon: Icon(Icons.close),
                   onPressed: () {
                     if (_isRangeSelectionActive) {
-                      setState(() {
-                        _isRangeSelectionActive = false;
-                        _rangeStartIndex = null;
-                      });
+                      _controller.cancelRangeSelection();
                     } else {
                       _clearSelection();
                     }
