@@ -556,7 +556,16 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
 
   @override
   void dispose() {
+    final hasPendingGeminiKeyWrite =
+        _geminiApiKeySaveTimer?.isActive == true;
     _geminiApiKeySaveTimer?.cancel();
+
+    if (hasPendingGeminiKeyWrite) {
+      final repository = ref.read(appPreferencesRepositoryProvider);
+      unawaited(repository.setGeminiApiKey(_geminiApiKey));
+      GeminiModelsService.clearCache();
+    }
+
     _maxLineLengthController.dispose();
     _skipDurationController.dispose();
     _snapshotIntervalController.dispose();
