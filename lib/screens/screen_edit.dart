@@ -1566,7 +1566,7 @@ Future<void> _deleteSelectedSubtitles() async {
     );
     final isSelected = _selectedIndices.contains(index);
     final isLightTheme =
-        Provider.of<ThemeProvider>(context).themeMode == ThemeMode.light;
+        Theme.of(context).brightness == Brightness.light;
 
     return SubtitleCard(
       line: line,
