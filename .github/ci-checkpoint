@@ -1,13 +1,19 @@
-Riverpod migration checkpoint 9b
+Riverpod migration checkpoint 10
 Date: 2026-09-28
 Checks:
 - flutter analyze
 - flutter test
 
-Corrections after checkpoint 9:
-- Replaced protected setState calls from Waveform extension parts with state-owned mutation wrapper
-- Qualified Waveform static double-click state references
-- Migrated active macOS-aware screen_repository VideoRepository to injected EditorPreferencesRepository
-- Exposed injected video preferences access required for macOS bookmark restoration
+Scope since checkpoint 9b:
+- Inject Home session-sort persistence
+- Inject Waveform audio/zoom preference persistence
+- Inject AI explanation preference persistence
+- Inject Theme/font preference persistence
+- Move Edit-Line subtitle mutations to injected Isar
+- Inject Edit-Line preference/video persistence and reduce initial preference reads
+- Batch selected subtitle deletion through one repository transaction/refresh
+- Route Editor mark/comment/resolved/unmark mutations through Riverpod
+- Route Editor collection/session/marked-line/add-line reads and writes through Riverpod
+- Inject Editor waveform-cache cleanup and remove static PreferencesModel use from Editor UI
 
 Platform builds intentionally disabled.
