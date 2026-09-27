@@ -89,7 +89,6 @@ class HomeController extends Notifier<HomeState> {
   }
 
   void clearSearch() {
-    logInfo('HomeController: Clearing search query');
     state = state.copyWith(searchQuery: '');
   }
 
@@ -115,13 +114,11 @@ class HomeController extends Notifier<HomeState> {
 
   void toggleFabExpansion() {
     final newState = !state.isFabExpanded;
-    logInfo('HomeController: Toggling FAB expansion to: $newState');
     state = state.copyWith(isFabExpanded: newState);
   }
 
   void collapseFab() {
     if (state.isFabExpanded) {
-      logInfo('HomeController: Collapsing FAB');
       state = state.copyWith(isFabExpanded: false);
     }
   }

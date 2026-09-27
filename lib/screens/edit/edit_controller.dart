@@ -392,18 +392,13 @@ class EditController extends Notifier<EditState> {
 
   /// Toggle selection for a subtitle line
   void toggleSelection(int index) {
-    logInfo('EditController: Toggling selection for index $index');
-
     final newState = state.toggleSelection(index);
     _setState(newState);
 
-    logInfo('EditController: Selection mode: ${newState.isSelectionMode}, selected: ${newState.selectedIndices.length}');
   }
 
   /// Clear all selections
   void clearSelection() {
-    logInfo('EditController: Clearing all selections');
-
     _setState(state.clearSelection());
   }
 
@@ -486,8 +481,6 @@ class EditController extends Notifier<EditState> {
 
   /// Select all subtitle lines
   void selectAll() {
-    logInfo('EditController: Selecting all ${state.subtitleLines.length} lines');
-
     final allIndices = List.generate(state.subtitleLines.length, (i) => i).toSet();
     
     _setState(state.copyWith(
@@ -498,8 +491,6 @@ class EditController extends Notifier<EditState> {
 
   /// Navigate to a specific index (for video sync and goto)
   void navigateToIndex(int index) {
-    logInfo('EditController: Navigating to index $index');
-
     if (index < 0 || index >= state.subtitleLines.length) {
       logWarning('EditController: Invalid navigation index: $index');
       return;
@@ -510,8 +501,6 @@ class EditController extends Notifier<EditState> {
 
   /// Toggle card expansion state
   void toggleCardExpansion(int index) {
-    logInfo('EditController: Toggling card expansion for index $index');
-
     final newState = state.toggleCardExpansion(index);
     _setState(newState);
   }
@@ -576,12 +565,9 @@ class EditController extends Notifier<EditState> {
 
   /// Toggle secondary subtitles visibility
   void toggleSecondarySubtitles() {
-    logInfo('EditController: Toggling secondary subtitles');
-
     final newShowState = !state.showSecondarySubtitles;
     _setState(state.copyWith(showSecondarySubtitles: newShowState));
 
-    logInfo('EditController: Secondary subtitles visible: $newShowState');
   }
 
   /// Load secondary subtitle from external file
@@ -787,16 +773,12 @@ class EditController extends Notifier<EditState> {
 
   /// Update resize ratio
   Future<void> updateResizeRatio(double ratio) async {
-    logInfo('EditController: Updating resize ratio: $ratio');
-
     await _videoRepo.saveEditScreenResizeRatio(ratio);
     _setState(state.copyWith(resizeRatio: ratio));
   }
 
   /// Update mobile video resize ratio
   Future<void> updateMobileResizeRatio(double ratio) async {
-    logInfo('EditController: Updating mobile resize ratio: $ratio');
-
     await _videoRepo.saveMobileVideoResizeRatio(ratio);
     _setState(state.copyWith(mobileVideoResizeRatio: ratio));
   }
