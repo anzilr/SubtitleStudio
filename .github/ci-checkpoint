@@ -1,11 +1,18 @@
-Riverpod migration checkpoint 6b
+Riverpod migration checkpoint 7
 Date: 2026-09-27
 Checks:
 - flutter analyze
 - flutter test
 
-Corrections after checkpoint 6:
-- Fixed Dart export/part directive ordering after video file splits
-- Removed stale Log Management export-path state after Telegram client removal
+Scope since checkpoint 6b:
+- Protect unsaved Source View edits with Save / Discard / Cancel
+- Enlarge Home delete touch target
+- Hide raw exceptions from user-facing Home, Editor and log UI
+- Reduce Home search hot-path work
+- Make Riverpod authoritative for Editor selection state
+- Skip full subtitle sort/reindex for text-only edits
+- Retain current dependency lock as a CI artifact
+- Make Home sorting deterministic
+- Remove obsolete dotenv preparation from CI
 
 Platform builds intentionally disabled.
