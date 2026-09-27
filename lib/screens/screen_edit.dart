@@ -115,8 +115,9 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
   bool _isVideoVisible = false;
   bool _isVideoLoaded = false;
   List<Subtitle> get _subtitles => _editState.generatedSubtitles;
-  List<Subtitle> _secondarySubtitles = []; // To store secondary subtitles for video player
-  List<SimpleSubtitleLine> _originalSecondarySubtitles = []; // Store original format for passing to EditSubtitleScreen
+  List<Subtitle> get _secondarySubtitles => _editState.secondarySubtitles;
+  List<SimpleSubtitleLine> get _originalSecondarySubtitles =>
+      _editState.originalSecondarySubtitles;
   final ItemScrollController _itemScrollController = ItemScrollController();
   final ItemPositionsListener _itemPositionsListener = ItemPositionsListener.create();
   final ValueNotifier<double> _scrollbarThumbOffset = ValueNotifier<double>(0.0);
@@ -126,7 +127,8 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
       GlobalKey<WaveformWidgetState>();
   final bool _isLoading = false;
   Duration _lastVideoPosition = Duration.zero; // Add this to store video position
-  late TextEditingController _goToController;  bool _showSecondarySubtitles = true; // Add this field
+  late TextEditingController _goToController;
+  bool get _showSecondarySubtitles => _editState.showSecondarySubtitles;
   bool get _isRangeSelectionActive => _editState.isRangeSelectionActive;
   int? get _rangeStartIndex => _editState.rangeStartIndex;
   bool get _floatingControlsEnabled => _editState.floatingControlsEnabled;
