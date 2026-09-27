@@ -151,7 +151,7 @@ extension _EditResponsiveLayout on _EditScreenState {
                               
                               // Refresh the subtitle line in UI
                               if (subtitleIndex < subtitleLines.length) {
-                                setState(() {
+                                _setEditorState(() {
                                   subtitleLines[subtitleIndex].comment = comment;
                                 });
                                 // Update controller
@@ -283,7 +283,7 @@ extension _EditResponsiveLayout on _EditScreenState {
                       await updateSubtitleLineComment(widget.subtitleCollectionId, subtitleIndex, comment);
                       // Refresh the subtitle line in UI
                       if (subtitleIndex < subtitleLines.length) {
-                        setState(() {
+                        _setEditorState(() {
                           subtitleLines[subtitleIndex].comment = comment;
                         });
                         // Update controller
@@ -354,7 +354,7 @@ extension _EditResponsiveLayout on _EditScreenState {
               // Use post frame callback to avoid "Build scheduled during frame" error
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (mounted) {
-                  setState(() {
+                  _setEditorState(() {
                     _mobileVideoResizeRatio = ratio;
                   });
                 }
@@ -402,7 +402,7 @@ extension _EditResponsiveLayout on _EditScreenState {
                             await updateSubtitleLineComment(widget.subtitleCollectionId, subtitleIndex, comment);
                             // Refresh the subtitle line in UI
                             if (subtitleIndex < subtitleLines.length) {
-                              setState(() {
+                              _setEditorState(() {
                                 subtitleLines[subtitleIndex].comment = comment;
                               });
                               // Update controller
@@ -448,7 +448,7 @@ extension _EditResponsiveLayout on _EditScreenState {
                             onSubtitleHighlight: (int index) {
                               // Scroll to and highlight the subtitle in the list
                               _scrollToIndexWithLoading(index);
-                              setState(() {
+                              _setEditorState(() {
                                 _highlightedIndex = index;
                               });
                             },
@@ -574,7 +574,7 @@ extension _EditResponsiveLayout on _EditScreenState {
                         await updateSubtitleLineComment(widget.subtitleCollectionId, subtitleIndex, comment);
                         // Refresh the subtitle line in UI
                         if (subtitleIndex < subtitleLines.length) {
-                          setState(() {
+                          _setEditorState(() {
                             subtitleLines[subtitleIndex].comment = comment;
                           });
                           // Update controller
@@ -618,7 +618,7 @@ extension _EditResponsiveLayout on _EditScreenState {
                       onSubtitleHighlight: (int index) {
                         // Scroll to and highlight the subtitle in the list
                         _scrollToIndexWithLoading(index);
-                        setState(() {
+                        _setEditorState(() {
                           _highlightedIndex = index;
                         });
                       },

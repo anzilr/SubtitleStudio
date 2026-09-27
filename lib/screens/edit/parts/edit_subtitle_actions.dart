@@ -189,7 +189,7 @@ extension _EditSubtitleActions on _EditScreenState {
     
     // Update local state from controller state
     final state = _editState;
-    setState(() {
+    _setEditorState(() {
       subtitleLines = state.subtitleLines;
       // Restore the highlighted index to prevent unwanted scrolling
       _highlightedIndex = previousHighlightedIndex;
@@ -226,7 +226,7 @@ extension _EditSubtitleActions on _EditScreenState {
       if (success) {
         // Update the subtitle line in the list
         if (subtitleIndex < subtitleLines.length) {
-          setState(() {
+          _setEditorState(() {
             subtitleLines[subtitleIndex].marked = isMarked;
           });
           
@@ -372,7 +372,7 @@ extension _EditSubtitleActions on _EditScreenState {
           if (!mounted) return;
           
           // Update state with new data
-          setState(() {
+          _setEditorState(() {
             subtitleLines = updatedSubtitles;
             _controller.replaceSubtitleLinesLocally(updatedSubtitles);
             _subtitles = _generateSubtitles(updatedSubtitles);
