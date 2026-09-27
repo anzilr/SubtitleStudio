@@ -22,9 +22,7 @@ import 'package:subtitle_studio/screens/edit/services/source_view_reconciler.dar
 /// - Source view synchronization
 /// - Generate subtitles for video player
 class SubtitleRepository {
-  static final SubtitleRepository _instance = SubtitleRepository._internal();
-  factory SubtitleRepository() => _instance;
-  SubtitleRepository._internal();
+  SubtitleRepository();
 
   /// Fetch all subtitle lines for a collection
   Future<List<SubtitleLine>> fetchLines(int collectionId) async {

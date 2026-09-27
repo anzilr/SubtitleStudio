@@ -21,10 +21,7 @@ import 'package:subtitle_studio/utils/logging_helpers.dart';
 /// - Consistent error handling and logging
 /// - Easy to mock for testing
 class SessionRepository {
-  /// Singleton instance
-  static final SessionRepository instance = SessionRepository._internal();
-  
-  SessionRepository._internal();
+  SessionRepository();
   
   /// Fetches all sessions from the database in reverse chronological order
   /// 

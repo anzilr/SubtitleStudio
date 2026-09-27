@@ -17,9 +17,7 @@ import 'package:subtitle_studio/utils/macos_bookmark_manager.dart';
 /// - Secondary subtitle management
 /// - Video-related preference loading
 class VideoRepository {
-  static final VideoRepository _instance = VideoRepository._internal();
-  factory VideoRepository() => _instance;
-  VideoRepository._internal();
+  VideoRepository();
 
   /// Get saved video path for a subtitle collection
   Future<String?> getSavedVideoPath(int collectionId) async {

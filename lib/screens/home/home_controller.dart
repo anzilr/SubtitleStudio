@@ -8,7 +8,7 @@ import 'package:subtitle_studio/utils/logging_helpers.dart';
 
 /// Provides the session repository used by the Riverpod Home controller.
 final sessionRepositoryProvider = Provider<SessionRepository>(
-  (ref) => SessionRepository.instance,
+  (ref) => SessionRepository(),
 );
 
 /// Riverpod controller for Home screen state and session workflows.
