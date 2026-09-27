@@ -1,6 +1,6 @@
 part of '../video_player_widget.dart';
 
-extension _VideoFullscreenActions on VideoPlayerWidgetState {
+extension VideoFullscreenActions on VideoPlayerWidgetState {
   void _enterCustomFullscreen() {
     if (_isCustomFullscreen) return;
     
