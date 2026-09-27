@@ -52,7 +52,10 @@ class AiExplanationController extends Notifier<AiExplanationState> {
 
       logInfo('Requesting AI explanation using model: $model');
 
-      final response = await gemini.text(prompt, modelName: model);
+      final response = await gemini.prompt(
+        parts: [Part.text(prompt)],
+        model: model,
+      );
 
       if (response?.output == null || response!.output!.isEmpty) {
         state = const AiExplanationError(
