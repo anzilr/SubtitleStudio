@@ -1768,20 +1768,12 @@ Future<void> _deleteSelectedSubtitles() async {
           comment: line.comment,
         );
         
-        // Mark dialog as open
-        setState(() => _isCommentDialogOpen = true);
-        
-        // Use the video player's fullscreen-specific comment dialog
-        videoPlayerState.showFullscreenCommentDialog(subtitleWithComment,
+        // Fullscreen controls own their dialog-open lifecycle and duplicate guard.
+        videoPlayerState.showFullscreenCommentDialog(
+          subtitleWithComment,
           originalText: line.original,
           editedText: line.edited,
         );
-        
-        Future.delayed(const Duration(milliseconds: 500), () {
-          if (mounted) {
-            setState(() => _isCommentDialogOpen = false);
-          }
-        });
         return;
       }
     } else {

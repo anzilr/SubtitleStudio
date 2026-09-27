@@ -2294,17 +2294,8 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
           comment: _subtitleLine!.comment,
         );
         
-        // Mark dialog as open
-        setState(() => _isCommentDialogOpen = true);
-        
-        // Use the video player's fullscreen-specific comment dialog
+        // Fullscreen controls own their dialog-open lifecycle and duplicate guard.
         videoPlayerState.showFullscreenCommentDialog(subtitleWithComment);
-        
-        Future.delayed(const Duration(milliseconds: 500), () {
-          if (mounted) {
-            setState(() => _isCommentDialogOpen = false);
-          }
-        });
         return;
       }
     } else {
