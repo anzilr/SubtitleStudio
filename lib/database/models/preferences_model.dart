@@ -21,11 +21,20 @@ class PreferencesModel {
     return prefs;
   }
 
-  /// Update preferences with a transaction
-  static Future<void> _updatePreferences(void Function(Preferences) update) async {
+  /// Update preferences with a single write transaction.
+  ///
+  /// Resolve or create the singleton before entering the transaction so a
+  /// fresh database never attempts a nested write transaction through
+  /// [_getPreferences].
+  static Future<void> _updatePreferences(
+    void Function(Preferences) update,
+  ) async {
+    final existing = await isar.preferences.where().findFirst();
+    final prefs = existing ?? Preferences(autoSave: true);
+
+    update(prefs);
+
     await isar.writeTxn(() async {
-      final prefs = await _getPreferences();
-      update(prefs);
       await isar.preferences.put(prefs);
     });
   }
