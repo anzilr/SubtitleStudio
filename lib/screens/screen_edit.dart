@@ -138,7 +138,6 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
   late final Function(int, String?) _onSubtitleCommentUpdatedStable;
 
   // Navigation debouncing
-  Timer? _navigationDebounceTimer;
   bool _isNavigating = false;
 
   // Source view support
@@ -675,7 +674,6 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
   void dispose() {
     _resizeRatioSaveTimer?.cancel(); // Cancel resize ratio save timer
     _mobileResizeRatioSaveTimer?.cancel(); // Cancel mobile resize ratio save timer
-    _navigationDebounceTimer?.cancel(); // Cancel navigation debounce timer
     _subtitleChangeDebouncer?.cancel(); // Cancel subtitle change debouncer
     
     // Unregister only this screen's hotkey shortcuts
@@ -997,72 +995,49 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
     }).toList();
   }
 
-  Future<void> _scrollToIndexWithLoading(int indx) async {
-    print('Scrolling to index: $indx');
-    // This helper accepts a 1-based cue number and converts it once to the
-    // zero-based list index required by ScrollablePositionedList.
-    final index = indx - 1;
+  Future<void> _scrollToIndexWithLoading(int cueNumber) async {
+    final index = cueNumber - 1;
+    if (index < 0 || index >= subtitleLines.length) return;
 
-    // Cue number 0 would become -1 and must never reach scrollTo().
-    if (index < 0 || index >= subtitleLines.length) {
-      return;
-    }
-    
-    // Show the isolated loader
     IsolatedLoaderController.show(context);
-    
+
     try {
-      // More aggressive approach to prevent UI blocking
-      // First, yield to allow the loader to render
-      await Future.delayed(const Duration(milliseconds: 50));
-      
-      // Wait for widget to be fully mounted and ready
-      if (!mounted) {
-        return;
-      }
-      
-      // Ensure the scroll controller is attached before using it
-      // This prevents the assertion error when called right after modal close
-      int retries = 0;
-      const maxRetries = 10;
-      while (!_itemScrollController.isAttached && retries < maxRetries) {
-        await Future.delayed(const Duration(milliseconds: 50));
-        retries++;
-      }
-      
-      // If still not attached after retries, skip scrolling
-      if (!_itemScrollController.isAttached) {
-        print('Warning: ItemScrollController not attached after $maxRetries retries, skipping scroll');
-        if (mounted) {
-          setState(() {
-            _highlightedIndex = index;
-          });
-        }
+      await WidgetsBinding.instance.endOfFrame;
+      if (!mounted) return;
+
+      final attached = await _waitForItemScrollController();
+      if (!attached || !mounted) {
+        setState(() {
+          _highlightedIndex = index;
+        });
         return;
       }
 
-      // Use ScrollablePositionedList's scrollTo method
-      _itemScrollController.scrollTo(
+      await _itemScrollController.scrollTo(
         index: index,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
         alignment: 0.5,
       );
-      
-      // Set the highlight after scrolling completes
-      await Future.delayed(const Duration(milliseconds: 350));
-      
-      if (mounted) {
-        setState(() {
-          _highlightedIndex = index;
-        });
-      }
-      
-      await Future.delayed(const Duration(milliseconds: 50));
+
+      if (!mounted) return;
+      setState(() {
+        _highlightedIndex = index;
+      });
     } finally {
-      // Always ensure the loader is hidden
       IsolatedLoaderController.hide();
     }
+  }
+
+  Future<bool> _waitForItemScrollController({
+    int maxFrames = 10,
+  }) async {
+    for (int frame = 0; frame < maxFrames; frame++) {
+      if (_itemScrollController.isAttached) return true;
+      if (!mounted) return false;
+      await WidgetsBinding.instance.endOfFrame;
+    }
+    return _itemScrollController.isAttached;
   }
 
   void _updateScrollbarPosition() {
@@ -1079,58 +1054,37 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
     }
   }
 
-  void scrollToIndex(int index) {
+  Future<void> scrollToIndex(int index) async {
     if (index < 0 || index >= subtitleLines.length) return;
-    
-    // Use ScrollablePositionedList's built-in scrollTo method
-    // which handles index-based scrolling accurately
-    _itemScrollController.scrollTo(
+    if (!await _waitForItemScrollController()) return;
+
+    await _itemScrollController.scrollTo(
       index: index,
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
-      alignment: 0.5, // Center the item in the viewport (0.0 = top, 1.0 = bottom)
+      alignment: 0.5,
     );
   }
 
-  // Direct navigation method that only updates UI state without side effects
-  void _navigateToIndex(int index) async {
-    if (index < 0 || index >= subtitleLines.length) return;
-
-    // Debounce navigation to prevent multiple rapid calls
-    if (_isNavigating) {
-      debugPrint('_navigateToIndex: Ignoring call due to ongoing navigation (index: $index)');
+  // Direct navigation method that only updates UI state without side effects.
+  Future<void> _navigateToIndex(int index) async {
+    if (index < 0 || index >= subtitleLines.length || _isNavigating) {
       return;
     }
 
     _isNavigating = true;
-    debugPrint('=== _navigateToIndex called: updating _highlightedIndex from $_highlightedIndex to $index ===');
-    debugPrint('_navigateToIndex: Full stack trace:');
-    debugPrint(StackTrace.current.toString());
-    
-    // Add delay to ensure modal close animation completes and UI is ready
-    await Future.delayed(const Duration(milliseconds: 300));
-    
-    if (!mounted) {
+    try {
+      if (!mounted) return;
+      setState(() {
+        _highlightedIndex = index;
+      });
+
+      await WidgetsBinding.instance.endOfFrame;
+      if (!mounted) return;
+      await scrollToIndex(index);
+    } finally {
       _isNavigating = false;
-      return;
     }
-    
-    setState(() {
-      _highlightedIndex = index;
-    });
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        scrollToIndex(index);
-      }
-    });
-
-    // Clear the navigation flag after a short delay
-    _navigationDebounceTimer?.cancel();
-    _navigationDebounceTimer = Timer(const Duration(milliseconds: 100), () {
-      _isNavigating = false;
-      debugPrint('_navigateToIndex: Navigation debounce cleared');
-    });
   }
 
   void _onSubtitleChange(int index) {
@@ -1152,7 +1106,7 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          scrollToIndex(index);
+          unawaited(scrollToIndex(index));
         }
       });
     });
