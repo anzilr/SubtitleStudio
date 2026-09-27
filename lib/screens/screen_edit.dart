@@ -107,7 +107,8 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
   final ValueNotifier<double> _scrollbarThumbOffset = ValueNotifier<double>(0.0);
   bool _isDraggingScrollbar = false;
   int? _highlightedIndex;  final GlobalKey<VideoPlayerWidgetState> _videoPlayerKey = GlobalKey();
-  final GlobalKey _waveformKey = GlobalKey(); // Add waveform key
+  final GlobalKey<WaveformWidgetState> _waveformKey =
+      GlobalKey<WaveformWidgetState>();
   final bool _isLoading = false;
   Duration _lastVideoPosition = Duration.zero; // Add this to store video position
   late TextEditingController _goToController;  bool _showSecondarySubtitles = true; // Add this field
@@ -328,7 +329,7 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
     
     // Update waveform with subtitle lines
     if (_waveformKey.currentState != null && subtitleLines.isNotEmpty) {
-      (_waveformKey.currentState as dynamic).updateSubtitles(subtitleLines);
+      _waveformKey.currentState!.updateSubtitles(subtitleLines);
     }
   }
   
@@ -346,7 +347,7 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
     
     // Update waveform
     if (_waveformKey.currentState != null) {
-      (_waveformKey.currentState as dynamic).updateSubtitles(subtitleLines);
+      _waveformKey.currentState!.updateSubtitles(subtitleLines);
     }
   }
 
@@ -1079,7 +1080,7 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
     
     // Update waveform if it exists
     if (_waveformKey.currentState != null) {
-      (_waveformKey.currentState as dynamic).updateSubtitles(subtitleLines);
+      _waveformKey.currentState!.updateSubtitles(subtitleLines);
     }
   }
 
@@ -1938,7 +1939,7 @@ Future<void> _deleteSelectedSubtitles() async {
     
     // Update the waveform's subtitles
     if (_waveformKey.currentState != null) {
-      (_waveformKey.currentState as dynamic).updateSubtitles(updatedSubtitles);
+      _waveformKey.currentState!.updateSubtitles(updatedSubtitles);
     }
   }
 

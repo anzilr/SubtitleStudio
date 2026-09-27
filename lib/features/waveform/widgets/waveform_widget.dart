@@ -44,10 +44,10 @@ class WaveformWidget extends riverpod.ConsumerStatefulWidget {
   });
 
   @override
-  riverpod.ConsumerState<WaveformWidget> createState() => _WaveformWidgetState();
+  riverpod.ConsumerState<WaveformWidget> createState() => WaveformWidgetState();
 }
 
-class _WaveformWidgetState extends riverpod.ConsumerState<WaveformWidget> {
+class WaveformWidgetState extends riverpod.ConsumerState<WaveformWidget> {
   // Cache current subtitles for change detection
   List<SubtitleLine> _currentSubtitles = [];
   
