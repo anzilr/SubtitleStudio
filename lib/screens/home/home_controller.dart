@@ -91,7 +91,6 @@ class HomeController extends Notifier<HomeState> {
   }
 
   void updateSearchQuery(String query) {
-    logInfo('HomeController: Updating search query: "$query"');
     state = state.copyWith(searchQuery: query);
   }
 

@@ -133,9 +133,17 @@ class HomeState extends Equatable {
   /// Whether the screen has sessions to display
   bool get hasSessions => recentSessions.isNotEmpty;
 
-  /// Whether there's an active search with no results
-  bool get hasNoSearchResults =>
-      searchQuery.isNotEmpty && filteredSessions.isEmpty;
+  /// Whether there's an active search with no results.
+  ///
+  /// Avoid calling [filteredSessions] here because that getter also sorts and
+  /// allocates a list; the UI may already have requested it for the same build.
+  bool get hasNoSearchResults {
+    if (searchQuery.isEmpty) return false;
+    final normalizedQuery = searchQuery.toLowerCase();
+    return !recentSessions.any(
+      (session) => session.fileName.toLowerCase().contains(normalizedQuery),
+    );
+  }
 
   @override
   List<Object?> get props => [
