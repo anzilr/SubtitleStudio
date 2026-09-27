@@ -64,5 +64,8 @@ void main() {
     });
 
     expect(await store.loadLastOpened(), isEmpty);
+
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('session_last_opened_v1'), isNull);
   });
 }

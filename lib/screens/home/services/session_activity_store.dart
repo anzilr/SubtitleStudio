@@ -38,6 +38,9 @@ class SessionActivityStore {
 
       return result;
     } catch (_) {
+      // Self-heal corrupted activity metadata instead of reparsing the same
+      // invalid payload on every Home load.
+      await prefs.remove(_lastOpenedKey);
       return {};
     }
   }
