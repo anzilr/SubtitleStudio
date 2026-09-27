@@ -48,18 +48,7 @@ extension _EditMediaActions on _EditScreenState {
   }
 
   Future<void> _loadSavedVideoPath() async {
-    // Riverpod migration - video path already loaded by controller initialization
-    // Just sync local state from controller state
-    final state = _editState;
     if (!mounted) return;
-    
-    _setEditorState(() {
-      _selectedVideoPath = state.selectedVideoPath;
-      _isVideoVisible = state.selectedVideoPath != null;
-      _isVideoLoaded = state.isVideoLoaded;
-    });
-    
-    // Ensure video player gets subtitles after video is loaded
     _ensureVideoPlayerSubtitles();
   }
 
@@ -84,17 +73,7 @@ extension _EditMediaActions on _EditScreenState {
       // Riverpod migration - delegate to the Riverpod controller
       await _controller.loadVideo(filePath);
       
-      // Update local state from controller state
-      final state = _editState;
       if (!mounted) return;
-      
-      _setEditorState(() {
-        _selectedVideoPath = state.selectedVideoPath;
-        _isVideoVisible = true;
-        _isVideoLoaded = state.isVideoLoaded;
-      });
-      
-      // Ensure video player gets subtitles after video is loaded
       _ensureVideoPlayerSubtitles();
     }
   }
@@ -102,15 +81,7 @@ extension _EditMediaActions on _EditScreenState {
     // Riverpod migration - delegate to the Riverpod controller
     await _controller.unloadVideo();
     
-    // Update local state from controller state
-    final state = _editState;
     if (!mounted) return;
-    
-    _setEditorState(() {
-      _selectedVideoPath = state.selectedVideoPath;
-      _isVideoVisible = false;
-      _isVideoLoaded = state.isVideoLoaded;
-    });
   }
 
 

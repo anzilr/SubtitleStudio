@@ -111,9 +111,9 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
   List<SubtitleLine> get subtitleLines => _editState.subtitleLines;
   late String fileName;
   late Future<List<SubtitleLine>> subtitleLinesFuture;
-  String? _selectedVideoPath;
-  bool _isVideoVisible = false;
-  bool _isVideoLoaded = false;
+  String? get _selectedVideoPath => _editState.selectedVideoPath;
+  bool get _isVideoVisible => _editState.isVideoVisible;
+  bool get _isVideoLoaded => _editState.isVideoLoaded;
   List<Subtitle> get _subtitles => _editState.generatedSubtitles;
   List<Subtitle> get _secondarySubtitles => _editState.secondarySubtitles;
   List<SimpleSubtitleLine> get _originalSecondarySubtitles =>
@@ -568,6 +568,11 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
           state.floatingControlsEnabled,
           state.isMsoneEnabled,
           state.isLayout1,
+          state.selectedVideoPath,
+          state.isVideoVisible,
+          state.isVideoLoaded,
+          state.showSecondarySubtitles,
+          state.secondarySubtitles,
         ),
       ),
     );
@@ -691,14 +696,15 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
                   if (_isVideoLoaded && !_isSourceView) // Hide video toggle in source view
                     IconButton(
                       onPressed: () {
-                        // Store current position when hiding video
-                        if (_isVideoVisible && _videoPlayerKey.currentState != null) {
-                          _lastVideoPosition = _videoPlayerKey.currentState!.getCurrentPosition();
+                        if (_isVideoVisible &&
+                            _videoPlayerKey.currentState != null) {
+                          _lastVideoPosition = _videoPlayerKey
+                              .currentState!
+                              .getCurrentPosition();
                         }
-                          setState(() {
-                          _isVideoVisible = !_isVideoVisible;
-                        });
-                        
+
+                        _controller.toggleVideoVisibility();
+
                         if (_isVideoVisible) {
                           WidgetsBinding.instance.addPostFrameCallback((_) {
                             unawaited(_restoreVideoPositionWhenReady());

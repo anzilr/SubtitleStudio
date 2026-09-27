@@ -159,6 +159,7 @@ class EditController extends Notifier<EditState> {
         subtitleLines: lines,
         generatedSubtitles: generatedSubtitles,
         selectedVideoPath: videoPath,
+        isVideoVisible: isVideoLoaded,
         isVideoLoaded: isVideoLoaded,
         secondarySubtitles: secondarySubtitles,
         originalSecondarySubtitles: originalSecondarySubtitles,
@@ -728,6 +729,7 @@ class EditController extends Notifier<EditState> {
 
       _setState(state.copyWith(
         selectedVideoPath: videoPath,
+        isVideoVisible: true,
         isVideoLoaded: true,
         lastVideoPosition: lastPosition,
       ));
@@ -756,6 +758,7 @@ class EditController extends Notifier<EditState> {
 
       _setState(state.copyWith(
         clearSelectedVideoPath: true,
+        isVideoVisible: false,
         isVideoLoaded: false,
         lastVideoPosition: Duration.zero,
       ));
@@ -774,6 +777,16 @@ class EditController extends Notifier<EditState> {
   /// Update video position (for restoration)
   void updateVideoPosition(Duration position) {
     _setState(state.copyWith(lastVideoPosition: position));
+  }
+
+  /// Toggle whether the loaded video pane is visible.
+  void toggleVideoVisibility() {
+    if (!state.isVideoLoaded) return;
+    _setState(
+      state.copyWith(
+        isVideoVisible: !state.isVideoVisible,
+      ),
+    );
   }
 
   /// Toggle secondary subtitles visibility
