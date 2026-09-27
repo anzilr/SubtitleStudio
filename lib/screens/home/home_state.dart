@@ -99,19 +99,25 @@ class HomeState extends Equatable {
     // Apply sorting based on selected option
     switch (sortOption) {
       case SessionSortOption.lastOpened:
-        // Sort by last edited session, with most recent at the top
-        if (lastEditedSession != null) {
-          sessions.sort((a, b) {
-            if (lastEditedSession!.id == a.id) return -1;
-            if (lastEditedSession!.id == b.id) return 1;
-            return 0;
-          });
-        }
+        // Only the most recently active session is persisted today. Pin it to
+        // the top, then use descending session ID as a deterministic fallback.
+        sessions.sort((a, b) {
+          if (lastEditedSession?.id == a.id &&
+              lastEditedSession?.id != b.id) {
+            return -1;
+          }
+          if (lastEditedSession?.id == b.id &&
+              lastEditedSession?.id != a.id) {
+            return 1;
+          }
+          return b.id.compareTo(a.id);
+        });
         break;
-        
+
       case SessionSortOption.lastCreated:
-        // Already in reverse chronological order (newest first) from database
-        // No additional sorting needed as database returns in this order
+        // Isar auto-increment IDs are monotonic for newly inserted sessions.
+        // Sort explicitly instead of relying on query iteration order.
+        sessions.sort((a, b) => b.id.compareTo(a.id));
         break;
         
       case SessionSortOption.name:
