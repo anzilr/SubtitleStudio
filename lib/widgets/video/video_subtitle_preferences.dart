@@ -3,32 +3,31 @@ part of '../video_player_widget.dart';
 extension _VideoSubtitlePreferences on VideoPlayerWidgetState {
   Future<void> _loadSubtitlePreferences() async {
     try {
-      final savedSize = await PreferencesModel.getSubtitleFontSize();
-      final savedPath = await PreferencesModel.getSubtitleFontPath();
-      final skipDuration = await PreferencesModel.getSkipDurationSeconds();
-      final primaryPosition = await PreferencesModel.getPrimarySubtitleVerticalPosition();
-      final secondaryPosition = await PreferencesModel.getSecondarySubtitleVerticalPosition();
-      final savedVolume = await PreferencesModel.getVideoVolume();
-      final showBackground = await PreferencesModel.getShowSubtitleBackground();
+      final stored = await _preferencesRepository.loadPlayerPreferences();
+      if (!mounted) return;
+
       _setVideoState(() {
-        _subtitleFontSize = savedSize;
-        _skipDurationSeconds = skipDuration;
-        _primarySubtitleVerticalPosition = primaryPosition;
-        _secondarySubtitleVerticalPosition = secondaryPosition;
-        _currentVolume = savedVolume;
-        _showSubtitleBackground = showBackground;
+        _subtitleFontSize = stored.subtitleFontSize;
+        _skipDurationSeconds = stored.skipDurationSeconds;
+        _primarySubtitleVerticalPosition =
+            stored.primarySubtitleVerticalPosition;
+        _secondarySubtitleVerticalPosition =
+            stored.secondarySubtitleVerticalPosition;
+        _currentVolume = stored.videoVolume;
+        _showSubtitleBackground = stored.showSubtitleBackground;
       });
+
+      final savedPath = stored.subtitleFontPath;
       if (savedPath != null) {
-        // If file exists at saved path, attempt to load it, else clear pref
-        final f = File(savedPath);
-        if (await f.exists()) {
-          await _loadFontFromFile(f);
+        final file = File(savedPath);
+        if (await file.exists()) {
+          await _loadFontFromFile(file);
         } else {
-          await PreferencesModel.setSubtitleFontPath(null);
+          await _preferencesRepository.setSubtitleFontPath(null);
         }
       }
-    } catch (e) {
-      // ignore errors and keep defaults
+    } catch (_) {
+      // Keep defaults if persisted preferences cannot be loaded.
     }
   }
   
@@ -46,7 +45,7 @@ extension _VideoSubtitlePreferences on VideoPlayerWidgetState {
         _subtitleFontFamily = family;
         _subtitleFontFilePath = file.path;
       });
-      await PreferencesModel.setSubtitleFontPath(file.path);
+      await _preferencesRepository.setSubtitleFontPath(file.path);
       // Rebuild any custom fullscreen overlay if present
       _fullscreenOverlay?.markNeedsBuild();
     } catch (e) {
@@ -115,7 +114,7 @@ extension _VideoSubtitlePreferences on VideoPlayerWidgetState {
   
       // If a previous custom font exists, delete it to replace with new one
       try {
-        final prevPath = await PreferencesModel.getSubtitleFontPath();
+        final prevPath = await _preferencesRepository.getSubtitleFontPath();
         if (prevPath != null && prevPath.isNotEmpty) {
           final prevFile = File(prevPath);
           if (await prevFile.exists()) {
