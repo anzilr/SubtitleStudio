@@ -42,7 +42,7 @@ class AiExplanationController extends Notifier<AiExplanationState> {
 
       state = const AiExplanationLoading();
 
-      Gemini.init(apiKey: apiKey);
+      Gemini.reInitialize(apiKey: apiKey);
       final gemini = Gemini.instance;
 
       model = modelName ?? await _preferences.getGeminiModel();

@@ -35,12 +35,9 @@ class GeminiModelsService {
         return [];
       }
 
-      // Initialize Gemini if not already initialized
-      try {
-        Gemini.init(apiKey: normalizedApiKey);
-      } catch (e) {
-        // Already initialized, ignore
-      }
+      // The SDK's init() keeps the first credential forever. Reinitialize
+      // explicitly so changing the key in Settings takes effect immediately.
+      Gemini.reInitialize(apiKey: normalizedApiKey);
 
       logInfo('Fetching available Gemini models from API...');
       final models = await Gemini.instance.listModels();
