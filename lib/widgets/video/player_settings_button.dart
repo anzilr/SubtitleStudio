@@ -440,7 +440,7 @@ class _SettingsButtonState extends State<_SettingsButton> {
                               onTap: () async {
                                 final newValue =
                                     !videoPlayerState._showSubtitleBackground;
-                                await PreferencesModel.setShowSubtitleBackground(
+                                await _preferencesRepository.setShowSubtitleBackground(
                                   newValue,
                                 );
                                 videoPlayerState.setState(() {
@@ -516,7 +516,7 @@ class _SettingsButtonState extends State<_SettingsButton> {
                                           videoPlayerState
                                               ._showSubtitleBackground,
                                       onChanged: (value) async {
-                                        await PreferencesModel.setShowSubtitleBackground(
+                                        await _preferencesRepository.setShowSubtitleBackground(
                                           value,
                                         );
                                         videoPlayerState.setState(() {
@@ -605,7 +605,7 @@ class _SettingsButtonState extends State<_SettingsButton> {
                                       ElevatedButton(
                                         onPressed: () async {
                                           final newPosition = (videoPlayerState._primarySubtitleVerticalPosition - 10).clamp(-1000.0, 1000.0);
-                                          await PreferencesModel.setPrimarySubtitleVerticalPosition(newPosition);
+                                          await _preferencesRepository.setPrimarySubtitleVerticalPosition(newPosition);
                                           videoPlayerState.setState(() {
                                             videoPlayerState._primarySubtitleVerticalPosition = newPosition;
                                           });
@@ -647,7 +647,7 @@ class _SettingsButtonState extends State<_SettingsButton> {
                                       ElevatedButton(
                                         onPressed: () async {
                                           final newPosition = (videoPlayerState._primarySubtitleVerticalPosition + 10).clamp(-1000.0, 1000.0);
-                                          await PreferencesModel.setPrimarySubtitleVerticalPosition(newPosition);
+                                          await _preferencesRepository.setPrimarySubtitleVerticalPosition(newPosition);
                                           videoPlayerState.setState(() {
                                             videoPlayerState._primarySubtitleVerticalPosition = newPosition;
                                           });
@@ -739,7 +739,7 @@ class _SettingsButtonState extends State<_SettingsButton> {
                                       ElevatedButton(
                                         onPressed: () async {
                                           final newPosition = (videoPlayerState._secondarySubtitleVerticalPosition + 10).clamp(-1000.0, 1000.0);
-                                          await PreferencesModel.setSecondarySubtitleVerticalPosition(newPosition);
+                                          await _preferencesRepository.setSecondarySubtitleVerticalPosition(newPosition);
                                           videoPlayerState.setState(() {
                                             videoPlayerState._secondarySubtitleVerticalPosition = newPosition;
                                           });
@@ -781,7 +781,7 @@ class _SettingsButtonState extends State<_SettingsButton> {
                                       ElevatedButton(
                                         onPressed: () async {
                                           final newPosition = (videoPlayerState._secondarySubtitleVerticalPosition - 10).clamp(-1000.0, 1000.0);
-                                          await PreferencesModel.setSecondarySubtitleVerticalPosition(newPosition);
+                                          await _preferencesRepository.setSecondarySubtitleVerticalPosition(newPosition);
                                           videoPlayerState.setState(() {
                                             videoPlayerState._secondarySubtitleVerticalPosition = newPosition;
                                           });

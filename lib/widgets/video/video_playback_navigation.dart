@@ -8,13 +8,13 @@ extension _VideoPlaybackNavigation on VideoPlayerWidgetState {
       _setVideoState(() {
         _currentVolume = 0;
       });
-      await PreferencesModel.setVideoVolume(0);
+      await _preferencesRepository.setVideoVolume(0);
     } else {
       _player.setVolume(100);
       _setVideoState(() {
         _currentVolume = 100;
       });
-      await PreferencesModel.setVideoVolume(100);
+      await _preferencesRepository.setVideoVolume(100);
     }
   }
   
