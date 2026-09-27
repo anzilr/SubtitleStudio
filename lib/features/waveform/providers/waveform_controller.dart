@@ -4,7 +4,7 @@ import 'package:subtitle_studio/features/waveform/state/waveform_event.dart';
 import 'package:subtitle_studio/features/waveform/state/waveform_state.dart';
 import 'package:subtitle_studio/features/waveform/services/audio_processor.dart';
 import 'package:subtitle_studio/features/waveform/repositories/waveform_subtitle_repository.dart';
-import 'package:subtitle_studio/database/models/preferences_model.dart';
+import 'package:subtitle_studio/features/waveform/repositories/waveform_preferences_repository.dart';
 
 /// Disposable audio processor dependency for the Waveform feature.
 final waveformAudioProcessorProvider = Provider<AudioProcessor>((ref) {
@@ -16,6 +16,11 @@ final waveformAudioProcessorProvider = Provider<AudioProcessor>((ref) {
 final waveformSubtitleRepositoryProvider =
     Provider<WaveformSubtitleRepository>(
   (ref) => WaveformSubtitleRepository(ref.watch(isarProvider)),
+);
+
+final waveformPreferencesRepositoryProvider =
+    Provider<WaveformPreferencesRepository>(
+  (ref) => WaveformPreferencesRepository(ref.watch(isarProvider)),
 );
 
 final waveformControllerProvider =
@@ -32,6 +37,9 @@ class WaveformController extends Notifier<WaveformState> {
 
   AudioProcessor get _audioProcessor =>
       ref.read(waveformAudioProcessorProvider);
+
+  WaveformPreferencesRepository get _preferences =>
+      ref.read(waveformPreferencesRepositoryProvider);
 
   @override
   WaveformState build() {
@@ -159,7 +167,7 @@ class WaveformController extends Notifier<WaveformState> {
       String? audioTrackId = event.audioTrackId;
       if (audioTrackId == null && event.subtitleCollectionId != null) {
         // Try to fetch from saved preferences
-        audioTrackId = await PreferencesModel.getSelectedAudioTrackId(
+        audioTrackId = await _preferences.getSelectedAudioTrackId(
           event.subtitleCollectionId!,
         );
       }
@@ -183,7 +191,7 @@ class WaveformController extends Notifier<WaveformState> {
       
       // Try to load saved zoom levels if subtitle collection ID is provided
       if (event.subtitleCollectionId != null) {
-        final savedZoom = await PreferencesModel.getWaveformZoomLevels(
+        final savedZoom = await _preferences.getWaveformZoomLevels(
           event.subtitleCollectionId!,
         );
         if (savedZoom != null) {
@@ -560,7 +568,7 @@ class WaveformController extends Notifier<WaveformState> {
     // Only save if we have a subtitle collection ID
     if (state.subtitleCollectionId != null) {
       // Use fire-and-forget pattern to avoid blocking
-      PreferencesModel.saveWaveformZoomLevels(
+      _preferences.saveWaveformZoomLevels(
         subtitleCollectionId: state.subtitleCollectionId!,
         zoomIndex: state.currentZoomIndex,
         verticalZoom: state.verticalZoom,
