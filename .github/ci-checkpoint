@@ -1,19 +1,20 @@
-Riverpod migration checkpoint 10
+Riverpod migration checkpoint 11
 Date: 2026-09-28
 Checks:
 - flutter analyze
 - flutter test
 
-Scope since checkpoint 9b:
-- Inject Home session-sort persistence
-- Inject Waveform audio/zoom preference persistence
-- Inject AI explanation preference persistence
-- Inject Theme/font preference persistence
-- Move Edit-Line subtitle mutations to injected Isar
-- Inject Edit-Line preference/video persistence and reduce initial preference reads
-- Batch selected subtitle deletion through one repository transaction/refresh
-- Route Editor mark/comment/resolved/unmark mutations through Riverpod
-- Route Editor collection/session/marked-line/add-line reads and writes through Riverpod
-- Inject Editor waveform-cache cleanup and remove static PreferencesModel use from Editor UI
+Scope since checkpoint 10:
+- Remove remaining global database-helper access from Editor/Home/Edit-Line UI
+- Add injected application preferences repository
+- Route Settings reads/writes through injected preference persistence
+- Route MSone translator profile persistence through Riverpod
+- Add injected VideoPlayer preference repository
+- Make VideoPlayerWidget Riverpod-aware without changing its public API
+- Load video display preferences with one Isar read
+- Inject audio-track selection persistence
+- Inject subtitle font-size and volume persistence
+- Inject mute/unmute, subtitle background and subtitle-position persistence
+- Remove legacy PreferencesModel dependency from video player
 
 Platform builds intentionally disabled.
