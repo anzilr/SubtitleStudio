@@ -6,15 +6,13 @@ import 'package:subtitle_studio/screens/screen_edit.dart' as legacy;
 
 /// Compatibility wrapper for [legacy.EditScreen].
 ///
-/// The public class name is kept temporarily so existing navigation call sites
-/// do not need to change during the state-management migration. Internally the
-/// wrapper is Riverpod-based.
-class EditScreenBloc extends StatelessWidget {
+/// This host scopes the Editor's Riverpod providers for one editing session.
+class EditScreenHost extends StatelessWidget {
   final int subtitleCollectionId;
   final int? lastEditedIndex;
   final int sessionId;
 
-  const EditScreenBloc({
+  const EditScreenHost({
     super.key,
     required this.subtitleCollectionId,
     this.lastEditedIndex,

@@ -30,7 +30,7 @@ import 'package:subtitle_studio/themes/theme_switcher_button.dart';
 import 'package:subtitle_studio/utils/project_manager.dart';
 import 'package:subtitle_studio/widgets/export_file_widget.dart';
 import 'package:subtitle_studio/widgets/project_settings_sheet.dart';
-import 'package:subtitle_studio/screens/edit_line/edit_line_bloc.dart'; // EditSubtitleScreenBloc wrapper
+import 'package:subtitle_studio/screens/edit_line/edit_line_host.dart'; // EditSubtitleScreenHost wrapper
 import 'package:subtitle_studio/utils/time_parser.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
@@ -4655,7 +4655,7 @@ Future<void> _deleteSelectedSubtitles() async {
     
     final result = await Navigator.push<int?>(
       context,
-      MaterialPageRoute(        builder: (context) => EditSubtitleScreenBloc(
+      MaterialPageRoute(        builder: (context) => EditSubtitleScreenHost(
           subtitleId: widget.subtitleCollectionId,
           index: index + 1,
           sessionId: widget.sessionId,
@@ -5247,7 +5247,7 @@ Future<void> _deleteSelectedSubtitles() async {
         
         final result = await Navigator.push<bool>(
           context,
-          MaterialPageRoute(            builder: (context) => EditSubtitleScreenBloc(
+          MaterialPageRoute(            builder: (context) => EditSubtitleScreenHost(
               subtitleId: widget.subtitleCollectionId,
               index: 1, // First subtitle
               sessionId: widget.sessionId,

@@ -34,7 +34,7 @@ import 'package:flutter/services.dart';      // Hardware services and keyboard s
 import 'dart:convert';                        // For encoding/decoding file content
 import 'package:flutter_svg/flutter_svg.dart'; // SVG asset support
 import 'package:flutter_riverpod/flutter_riverpod.dart'; // Riverpod state management
-import 'package:subtitle_studio/screens/edit_line/edit_line_bloc.dart'; // EditSubtitleScreenBloc wrapper
+import 'package:subtitle_studio/screens/edit_line/edit_line_host.dart'; // EditSubtitleScreenHost wrapper
 import 'package:subtitle_studio/screens/screen_help.dart';      // Help documentation
 import 'package:subtitle_studio/screens/screen_source_view.dart'; // Source view screen
 import 'package:subtitle_studio/screens/home/home_controller.dart'; // Home Riverpod controller
@@ -58,7 +58,7 @@ import 'package:subtitle_studio/utils/snackbar_helper.dart';    // User notifica
 import 'package:subtitle_studio/utils/update_manager.dart';     // In-app update functionality
 import 'package:subtitle_studio/widgets/first_time_instructions.dart'; // Tutorial system
 import 'package:subtitle_studio/utils/msone_hotkey_manager.dart' as hotkey; // Keyboard shortcuts
-import 'edit/edit_screen_bloc.dart';          // Main editing interface with BLoC wrapper
+import 'edit/edit_screen_host.dart';          // Main editing interface with Riverpod host
 
 /// Main home screen widget serving as the application's primary interface
 /// 
@@ -1328,7 +1328,7 @@ class _HomeScreenContentState extends ConsumerState<_HomeScreenContent> with Tic
       await Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => EditScreenBloc(
+          builder: (context) => EditScreenHost(
             subtitleCollectionId: session.subtitleCollectionId,
             lastEditedIndex: session.lastEditedIndex,
             sessionId: session.id,
@@ -1382,7 +1382,7 @@ class _HomeScreenContentState extends ConsumerState<_HomeScreenContent> with Tic
               final navigator = Navigator.of(context);
               navigator.push(
                 MaterialPageRoute(
-                  builder: (context) => EditSubtitleScreenBloc(
+                  builder: (context) => EditSubtitleScreenHost(
                     subtitleId: subtitleData['subtitleCollectionId'],
                     index: 1,
                     sessionId: createdSessionId,

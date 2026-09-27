@@ -8,10 +8,8 @@ import 'package:subtitle_studio/utils/subtitle_parser.dart';
 
 /// Compatibility wrapper for [legacy.EditSubtitleScreen].
 ///
-/// The public class name is intentionally kept during the migration so existing
-/// navigation call sites do not need to change at the same time as state
-/// management. Internally this is now Riverpod-based, not BLoC-based.
-class EditSubtitleScreenBloc extends StatelessWidget {
+/// This host scopes the single-line editor's Riverpod providers.
+class EditSubtitleScreenHost extends StatelessWidget {
   final Id subtitleId;
   final int index;
   final int sessionId;
@@ -22,7 +20,7 @@ class EditSubtitleScreenBloc extends StatelessWidget {
   final Duration? startVideoPosition;
   final List<SimpleSubtitleLine>? secondarySubtitles;
 
-  const EditSubtitleScreenBloc({
+  const EditSubtitleScreenHost({
     super.key,
     required this.subtitleId,
     required this.index,

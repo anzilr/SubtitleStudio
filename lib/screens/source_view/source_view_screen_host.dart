@@ -18,7 +18,7 @@ import 'package:subtitle_studio/utils/unicode_text_input_formatter.dart';
 /// - Error handling with user-friendly messages
 /// - Save operation feedback
 /// - Performance optimizations with proper widget rebuilding
-class SourceViewScreenBloc extends StatelessWidget {
+class SourceViewScreenHost extends StatelessWidget {
   /// Path to the SRT file to be displayed and edited
   final String filePath;
   
@@ -31,7 +31,7 @@ class SourceViewScreenBloc extends StatelessWidget {
   /// Optional pre-loaded file content (used when file is already read via SAF)
   final String? fileContent;
 
-  const SourceViewScreenBloc({
+  const SourceViewScreenHost({
     super.key,
     required this.filePath,
     this.displayName,
@@ -124,7 +124,7 @@ class _SourceViewRiverpodHost extends ConsumerWidget {
 
 /// The actual source view widget implementation
 /// 
-/// This widget is separated from the BLoC wrapper to optimize rebuilds
+/// This widget is separated from the Riverpod wrapper to optimize rebuilds
 /// and provide better performance. It uses const constructors where possible
 /// and implements efficient ListView building.
 class _SourceViewWidget extends StatelessWidget {
@@ -439,7 +439,7 @@ class _OptimizedSubtitleListState extends State<_OptimizedSubtitleList> {
 /// 
 /// This widget represents a single subtitle entry with editable fields
 /// for index, timecodes, and text. Uses direct object mutation for best performance
-/// like EditScreen, avoiding complex BLoC updates on every keystroke.
+/// like EditScreen, avoiding complex Riverpod updates on every keystroke.
 class _SimpleSubtitleTile extends StatelessWidget {
   final SubtitleEntry entry;
   final int index;
