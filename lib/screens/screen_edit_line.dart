@@ -8,7 +8,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:isar_community/isar.dart';
 import 'package:provider/provider.dart';
-import 'package:subtitle_studio/main.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/database/database_helper.dart';
 import 'package:subtitle_studio/themes/theme_switcher_button.dart';
