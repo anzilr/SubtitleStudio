@@ -57,8 +57,7 @@ class AppDataMaintenanceRepository {
       }
     } catch (e, stackTrace) {
       await logWarning(
-        'Could not fully clear waveform cache',
-        error: e,
+        'Could not fully clear waveform cache: $e',
         stackTrace: stackTrace,
         context: 'AppDataMaintenanceRepository._deleteWaveformCache',
       );
@@ -79,8 +78,7 @@ class AppDataMaintenanceRepository {
           }
         } catch (e, stackTrace) {
           await logWarning(
-            'Could not delete a temporary entry',
-            error: e,
+            'Could not delete a temporary entry: $e',
             stackTrace: stackTrace,
             context: 'AppDataMaintenanceRepository._deleteTemporaryFiles',
           );
@@ -88,8 +86,7 @@ class AppDataMaintenanceRepository {
       }
     } catch (e, stackTrace) {
       await logWarning(
-        'Could not fully clear temporary files',
-        error: e,
+        'Could not fully clear temporary files: $e',
         stackTrace: stackTrace,
         context: 'AppDataMaintenanceRepository._deleteTemporaryFiles',
       );
