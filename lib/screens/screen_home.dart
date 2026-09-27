@@ -964,10 +964,10 @@ class _HomeScreenContentState extends ConsumerState<_HomeScreenContent> with Tic
                         ),
                         iconSize: 18,
                         constraints: const BoxConstraints(
-                          minWidth: 24,
-                          minHeight: 24,
+                          minWidth: 48,
+                          minHeight: 48,
                         ),
-                        padding: EdgeInsets.zero,
+                        padding: const EdgeInsets.all(12),
                         tooltip: 'Delete Session',
                       ),
                     ],
