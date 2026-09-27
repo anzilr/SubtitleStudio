@@ -329,7 +329,10 @@ class _AiExplanationSheetContentState extends ConsumerState<_AiExplanationSheetC
     });
 
     try {
-      final models = await GeminiModelsService.fetchAvailableModels();
+      final apiKey = await PreferencesModel.getGeminiApiKey();
+      final models = await GeminiModelsService.fetchAvailableModels(
+        apiKey: apiKey,
+      );
       if (mounted) {
         setState(() {
           _availableModels = models;
