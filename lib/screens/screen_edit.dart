@@ -66,6 +66,8 @@ import 'package:subtitle_studio/features/waveform/bloc/waveform_state.dart';
 import 'package:subtitle_studio/features/waveform/providers/waveform_controller.dart';
 import 'package:subtitle_studio/features/waveform/widgets/waveform_widget.dart';
 
+enum _SourceLeaveChoice { save, discard, cancel }
+
 class EditScreen extends riverpod.ConsumerStatefulWidget {
   final int subtitleCollectionId;
   final int? lastEditedIndex;
@@ -143,6 +145,7 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
   // Source view support
   bool _isSourceView = false; // Track if we're in source view mode
   List<SubtitleEntry> _sourceViewEntries = []; // Store subtitle entries for source view
+  bool _sourceViewDirty = false;
   final ScrollController _sourceScrollController = ScrollController(); // Separate scroll controller for source view
 
   // Layout switching support
@@ -973,17 +976,20 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
     setState(() {
       _isSourceView = state.isSourceView;
       _sourceViewEntries = state.sourceViewEntries;
+      _sourceViewDirty = false;
     });
   }
 
-  void _switchToTimelineView() {
-    // Migrated to BLoC - delegate to cubit
+  Future<void> _switchToTimelineView() async {
+    if (!await _resolveSourceChangesBeforeLeaving()) return;
+
     _controller.switchToCardsView();
-    
-    // Update local state from cubit
     final state = _editState;
+
+    if (!mounted) return;
     setState(() {
       _isSourceView = state.isSourceView;
+      _sourceViewDirty = false;
     });
   }
 
@@ -1003,7 +1009,74 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
   // }
 
   void _onSourceViewContentChanged() {
-    // Mark that changes have been made (you can add unsaved changes tracking here)
+    if (_sourceViewDirty) return;
+    setState(() {
+      _sourceViewDirty = true;
+    });
+  }
+
+  Future<bool> _resolveSourceChangesBeforeLeaving() async {
+    if (!_isSourceView || !_sourceViewDirty) return true;
+
+    final choice = await showDialog<_SourceLeaveChoice>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Unsaved source changes'),
+        content: const Text(
+          'Save the Source View changes before leaving?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(
+              _SourceLeaveChoice.cancel,
+            ),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(
+              _SourceLeaveChoice.discard,
+            ),
+            child: const Text('Discard'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(
+              _SourceLeaveChoice.save,
+            ),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted || choice == null || choice == _SourceLeaveChoice.cancel) {
+      return false;
+    }
+
+    if (choice == _SourceLeaveChoice.save) {
+      try {
+        await _syncSourceViewToDatabase();
+        if (!mounted) return false;
+        SnackbarHelper.showSuccess(context, 'Source View changes saved');
+      } catch (e) {
+        if (mounted) {
+          SnackbarHelper.showError(
+            context,
+            'Could not save Source View changes',
+          );
+        }
+        return false;
+      }
+    } else {
+      final currentLines = _editState.subtitleLines;
+      _sourceViewEntries = _convertSubtitleLinesToEntries(currentLines);
+    }
+
+    if (mounted) {
+      setState(() {
+        _sourceViewDirty = false;
+      });
+    }
+    return true;
   }
 
   // Future<void> _saveSourceViewChanges() async {
@@ -1022,9 +1095,14 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
     try {
       // Migrated to BLoC - delegate to cubit
       await _controller.syncSourceViewToDatabase(_sourceViewEntries);
-      
-      // Refresh the subtitle lines cache
+
       await _refreshSubtitleLines();
+
+      if (mounted) {
+        setState(() {
+          _sourceViewDirty = false;
+        });
+      }
       
     } catch (e) {
       throw Exception('Failed to sync source view to database: $e');
@@ -3831,7 +3909,7 @@ Future<void> _deleteSelectedSubtitles() async {
         _switchToSourceView();
         break;
       case 'switch_to_timeline':
-        _switchToTimelineView();
+        await _switchToTimelineView();
         break;
       case 'load_video':
         if (_isVideoLoaded) {
@@ -4947,7 +5025,7 @@ Future<void> _deleteSelectedSubtitles() async {
     });
 
     return PopScope(
-        canPop: !_isSelectionMode && !_isRangeSelectionActive, // Keep selection modes in-screen
+        canPop: !_isSelectionMode && !_isRangeSelectionActive && !_sourceViewDirty,
         onPopInvokedWithResult: (bool didPop, Object? result) async {
         // Pause video when going back
         if (_videoPlayerKey.currentState != null &&
@@ -4965,9 +5043,11 @@ Future<void> _deleteSelectedSubtitles() async {
           // Handle selection mode back press
           _clearSelection();
         } else {
-          // Handle normal back navigation
           if (!didPop) {
-            Navigator.of(context).pop(true);
+            if (!await _resolveSourceChangesBeforeLeaving()) return;
+            if (mounted) {
+              Navigator.of(context).pop(true);
+            }
           }
         }
       },
@@ -4994,7 +5074,12 @@ Future<void> _deleteSelectedSubtitles() async {
                 )
               : IconButton(
                   icon: Icon(Icons.arrow_back),
-                  onPressed: () => Navigator.of(context).pop(true),
+                  onPressed: () async {
+                    if (!await _resolveSourceChangesBeforeLeaving()) return;
+                    if (mounted) {
+                      Navigator.of(context).pop(true);
+                    }
+                  },
                 ),
               title: _isRangeSelectionActive
                   ? Text('Select range: tap first & last')

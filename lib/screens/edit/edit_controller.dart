@@ -656,13 +656,18 @@ class EditController extends Notifier<EditState> {
         entries,
       );
 
-      // Refresh subtitle lines and return to cards view
+      // Refresh the canonical subtitle state but keep the current view.
+      // The UI decides whether this save is a normal Save action or a
+      // Save-and-leave transition.
       await refreshSubtitleLines();
-      
-      _setState(state.copyWith(
-        isSourceView: false,
-        sourceViewEntries: [],
-      ));
+
+      _setState(
+        state.copyWith(
+          sourceViewEntries: _subtitleRepo.convertToSourceViewEntries(
+            state.subtitleLines,
+          ),
+        ),
+      );
 
       logInfo('EditController: Source view synced to database');
     } catch (e, stackTrace) {
