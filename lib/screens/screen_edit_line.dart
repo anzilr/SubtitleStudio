@@ -23,9 +23,6 @@ import 'package:subtitle_studio/widgets/formatting_menu.dart';
 import 'package:subtitle_studio/widgets/colour_picker_widget.dart';
 
 import 'package:subtitle_studio/widgets/subtitle_actions_menu.dart';
-import 'package:subtitle_studio/widgets/dictionary_search_widget.dart';
-import 'package:subtitle_studio/widgets/olam_dictionary_widget.dart';
-import 'package:subtitle_studio/widgets/urban_dictionary_widget.dart';
 import 'package:subtitle_studio/database/models/preferences_model.dart';
 import 'package:subtitle_studio/screens/screen_help.dart';
 import 'package:subtitle_studio/widgets/settings_sheet.dart';
@@ -43,7 +40,6 @@ import 'package:subtitle_studio/utils/time_parser.dart';
 import 'package:subtitle_studio/utils/subtitle_parser.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/utils/unicode_text_input_formatter.dart';
-import 'package:subtitle_studio/utils/time_input_formatter.dart';
 import 'package:subtitle_studio/themes/theme_provider.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
@@ -58,7 +54,7 @@ import 'package:subtitle_studio/screens/edit_line/services/ai_context_builder.da
 import 'package:subtitle_studio/widgets/ai_explanation_sheet.dart';
 
 // Edit subtitle line screen with video player integration
-// Uses Bloc/Cubit for state management, character counting, and time validation
+// Uses Riverpod for state management, character counting, and time validation
 // Supports keyboard shortcuts, formatting, and responsive layouts
 
 class EditSubtitleScreen extends riverpod.ConsumerStatefulWidget {
