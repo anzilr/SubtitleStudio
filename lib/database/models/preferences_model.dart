@@ -1,9 +1,7 @@
 import 'dart:io';
 import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/database/models/models.dart';
-import 'package:subtitle_studio/main.dart';
-
-/// Preferences Model - Manages application preferences using Isar database
+import 'package:subtitle_studio/database/database_instance.dart';
 /// 
 /// This class provides a unified interface for all application preferences
 /// that were previously stored using SharedPreferences. Now all preferences

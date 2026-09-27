@@ -37,13 +37,9 @@ import 'package:subtitle_studio/widgets/splash_screen.dart'; // Initial splash s
 import 'screens/screen_home.dart';                        // Main home screen
 import 'screens/screen_source_view.dart';                 // Source view screen
 import 'database/models/models.dart';                     // Database models
+import 'database/database_instance.dart';                   // Shared Isar handle
 import 'themes/theme_provider.dart';                      // Theme management
 import 'package:media_kit/media_kit.dart';               // Video playback support
-
-/// Global Isar database instance
-/// This is accessible throughout the app for data operations
-/// Initialized in main() before app startup
-late Isar isar;
 
 /// Application entry point
 /// 

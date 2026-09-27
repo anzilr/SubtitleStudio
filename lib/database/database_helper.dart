@@ -26,7 +26,7 @@
 import 'package:flutter/foundation.dart';     // Flutter debugging utilities
 import 'package:isar_community/isar.dart';              // Isar database framework
 import 'package:subtitle_studio/database/models/models.dart'; // Data models
-import 'package:subtitle_studio/main.dart';      // Global Isar instance access
+import 'package:subtitle_studio/database/database_instance.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart'; // Logging utilities
 import 'package:subtitle_studio/services/checkpoint_manager.dart'; // Checkpoint management
 import 'package:subtitle_studio/utils/subtitle_sorting.dart'; // Enhanced subtitle sorting
