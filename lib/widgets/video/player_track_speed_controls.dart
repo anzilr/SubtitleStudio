@@ -234,7 +234,7 @@ class _FontSizeExpandableControlState extends State<_FontSizeExpandableControl> 
                     },
                     onChangeEnd: (v) async {
                       // Apply the new font size
-                      await PreferencesModel.setSubtitleFontSize(v);
+                      await _preferencesRepository.setSubtitleFontSize(v);
                       if (widget.videoPlayerState.mounted) {
                         widget.videoPlayerState.setState(() {
                           widget.videoPlayerState._subtitleFontSize = v;
@@ -254,7 +254,7 @@ class _FontSizeExpandableControlState extends State<_FontSizeExpandableControl> 
                       onPressed: () {
                         setState(() => _tempFontSize = 16.0);
                         // Also apply the reset immediately
-                        PreferencesModel.setSubtitleFontSize(16.0).then((_) {
+                        _preferencesRepository.setSubtitleFontSize(16.0).then((_) {
                           if (widget.videoPlayerState.mounted) {
                             widget.videoPlayerState.setState(() {
                               widget.videoPlayerState._subtitleFontSize = 16.0;
