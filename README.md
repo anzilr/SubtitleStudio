@@ -182,10 +182,10 @@ usable throughout the migration:
   Editor, Edit Line, Source View, theme and waveform state.
 - **Isar** provides local persistence for sessions, preferences and subtitle
   data.
-- Large editor/video widgets are being split by feature boundary to improve
+- Large editor/video widgets are split by feature boundary to improve
   testability and reviewability.
-- Compatibility wrapper filenames from the earlier BLoC architecture may remain
-  temporarily, but their active state flow is Riverpod-based.
+- The former BLoC, Provider and GetX application state layers have been removed
+  from the active architecture; Riverpod now owns application/domain state.
 
 
 ## 🔐 Client Secret Policy
