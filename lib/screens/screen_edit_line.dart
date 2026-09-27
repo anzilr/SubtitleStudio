@@ -2836,7 +2836,7 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
           children: [
             Expanded(
               flex: 35, // Default 35% while loading
-              child: _buildEditingInterfaceWithoutVideo(originalContent),
+              child: _buildContentWithoutVideo(originalContent),
             ),
             Expanded(
               flex: 65, // Default 65% while loading
@@ -2901,7 +2901,7 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
           ? _buildVideoPlayerWidget()
           : NoVideoPlaceholder(onLoadVideo: _pickVideoFile);
 
-      final editingContent = _buildEditingInterfaceWithoutVideo(originalContent);
+      final editingContent = _buildContentWithoutVideo(originalContent);
 
       // Determine left and right children based on layout preference
       final leftChild = _layoutPreference == 'layout2' ? videoContent : editingContent;
@@ -3056,16 +3056,16 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
                     ),
                   ),
                 ),
-            rightChild: _buildEditingInterfaceWithoutVideo(originalContent),
+            rightChild: _buildContentWithoutVideo(originalContent),
           )
         : // Fallback to original content for mobile when auto-resize is disabled or no video is visible
           ResponsiveLayout.shouldUseMobileLayout(context) && !shouldShowVideo
-            ? _buildMobileContentWithoutVideo(originalContent) // Show mobile layout without video section
+            ? _buildContentWithoutVideo(originalContent) // Show mobile layout without video section
             : originalContent; // Original content with video section (for desktop or when video is visible)
     }
   }
 
-  Widget _buildEditingInterfaceWithoutVideo(Column originalContent) {
+  Widget _buildContentWithoutVideo(Column originalContent) {
     // Create a modified version of the original content without the video player
     final children = originalContent.children;
     final modifiedChildren = <Widget>[];
@@ -3159,31 +3159,6 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
         'Could not update the comment. Please try again.',
       );
     }
-  }
-
-  Widget _buildMobileContentWithoutVideo(Column originalContent) {
-    // For mobile devices when no video is loaded, show just the editing interface 
-    // without the video player section to provide full screen space for editing
-    final children = originalContent.children;
-    final modifiedChildren = <Widget>[];
-
-    for (final child in children) {
-      // Skip the video player widget (SizedBox with height 240 containing VideoPlayerWidget)
-      if (child is SizedBox && child.height == 240) {
-        continue; // Skip video player section
-      }
-      // Skip the spacing after video player
-      else if (modifiedChildren.isNotEmpty &&
-          modifiedChildren.last is SizedBox &&
-          child is SizedBox &&
-          child.height == 1) {
-        continue; // Skip spacing after video
-      } else {
-        modifiedChildren.add(child);
-      }
-    }
-
-    return Column(children: modifiedChildren);
   }
 
   // Keyboard shortcut handlers
