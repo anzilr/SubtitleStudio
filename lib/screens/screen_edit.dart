@@ -66,6 +66,7 @@ import 'package:subtitle_studio/features/waveform/providers/waveform_controller.
 import 'package:subtitle_studio/features/waveform/widgets/waveform_widget.dart';
 
 part 'edit/parts/edit_dialog_actions.dart';
+part 'edit/parts/edit_responsive_layout.dart';
 
 enum _SourceLeaveChoice { save, discard, cancel }
 
@@ -3401,25 +3402,7 @@ Future<void> _deleteSelectedSubtitles() async {
                   if (_isSourceView) {
                     return _buildSourceView(snapshot.data!);
                   } else {
-                    return _buildResponsiveContent(snapshot.data!);
-                  }
-                },
-              ),
-            ),
-          ),
-
-          // Add floating play/pause button when enabled (hide in source view)
-          if (!_isSourceView && _floatingControlsEnabled && _isVideoVisible && _isVideoLoaded && _videoPlayerKey.currentState != null)
-            Positioned(
-              right: 20,
-              bottom: 20,
-              child: FloatingActionButton(
-                heroTag: 'floatingPlayPause',
-                onPressed: () {
-                  if (_videoPlayerKey.currentState!.isInitialized()) {
-                    _videoPlayerKey.currentState!.playOrPause();
-                  }
-                },
+,
                 backgroundColor: Colors.blue,
                 child: StreamBuilder<bool>(
                   stream: _videoPlayerKey.currentState!.player.stream.playing,
