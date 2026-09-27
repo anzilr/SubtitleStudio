@@ -229,25 +229,25 @@ class _HomeScreenContentState extends ConsumerState<_HomeScreenContent> with Tic
   }
 
   Future<void> _handleInitialFilePath() async {
-    if (widget.initialFilePath != null) {
-      // Wait a bit to ensure the UI is ready
-      await Future.delayed(const Duration(milliseconds: 500));
-      if (mounted) {
-        if (widget.isProjectFile) {
-          // Handle .msone project file
-          _handleImportProject(
-            preselectedFilePath: widget.initialFilePath!,
-            originalSafUri: widget.originalSafUri,
-          );
-        } else {
-          // Handle .srt subtitle file
-          _showImportWithFilePath(
-            widget.initialFilePath!, 
-            widget.initialFileName,
-            originalSafUri: widget.originalSafUri,
-          );
-        }
-      }
+    if (widget.initialFilePath == null) return;
+
+    // Navigation/dialog work launched from initState should wait until the
+    // first frame has attached this route. A fixed delay is device-speed
+    // dependent and can either be unnecessarily slow or still too early.
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
+
+    if (widget.isProjectFile) {
+      _handleImportProject(
+        preselectedFilePath: widget.initialFilePath!,
+        originalSafUri: widget.originalSafUri,
+      );
+    } else {
+      _showImportWithFilePath(
+        widget.initialFilePath!,
+        widget.initialFileName,
+        originalSafUri: widget.originalSafUri,
+      );
     }
   }
 
