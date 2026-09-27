@@ -10,7 +10,7 @@ extension _EditLinePersistence on EditSubtitleScreenState {
     });
 
     // Fetch the subtitle document using the provided ID
-    _subtitle = (await isar.subtitleCollections.get(widget.subtitleId))!;
+    _subtitle = (await _editLineController.loadSubtitleCollection())!;
 
     // Handle case when we're creating a new subtitle or at the end of the list
     if (widget.index > _subtitle!.lines.length) {
@@ -215,8 +215,7 @@ extension _EditLinePersistence on EditSubtitleScreenState {
         // Handle new lines in edit mode
         if (_isEditMode && !_subtitle!.lines.contains(_subtitleLine)) {
           await Future.microtask(() async {
-            await addSubtitleLine(
-              widget.subtitleId,
+            await _editLineController.addLine(
               _subtitleLine!,
               _subtitle!.lines.length,
             );
@@ -233,18 +232,15 @@ extension _EditLinePersistence on EditSubtitleScreenState {
           
           // Call the database function for existing lines asynchronously
           await Future.microtask(() async {
-            await saveSubtitleChangesToDatabase(
-              _subtitle!.id,
+            await _editLineController.saveCompleteLine(
               _subtitleLine!,
-              _parseSubtitleTime,
-              sessionId: widget.sessionId,
               beforeLine: lineBeforeChanges,
             );
           });
         }
 
         await Future.microtask(() async {
-          await updateLastEditedIndex(widget.sessionId, _subtitleLine!.index);
+          await _editLineController.updateLastEditedIndex(_subtitleLine!.index);
         });
 
         // Mark subtitles for regeneration and regenerate subtitles for video player after saving changes (async)
@@ -416,8 +412,7 @@ extension _EditLinePersistence on EditSubtitleScreenState {
         // Handle new lines in edit mode
         if (_isEditMode && !_subtitle!.lines.contains(_subtitleLine)) {
           await Future.microtask(() async {
-            await addSubtitleLine(
-              widget.subtitleId,
+            await _editLineController.addLine(
               _subtitleLine!,
               _subtitle!.lines.length,
             );
@@ -434,18 +429,15 @@ extension _EditLinePersistence on EditSubtitleScreenState {
           
           // Call the database function for existing lines asynchronously
           await Future.microtask(() async {
-            await saveSubtitleChangesToDatabase(
-              _subtitle!.id,
+            await _editLineController.saveCompleteLine(
               _subtitleLine!,
-              _parseSubtitleTime,
-              sessionId: widget.sessionId,
               beforeLine: lineBeforeChanges,
             );
           });
         }
 
         await Future.microtask(() async {
-          await updateLastEditedIndex(widget.sessionId, _subtitleLine!.index);
+          await _editLineController.updateLastEditedIndex(_subtitleLine!.index);
         });
 
         // Mark subtitles for regeneration and regenerate for video player after saving changes (async)
@@ -709,7 +701,7 @@ extension _EditLinePersistence on EditSubtitleScreenState {
             _subtitle!.filePath = newFilePath;
             _subtitle!.originalFileUri = newOriginalUri;
             
-            final updateSuccess = await updateSubtitleCollection(_subtitle!);
+            final updateSuccess = await _editLineController.saveCollection(_subtitle!);
             
             if (updateSuccess && mounted) {
               ScaffoldMessenger.of(contxt).showSnackBar(
@@ -780,11 +772,11 @@ extension _EditLinePersistence on EditSubtitleScreenState {
 
     try {
       // Add to database
-      final success = await addSubtitleLine(widget.subtitleId, newLine, 0);
+      final success = await _editLineController.addLine(newLine, 0);
       if (success) {
         // The database helper completes its transaction before returning.
         // Force refresh subtitle collection before fetching the new line
-        _subtitle = await isar.subtitleCollections.get(widget.subtitleId);
+        _subtitle = await _editLineController.loadSubtitleCollection();
 
         // Refresh the screen with the new line
         _fetchSubtitleLine(widget.subtitleId, 0);
