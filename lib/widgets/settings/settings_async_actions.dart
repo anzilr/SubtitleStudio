@@ -50,7 +50,9 @@ extension _SettingsAsyncActions on _SettingsSheetState {
     });
   
     try {
-      final models = await GeminiModelsService.fetchAvailableModels();
+      final models = await GeminiModelsService.fetchAvailableModels(
+        apiKey: _geminiApiKey,
+      );
       if (mounted) {
         _setSettingsState(() {
           _availableModels = models;
