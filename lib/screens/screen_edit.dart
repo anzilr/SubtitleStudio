@@ -90,8 +90,8 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
   EditController get _controller => ref.read(editControllerProvider.notifier);
   EditState get _editState => ref.read(editControllerProvider);
   
-  final Set<int> _selectedIndices = {};
-  bool _isSelectionMode = false;
+  Set<int> get _selectedIndices => _editState.selectedIndices;
+  bool get _isSelectionMode => _editState.isSelectionMode;
   SubtitleCollection? subtitleCollection; // Make nullable to avoid late initialization error
   List<SubtitleLine> subtitleLines = []; // Initialize with empty list
   late String fileName;
@@ -2733,9 +2733,7 @@ Future<void> _deleteSelectedSubtitles() async {
       } else if (direction == DismissDirection.endToStart) {
         // Left swipe: Enter selection mode and select this item
         if (!_isSelectionMode) {
-          setState(() {
-            _isSelectionMode = true;
-          });
+          _controller.setSelectionMode(true);
         }
         _toggleSelection(index);
       }
@@ -3461,14 +3459,10 @@ Future<void> _deleteSelectedSubtitles() async {
                           }
                           
                           Navigator.pop(context);
-                          
-                          setState(() {
-                            _selectedIndices.clear();
-                            for (int i = startIndex - 1; i < endIndex; i++) {
-                              _selectedIndices.add(i);
-                            }
-                            _isSelectionMode = _selectedIndices.isNotEmpty;
-                          });
+                          _controller.selectRange(
+                            startIndex - 1,
+                            endIndex - 1,
+                          );
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primaryColor,
@@ -3527,19 +3521,9 @@ Future<void> _deleteSelectedSubtitles() async {
       final start = min(_rangeStartIndex!, index);
       final end = max(_rangeStartIndex!, index);
       
-      // Migrated to BLoC - use cubit for selection updates
-      _controller.clearSelection();
-      for (int i = start; i <= end; i++) {
-        _controller.toggleSelection(i);
-      }
-      
-      // Update local state from cubit
-      final state = _editState;
+      _controller.selectRange(start, end);
+
       setState(() {
-        _selectedIndices
-          ..clear()
-          ..addAll(state.selectedIndices);
-        _isSelectionMode = state.isSelectionMode;
         _isRangeSelectionActive = false;
         _rangeStartIndex = null;
       });
@@ -4795,13 +4779,11 @@ Future<void> _deleteSelectedSubtitles() async {
   }
 
   void _handleToggleSelectionModeShortcut() {
-    // Use existing selection toggle logic
-    setState(() {
-      _isSelectionMode = !_isSelectionMode;
-      if (!_isSelectionMode) {
-        _clearSelection();
-      }
-    });
+    if (_isSelectionMode) {
+      _controller.clearSelection();
+    } else {
+      _controller.setSelectionMode(true);
+    }
   }
 
   void _handleDeleteSelectionShortcut() {
@@ -4992,10 +4974,13 @@ Future<void> _deleteSelectedSubtitles() async {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(
+      editControllerProvider.select(
+        (state) => (state.selectedIndices, state.isSelectionMode),
+      ),
+    );
+
     ref.listen<EditState>(editControllerProvider, (previous, next) {
-      final selectionChanged =
-          !setEquals(_selectedIndices, next.selectedIndices) ||
-          _isSelectionMode != next.isSelectionMode;
       final preferencesChanged =
           _floatingControlsEnabled != next.floatingControlsEnabled ||
           _isMsoneEnabled != next.isMsoneEnabled ||
@@ -5003,24 +4988,14 @@ Future<void> _deleteSelectedSubtitles() async {
           _resizeRatio != next.resizeRatio ||
           _mobileVideoResizeRatio != next.mobileVideoResizeRatio;
 
-      if (!selectionChanged && !preferencesChanged) return;
-      if (!mounted) return;
+      if (!preferencesChanged || !mounted) return;
 
       setState(() {
-        if (selectionChanged) {
-          _selectedIndices
-            ..clear()
-            ..addAll(next.selectedIndices);
-          _isSelectionMode = next.isSelectionMode;
-        }
-
-        if (preferencesChanged) {
-          _floatingControlsEnabled = next.floatingControlsEnabled;
-          _isMsoneEnabled = next.isMsoneEnabled;
-          _isLayout1 = next.isLayout1;
-          _resizeRatio = next.resizeRatio;
-          _mobileVideoResizeRatio = next.mobileVideoResizeRatio;
-        }
+        _floatingControlsEnabled = next.floatingControlsEnabled;
+        _isMsoneEnabled = next.isMsoneEnabled;
+        _isLayout1 = next.isLayout1;
+        _resizeRatio = next.resizeRatio;
+        _mobileVideoResizeRatio = next.mobileVideoResizeRatio;
       });
     });
 

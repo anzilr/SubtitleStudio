@@ -407,6 +407,42 @@ class EditController extends Notifier<EditState> {
     _setState(state.clearSelection());
   }
 
+  /// Enter or exit selection mode without changing selection content.
+  void setSelectionMode(bool enabled) {
+    if (!enabled) {
+      clearSelection();
+      return;
+    }
+
+    if (!state.isSelectionMode) {
+      _setState(state.copyWith(isSelectionMode: true));
+    }
+  }
+
+  /// Replace the selected set with a contiguous zero-based range.
+  void selectRange(int startIndex, int endIndex) {
+    if (startIndex < 0 ||
+        endIndex < startIndex ||
+        endIndex >= state.subtitleLines.length) {
+      logWarning(
+        'EditController: Ignoring invalid selection range '
+        '$startIndex..$endIndex',
+      );
+      return;
+    }
+
+    final selected = <int>{
+      for (int index = startIndex; index <= endIndex; index++) index,
+    };
+
+    _setState(
+      state.copyWith(
+        selectedIndices: selected,
+        isSelectionMode: selected.isNotEmpty,
+      ),
+    );
+  }
+
   /// Select all subtitle lines
   void selectAll() {
     logInfo('EditController: Selecting all ${state.subtitleLines.length} lines');
