@@ -113,7 +113,7 @@ class _LogManagementWidgetState extends State<LogManagementWidget> {
         _isLoading = false;
       });
       
-      await AppLogger.instance.error('Failed to load log statistics: $e', stackTrace: stackTrace, context: 'LogManagementWidget._loadLogStats');
+      await AppLogger.instance.error('Could not load log information.', stackTrace: stackTrace, context: 'LogManagementWidget._loadLogStats');
       
       if (mounted) {
         _showSnackBar(
@@ -155,7 +155,7 @@ class _LogManagementWidgetState extends State<LogManagementWidget> {
       await AppLogger.instance.error('Failed to export logs: $e', stackTrace: stackTrace, context: 'LogManagementWidget._exportLogs');
       
       if (mounted) {
-        _showSnackBar('Failed to export logs: $e', Colors.red, duration: 5);
+        _showSnackBar('Could not export logs. Please try again.', Colors.red, duration: 5);
       }
     }
   }
@@ -246,7 +246,7 @@ class _LogManagementWidgetState extends State<LogManagementWidget> {
         await AppLogger.instance.error('Failed to clear logs: $e', stackTrace: stackTrace, context: 'LogManagementWidget._clearLogs');
         
         if (mounted) {
-          _showSnackBar('Failed to clear logs: $e', Colors.red);
+          _showSnackBar('Could not clear logs. Please try again.', Colors.red);
         }
       }
     }
@@ -272,7 +272,7 @@ class _LogManagementWidgetState extends State<LogManagementWidget> {
       await AppLogger.instance.error('Failed to copy log path: $e', stackTrace: stackTrace, context: 'LogManagementWidget._copyLogPath');
       
       if (mounted) {
-        _showSnackBar('Failed to copy path: $e', Colors.red);
+        _showSnackBar('Could not copy the log path.', Colors.red);
       }
     }
   }

@@ -1397,7 +1397,7 @@ class _HomeScreenContentState extends ConsumerState<_HomeScreenContent> with Tic
       );
     } catch (e) {
       if (!mounted) return;
-      SnackbarHelper.showError(context, 'Error: $e');
+      SnackbarHelper.showError(context, 'Something went wrong. Please try again.');
     }
   }
 
@@ -1470,7 +1470,7 @@ class _HomeScreenContentState extends ConsumerState<_HomeScreenContent> with Tic
               print('Error during extraction navigation: $e');
             }
             if (mounted) {
-              SnackbarHelper.showError(context, 'Error: $e');
+              SnackbarHelper.showError(context, 'Something went wrong. Please try again.');
             }
           }
         },
@@ -1507,7 +1507,7 @@ class _HomeScreenContentState extends ConsumerState<_HomeScreenContent> with Tic
               print('Error during import navigation: $e');
             }
             if (mounted) {
-              SnackbarHelper.showError(context, 'Error: $e');
+              SnackbarHelper.showError(context, 'Something went wrong. Please try again.');
             }
           }
         },
@@ -1597,7 +1597,7 @@ class _HomeScreenContentState extends ConsumerState<_HomeScreenContent> with Tic
       }
     } catch (e) {
       if (mounted) {
-        SnackbarHelper.showError(context, 'Error opening file: $e');
+        SnackbarHelper.showError(context, 'Could not open this file. Please verify the file and try again.');
       }
       await logError('Error in source view handler: $e');
     }
