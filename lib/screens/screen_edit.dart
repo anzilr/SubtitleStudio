@@ -14,7 +14,6 @@ import 'package:subtitle_studio/utils/platform_file_handler.dart';
 import 'package:subtitle_studio/operations/subtitle_sync_operations.dart';
 import 'package:subtitle_studio/utils/subtitle_parser.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
-import 'package:subtitle_studio/utils/subtitle_processor.dart';
 import 'package:subtitle_studio/widgets/goto_line_sheet.dart';
 import 'package:subtitle_studio/widgets/video_player_widget.dart';
 import 'package:subtitle_studio/screens/edit/widgets/video_player_section.dart';
@@ -60,6 +59,7 @@ import 'package:subtitle_studio/screens/edit/widgets/subtitle_card.dart';
 import 'package:subtitle_studio/screens/edit/widgets/edit_selection_dialogs.dart';
 import 'package:subtitle_studio/screens/edit/widgets/editor_custom_scrollbar.dart';
 import 'package:subtitle_studio/screens/edit/widgets/edit_tool_sheets.dart';
+import 'package:subtitle_studio/screens/edit/services/hearing_impaired_cleanup_service.dart';
 import 'package:subtitle_studio/features/waveform/state/waveform_event.dart';
 import 'package:subtitle_studio/features/waveform/state/waveform_state.dart';
 import 'package:subtitle_studio/features/waveform/providers/waveform_controller.dart';
@@ -3065,202 +3065,83 @@ Future<void> _deleteSelectedSubtitles() async {
   }
 
   Future<void> _removeHearingImpairedLines() async {
-    // Show confirmation dialog
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Remove Hearing Impaired Text'),
-          content: const Text(
-            'This will remove hearing impaired annotations such as:\n'
-            '• Text in square brackets [like this]\n'
-            '• Sound effects and music notes ♪\n'
-            '• Speaker labels (NAME:)\n'
-            '• Sound descriptions in parentheses\n\n'
-            'Lines that become empty after removal will be deleted.\n\n'
-            'This action cannot be undone. Continue?',
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Remove Hearing Impaired Text'),
+        content: const Text(
+          'This will remove hearing impaired annotations such as:\n'
+          '• Text in square brackets [like this]\n'
+          '• Sound effects and music notes ♪\n'
+          '• Speaker labels (NAME:)\n'
+          '• Sound descriptions in parentheses\n\n'
+          'Lines that become empty after removal will be deleted.\n\n'
+          'This action cannot be undone. Continue?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: Text('Cancel', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
             ),
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-              ),
-              child: Text('Remove', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
-            ),
-          ],
-        );
-      },
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
     );
 
-    if (confirm != true) return;
+    if (confirm != true || !mounted) return;
 
+    var loadingVisible = false;
     try {
-      // Show loading indicator
-      if (!mounted) return;
-      showDialog(
+      showDialog<void>(
         context: context,
         barrierDismissible: false,
-        builder: (BuildContext context) {
-          return const Center(
-            child: Card(
-              child: Padding(
-                padding: EdgeInsets.all(20.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 16),
-                    Text('Processing subtitles...'),
-                  ],
-                ),
+        builder: (_) => const Center(
+          child: Card(
+            child: Padding(
+              padding: EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Processing subtitles...'),
+                ],
               ),
             ),
-          );
-        },
+          ),
+        ),
+      );
+      loadingVisible = true;
+
+      final result = await HearingImpairedCleanupService.execute(
+        sessionId: widget.sessionId,
+        subtitleCollectionId: widget.subtitleCollectionId,
+        currentLines: subtitleLines,
       );
 
-      // Get current subtitle lines
-      final currentLines = List<SubtitleLine>.from(subtitleLines);
-      final originalCount = currentLines.length;
-
-      // Apply hearing impaired text removal
-      final cleanedLines = removeHearingImpairedText(currentLines);
-      final removedCount = originalCount - cleanedLines.length;
-      final modifiedCount = cleanedLines.where((cleaned) {
-        final original = currentLines.firstWhere((c) => c.index == cleaned.index, orElse: () => cleaned);
-        return original.original != cleaned.original;
-      }).length;
-
-      // Create checkpoint before making changes
-      final List<SubtitleLineDelta> batchDeltas = [];
-      
-      // Track deletions and modifications
-      for (int i = 0; i < currentLines.length; i++) {
-        final originalLine = currentLines[i];
-        final cleanedIndex = cleanedLines.indexWhere((cl) => cl.index == originalLine.index);
-        
-        if (cleanedIndex == -1) {
-          // Line was removed
-          final lineCopy = SubtitleLine()
-            ..index = originalLine.index
-            ..startTime = originalLine.startTime
-            ..endTime = originalLine.endTime
-            ..original = originalLine.original
-            ..edited = originalLine.edited
-            ..marked = originalLine.marked
-            ..comment = originalLine.comment
-            ..resolved = originalLine.resolved;
-          
-          final delta = SubtitleLineDelta()
-            ..changeType = 'delete'
-            ..lineIndex = i
-            ..beforeState = lineCopy
-            ..afterState = null;
-          batchDeltas.add(delta);
-        } else {
-          final cleanedLine = cleanedLines[cleanedIndex];
-          if (originalLine.original != cleanedLine.original) {
-            // Line was modified
-            final beforeCopy = SubtitleLine()
-              ..index = originalLine.index
-              ..startTime = originalLine.startTime
-              ..endTime = originalLine.endTime
-              ..original = originalLine.original
-              ..edited = originalLine.edited
-              ..marked = originalLine.marked
-              ..comment = originalLine.comment
-              ..resolved = originalLine.resolved;
-            
-            final afterCopy = SubtitleLine()
-              ..index = cleanedLine.index
-              ..startTime = cleanedLine.startTime
-              ..endTime = cleanedLine.endTime
-              ..original = cleanedLine.original
-              ..edited = cleanedLine.edited
-              ..marked = cleanedLine.marked
-              ..comment = cleanedLine.comment
-              ..resolved = cleanedLine.resolved;
-            
-            final delta = SubtitleLineDelta()
-              ..changeType = 'modify'
-              ..lineIndex = i
-              ..beforeState = beforeCopy
-              ..afterState = afterCopy;
-            batchDeltas.add(delta);
-          }
-        }
-      }
-
-      if (batchDeltas.isNotEmpty) {
-        try {
-          await CheckpointManager.createCheckpoint(
-            sessionId: widget.sessionId,
-            subtitleCollectionId: widget.subtitleCollectionId,
-            operationType: 'batch',
-            description: 'Remove hearing impaired text',
-            deltas: batchDeltas,
-          );
-        } catch (e) {
-          if (kDebugMode) print('Error creating checkpoint: $e');
-        }
-      }
-
-      // Update subtitle collection with cleaned lines
-      await isar.writeTxn(() async {
-        // Fetch the subtitle collection
-        final collection = await isar.subtitleCollections.get(widget.subtitleCollectionId);
-        if (collection != null) {
-          // Replace lines with cleaned lines (re-index them properly)
-          collection.lines = cleanedLines.map((line) {
-            return SubtitleLine()
-              ..index = line.index
-              ..startTime = line.startTime
-              ..endTime = line.endTime
-              ..original = line.original
-              ..edited = line.edited
-              ..marked = line.marked
-              ..comment = line.comment
-              ..resolved = line.resolved;
-          }).toList();
-          
-          // Reindex to ensure sequential numbering
-          for (int i = 0; i < collection.lines.length; i++) {
-            collection.lines[i].index = i + 1;
-          }
-          
-          // Save the updated collection
-          await isar.subtitleCollections.put(collection);
-        }
-      });
-
-      // Refresh subtitle lines from database
       await _refreshSubtitleLines();
 
-      // Close loading dialog
       if (!mounted) return;
-      Navigator.of(context).pop();
-
-      // Show success message
-      if (!mounted) return;
-      SnackbarHelper.showSuccess(
-        context,
-        'Processed $originalCount lines. '
-        '${removedCount > 0 ? "$removedCount lines deleted. " : ""}'
-        '${modifiedCount > 0 ? "$modifiedCount lines modified. " : ""}'
-        '${cleanedLines.length} lines remaining.',
-      );
-    } catch (e) {
-      // Close loading dialog if it's open
-      if (mounted && Navigator.of(context).canPop()) {
+      if (loadingVisible && Navigator.of(context).canPop()) {
         Navigator.of(context).pop();
+        loadingVisible = false;
       }
 
+      SnackbarHelper.showSuccess(
+        context,
+        result.summaryMessage,
+      );
+    } catch (e) {
       if (!mounted) return;
+      if (loadingVisible && Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
       SnackbarHelper.showError(
         context,
         'Could not remove hearing-impaired text. Please try again.',
