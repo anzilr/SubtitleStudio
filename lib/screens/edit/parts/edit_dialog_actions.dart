@@ -262,21 +262,7 @@ extension _EditDialogActions on _EditScreenState {
                   updatedLine.edited = newText;
                   
                   // Save to database
-                  await saveSubtitleChangesToDatabase(
-                    widget.subtitleCollectionId,
-                    updatedLine,
-                    (String time) {
-                      // Parse time format "HH:mm:ss,SSS" to DateTime
-                      final parts = time.split(',');
-                      final hms = parts[0].split(':');
-                      return DateTime(0, 1, 1, 
-                        int.parse(hms[0]), 
-                        int.parse(hms[1]), 
-                        int.parse(hms[2]), 
-                        int.parse(parts[1]));
-                    },
-                    sessionId: widget.sessionId,
-                  );
+                  await _controller.saveLineChanges(updatedLine);
                   
                   // Update UI
                   _setEditorState(() {
@@ -403,21 +389,7 @@ extension _EditDialogActions on _EditScreenState {
                   updatedLine.edited = newText;
                   
                   // Save to database
-                  await saveSubtitleChangesToDatabase(
-                    widget.subtitleCollectionId,
-                    updatedLine,
-                    (String time) {
-                      // Parse time format "HH:mm:ss,SSS" to DateTime
-                      final parts = time.split(',');
-                      final hms = parts[0].split(':');
-                      return DateTime(0, 1, 1, 
-                        int.parse(hms[0]), 
-                        int.parse(hms[1]), 
-                        int.parse(hms[2]), 
-                        int.parse(parts[1]));
-                    },
-                    sessionId: widget.sessionId,
-                  );
+                  await _controller.saveLineChanges(updatedLine);
                   
                   // Update UI
                   _setEditorState(() {
