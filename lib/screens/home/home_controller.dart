@@ -4,12 +4,17 @@ import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/database/models/preferences_model.dart';
 import 'package:subtitle_studio/screens/home/home_state.dart';
 import 'package:subtitle_studio/screens/home/models/session_summary.dart';
+import 'package:subtitle_studio/screens/home/services/session_activity_store.dart';
 import 'package:subtitle_studio/screens/home/repositories/session_repository.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 
 /// Provides the session repository used by the Riverpod Home controller.
 final sessionRepositoryProvider = Provider<SessionRepository>(
   (ref) => SessionRepository(ref.watch(isarProvider)),
+);
+
+final sessionActivityStoreProvider = Provider<SessionActivityStore>(
+  (ref) => SessionActivityStore(),
 );
 
 /// Riverpod controller for Home screen state and session workflows.
@@ -19,6 +24,8 @@ final homeControllerProvider = NotifierProvider<HomeController, HomeState>(
 
 class HomeController extends Notifier<HomeState> {
   SessionRepository get _repository => ref.read(sessionRepositoryProvider);
+  SessionActivityStore get _activityStore =>
+      ref.read(sessionActivityStoreProvider);
 
   @override
   HomeState build() {
@@ -39,6 +46,19 @@ class HomeController extends Notifier<HomeState> {
       final lastEditedId = await _repository.getLastEditedSessionId();
       final sortOption = await PreferencesModel.getSessionSortOption();
       final sessionSummaries = await _repository.fetchSessionSummaries(sessions);
+
+      final validSessionIds = sessions.map((session) => session.id).toSet();
+      final sessionLastOpenedEpochMs = await _activityStore.loadLastOpened(
+        validSessionIds: validSessionIds,
+      );
+
+      // Migration fallback: older installs only persisted one last-edited ID.
+      if (lastEditedId != null &&
+          validSessionIds.contains(lastEditedId) &&
+          !sessionLastOpenedEpochMs.containsKey(lastEditedId)) {
+        sessionLastOpenedEpochMs[lastEditedId] =
+            await _activityStore.markOpened(lastEditedId);
+      }
 
       await logInfo(
         'HomeController: Fetched ${sessions.length} sessions, '
@@ -64,6 +84,7 @@ class HomeController extends Notifier<HomeState> {
         recentSessions: sessions,
         lastEditedSession: lastEditedSession,
         sessionSummaries: sessionSummaries,
+        sessionLastOpenedEpochMs: sessionLastOpenedEpochMs,
         sortOption: sortOption,
         clearError: true,
       );
@@ -139,10 +160,15 @@ class HomeController extends Notifier<HomeState> {
       final updatedSummaries = Map<int, SessionSummary>.from(
         state.sessionSummaries,
       )..remove(session.id);
+      final updatedLastOpened = Map<int, int>.from(
+        state.sessionLastOpenedEpochMs,
+      )..remove(session.id);
+      await _activityStore.removeSession(session.id);
 
       state = state.copyWith(
         recentSessions: updatedSessions,
         sessionSummaries: updatedSummaries,
+        sessionLastOpenedEpochMs: updatedLastOpened,
         clearLastEditedSession: shouldClearLastEdited,
         clearError: true,
       );
@@ -174,6 +200,24 @@ class HomeController extends Notifier<HomeState> {
       );
 
       await _repository.setLastEditedSession(sessionId);
+      final openedEpochMs = await _activityStore.markOpened(sessionId);
+
+      final updatedLastOpened = Map<int, int>.from(
+        state.sessionLastOpenedEpochMs,
+      )..[sessionId] = openedEpochMs;
+
+      Session? openedSession;
+      for (final session in state.recentSessions) {
+        if (session.id == sessionId) {
+          openedSession = session;
+          break;
+        }
+      }
+
+      state = state.copyWith(
+        sessionLastOpenedEpochMs: updatedLastOpened,
+        lastEditedSession: openedSession,
+      );
 
       await logInfo(
         'HomeController: Successfully updated last edited session',

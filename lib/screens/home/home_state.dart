@@ -25,6 +25,7 @@ class HomeState extends Equatable {
   final List<Session> recentSessions;
   final Session? lastEditedSession;
   final Map<int, SessionSummary> sessionSummaries;
+  final Map<int, int> sessionLastOpenedEpochMs;
   final String searchQuery;
   final bool isFabExpanded;
   final SessionSortOption sortOption;
@@ -35,6 +36,7 @@ class HomeState extends Equatable {
     this.recentSessions = const [],
     this.lastEditedSession,
     this.sessionSummaries = const {},
+    this.sessionLastOpenedEpochMs = const {},
     this.searchQuery = '',
     this.isFabExpanded = false,
     this.sortOption = SessionSortOption.lastOpened,
@@ -47,6 +49,7 @@ class HomeState extends Equatable {
         recentSessions: [],
         lastEditedSession: null,
         sessionSummaries: {},
+        sessionLastOpenedEpochMs: {},
         searchQuery: '',
         isFabExpanded: false,
         sortOption: SessionSortOption.lastOpened,
@@ -59,6 +62,7 @@ class HomeState extends Equatable {
     List<Session>? recentSessions,
     Session? lastEditedSession,
     Map<int, SessionSummary>? sessionSummaries,
+    Map<int, int>? sessionLastOpenedEpochMs,
     String? searchQuery,
     bool? isFabExpanded,
     SessionSortOption? sortOption,
@@ -73,6 +77,8 @@ class HomeState extends Equatable {
           ? null
           : (lastEditedSession ?? this.lastEditedSession),
       sessionSummaries: sessionSummaries ?? this.sessionSummaries,
+      sessionLastOpenedEpochMs:
+          sessionLastOpenedEpochMs ?? this.sessionLastOpenedEpochMs,
       searchQuery: searchQuery ?? this.searchQuery,
       isFabExpanded: isFabExpanded ?? this.isFabExpanded,
       sortOption: sortOption ?? this.sortOption,
@@ -99,17 +105,18 @@ class HomeState extends Equatable {
     // Apply sorting based on selected option
     switch (sortOption) {
       case SessionSortOption.lastOpened:
-        // Only the most recently active session is persisted today. Pin it to
-        // the top, then use descending session ID as a deterministic fallback.
         sessions.sort((a, b) {
-          if (lastEditedSession?.id == a.id &&
-              lastEditedSession?.id != b.id) {
-            return -1;
+          final aOpened = sessionLastOpenedEpochMs[a.id];
+          final bOpened = sessionLastOpenedEpochMs[b.id];
+
+          if (aOpened != null && bOpened != null && aOpened != bOpened) {
+            return bOpened.compareTo(aOpened);
           }
-          if (lastEditedSession?.id == b.id &&
-              lastEditedSession?.id != a.id) {
-            return 1;
-          }
+          if (aOpened != null && bOpened == null) return -1;
+          if (aOpened == null && bOpened != null) return 1;
+
+          // Existing sessions created before activity tracking fall back to
+          // deterministic newest-ID order until they are opened once.
           return b.id.compareTo(a.id);
         });
         break;
@@ -157,6 +164,7 @@ class HomeState extends Equatable {
         recentSessions,
         lastEditedSession,
         sessionSummaries,
+        sessionLastOpenedEpochMs,
         searchQuery,
         isFabExpanded,
         sortOption,
