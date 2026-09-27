@@ -1,18 +1,17 @@
-Riverpod migration checkpoint 10
+Riverpod migration checkpoint 11
 Date: 2026-09-27
 Checks:
 - flutter analyze
 - flutter test
 
-Scope since checkpoint 9:
-- Extracted Editor main menu rendering
-- Extracted Editor selection menu rendering
-- Extracted Editor static empty-state UI
-- Extracted subtitle card widget
-- Extracted batch-delete confirmation sheet
-- Extracted index-selection sheet
-- Hardened Go-to-Line input validation
-- Extracted shift-selected-times sheet
-- Reduced screen_edit.dart to roughly 4,700 lines
+Scope since checkpoint 10:
+- Made hearing-impaired cleanup non-mutating
+- Added hearing-impaired cleanup regression tests
+- Preserved resolved comment state in cleanup checkpoints
+- Removed remaining app-entry database imports
+- Extracted Edit Line dictionary sheets
+- Extracted and tested AI explanation context builder
+- Cleaned stale extracted imports/comments
+- Sanitized raw Edit Line exception messages
 
 Platform builds intentionally disabled.
