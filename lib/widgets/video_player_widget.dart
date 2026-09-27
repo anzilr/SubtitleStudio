@@ -31,6 +31,7 @@
 // - Use iOS native subtitle rendering if available
 
 import 'package:flutter/material.dart';      // Flutter UI framework
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';     // System services integration
 import 'package:flutter/foundation.dart';   // Flutter foundation for kDebugMode
 import 'package:flutter/gestures.dart';     // Gesture detection and pointer events
@@ -49,6 +50,7 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 // FontLoader is available via flutter services import above
 import 'package:subtitle_studio/database/models/preferences_model.dart';
+import 'package:subtitle_studio/widgets/video/video_player_preferences_repository.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/utils/responsive_layout.dart'; // Import responsive layout utilities
 import 'package:subtitle_studio/screens/screen_edit_line.dart'; // Import EditSubtitleScreenState
@@ -111,7 +113,7 @@ Future<void> _awaitCallbackResult(dynamic result) async {
 /// - Implement subtitle overlay with Core Animation layers
 /// - Handle iOS-specific video lifecycle and interruptions
 /// - Integrate with iOS media center and lock screen controls
-class VideoPlayerWidget extends StatefulWidget {
+class VideoPlayerWidget extends ConsumerStatefulWidget {
   /// Path to the video file for playback
   /// Supports local files and remote URLs
   final String videoPath;
@@ -181,7 +183,7 @@ class VideoPlayerWidget extends StatefulWidget {
   });
 
   @override
-  VideoPlayerWidgetState createState() => VideoPlayerWidgetState();
+  ConsumerState<VideoPlayerWidget> createState() => VideoPlayerWidgetState();
 }
 
 /// State management class for VideoPlayerWidget
@@ -195,7 +197,10 @@ class VideoPlayerWidget extends StatefulWidget {
 /// - User interface state management
 /// - Error handling and recovery
 /// - Performance optimization for smooth playback
-class VideoPlayerWidgetState extends State<VideoPlayerWidget> with AutomaticKeepAliveClientMixin {
+class VideoPlayerWidgetState extends ConsumerState<VideoPlayerWidget> with AutomaticKeepAliveClientMixin {
+  VideoPlayerPreferencesRepository get _preferencesRepository =>
+      ref.read(videoPlayerPreferencesRepositoryProvider);
+
   void _setVideoState(VoidCallback update) {
     if (!mounted) return;
     setState(update);
