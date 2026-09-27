@@ -207,7 +207,7 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
         }
       } catch (e) {
         if (mounted && context.mounted) {
-          SnackbarHelper.showError(context, 'Failed to update comment: $e');
+          SnackbarHelper.showError(context, 'Could not update the comment. Please try again.');
         } else {
           debugPrint('Failed to update comment (context unavailable): $e');
         }
@@ -1545,7 +1545,7 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
       // Show error message
       SnackbarHelper.showError(
         context,
-        'Error applying effect: $e',
+        'Could not apply the subtitle effect. Please try again.',
         duration: const Duration(seconds: 3),
       );
     }
@@ -2069,7 +2069,7 @@ Future<void> _deleteSelectedSubtitles() async {
       
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to add new line: $e'),
+          content: const Text('Could not add the subtitle line. Please try again.'),
           backgroundColor: const Color(0xFFD32F2F),
         ),
       );
@@ -2331,7 +2331,7 @@ Future<void> _deleteSelectedSubtitles() async {
                 SnackbarHelper.showSuccess(context, 
                   comment != null ? 'Comment updated' : 'Comment deleted');
               } catch (e) {
-                SnackbarHelper.showError(context, 'Failed to update comment: $e');
+                SnackbarHelper.showError(context, 'Could not update the comment. Please try again.');
               }
             },
             onLineUnmarked: (index) async {
@@ -2354,7 +2354,7 @@ Future<void> _deleteSelectedSubtitles() async {
                 
                 SnackbarHelper.showSuccess(context, 'Line unmarked and comment deleted');
               } catch (e) {
-                SnackbarHelper.showError(context, 'Failed to unmark line: $e');
+                SnackbarHelper.showError(context, 'Could not update the mark. Please try again.');
               }
             },
             onResolvedUpdated: (index, resolved) async {
@@ -2373,7 +2373,7 @@ Future<void> _deleteSelectedSubtitles() async {
                 SnackbarHelper.showSuccess(context, 
                   resolved ? 'Comment marked as resolved' : 'Comment marked as unresolved');
               } catch (e) {
-                SnackbarHelper.showError(context, 'Failed to update resolved status: $e');
+                SnackbarHelper.showError(context, 'Could not update the comment status. Please try again.');
               }
             },
             onTextEdited: (index, newText) async {
@@ -2415,14 +2415,14 @@ Future<void> _deleteSelectedSubtitles() async {
                   SnackbarHelper.showSuccess(context, 'Subtitle text updated');
                 }
               } catch (e) {
-                SnackbarHelper.showError(context, 'Failed to update subtitle text: $e');
+                SnackbarHelper.showError(context, 'Could not update the subtitle text. Please try again.');
               }
             },
           ),
         ),
       );
     } catch (e) {
-      SnackbarHelper.showError(context, 'Error loading marked lines: $e');
+      SnackbarHelper.showError(context, 'Could not load marked subtitles. Please try again.');
     }
   }
 
@@ -2470,7 +2470,7 @@ Future<void> _deleteSelectedSubtitles() async {
                 SnackbarHelper.showSuccess(context, 
                   comment != null ? 'Comment updated' : 'Comment deleted');
               } catch (e) {
-                SnackbarHelper.showError(context, 'Failed to update comment: $e');
+                SnackbarHelper.showError(context, 'Could not update the comment. Please try again.');
               }
             },
             onLineUnmarked: (index) async {
@@ -2493,7 +2493,7 @@ Future<void> _deleteSelectedSubtitles() async {
                 
                 SnackbarHelper.showSuccess(context, 'Line unmarked and comment deleted');
               } catch (e) {
-                SnackbarHelper.showError(context, 'Failed to unmark line: $e');
+                SnackbarHelper.showError(context, 'Could not update the mark. Please try again.');
               }
             },
             onResolvedUpdated: (index, resolved) async {
@@ -2512,7 +2512,7 @@ Future<void> _deleteSelectedSubtitles() async {
                 SnackbarHelper.showSuccess(context, 
                   resolved ? 'Comment marked as resolved' : 'Comment marked as unresolved');
               } catch (e) {
-                SnackbarHelper.showError(context, 'Failed to update resolved status: $e');
+                SnackbarHelper.showError(context, 'Could not update the comment status. Please try again.');
               }
             },
             onTextEdited: (index, newText) async {
@@ -2554,14 +2554,14 @@ Future<void> _deleteSelectedSubtitles() async {
                   SnackbarHelper.showSuccess(context, 'Subtitle text updated');
                 }
               } catch (e) {
-                SnackbarHelper.showError(context, 'Failed to update subtitle text: $e');
+                SnackbarHelper.showError(context, 'Could not update the subtitle text. Please try again.');
               }
             },
           ),
         ),
       );
     } catch (e) {
-      SnackbarHelper.showError(context, 'Error loading marked lines: $e');
+      SnackbarHelper.showError(context, 'Could not load marked subtitles. Please try again.');
     }
   }
 
@@ -2676,7 +2676,7 @@ Future<void> _deleteSelectedSubtitles() async {
         SnackbarHelper.showError(context, 'Failed to update mark status');
       }
     } catch (e) {
-      SnackbarHelper.showError(context, 'Error updating mark status: $e');
+      SnackbarHelper.showError(context, 'Could not update the mark. Please try again.');
     }
   }
 
@@ -4201,7 +4201,7 @@ Future<void> _deleteSelectedSubtitles() async {
       await _handleSaveFileAs();
 
     } catch (e) {
-      if (mounted) SnackbarHelper.showError(context, 'Error saving file: $e');
+      if (mounted) SnackbarHelper.showError(context, 'Could not save the subtitle file. Please try again.');
     }
   }
 
@@ -4237,7 +4237,7 @@ Future<void> _deleteSelectedSubtitles() async {
       }
     } catch (e) {
       if (context.mounted) {
-        SnackbarHelper.showError(context, 'Error preparing export: $e');
+        SnackbarHelper.showError(context, 'Could not prepare the export. Please try again.');
       }
     }
   }
@@ -4272,7 +4272,7 @@ Future<void> _deleteSelectedSubtitles() async {
       }
     } catch (e) {
       if (context.mounted) {
-        SnackbarHelper.showError(context, 'Error saving project: $e');
+        SnackbarHelper.showError(context, 'Could not save the project. Please try again.');
       }
     }
   }
@@ -4675,7 +4675,7 @@ Future<void> _deleteSelectedSubtitles() async {
       if (!mounted) return;
       SnackbarHelper.showError(
         context,
-        'Failed to remove hearing impaired text: $e',
+        'Could not remove hearing-impaired text. Please try again.',
       );
     }
   }
@@ -5381,7 +5381,7 @@ Future<void> _deleteSelectedSubtitles() async {
       }
     } catch (e) {
       if (!mounted) return;
-      SnackbarHelper.showError(context, 'Error: $e');
+      SnackbarHelper.showError(context, 'Something went wrong. Please try again.');
     }
   }
 
@@ -5554,7 +5554,7 @@ Future<void> _deleteSelectedSubtitles() async {
                                 comment != null ? 'Comment updated' : 'Comment deleted');
                             } catch (e) {
                               debugPrint('  - Error: $e');
-                              SnackbarHelper.showError(context, 'Failed to update comment: $e');
+                              SnackbarHelper.showError(context, 'Could not update the comment. Please try again.');
                             }
                           },
                         ),
@@ -5685,7 +5685,7 @@ Future<void> _deleteSelectedSubtitles() async {
                       SnackbarHelper.showSuccess(context, 
                         comment != null ? 'Comment updated' : 'Comment deleted');
                     } catch (e) {
-                      SnackbarHelper.showError(context, 'Failed to update comment: $e');
+                      SnackbarHelper.showError(context, 'Could not update the comment. Please try again.');
                     }
                   },
                 ),
@@ -5804,7 +5804,7 @@ Future<void> _deleteSelectedSubtitles() async {
                             SnackbarHelper.showSuccess(context, 
                               comment != null ? 'Comment updated' : 'Comment deleted');
                           } catch (e) {
-                            SnackbarHelper.showError(context, 'Failed to update comment: $e');
+                            SnackbarHelper.showError(context, 'Could not update the comment. Please try again.');
                           }
                         },
                       ),
@@ -5976,7 +5976,7 @@ Future<void> _deleteSelectedSubtitles() async {
                         SnackbarHelper.showSuccess(context, 
                           comment != null ? 'Comment updated' : 'Comment deleted');
                       } catch (e) {
-                        SnackbarHelper.showError(context, 'Failed to update comment: $e');
+                        SnackbarHelper.showError(context, 'Could not update the comment. Please try again.');
                       }
                     },
                   ),
