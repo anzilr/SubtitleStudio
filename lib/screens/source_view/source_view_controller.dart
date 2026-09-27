@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:subtitle_studio/screens/source_view/source_view_state.dart';
+import 'package:subtitle_studio/models/subtitle_entry.dart';
 import 'package:subtitle_studio/utils/app_logger.dart';
 import 'package:subtitle_studio/utils/saf_file_handler.dart';
 import 'package:subtitle_studio/utils/subtitle_parser.dart';

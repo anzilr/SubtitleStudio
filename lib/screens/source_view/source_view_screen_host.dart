@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/screens/source_view/source_view_controller.dart';
 import 'package:subtitle_studio/screens/source_view/source_view_state.dart';
+import 'package:subtitle_studio/models/subtitle_entry.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/utils/unicode_text_input_formatter.dart';
 

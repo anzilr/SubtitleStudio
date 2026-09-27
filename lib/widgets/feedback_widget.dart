@@ -301,8 +301,7 @@ class _FeedbackWidgetState extends State<FeedbackWidget> {
         await _shareWithAttachments(emailBody);
       } catch (shareError, shareStackTrace) {
         await AppLogger.instance.error(
-          'Feedback fallback sharing failed',
-          error: shareError,
+          'Feedback fallback sharing failed: $shareError',
           stackTrace: shareStackTrace,
           context: 'FeedbackWidget._sendFeedback',
         );
@@ -426,8 +425,7 @@ $emailBody''';
       _clearForm();
     } catch (e, stackTrace) {
       await AppLogger.instance.error(
-        'Failed to share feedback',
-        error: e,
+        'Failed to share feedback: $e',
         stackTrace: stackTrace,
         context: 'FeedbackWidget._shareWithAttachments',
       );

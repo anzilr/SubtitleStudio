@@ -16,7 +16,6 @@ import 'package:subtitle_studio/utils/subtitle_parser.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/widgets/goto_line_sheet.dart';
 import 'package:subtitle_studio/widgets/video_player_widget.dart';
-import 'package:subtitle_studio/screens/edit/widgets/video_player_section.dart';
 import 'package:subtitle_studio/screens/edit/widgets/editor_video_pane.dart';
 import 'package:subtitle_studio/screens/screen_help.dart';
 import 'package:subtitle_studio/utils/responsive_layout.dart';

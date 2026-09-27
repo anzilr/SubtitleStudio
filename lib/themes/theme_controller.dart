@@ -53,7 +53,6 @@ class ThemeState {
 
 class ThemeController extends Notifier<ThemeState> {
   int _fontCounter = 0;
-  FontLoader? _fontLoader;
 
   @override
   ThemeState build() {
@@ -95,8 +94,6 @@ class ThemeController extends Notifier<ThemeState> {
   }
 
   Future<void> setCustomFont(String? path) async {
-    _fontLoader = null;
-
     if (path == null) {
       await PreferencesModel.setAppFontPath(null);
       await PreferencesModel.setAppFontName(null);
@@ -132,11 +129,9 @@ class ThemeController extends Notifier<ThemeState> {
       final loader = FontLoader(fontFamily);
       loader.addFont(Future.value(ByteData.view(bytes.buffer)));
       await loader.load();
-      _fontLoader = loader;
       return true;
     } catch (error) {
       debugPrint('Error loading app font: $error');
-      _fontLoader = null;
       return false;
     }
   }
