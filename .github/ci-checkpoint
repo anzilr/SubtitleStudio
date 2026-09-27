@@ -1,12 +1,19 @@
-Riverpod migration checkpoint 12b
+Riverpod migration checkpoint 13
 Date: 2026-09-28
 Checks:
 - flutter analyze
 - flutter test
 
-Corrections after checkpoint 12:
-- Restored Flutter Color import in EditLineController
-- Restored EditLinePreferences type visibility for Edit-Line part library
-- Removed obsolete one-by-one preference loader helpers after snapshot consolidation
+Scope since checkpoint 12b:
+- Await fullscreen repeat-range dialog lifecycle instead of fixed delays
+- Make Gemini model discovery credential-explicit and credential-aware
+- Sequence Settings initialization before AI model discovery
+- Debounce Gemini API key persistence and flush pending writes on close
+- Reinitialize Gemini SDK when credentials change
+- Make manual Gemini model refresh bypass cache
+- Isolate destructive application-data maintenance behind injected repository
+- Sanitize destructive reset failure messaging
+- Harden Gemini model display-name formatting with tests
+- Cancel pending Gemini key writes before settings/data resets
 
 Platform builds intentionally disabled.
