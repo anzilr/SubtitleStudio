@@ -1,12 +1,21 @@
-Riverpod migration checkpoint 9b
+Riverpod migration checkpoint 10
 Date: 2026-09-27
 Checks:
 - flutter analyze
 - flutter test
 
-Corrections since checkpoint 9:
-- Restored repeat-range public bridge and State-owned cache field
-- Removed illegal extension instance storage
-- Finished Provider/ThemeProvider lookup replacement in both editors
+Scope since checkpoint 9b:
+- Split Editor Source View coordination
+- Split Editor navigation/scroll/seek helpers
+- Split Editor shortcut handlers
+- Split Editor media preferences/hotkey setup
+- Split Editor media actions
+- Split Editor subtitle rendering helpers
+- Split Editor selection/copy actions
+- Split Editor menu/modal actions
+- Split Editor initialization helpers
+- Split Editor interface builders
+
+screen_edit.dart is now ~808 lines, down from the original 6000+ line monolith.
 
 Platform builds intentionally disabled.
