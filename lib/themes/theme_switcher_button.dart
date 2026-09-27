@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'theme_provider.dart';
+import 'theme_controller.dart';
 
-class ThemeSwitcherButton extends StatefulWidget {
+class ThemeSwitcherButton extends ConsumerStatefulWidget {
   const ThemeSwitcherButton({super.key});
 
   @override
-  ThemeSwitcherButtonState createState() => ThemeSwitcherButtonState();
+  ConsumerState<ThemeSwitcherButton> createState() => ThemeSwitcherButtonState();
 }
 
-class ThemeSwitcherButtonState extends State<ThemeSwitcherButton>
+class ThemeSwitcherButtonState extends ConsumerState<ThemeSwitcherButton>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _rotationAnimation;
@@ -63,30 +63,28 @@ class ThemeSwitcherButtonState extends State<ThemeSwitcherButton>
   }
 
   void _switchTheme() {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final state = ref.read(themeControllerProvider);
+    final controller = ref.read(themeControllerProvider.notifier);
 
-    // Cycle through the themes
-    switch (themeProvider.themeMode) {
+    switch (state.themeMode) {
       case ThemeMode.light:
-        themeProvider.setTheme(ThemeMode.dark);
-        _controller.forward(from: 0);
+        controller.setTheme(ThemeMode.dark);
         break;
       case ThemeMode.dark:
-        themeProvider.setTheme(ThemeMode.system); // Classic theme
-        _controller.forward(from: 0);
+        controller.setTheme(ThemeMode.system);
         break;
-      default: // Classic theme
-        themeProvider.setTheme(ThemeMode.light);
-        _controller.forward(from: 0);
+      case ThemeMode.system:
+        controller.setTheme(ThemeMode.light);
         break;
     }
+
+    _controller.forward(from: 0);
   }
 
   @override
   Widget build(BuildContext context) {
-    // Listen to theme changes
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final currentIcon = _getIconForTheme(themeProvider.themeMode);
+    final themeState = ref.watch(themeControllerProvider);
+    final currentIcon = _getIconForTheme(themeState.themeMode);
 
     return IconButton(
       onPressed: _switchTheme,

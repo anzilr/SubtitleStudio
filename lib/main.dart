@@ -21,8 +21,7 @@
 import 'package:flutter/material.dart';         // Core Flutter framework
 import 'package:flutter/services.dart';        // System services (orientation, clipboard)
 import 'package:flutter/foundation.dart';      // Platform detection
-import 'package:provider/provider.dart';       // State management
-import 'package:flutter_riverpod/flutter_riverpod.dart' show ProviderScope; // Migration root
+import 'package:flutter_riverpod/flutter_riverpod.dart'; // Riverpod root
 import 'package:subtitle_studio/app/providers/core_providers.dart'; // Riverpod core dependencies
 import 'package:isar_community/isar.dart';              // Local database
 import 'package:path_provider/path_provider.dart'; // File system access
@@ -38,7 +37,7 @@ import 'screens/screen_home.dart';                        // Main home screen
 import 'screens/screen_source_view.dart';                 // Source view screen
 import 'database/models/models.dart';                     // Database models
 import 'database/database_instance.dart';                   // Shared Isar handle
-import 'themes/theme_provider.dart';                      // Theme management
+import 'themes/theme_controller.dart';                    // Riverpod theme management
 import 'package:media_kit/media_kit.dart';               // Video playback support
 
 /// Application entry point
@@ -206,47 +205,36 @@ Future<void> initializeIsarWithRetry({int maxRetries = 3}) async {
   }
 }
 
-/// Root application widget using Provider for state management
-/// 
-/// Sets up the MaterialApp with:
-/// - ThemeProvider for dynamic theme switching (dark/light mode)
-/// - Custom theme data based on user preferences
-/// - Initial navigation to splash screen
-/// 
-/// The Provider pattern is used for:
-/// - Theme management across the entire app
-/// - Reactive UI updates when theme changes
-/// - Centralized state management for app-wide settings
-class MainApp extends StatelessWidget {
+/// Root application widget using Riverpod-managed theme state.
+class MainApp extends ConsumerWidget {
   const MainApp({super.key, this.initialFile});
-  
+
   final String? initialFile;
 
   @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => ThemeProvider(),
-      child: Consumer<ThemeProvider>(
-        builder: (context, themeProvider, _) {
-          // Update system UI overlay style based on theme
-          final isDark = themeProvider.themeMode == ThemeMode.dark;
-          SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-            systemNavigationBarColor: Colors.transparent,
-            systemNavigationBarDividerColor: Colors.transparent,
-            systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
-            statusBarColor: Colors.transparent,
-            statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
-            statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
-          ));
-          
-          return MaterialApp(
-            title: 'Subtitle Studio ${AppInfo.version}',
-            theme: themeProvider.getThemeData(),
-            home: _getInitialScreen(),
-            debugShowCheckedModeBanner: false,
-          );
-        },
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeState = ref.watch(themeControllerProvider);
+
+    final isDark = themeState.themeMode == ThemeMode.dark;
+    SystemChrome.setSystemUIOverlayStyle(
+      SystemUiOverlayStyle(
+        systemNavigationBarColor: Colors.transparent,
+        systemNavigationBarDividerColor: Colors.transparent,
+        systemNavigationBarIconBrightness:
+            isDark ? Brightness.light : Brightness.dark,
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness:
+            isDark ? Brightness.light : Brightness.dark,
+        statusBarBrightness:
+            isDark ? Brightness.dark : Brightness.light,
       ),
+    );
+
+    return MaterialApp(
+      title: 'Subtitle Studio ${AppInfo.version}',
+      theme: themeState.themeData,
+      home: _getInitialScreen(),
+      debugShowCheckedModeBanner: false,
     );
   }
 
