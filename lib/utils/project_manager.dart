@@ -1,16 +1,14 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart' as fp;
 import 'package:subtitle_studio/database/models/models.dart';
-import 'package:subtitle_studio/utils/platform_file_handler.dart';
 import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/widgets/session_selection_sheet.dart';
 import 'package:subtitle_studio/services/checkpoint_repository.dart';
 import 'package:subtitle_studio/services/project_document_codec.dart';
 import 'package:subtitle_studio/services/project_document_builder.dart';
+import 'package:subtitle_studio/services/project_file_service.dart';
 
 /// Project Manager for .msone files
 /// 
@@ -169,145 +167,90 @@ class ProjectManager {
     required Map<String, dynamic> projectData,
     required String fileName,
   }) async {
-    try {
-      final jsonString = ProjectDocumentCodec.encode(projectData);
-      
-      final fileInfo = await PlatformFileHandler.saveNewFile(
-        content: jsonString,
-        fileName: fileName,
-        mimeType: 'application/octet-stream', // Use generic binary type for .msone files
+    final result = await ProjectFileService.saveAndroidProject(
+      content: ProjectDocumentCodec.encode(projectData),
+      fileName: fileName,
+    );
+
+    if (result != null && context.mounted) {
+      SnackbarHelper.showSuccess(
+        context,
+        'Project saved successfully!',
+        duration: const Duration(seconds: 2),
       );
-      
-      if (fileInfo != null) {
-        if (context.mounted) {
-          SnackbarHelper.showSuccess(
-            context, 
-            'Project saved successfully!',
-            duration: const Duration(seconds: 2),
-          );
-        }
-        return fileInfo.safUri ?? fileInfo.path;
-      }
-      return null;
-    } catch (e) {
-      if (kDebugMode) {
-        print('SAF save error: $e');
-      }
-      rethrow;
     }
+
+    return result;
   }
-  
-  /// Save project using file picker (iOS)
+
+  /// Save project using the iOS document picker.
   static Future<String?> _saveProjectWithFilePicker({
     required BuildContext context,
     required Map<String, dynamic> projectData,
     required String fileName,
   }) async {
-    try {
-      final jsonString = ProjectDocumentCodec.encode(projectData);
-      final contentBytes = Uint8List.fromList(utf8.encode(jsonString));
-      
-      // Use file picker to save the file on iOS
-      final result = await fp.FilePicker.platform.saveFile(
-        dialogTitle: 'Save Project File',
-        fileName: fileName,
-        type: fp.FileType.custom,
-        allowedExtensions: ['msone'],
-        bytes: contentBytes,
+    final result = await ProjectFileService.saveIosProject(
+      content: ProjectDocumentCodec.encode(projectData),
+      fileName: fileName,
+    );
+
+    if (result != null && context.mounted) {
+      SnackbarHelper.showSuccess(
+        context,
+        'Project saved successfully!',
+        duration: const Duration(seconds: 2),
       );
-      
-      if (result != null) {
-        if (context.mounted) {
-          SnackbarHelper.showSuccess(
-            context, 
-            'Project saved successfully!',
-            duration: const Duration(seconds: 2),
-          );
-        }
-        return result;
-      }
-      return null;
-    } catch (e) {
-      if (kDebugMode) {
-        print('iOS file picker save error: $e');
-      }
-      rethrow;
     }
+
+    return result;
   }
-  
-  /// Save project using file picker (Desktop)
+
+  /// Save project using a user-selected desktop directory.
   static Future<String?> _saveProjectWithPicker({
     required BuildContext context,
     required Map<String, dynamic> projectData,
     required String fileName,
   }) async {
-    try {
-      final selectedPath = await FilePickerConvenience.pickExportFolder(
-        context: context,
+    final selectedPath = await FilePickerConvenience.pickExportFolder(
+      context: context,
+    );
+    if (selectedPath == null) return null;
+
+    final filePath = await ProjectFileService.saveDesktopProject(
+      content: ProjectDocumentCodec.encode(projectData),
+      directoryPath: selectedPath,
+      fileName: fileName,
+    );
+
+    if (context.mounted) {
+      SnackbarHelper.showSuccess(
+        context,
+        'Project saved to: $filePath',
+        duration: const Duration(seconds: 3),
       );
-      
-      if (selectedPath != null) {
-        final filePath = '$selectedPath${Platform.pathSeparator}$fileName';
-        final file = File(filePath);
-        
-        final jsonString = ProjectDocumentCodec.encode(projectData);
-        await file.writeAsString(jsonString);
-        
-        if (context.mounted) {
-          SnackbarHelper.showSuccess(
-            context, 
-            'Project saved to: $filePath',
-            duration: const Duration(seconds: 3),
-          );
-        }
-        return filePath;
-      }
-      return null;
-    } catch (e) {
-      if (kDebugMode) {
-        print('File picker save error: $e');
-      }
-      rethrow;
     }
+
+    return filePath;
   }
-  
-  /// Update existing project file
+
+  /// Update an existing project file when the platform grants durable access.
   static Future<bool> _updateExistingProject({
     required String projectFilePath,
     required Map<String, dynamic> projectData,
   }) async {
     try {
-      final jsonString = ProjectDocumentCodec.encode(projectData);
-      
-      if (Platform.isAndroid && projectFilePath.startsWith('content://')) {
-        // Use SAF to update existing file
-        final success = await PlatformFileHandler.writeFile(
-          content: jsonString,
-          filePath: projectFilePath,
-        );
-        return success;
-      } else if (Platform.isIOS) {
-        // On iOS, we cannot write to arbitrary file paths due to sandbox restrictions
-        // The file picker returns a path, but we don't have write access to it
-        // Return false to trigger save to new location instead
-        if (kDebugMode) {
-          print('iOS: Cannot update existing project file directly. Will prompt for new location.');
-        }
-        return false;
-      } else {
-        // Direct file update for desktop
-        final file = File(projectFilePath);
-        await file.writeAsString(jsonString);
-        return true;
-      }
+      return await ProjectFileService.updateExistingProject(
+        content: ProjectDocumentCodec.encode(projectData),
+        projectFilePath: projectFilePath,
+      );
     } catch (e) {
       if (kDebugMode) {
-        print('Update existing project error: $e');
+        debugPrint('Update existing project error: $e');
       }
       return false;
     }
   }
-  
+
   /// Check if session has an associated project file
   static bool hasProjectFile(Session session) {
     return session.projectFilePath != null && 
