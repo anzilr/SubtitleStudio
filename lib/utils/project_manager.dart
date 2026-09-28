@@ -10,6 +10,7 @@ import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/widgets/session_selection_sheet.dart';
 import 'package:subtitle_studio/services/checkpoint_repository.dart';
 import 'package:subtitle_studio/services/project_document_codec.dart';
+import 'package:subtitle_studio/services/project_document_builder.dart';
 
 /// Project Manager for .msone files
 /// 
@@ -130,112 +131,38 @@ class ProjectManager {
     Session session,
     SubtitleCollection subtitleCollection,
   ) async {
-    // Fetch checkpoints for this session
-    final checkpointsData = await _fetchCheckpoints(session.id);
-    
-    return {
-      'version': projectVersion,
-      'createdAt': DateTime.now().toIso8601String(),
-      'appVersion': '3.0.0', // You can get this from package_info
-      'session': {
-        'fileName': session.fileName,
-        'lastEditedIndex': session.lastEditedIndex,
-        'editMode': session.editMode,
-        'projectFilePath': session.projectFilePath,
-      },
-      'subtitleCollection': {
-        'fileName': subtitleCollection.fileName,
-        'filePath': subtitleCollection.filePath,
-        'originalFileUri': subtitleCollection.originalFileUri,
-        'encoding': subtitleCollection.encoding,
-        'lines': subtitleCollection.lines.map((line) => {
-          'index': line.index,
-          'startTime': line.startTime,
-          'endTime': line.endTime,
-          'original': line.original,
-          'edited': line.edited,
-          'marked': line.marked,
-          'comment': line.comment,  // Include comment field
-          'resolved': line.resolved, // Include resolved field
-        }).toList(),
-      },
-      'checkpoints': checkpointsData,
-      'metadata': {
-        'totalLines': subtitleCollection.lines.length,
-        'editedLines': subtitleCollection.lines.where((l) => 
-          l.edited != null && l.edited!.isNotEmpty).length,
-        'markedLines': subtitleCollection.lines.where((l) => l.marked).length,
-        'lastSaved': DateTime.now().toIso8601String(),
-      },
-    };
+    final checkpoints = await _fetchCheckpoints(session.id);
+
+    return ProjectDocumentBuilder.build(
+      session: session,
+      subtitleCollection: subtitleCollection,
+      checkpoints: checkpoints,
+      projectVersion: projectVersion,
+      appVersion: '3.0.0',
+    );
   }
-  
-  /// Fetch checkpoints for a session
-  static Future<List<Map<String, dynamic>>> _fetchCheckpoints(int sessionId) async {
+
+  static Future<List<Checkpoint>> _fetchCheckpoints(int sessionId) async {
     try {
-      print('[ProjectManager] Fetching checkpoints for session $sessionId...');
       final checkpoints =
           await _checkpointRepository.getCheckpointsForSession(sessionId);
-      print('[ProjectManager] Found ${checkpoints.length} checkpoints for session $sessionId');
-      
-      if (checkpoints.isEmpty) {
-        print('[ProjectManager] WARNING: No checkpoints found! Saving without checkpoint data.');
+
+      if (kDebugMode) {
+        debugPrint(
+          '[ProjectManager] Loaded ${checkpoints.length} checkpoints '
+          'for project serialization',
+        );
       }
 
-      // Convert checkpoints to JSON-serializable format
-      return checkpoints.map((checkpoint) {
-        return {
-          'sessionId': checkpoint.sessionId,
-          'subtitleCollectionId': checkpoint.subtitleCollectionId,
-          'timestamp': checkpoint.timestamp.toIso8601String(),
-          'operationType': checkpoint.operationType,
-          'description': checkpoint.description,
-          'parentCheckpointId': checkpoint.parentCheckpointId,
-          'isActive': checkpoint.isActive,
-          'checkpointType': checkpoint.checkpointType,
-          'metadata': checkpoint.metadata,
-          'deltas': checkpoint.deltas.map((delta) => {
-            'changeType': delta.changeType,
-            'lineIndex': delta.lineIndex,
-            'beforeState': delta.beforeState != null ? {
-              'index': delta.beforeState!.index,
-              'startTime': delta.beforeState!.startTime,
-              'endTime': delta.beforeState!.endTime,
-              'original': delta.beforeState!.original,
-              'edited': delta.beforeState!.edited,
-              'marked': delta.beforeState!.marked,
-              'comment': delta.beforeState!.comment,
-              'resolved': delta.beforeState!.resolved,
-            } : null,
-            'afterState': delta.afterState != null ? {
-              'index': delta.afterState!.index,
-              'startTime': delta.afterState!.startTime,
-              'endTime': delta.afterState!.endTime,
-              'original': delta.afterState!.original,
-              'edited': delta.afterState!.edited,
-              'marked': delta.afterState!.marked,
-              'comment': delta.afterState!.comment,
-              'resolved': delta.afterState!.resolved,
-            } : null,
-          }).toList(),
-          'snapshot': checkpoint.snapshot.map((line) => {
-            'index': line.index,
-            'startTime': line.startTime,
-            'endTime': line.endTime,
-            'original': line.original,
-            'edited': line.edited,
-            'marked': line.marked,
-            'comment': line.comment,
-            'resolved': line.resolved,
-          }).toList(),
-        };
-      }).toList();
+      return checkpoints;
     } catch (e) {
-      print('[ProjectManager] Error fetching checkpoints: $e');
-      return [];
+      if (kDebugMode) {
+        debugPrint('[ProjectManager] Error fetching checkpoints: $e');
+      }
+      return const [];
     }
   }
-  
+
   /// Save project using SAF (Android)
   static Future<String?> _saveProjectWithSAF({
     required BuildContext context,
