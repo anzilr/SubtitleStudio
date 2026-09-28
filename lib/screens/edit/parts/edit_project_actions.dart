@@ -197,9 +197,7 @@ extension _EditProjectActions on _EditScreenState {
                   'Secondary subtitles cleared',
                 );
               },
-              onSaveProject: () {
-                _handleSaveProject();
-              },
+              onSaveProject: _handleSaveProject,
               onLoadVideo: _pickVideoFile,
             ),
           ),

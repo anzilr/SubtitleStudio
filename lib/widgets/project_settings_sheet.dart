@@ -20,7 +20,7 @@ class ProjectSettingsSheet extends StatefulWidget {
   final VoidCallback onProjectUpdated;
   final Function(List<SimpleSubtitleLine>)? onSecondarySubtitlesLoaded;
   final Function()? onSecondarySubtitlesCleared;
-  final VoidCallback? onSaveProject;
+  final Future<void> Function()? onSaveProject;
   final Future<void> Function()? onLoadVideo;
 
   const ProjectSettingsSheet({
@@ -1938,17 +1938,16 @@ class _ProjectSettingsSheetState extends State<ProjectSettingsSheet> with Widget
   }
 
   Future<void> _saveProjectFile() async {
-    if (widget.onSaveProject != null) {
-      try {
-        widget.onSaveProject!();
-        // Trigger immediate refresh to show updated project file path
-        await Future.delayed(const Duration(milliseconds: 500)); // Give time for save to complete
-        await _refreshDataSilently();
-        // Don't close the sheet here - let user see the success/failure feedback
-        // The user can manually close the sheet when they're done
-      } catch (e) {
-        // Error handling is done in the EditScreen's save project method
-        print('Error saving project: $e');
+    final saveProject = widget.onSaveProject;
+    if (saveProject == null) return;
+
+    try {
+      await saveProject();
+      if (!mounted) return;
+      await _refreshDataSilently();
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('Project save callback failed: $e');
       }
     }
   }
