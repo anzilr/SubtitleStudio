@@ -807,67 +807,11 @@ class _SubtitleExtractOptionsSheetState
             }
           } else {
             // On desktop, copy extracted file from temp to user-selected location
-            final normalizedOutputFilePath = FFmpegHelper.normalizePath(outputFilePath);
-            final destinationFile = File(normalizedOutputFilePath);
-            final normalizedTempPath = FFmpegHelper.normalizePath(tempOutputFile);
-            
-            if (kDebugMode) {
-              print('Desktop extraction complete');
-              print('Temp file path: $tempOutputFile');
-              print('Normalized temp path: $normalizedTempPath');
-              print('Final output path: $normalizedOutputFilePath');
-            }
-            
-            // Verify temp file has content before copying
-            if (!await tempFile.exists()) {
-              throw Exception('Temp file not found: $tempOutputFile');
-            }
-            
-            final tempFileSize = await tempFile.length();
-            if (kDebugMode) {
-              print('Temp file size: $tempFileSize bytes');
-            }
-            
-            if (tempFileSize == 0) {
-              // Clean up empty temp file
-              await tempFile.delete();
-              throw Exception('FFmpeg extraction produced an empty file. The subtitle track may be empty or corrupted.');
-            }
-            
-            // Delete destination file first if it exists (user already confirmed replacement)
-            if (await destinationFile.exists()) {
-              await destinationFile.delete();
-              if (kDebugMode) {
-                print('Deleted existing file at: $normalizedOutputFilePath');
-              }
-            }
-            
-            // Copy file from temp to final location
-            await tempFile.copy(normalizedOutputFilePath);
-            if (kDebugMode) {
-              print('Copied file from temp to final location: $normalizedOutputFilePath');
-              print('Verifying copied file...');
-            }
-            
-            // Verify the copied file
-            final copiedFileSize = await destinationFile.length();
-            if (kDebugMode) {
-              print('Copied file size: $copiedFileSize bytes');
-            }
-            
-            if (copiedFileSize != tempFileSize) {
-              if (kDebugMode) {
-                print('WARNING: File size mismatch! Temp: $tempFileSize, Copied: $copiedFileSize');
-              }
-            }
-            
-            // Clean up temp file
-            await tempFile.delete();
-            if (kDebugMode) {
-              print('Cleaned up temp file: $tempOutputFile');
-            }
-            
-            finalOutputPath = normalizedOutputFilePath;
+            finalOutputPath =
+                await SubtitleExtractionFileService.copyDesktopResult(
+              tempOutputFile: tempOutputFile,
+              outputFilePath: outputFilePath,
+            );
             
           }
         } else {
