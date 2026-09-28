@@ -10,6 +10,7 @@ import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/widgets/session_selection_sheet.dart';
 import 'package:subtitle_studio/services/checkpoint_repository.dart';
+import 'package:subtitle_studio/services/project_document_codec.dart';
 
 /// Project Manager for .msone files
 /// 
@@ -243,7 +244,7 @@ class ProjectManager {
     required String fileName,
   }) async {
     try {
-      final jsonString = jsonEncode(projectData);
+      final jsonString = ProjectDocumentCodec.encode(projectData);
       
       final fileInfo = await PlatformFileHandler.saveNewFile(
         content: jsonString,
@@ -277,7 +278,7 @@ class ProjectManager {
     required String fileName,
   }) async {
     try {
-      final jsonString = jsonEncode(projectData);
+      final jsonString = ProjectDocumentCodec.encode(projectData);
       final contentBytes = Uint8List.fromList(utf8.encode(jsonString));
       
       // Use file picker to save the file on iOS
@@ -323,7 +324,7 @@ class ProjectManager {
         final filePath = '$selectedPath${Platform.pathSeparator}$fileName';
         final file = File(filePath);
         
-        final jsonString = jsonEncode(projectData);
+        final jsonString = ProjectDocumentCodec.encode(projectData);
         await file.writeAsString(jsonString);
         
         if (context.mounted) {
@@ -350,7 +351,7 @@ class ProjectManager {
     required Map<String, dynamic> projectData,
   }) async {
     try {
-      final jsonString = jsonEncode(projectData);
+      final jsonString = ProjectDocumentCodec.encode(projectData);
       
       if (Platform.isAndroid && projectFilePath.startsWith('content://')) {
         // Use SAF to update existing file
