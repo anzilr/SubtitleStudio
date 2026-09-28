@@ -321,4 +321,51 @@ class SubtitleExtractionFileService {
     );
   }
 
+
+  static Future<String> readExtractedContent({
+    required String tempOutputFile,
+    required String outputFilePath,
+    required bool useDirectSave,
+  }) async {
+    late final File fileToRead;
+
+    if (Platform.isIOS) {
+      fileToRead = File(tempOutputFile);
+      if (kDebugMode) {
+        print('iOS: Reading from temp file: $tempOutputFile');
+      }
+    } else if (Platform.isAndroid && useDirectSave) {
+      fileToRead = File(tempOutputFile);
+      if (kDebugMode) {
+        print('Android SAF: Reading from temp file: $tempOutputFile');
+      }
+    } else {
+      fileToRead = File(outputFilePath);
+      if (kDebugMode) {
+        print('Desktop: Reading from final destination: $outputFilePath');
+      }
+    }
+
+    if (kDebugMode) {
+      print('Attempting to read file: ${fileToRead.path}');
+      print('File exists: ${await fileToRead.exists()}');
+    }
+
+    if (!await fileToRead.exists()) {
+      if (kDebugMode) {
+        print('File not found at: ${fileToRead.path}');
+        print('Current working directory: ${Directory.current.path}');
+      }
+      throw Exception('Subtitle file not found: ${fileToRead.path}');
+    }
+
+    final content = await fileToRead.readAsString();
+    if (kDebugMode) {
+      print(
+        'Successfully read SRT content: ${content.length} characters',
+      );
+    }
+    return content;
+  }
+
 }

@@ -915,48 +915,12 @@ class _SubtitleExtractOptionsSheetState
         String fileName = _fileName.isNotEmpty ? _fileName : 'extracted_subtitle.srt';
         
         try {
-          // Read content from the appropriate file based on platform
-          // For iOS: temp file is preserved until after processing
-          // For Android/Desktop: read from final destination (temp is already deleted)
-          File fileToRead;
-          
-          if (Platform.isIOS) {
-            // iOS preserves temp file for content reading
-            fileToRead = File(tempOutputFile);
-            if (kDebugMode) {
-              print('iOS: Reading from temp file: $tempOutputFile');
-            }
-          } else if (Platform.isAndroid && useDirectSave) {
-            // Android SAF: read from temp file (should still exist)
-            fileToRead = File(tempOutputFile);
-            if (kDebugMode) {
-              print('Android SAF: Reading from temp file: $tempOutputFile');
-            }
-          } else {
-            // Desktop: read from final destination (temp is deleted)
-            fileToRead = File(outputFilePath);
-            if (kDebugMode) {
-              print('Desktop: Reading from final destination: $outputFilePath');
-            }
-          }
-          
-          if (kDebugMode) {
-            print('Attempting to read file: ${fileToRead.path}');
-            print('File exists: ${await fileToRead.exists()}');
-          }
-          
-          if (await fileToRead.exists()) {
-            srtContent = await fileToRead.readAsString();
-            if (kDebugMode) {
-              print('Successfully read SRT content: ${srtContent.length} characters');
-            }
-          } else {
-            if (kDebugMode) {
-              print('File not found at: ${fileToRead.path}');
-              print('Current working directory: ${Directory.current.path}');
-            }
-            throw Exception('Subtitle file not found: ${fileToRead.path}');
-          }
+          srtContent =
+              await SubtitleExtractionFileService.readExtractedContent(
+            tempOutputFile: tempOutputFile,
+            outputFilePath: outputFilePath,
+            useDirectSave: useDirectSave,
+          );
         } catch (e) {
           throw Exception('Failed to read extracted subtitle content: $e');
         }
