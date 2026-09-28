@@ -1,14 +1,15 @@
-Riverpod migration checkpoint 18
+Riverpod migration checkpoint 19
 Date: 2026-09-28
 Checks:
 - flutter analyze
 - flutter test
 
 Focus:
-- dependency-first refactor roadmap v2
-- controller-owned Editor initialization
-- controller-owned Edit Line initialization
-- Source View scoped-provider regression
-- canonical VideoRepository with compatibility export
+- boundary-first refactor roadmap v3
+- CheckpointSheet repository injection
+- subtitle operation checkpoint boundary
+- project checkpoint repository routing
+- validated ProjectDocument codec
+- centralized project import validation
 
 Platform builds intentionally disabled.
