@@ -12,6 +12,8 @@ import '../widgets/merge_confirmation_sheet.dart';
 import '../widgets/split_confirmation_sheet.dart';
 
 class SubtitleOperations {
+  static const CheckpointRepository _checkpointRepository =
+      CheckpointRepository();
   static final RegExp positionRegex = RegExp(r'^\{\\an[1-9]\}');
 
   static void showDeleteConfirmation({
@@ -53,7 +55,7 @@ class SubtitleOperations {
     logInfo('Deleting subtitle line: ${currentLine.index} from collection ${collection.id}');
     
     // Create checkpoint BEFORE deleting
-    await CheckpointManager.createDeleteCheckpoint(
+    await _checkpointRepository.createDeleteCheckpoint(
       sessionId: sessionId,
       subtitleCollectionId: subtitleId,
       deletedLine: currentLine,
@@ -232,7 +234,7 @@ class SubtitleOperations {
         ..endTime = firstPartTime.split(' → ')[1];
 
       // Create checkpoint BEFORE splitting
-      await CheckpointManager.createSplitCheckpoint(
+      await _checkpointRepository.createSplitCheckpoint(
         sessionId: sessionId,
         subtitleCollectionId: subtitleId,
         originalLine: originalLine,
@@ -361,7 +363,7 @@ class SubtitleOperations {
             mergePrevious ? currentLine.endTime : mergeTargetLine.endTime;
 
       // Create checkpoint BEFORE merging
-      await CheckpointManager.createMergeCheckpoint(
+      await _checkpointRepository.createMergeCheckpoint(
         sessionId: sessionId,
         subtitleCollectionId: subtitleId,
         firstLine: originalFirst,
@@ -572,7 +574,7 @@ class SubtitleOperations {
       final insertAtIndex = addBefore ? currentIndex : currentIndex + 1;
       
       // Create checkpoint BEFORE adding
-      await CheckpointManager.createAddCheckpoint(
+      await _checkpointRepository.createAddCheckpoint(
         sessionId: sessionId,
         subtitleCollectionId: subtitleId,
         addedLine: newLine,

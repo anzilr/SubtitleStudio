@@ -81,4 +81,70 @@ class CheckpointRepository {
     );
   }
 
+  Future<int> createDeleteCheckpoint({
+    required int sessionId,
+    required int subtitleCollectionId,
+    required SubtitleLine deletedLine,
+    required int deletedIndex,
+  }) {
+    return CheckpointManager.createDeleteCheckpoint(
+      sessionId: sessionId,
+      subtitleCollectionId: subtitleCollectionId,
+      deletedLine: deletedLine,
+      deletedIndex: deletedIndex,
+    );
+  }
+
+  Future<int> createAddCheckpoint({
+    required int sessionId,
+    required int subtitleCollectionId,
+    required SubtitleLine addedLine,
+    required int insertIndex,
+    List<SubtitleLine>? preOperationState,
+  }) {
+    return CheckpointManager.createAddCheckpoint(
+      sessionId: sessionId,
+      subtitleCollectionId: subtitleCollectionId,
+      addedLine: addedLine,
+      insertIndex: insertIndex,
+      preOperationState: preOperationState,
+    );
+  }
+
+  Future<int> createSplitCheckpoint({
+    required int sessionId,
+    required int subtitleCollectionId,
+    required SubtitleLine originalLine,
+    required SubtitleLine firstPart,
+    required SubtitleLine secondPart,
+    List<SubtitleLine>? preOperationState,
+  }) {
+    return CheckpointManager.createSplitCheckpoint(
+      sessionId: sessionId,
+      subtitleCollectionId: subtitleCollectionId,
+      originalLine: originalLine,
+      firstPart: firstPart,
+      secondPart: secondPart,
+      preOperationState: preOperationState,
+    );
+  }
+
+  Future<int> createMergeCheckpoint({
+    required int sessionId,
+    required int subtitleCollectionId,
+    required SubtitleLine firstLine,
+    required SubtitleLine secondLine,
+    required SubtitleLine mergedLine,
+    List<SubtitleLine>? preOperationState,
+  }) {
+    return CheckpointManager.createMergeCheckpoint(
+      sessionId: sessionId,
+      subtitleCollectionId: subtitleCollectionId,
+      firstLine: firstLine,
+      secondLine: secondLine,
+      mergedLine: mergedLine,
+      preOperationState: preOperationState,
+    );
+  }
+
 }
