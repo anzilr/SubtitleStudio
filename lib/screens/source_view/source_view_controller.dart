@@ -51,6 +51,7 @@ final sourceViewConfigProvider = Provider<SourceViewConfig>((ref) {
 final sourceViewControllerProvider =
     NotifierProvider<SourceViewController, SourceViewState>(
   SourceViewController.new,
+  dependencies: [sourceViewConfigProvider],
 );
 
 class SourceViewController extends Notifier<SourceViewState> {

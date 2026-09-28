@@ -57,6 +57,7 @@ final editLineRepositoryProvider = Provider<EditLineRepository>((ref) {
 final editLineControllerProvider =
     NotifierProvider<EditLineController, EditLineState>(
   EditLineController.new,
+  dependencies: [editLineConfigurationProvider],
 );
 
 /// Riverpod controller for single-subtitle-line editing.

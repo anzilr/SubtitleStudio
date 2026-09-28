@@ -42,6 +42,7 @@ final videoRepositoryProvider = Provider<VideoRepository>((ref) {
 
 final editControllerProvider = NotifierProvider<EditController, EditState>(
   EditController.new,
+  dependencies: [editConfigurationProvider],
 );
 
 /// Riverpod controller for the main subtitle Editor.
