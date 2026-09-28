@@ -21,7 +21,7 @@ class ProjectSettingsSheet extends StatefulWidget {
   final Function(List<SimpleSubtitleLine>)? onSecondarySubtitlesLoaded;
   final Function()? onSecondarySubtitlesCleared;
   final VoidCallback? onSaveProject;
-  final VoidCallback? onLoadVideo; // Add callback for video loading
+  final Future<void> Function()? onLoadVideo;
 
   const ProjectSettingsSheet({
     super.key,
@@ -31,7 +31,7 @@ class ProjectSettingsSheet extends StatefulWidget {
     this.onSecondarySubtitlesLoaded,
     this.onSecondarySubtitlesCleared,
     this.onSaveProject,
-    this.onLoadVideo, // Add to constructor
+    this.onLoadVideo,
   });
 
   @override
@@ -1803,107 +1803,20 @@ class _ProjectSettingsSheetState extends State<ProjectSettingsSheet> with Widget
   }
 
   Future<void> _replaceVideoFile() async {
-    // Use the EditScreen's video loading function instead of the crashing one
     if (widget.onLoadVideo != null) {
       try {
-        // Store the current path to check for changes
         final oldPath = _videoPath;
-        
-        // First, trigger setState to show loading state
-        if (mounted) {
-          setState(() {
-            // Optionally show a loading indicator
-          });
-        }
-        
-        widget.onLoadVideo!();
-        
-        // Immediately start polling for path changes with more frequent checks
-        bool pathChanged = false;
-        for (int attempt = 0; attempt < 40; attempt++) { // Increased attempts
-          await Future.delayed(const Duration(milliseconds: 150)); // Shorter delay
-          await _loadVideoPath();
-          
-          if (_videoPath != oldPath && _videoPath != null) {
-            pathChanged = true;
-            if (kDebugMode) {
-              print('Video path changed from $oldPath to $_videoPath after ${(attempt + 1) * 150}ms');
-            }
-            // Immediately update UI when path changes
-            if (mounted) {
-              setState(() {});
-            }
-            break;
-          }
-        }
-        
-        if (!pathChanged) {
-          // Force one more refresh after a longer delay
-          await Future.delayed(const Duration(milliseconds: 1000));
-          await _loadVideoPath();
-          if (kDebugMode) {
-            print('Final video path check: $_videoPath (changed: ${_videoPath != oldPath})');
-          }
-        }
-        
-        // Always trigger a final UI refresh
-        if (mounted) {
-          setState(() {});
-        }
-        
-        // Trigger immediate refresh to update UI
-        await _refreshDataSilently();
-        
-        // Show feedback about the result
-        if (pathChanged && _videoPath != null) {
-          SnackbarHelper.showSnackBar(
-            context,
-            'Video file updated successfully',
-            backgroundColor: Colors.green,
-          );
-        } else if (_videoPath == null) {
-          SnackbarHelper.showSnackBar(
-            context,
-            'Video path not found - please try again',
-            backgroundColor: Colors.orange,
-          );
-        }
-        
-      } catch (e) {
-        SnackbarHelper.showSnackBar(
-          context,
-          'Error loading video: $e',
-          backgroundColor: Colors.red,
-        );
-      }
-    } else {
-      // Fallback to the previous implementation for platforms where it works
-      try {
-        String? videoPath;
-        
-        if (Platform.isAndroid) {
-          final fileInfo = await PlatformFileHandler.readFile(
-            mimeTypes: ['video/*'],
-          );
-          
-          if (fileInfo != null) {
-            videoPath = fileInfo.path;
-          }
-        } else {
-          videoPath = await FilePickerSAF.pickFile(
-            context: context,
-            title: 'Select Video File',
-            allowedExtensions: ['.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv'],
-            pickText: 'Select Video File',
-          );
-        }
 
-        if (videoPath != null) {
-          await PreferencesModel.saveVideoPath(widget.session.subtitleCollectionId, videoPath);
-          setState(() {
-            _videoPath = videoPath;
-          });
-          
+        // The Editor callback now completes only after file selection and
+        // controller persistence finish, so polling is unnecessary.
+        await widget.onLoadVideo!();
+        if (!mounted) return;
+
+        await _loadVideoPath();
+        await _refreshDataSilently();
+        if (!mounted) return;
+
+        if (_videoPath != null && _videoPath != oldPath) {
           SnackbarHelper.showSnackBar(
             context,
             'Video file updated successfully',
@@ -1911,12 +1824,58 @@ class _ProjectSettingsSheetState extends State<ProjectSettingsSheet> with Widget
           );
         }
       } catch (e) {
+        if (!mounted) return;
         SnackbarHelper.showSnackBar(
           context,
-          'Error selecting video file: $e',
+          'Could not update the video file. Please try again.',
           backgroundColor: Colors.red,
         );
       }
+      return;
+    }
+
+    // Fallback for standalone callers without an Editor callback.
+    try {
+      String? videoPath;
+
+      if (Platform.isAndroid) {
+        final fileInfo = await PlatformFileHandler.readFile(
+          mimeTypes: ['video/*'],
+        );
+        videoPath = fileInfo?.path;
+      } else {
+        videoPath = await FilePickerSAF.pickFile(
+          context: context,
+          title: 'Select Video File',
+          allowedExtensions: ['.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv'],
+          pickText: 'Select Video File',
+        );
+      }
+
+      if (videoPath == null || videoPath.isEmpty) return;
+
+      await PreferencesModel.saveVideoPath(
+        widget.session.subtitleCollectionId,
+        videoPath,
+      );
+      if (!mounted) return;
+
+      setState(() {
+        _videoPath = videoPath;
+      });
+
+      SnackbarHelper.showSnackBar(
+        context,
+        'Video file updated successfully',
+        backgroundColor: Colors.green,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      SnackbarHelper.showSnackBar(
+        context,
+        'Could not update the video file. Please try again.',
+        backgroundColor: Colors.red,
+      );
     }
   }
 

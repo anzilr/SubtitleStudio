@@ -200,10 +200,7 @@ extension _EditProjectActions on _EditScreenState {
               onSaveProject: () {
                 _handleSaveProject();
               },
-              onLoadVideo: () {
-                // Use the EditScreen's video loading function
-                _pickVideoFile();
-              },
+              onLoadVideo: _pickVideoFile,
             ),
           ),
         );
