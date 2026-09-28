@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:subtitle_studio/screens/edit/edit_controller.dart';
 import 'package:subtitle_studio/screens/edit_line/edit_line_controller.dart';
+import 'package:subtitle_studio/screens/source_view/source_view_controller.dart';
 
 void main() {
   testWidgets(
@@ -82,4 +84,46 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets(
+    'source-view controller uses configuration from nested ProviderScope',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+
+      String? filePath;
+      String? displayName;
+
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            home: ProviderScope(
+              overrides: [
+                sourceViewConfigProvider.overrideWithValue(
+                  const SourceViewConfig(
+                    filePath: '/tmp/scoped-test.srt',
+                    displayName: 'scoped-test.srt',
+                    fileContent:
+                        '1\n00:00:00,000 --> 00:00:01,000\nHello\n',
+                  ),
+                ),
+              ],
+              child: Consumer(
+                builder: (context, ref, child) {
+                  final state = ref.watch(sourceViewControllerProvider);
+                  filePath = state.filePath;
+                  displayName = state.displayName;
+                  return const SizedBox.shrink();
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(filePath, '/tmp/scoped-test.srt');
+      expect(displayName, 'scoped-test.srt');
+      expect(tester.takeException(), isNull);
+    },
+  );
+
 }
