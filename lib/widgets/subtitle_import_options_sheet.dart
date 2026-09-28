@@ -232,6 +232,7 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
         removeHearingImpairedLines: _removeHearingImpairedLines,
         mergeOverlappingSubtitles: _mergeOverlappingSubtitles,
         contentUri: contentUri, // Store SAF URI for future access
+        repository: ref.read(subtitleImportRepositoryProvider),
       );
 
       if (mounted) {

@@ -936,6 +936,7 @@ class _SubtitleExtractOptionsSheetState
             removeHearingImpairedLines: removeHI,
             mergeOverlappingSubtitles: mergeOverlapping,
             contentUri: null, // No SAF URI for extracted files
+            repository: ref.read(subtitleImportRepositoryProvider),
           );
         } else {
           throw Exception('Context not available');
@@ -953,6 +954,7 @@ class _SubtitleExtractOptionsSheetState
           outputFilePath, // Display path for UI  
           removeHearingImpairedLines: removeHI,
           mergeOverlappingSubtitles: mergeOverlapping,
+          repository: ref.read(subtitleImportRepositoryProvider),
         );
       }        if (kDebugMode) {
           print(
