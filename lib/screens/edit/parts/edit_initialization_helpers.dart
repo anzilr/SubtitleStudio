@@ -1,22 +1,6 @@
 part of '../../screen_edit.dart';
 
 extension _EditInitializationHelpers on _EditScreenState {
-  Future<void> _createInitialCheckpoint() async {
-    try {
-      await CheckpointManager.createInitialSnapshot(
-        sessionId: widget.sessionId,
-        subtitleCollectionId: widget.subtitleCollectionId,
-      );
-      if (kDebugMode) {
-        print('Initial checkpoint snapshot created for session ${widget.sessionId}');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('Failed to create initial checkpoint snapshot: $e');
-      }
-    }
-  }
-
   // Ensure video player gets subtitles after widget initialization.
   void _ensureVideoPlayerSubtitles() {
     WidgetsBinding.instance.addPostFrameCallback((_) {

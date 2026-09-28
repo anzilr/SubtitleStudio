@@ -1,27 +1,6 @@
 part of '../../screen_edit.dart';
 
 extension _EditMediaPreferences on _EditScreenState {
-  // Load resize ratio preference
-  Future<void> _loadResizeRatio() async {
-    // Riverpod migration - resize ratio already loaded by controller initialization
-    // Just sync local state from controller state
-    final state = _editState;
-    if (!mounted) return;
-    
-    if (kDebugMode) {
-      print('DEBUG: EditScreen - Loading resize ratio from controller: ${state.resizeRatio}');
-    }
-    
-    _setEditorState(() {
-      _resizeRatio = state.resizeRatio;
-      _isResizeRatioLoaded = true;
-    });
-    
-    if (kDebugMode) {
-      print('DEBUG: EditScreen - Updated _resizeRatio to: $_resizeRatio, loaded: $_isResizeRatioLoaded');
-    }
-  }
-
   // Save resize ratio preference with debouncing
   Future<void> _saveResizeRatio(double ratio) async {
     if (mounted) {
@@ -39,19 +18,6 @@ extension _EditMediaPreferences on _EditScreenState {
       if (mounted) {
         await _controller.updateResizeRatio(ratio);
       }
-    });
-  }
-
-  /// Load mobile video resize ratio from preferences
-  Future<void> _loadMobileResizeRatio() async {
-    // Riverpod migration - mobile resize ratio already loaded by controller initialization
-    // Just sync local state from controller state
-    final state = _editState;
-    if (!mounted) return;
-    
-    _setEditorState(() {
-      _mobileVideoResizeRatio = state.mobileVideoResizeRatio;
-      _isMobileResizeRatioLoaded = true;
     });
   }
 

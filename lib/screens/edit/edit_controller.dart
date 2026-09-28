@@ -168,6 +168,9 @@ class EditController extends Notifier<EditState> {
         resizeRatio: resizeRatio,
         mobileVideoResizeRatio: mobileResizeRatio,
         isLoading: false,
+        isInitialized: true,
+        isResizeRatioLoaded: true,
+        isMobileResizeRatioLoaded: true,
       ));
 
       logInfo('EditController: Initialization complete');

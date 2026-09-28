@@ -35,23 +35,6 @@ extension _EditMediaActions on _EditScreenState {
     }
   }
 
-  Future<List<SubtitleLine>> _fetchSubtitleLines() async {
-    final subtitles = await _controller.loadSubtitleLines();
-    _controller.replaceSubtitleLinesLocally(subtitles);
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && _isVideoLoaded) {
-        _updateVideoPlayerSubtitles();
-      }
-    });
-    return subtitles;
-  }
-
-  Future<void> _loadSavedVideoPath() async {
-    if (!mounted) return;
-    _ensureVideoPlayerSubtitles();
-  }
-
   Future<void> _restoreVideoPositionWhenReady() async {
     final player = await waitForVideoPlayerReady(_videoPlayerKey);
     if (!mounted || player == null || !_isVideoVisible) return;

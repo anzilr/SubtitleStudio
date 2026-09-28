@@ -109,7 +109,6 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
   bool get _isSelectionMode => _editState.isSelectionMode;
   SubtitleCollection? subtitleCollection; // Make nullable to avoid late initialization error
   List<SubtitleLine> get subtitleLines => _editState.subtitleLines;
-  late String fileName;
   late Future<List<SubtitleLine>> subtitleLinesFuture;
   String? get _selectedVideoPath => _editState.selectedVideoPath;
   bool get _isVideoVisible => _editState.isVideoVisible;
@@ -234,52 +233,51 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
     // Listen to scroll position changes to update custom scrollbar
     _itemPositionsListener.itemPositions.addListener(_updateScrollbarPosition);
     
+    final initialEditorState = _editState;
+    final subtitles = initialEditorState.subtitleLines;
+
+    subtitleCollection = initialEditorState.subtitleCollection;
+    _highlightedIndex = initialEditorState.highlightedIndex;
+    _resizeRatio = initialEditorState.resizeRatio;
+    _mobileVideoResizeRatio = initialEditorState.mobileVideoResizeRatio;
+    _isResizeRatioLoaded = initialEditorState.isResizeRatioLoaded;
+    _isMobileResizeRatioLoaded =
+        initialEditorState.isMobileResizeRatioLoaded;
+    subtitleLinesFuture = Future<List<SubtitleLine>>.value(subtitles);
+
     unawaited(_controller.updateLastEditedSession());
-    _loadResizeRatio(); // Load saved resize ratio
-    _loadMobileResizeRatio(); // Load saved mobile resize ratio
-    _registerHotkeyShortcuts(); // Register hotkey shortcuts
-    
-    // Create initial checkpoint snapshot for this session
-    _createInitialCheckpoint();
-    
-    subtitleLinesFuture = _fetchSubtitleLines().then((subtitles) async {
-      subtitleCollection = (await _controller.loadSubtitleCollection())!;
-      
-  await _loadSavedVideoPath();
-  // Attempt to restore previously loaded secondary subtitles using the freshly fetched subtitles
-  await _loadSavedSecondarySubtitle(subtitles);
-      
-      // Ensure video player gets subtitles after initialization
-      _ensureVideoPlayerSubtitles();
-      
-      final lastEditedCueNumber = widget.lastEditedIndex;
-      final lastEditedListIndex =
-          cueNumberToListIndex(lastEditedCueNumber);
+    unawaited(_registerHotkeyShortcuts());
 
-      if (lastEditedCueNumber != null &&
-          lastEditedListIndex != null &&
-          lastEditedListIndex < subtitles.length) {
-        WidgetsBinding.instance.addPostFrameCallback((_) async {
-          if (!mounted) return;
+    // Persistence and preference initialization is owned by EditController.
+    // The compatibility widget only wires already-loaded state to local UI
+    // handles such as scroll controllers and the video player.
+    _ensureVideoPlayerSubtitles();
 
-          await _scrollToIndexWithLoading(lastEditedCueNumber);
+    final lastEditedCueNumber = widget.lastEditedIndex;
+    final lastEditedListIndex = cueNumberToListIndex(lastEditedCueNumber);
 
-          final startTime = parseTimeString(
-            subtitles[lastEditedListIndex].startTime,
-          );
-          _lastVideoPosition = startTime;
-          ref
-              .read(waveformControllerProvider.notifier)
-              .dispatch(UpdatePlaybackPosition(startTime));
+    if (lastEditedCueNumber != null &&
+        lastEditedListIndex != null &&
+        lastEditedListIndex < subtitles.length) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
 
-          final player = await waitForVideoPlayerReady(_videoPlayerKey);
-          if (mounted && player != null) {
-            _seekToSubtitle(lastEditedListIndex);
-          }
-        });
-      }
-      return subtitles;
-    });
+        await _scrollToIndexWithLoading(lastEditedCueNumber);
+
+        final startTime = parseTimeString(
+          subtitles[lastEditedListIndex].startTime,
+        );
+        _lastVideoPosition = startTime;
+        ref
+            .read(waveformControllerProvider.notifier)
+            .dispatch(UpdatePlaybackPosition(startTime));
+
+        final player = await waitForVideoPlayerReady(_videoPlayerKey);
+        if (mounted && player != null) {
+          _seekToSubtitle(lastEditedListIndex);
+        }
+      });
+    }
 
     // Check if tutorial should be shown
   }
