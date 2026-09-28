@@ -92,23 +92,20 @@ class MarkedLinesSheetState extends State<MarkedLinesSheet> {
     super.initState();
     _currentMarkedLines = List.from(widget.markedLines);
     
-    // Load preference and then trigger scroll if needed
+    // Load the preference first, then scroll when the first frame containing
+    // the filtered cards has actually been laid out. No fixed timing delay is
+    // required; _scrollToLineByDatabaseIndex schedules its own post-frame
+    // scroll after updating the highlight.
     _loadShowAllCommentsPreference().then((_) {
-      // If initial highlight index is provided, scroll to it after preference is loaded
-      if (widget.initialHighlightLineIndex != null && mounted) {
-        print('DEBUG: initState - will scroll to index ${widget.initialHighlightLineIndex}');
-        // Wait for the widget to build at least once before trying to scroll
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          print('DEBUG: initState postFrameCallback - now triggering scroll after 500ms delay');
-          // Increase delay to 500ms to ensure DraggableScrollableSheet finishes building
-          Future.delayed(const Duration(milliseconds: 500), () {
-            if (mounted) {
-              print('DEBUG: About to call _scrollToLineByDatabaseIndex');
-              _scrollToLineByDatabaseIndex(widget.initialHighlightLineIndex!);
-            }
-          });
-        });
-      }
+      if (!mounted || widget.initialHighlightLineIndex == null) return;
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _scrollToLineByDatabaseIndex(
+            widget.initialHighlightLineIndex!,
+          );
+        }
+      });
     });
     
     // Request focus for keyboard navigation
