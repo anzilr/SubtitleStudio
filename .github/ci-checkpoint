@@ -1,12 +1,19 @@
-Riverpod migration checkpoint 15b
+Riverpod migration checkpoint 16
 Date: 2026-09-28
 Checks:
 - flutter analyze
 - flutter test
 
-Corrections after checkpoint 15:
-- Route Project Settings part-file UI updates through State-owned wrapper
-- Remove stale undefined file-location error identifier
-- Remove unused legacy simple-subtitle generator
+Scope since checkpoint 15:
+- Move project import/session persistence behind injected repository
+- Remove fixed import commit delays and direct UI database access
+- Clean subtitle extraction DB import, fixed delay, and raw technical errors
+- Extract Help content catalog and models from screen_help.dart
+- Route Search/Replace and Malayalam normalization batch edits through SubtitleRepository
+- Preserve mark/comment/resolved metadata during batch text edits
+- Move Olam Dictionary persistence/search behind injected repository
+- Harden checkpoint history async UI updates and error messages
+- Remove fixed Marked Lines initial-scroll delay
+- Split SRT location helper from session_selection_sheet.dart
 
 Platform builds intentionally disabled.
