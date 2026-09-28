@@ -1,19 +1,13 @@
-Riverpod migration checkpoint 16
+Riverpod migration checkpoint 16b
 Date: 2026-09-28
 Checks:
 - flutter analyze
 - flutter test
 
-Scope since checkpoint 15:
-- Move project import/session persistence behind injected repository
-- Remove fixed import commit delays and direct UI database access
-- Clean subtitle extraction DB import, fixed delay, and raw technical errors
-- Extract Help content catalog and models from screen_help.dart
-- Route Search/Replace and Malayalam normalization batch edits through SubtitleRepository
-- Preserve mark/comment/resolved metadata during batch text edits
-- Move Olam Dictionary persistence/search behind injected repository
-- Harden checkpoint history async UI updates and error messages
-- Remove fixed Marked Lines initial-scroll delay
-- Split SRT location helper from session_selection_sheet.dart
+Corrections after checkpoint 16:
+- Fixed session-selection import/part directive ordering
+- Routed extraction subtitle collection metadata updates through SubtitleRepository
+- Made extraction sheet Riverpod-aware for repository access
+- Removed unnecessary Help catalog import
 
 Platform builds intentionally disabled.
