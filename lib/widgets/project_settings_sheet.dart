@@ -157,15 +157,11 @@ class _ProjectSettingsSheetState extends State<ProjectSettingsSheet> with Widget
     }
   }
 
-  /// Force refresh video path with multiple attempts
+  /// Refresh video/path state after an awaited external operation.
   Future<void> forceRefreshVideoPath() async {
-    for (int i = 0; i < 5; i++) {
-      await _loadVideoPath();
-      await Future.delayed(const Duration(milliseconds: 200));
-    }
-    if (mounted) {
-      setState(() {});
-    }
+    await _loadVideoPath();
+    if (!mounted) return;
+    await _refreshDataSilently();
   }
 
   /// Public method to refresh all project data from external calls
