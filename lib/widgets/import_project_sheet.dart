@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
@@ -7,6 +6,7 @@ import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/utils/intent_handler.dart';
 import 'package:subtitle_studio/utils/project_manager.dart';
 import 'package:subtitle_studio/database/models/models.dart';
+import 'package:subtitle_studio/services/project_document_codec.dart';
 
 /// Import Project Sheet Widget
 /// 
@@ -153,25 +153,7 @@ class _ImportProjectSheetState extends State<ImportProjectSheet> {
       }
 
       final jsonString = await file.readAsString();
-      final data = jsonDecode(jsonString) as Map<String, dynamic>;
-
-      // Validate required fields
-      if (!data.containsKey('session') || 
-          !data.containsKey('subtitleCollection') ||
-          !data.containsKey('version')) {
-        throw Exception('Invalid .msone file format');
-      }
-
-      print('[Import] Loaded project data keys: ${data.keys.toList()}');
-      if (data.containsKey('checkpoints')) {
-        print('[Import] Found ${(data['checkpoints'] as List).length} checkpoints in file');
-      } else {
-        print('[Import] No checkpoints found in file');
-      }
-
-      setState(() {
-        _projectData = data;
-      });
+      _setProjectDocument(ProjectDocumentCodec.decode(jsonString));
     } catch (e) {
       if (mounted) {
         SnackbarHelper.showError(context, 'Error reading project file: $e');
@@ -182,30 +164,26 @@ class _ImportProjectSheetState extends State<ImportProjectSheet> {
   /// Load project data from file content (for SAF)
   Future<void> _loadProjectDataFromContent(String content, String fileName) async {
     try {
-      final data = jsonDecode(content) as Map<String, dynamic>;
-
-      // Validate required fields
-      if (!data.containsKey('session') || 
-          !data.containsKey('subtitleCollection') ||
-          !data.containsKey('version')) {
-        throw Exception('Invalid .msone file format');
-      }
-
-      print('[Import] Loaded project data keys: ${data.keys.toList()}');
-      if (data.containsKey('checkpoints')) {
-        print('[Import] Found ${(data['checkpoints'] as List).length} checkpoints in file');
-      } else {
-        print('[Import] No checkpoints found in file');
-      }
-
-      setState(() {
-        _projectData = data;
-      });
+      _setProjectDocument(ProjectDocumentCodec.decode(content));
     } catch (e) {
       if (mounted) {
         SnackbarHelper.showError(context, 'Error reading project file: $e');
       }
     }
+  }
+
+  void _setProjectDocument(ProjectDocument document) {
+    if (kDebugMode) {
+      debugPrint(
+        '[Import] Loaded project version ${document.version} '
+        'with ${document.totalLines} subtitle lines and '
+        '${document.checkpoints.length} checkpoints',
+      );
+    }
+
+    setState(() {
+      _projectData = document.toLegacyMap();
+    });
   }
 
   /// Import the project data into the database
