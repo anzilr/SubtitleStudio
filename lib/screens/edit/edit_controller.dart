@@ -5,7 +5,7 @@ import 'package:subtitle_studio/screens/edit/edit_state.dart';
 import 'package:subtitle_studio/screens/edit/repositories/subtitle_repository.dart';
 import 'package:subtitle_studio/screens/edit/providers/subtitle_repository_provider.dart';
 import 'package:subtitle_studio/screens/edit/repositories/editor_preferences_repository.dart';
-import 'package:subtitle_studio/screens/edit/repositories/screen_repository.dart';
+import 'package:subtitle_studio/screens/edit/repositories/video_repository.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 import 'package:subtitle_studio/utils/subtitle_index.dart';
 import 'package:subtitle_studio/widgets/video_player_widget.dart';
