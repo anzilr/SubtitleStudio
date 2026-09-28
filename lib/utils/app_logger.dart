@@ -401,13 +401,19 @@ class AppLogger {
       return;
     }
 
-    final logEntry = _formatLogEntry(
-      level,
-      message,
-      context: context,
-      stackTrace: stackTrace,
-      extra: extra,
-    );
+    late final String logEntry;
+    try {
+      logEntry = _formatLogEntry(
+        level,
+        message,
+        context: context,
+        stackTrace: stackTrace,
+        extra: extra,
+      );
+    } catch (e) {
+      debugPrint('Failed to format log entry: $e');
+      return;
+    }
 
     if (kDebugMode) {
       debugPrint(logEntry.trim());
