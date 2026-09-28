@@ -59,6 +59,23 @@ class SubtitleRepository {
     }
   }
 
+  /// Persist collection-level metadata changes.
+  Future<bool> updateCollection(SubtitleCollection collection) async {
+    try {
+      await _isar.writeTxn(() async {
+        await _isar.subtitleCollections.put(collection);
+      });
+      return true;
+    } catch (e, stackTrace) {
+      await logError(
+        'SubtitleRepository: Failed to update subtitle collection',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
+  }
+
   /// Persist one edited subtitle line and create an edit checkpoint when
   /// text or timing changed.
   Future<bool> saveLineChanges(

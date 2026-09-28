@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
 // Removed platform_check - using pure SAF implementation without permission checks
 import 'package:subtitle_studio/utils/ffmpeg_helper.dart';
 import 'package:subtitle_studio/utils/subtitle_processor.dart';
 import 'package:subtitle_studio/widgets/subtitle_tracks_sheet.dart';
 import 'package:subtitle_studio/database/models/models.dart';
+import 'package:subtitle_studio/screens/edit/providers/subtitle_repository_provider.dart';
 import 'package:subtitle_studio/widgets/loading_overlay.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/utils/app_logger.dart';
@@ -20,7 +22,7 @@ import 'dart:convert';
 // Global key for accessing navigator state
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-class SubtitleExtractOptionsSheet extends StatefulWidget {
+class SubtitleExtractOptionsSheet extends ConsumerStatefulWidget {
   final Function(Session) onSubtitleExtracted;
 
   const SubtitleExtractOptionsSheet({
@@ -29,12 +31,12 @@ class SubtitleExtractOptionsSheet extends StatefulWidget {
   });
 
   @override
-  State<SubtitleExtractOptionsSheet> createState() =>
+  ConsumerState<SubtitleExtractOptionsSheet> createState() =>
       _SubtitleExtractOptionsSheetState();
 }
 
 class _SubtitleExtractOptionsSheetState
-    extends State<SubtitleExtractOptionsSheet> {
+    extends ConsumerState<SubtitleExtractOptionsSheet> {
   bool _removeHearingImpairedLines = false;
   bool _mergeOverlappingSubtitles = false;
   bool _isLoading = false;
@@ -1225,11 +1227,15 @@ class _SubtitleExtractOptionsSheetState
             final subtitleCollectionId = subtitleData!['subtitleCollectionId'];
             if (subtitleCollectionId != null) {
               // Get the subtitle collection from database
-              final subtitle = await fetchSubtitle(subtitleCollectionId);
+              final subtitle = await ref
+                  .read(subtitleRepositoryProvider)
+                  .fetchSubtitleCollection(subtitleCollectionId);
               if (subtitle != null) {
                 // Update the originalFileUri
                 subtitle.originalFileUri = _currentSafUri!;
-                await updateSubtitleCollection(subtitle);
+                await ref
+                    .read(subtitleRepositoryProvider)
+                    .updateCollection(subtitle);
 
                 if (kDebugMode) {
                   print('Updated originalFileUri to: $_currentSafUri');
