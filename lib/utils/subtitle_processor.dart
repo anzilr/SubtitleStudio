@@ -112,29 +112,11 @@ Future<SubtitleImportResult> processAndImportSubtitle(
       throw Exception('Failed to decode SRT file: $e');
     }
 
-    // Step 2: SRT Format Parsing and Structure Validation
-    var parsedLines = _parseSrtContent(srtContent);
-
-    // Step 3: Comprehensive Processing Pipeline
-    if (parsedLines.isNotEmpty) {
-      // Fix invalid indexing and time codes that could cause playback issues
-      parsedLines = _fixInvalidFormats(parsedLines);
-
-      // Optional: Remove hearing impaired accessibility text
-      // Detects and removes text in brackets [], parentheses (), and speaker labels
-      if (removeHearingImpairedLines) {
-        parsedLines = removeHearingImpairedText(parsedLines);
-      }
-
-      // Optional: Merge subtitles with overlapping timelines
-      // Intelligently combines subtitles that appear simultaneously
-      if (mergeOverlappingSubtitles) {
-        parsedLines = _mergeOverlappingSubtitles(parsedLines);
-      }
-
-      // Re-index lines to ensure sequential numbering for proper playback
-      parsedLines = _reindexSubtitles(parsedLines);
-    }
+    final parsedLines = _processSubtitleLines(
+      srtContent,
+      removeHearingImpairedLines: removeHearingImpairedLines,
+      mergeOverlappingSubtitles: mergeOverlappingSubtitles,
+    );
 
     final result = await repository.storeSubtitleData(
       lines: parsedLines,
@@ -184,27 +166,11 @@ Future<SubtitleImportResult> processSubtitleWithoutContext(
       throw Exception('Failed to decode SRT file: $e');
     }
 
-    // Parse and process subtitle lines
-    var parsedLines = _parseSrtContent(srtContent);
-
-    // Clean up subtitle lines based on options
-    if (parsedLines.isNotEmpty) {
-      // Fix invalid indexing and time codes
-      parsedLines = _fixInvalidFormats(parsedLines);
-
-      // Remove hearing impaired text if requested
-      if (removeHearingImpairedLines) {
-        parsedLines = removeHearingImpairedText(parsedLines);
-      }
-
-      // Merge overlapping subtitles if requested
-      if (mergeOverlappingSubtitles) {
-        parsedLines = _mergeOverlappingSubtitles(parsedLines);
-      }
-
-      // Re-index lines to ensure they are sequential
-      parsedLines = _reindexSubtitles(parsedLines);
-    }
+    final parsedLines = _processSubtitleLines(
+      srtContent,
+      removeHearingImpairedLines: removeHearingImpairedLines,
+      mergeOverlappingSubtitles: mergeOverlappingSubtitles,
+    );
 
     final result = await repository.storeSubtitleData(
       lines: parsedLines,
@@ -246,25 +212,13 @@ Future<SubtitleImportResult> processAndImportSubtitleContent(
     String srtContent = content; // Content already provided
     String encoding = "UTF-8"; // Assume UTF-8 for content-based processing
 
-    // Step 2: SRT Format Parsing and Structure Validation
-    var parsedLines = _parseSrtContent(srtContent);
+    final parsedLines = _processSubtitleLines(
+      srtContent,
+      removeHearingImpairedLines: removeHearingImpairedLines,
+      mergeOverlappingSubtitles: mergeOverlappingSubtitles,
+    );
 
-    // Step 3: Comprehensive Processing Pipeline
     if (parsedLines.isNotEmpty) {
-      // Fix invalid indexing and time codes that could cause playback issues
-      parsedLines = _fixInvalidFormats(parsedLines);
-
-      // Optional: Remove hearing impaired accessibility text
-      // Detects and removes text in brackets [], parentheses (), and speaker labels
-      if (removeHearingImpairedLines) {
-        parsedLines = removeHearingImpairedText(parsedLines);
-      }
-
-      // Optional: Merge overlapping subtitles to prevent timing conflicts
-      if (mergeOverlappingSubtitles) {
-        parsedLines = _mergeOverlappingSubtitles(parsedLines);
-      }
-
       return repository.storeSubtitleData(
         lines: parsedLines,
         fileName: fileName,
@@ -302,24 +256,13 @@ Future<SubtitleImportResult> processSubtitleContentWithoutContext(
     String srtContent = content; // Content already provided
     String encoding = "UTF-8"; // Assume UTF-8 for content-based processing
 
-    // Step 2: SRT Format Parsing and Structure Validation
-    var parsedLines = _parseSrtContent(srtContent);
+    final parsedLines = _processSubtitleLines(
+      srtContent,
+      removeHearingImpairedLines: removeHearingImpairedLines,
+      mergeOverlappingSubtitles: mergeOverlappingSubtitles,
+    );
 
-    // Step 3: Comprehensive Processing Pipeline
     if (parsedLines.isNotEmpty) {
-      // Fix invalid indexing and time codes that could cause playback issues
-      parsedLines = _fixInvalidFormats(parsedLines);
-
-      // Optional: Remove hearing impaired accessibility text
-      if (removeHearingImpairedLines) {
-        parsedLines = removeHearingImpairedText(parsedLines);
-      }
-
-      // Optional: Merge overlapping subtitles to prevent timing conflicts
-      if (mergeOverlappingSubtitles) {
-        parsedLines = _mergeOverlappingSubtitles(parsedLines);
-      }
-
       final result = await repository.storeSubtitleData(
         lines: parsedLines,
         fileName: fileName,
@@ -344,6 +287,27 @@ Future<SubtitleImportResult> processSubtitleContentWithoutContext(
     }
     rethrow;
   }
+}
+
+List<SubtitleLine> _processSubtitleLines(
+  String content, {
+  required bool removeHearingImpairedLines,
+  required bool mergeOverlappingSubtitles,
+}) {
+  var lines = _parseSrtContent(content);
+  if (lines.isEmpty) return lines;
+
+  lines = _fixInvalidFormats(lines);
+
+  if (removeHearingImpairedLines) {
+    lines = removeHearingImpairedText(lines);
+  }
+
+  if (mergeOverlappingSubtitles) {
+    lines = _mergeOverlappingSubtitles(lines);
+  }
+
+  return _reindexSubtitles(lines);
 }
 
 /// Detect file encoding and read content
