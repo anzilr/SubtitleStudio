@@ -277,7 +277,6 @@ class SessionProjectImportRepository {
     } catch (error, stackTrace) {
       logWarning(
         'Project checkpoint import failed: $error',
-        error: error,
         stackTrace: stackTrace,
       );
     }

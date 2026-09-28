@@ -358,7 +358,7 @@ class _SessionSelectionSheetState extends ConsumerState<SessionSelectionSheet> {
         
         // Callback to refresh home screen sessions
         if (widget.onProjectImported != null) {
-          widget.onProjectImported!(updatedSession);
+          widget.onProjectImported!(createdSession);
         }
         
         // Navigate to EditScreen with the new session
@@ -366,9 +366,9 @@ class _SessionSelectionSheetState extends ConsumerState<SessionSelectionSheet> {
           context,
           MaterialPageRoute(
             builder: (context) => EditScreenHost(
-              subtitleCollectionId: updatedSession.subtitleCollectionId,
-              sessionId: updatedSession.id,
-              lastEditedIndex: updatedSession.lastEditedIndex,
+              subtitleCollectionId: createdSession.subtitleCollectionId,
+              sessionId: createdSession.id,
+              lastEditedIndex: createdSession.lastEditedIndex,
             ),
           ),
           (route) => route.isFirst, // Remove all routes except the first one
