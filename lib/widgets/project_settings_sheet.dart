@@ -199,7 +199,7 @@ class _ProjectSettingsSheetState extends State<ProjectSettingsSheet> with Widget
       if (mounted) {
         SnackbarHelper.showSnackBar(
           context,
-          'Error refreshing project data: $e',
+          'Could not refresh project data. Please try again.',
           backgroundColor: Colors.red,
         );
       }
@@ -227,7 +227,7 @@ class _ProjectSettingsSheetState extends State<ProjectSettingsSheet> with Widget
       if (mounted) {
         SnackbarHelper.showSnackBar(
           context,
-          'Error refreshing secondary subtitle data: $e',
+          'Could not refresh secondary subtitle data. Please try again.',
           backgroundColor: Colors.red,
         );
       }
@@ -252,7 +252,7 @@ class _ProjectSettingsSheetState extends State<ProjectSettingsSheet> with Widget
       if (mounted) {
         SnackbarHelper.showSnackBar(
           context,
-          'Error refreshing session info: $e',
+          'Could not refresh session information. Please try again.',
           backgroundColor: Colors.red,
         );
       }
@@ -284,7 +284,7 @@ class _ProjectSettingsSheetState extends State<ProjectSettingsSheet> with Widget
       if (mounted) {
         SnackbarHelper.showSnackBar(
           context,
-          'Error loading project data: $e',
+          'Could not load project settings. Please try again.',
           backgroundColor: Colors.red,
         );
       }
@@ -1323,7 +1323,10 @@ class _ProjectSettingsSheetState extends State<ProjectSettingsSheet> with Widget
         await _openDesktopFileLocation(filePath);
       }
     } catch (e) {
-      _showFileLocationErrorDialog(filePath, e.toString());
+      if (kDebugMode) {
+        debugPrint('Failed to open file location for $filePath: $e');
+      }
+      _showFileLocationErrorDialog(filePath);
     }
   }
 
@@ -1608,7 +1611,7 @@ class _ProjectSettingsSheetState extends State<ProjectSettingsSheet> with Widget
   }
 
   /// Show error dialog for file location access
-  void _showFileLocationErrorDialog(String filePath, String error) {
+  void _showFileLocationErrorDialog(String filePath) {
     showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -2056,9 +2059,12 @@ class _ProjectSettingsSheetState extends State<ProjectSettingsSheet> with Widget
         }
       }
     } catch (e) {
+      if (kDebugMode) {
+        debugPrint('Project Settings failed to load secondary subtitle: $e');
+      }
       SnackbarHelper.showSnackBar(
         context,
-        'Error loading secondary subtitle: $e',
+        'Could not load the secondary subtitle file. Please try again.',
         backgroundColor: Colors.red,
       );
     }
@@ -2136,9 +2142,12 @@ class _ProjectSettingsSheetState extends State<ProjectSettingsSheet> with Widget
         backgroundColor: Colors.green,
       );
     } catch (e) {
+      if (kDebugMode) {
+        debugPrint('Project Settings failed to update encoding: $e');
+      }
       SnackbarHelper.showSnackBar(
         context,
-        'Error updating encoding: $e',
+        'Could not update the text encoding. Please try again.',
         backgroundColor: Colors.red,
       );
     }
@@ -2176,7 +2185,10 @@ class _ProjectSettingsSheetState extends State<ProjectSettingsSheet> with Widget
               SnackbarHelper.showSuccess(context, 
                 comment != null ? 'Comment updated' : 'Comment deleted');
             } catch (e) {
-              SnackbarHelper.showError(context, 'Failed to update comment: $e');
+              if (kDebugMode) {
+                debugPrint('Project Settings failed to update comment: $e');
+              }
+              SnackbarHelper.showError(context, 'Could not update the comment. Please try again.');
             }
           },
           onLineUnmarked: (index) async {
@@ -2189,7 +2201,10 @@ class _ProjectSettingsSheetState extends State<ProjectSettingsSheet> with Widget
               
               SnackbarHelper.showSuccess(context, 'Line unmarked and comment deleted');
             } catch (e) {
-              SnackbarHelper.showError(context, 'Failed to unmark line: $e');
+              if (kDebugMode) {
+                debugPrint('Project Settings failed to unmark subtitle line: $e');
+              }
+              SnackbarHelper.showError(context, 'Could not unmark the subtitle line. Please try again.');
             }
           },
           onResolvedUpdated: (index, resolved) async {
@@ -2203,7 +2218,10 @@ class _ProjectSettingsSheetState extends State<ProjectSettingsSheet> with Widget
               SnackbarHelper.showSuccess(context, 
                 resolved ? 'Comment marked as resolved' : 'Comment marked as unresolved');
             } catch (e) {
-              SnackbarHelper.showError(context, 'Failed to update resolved status: $e');
+              if (kDebugMode) {
+                debugPrint('Project Settings failed to update resolved status: $e');
+              }
+              SnackbarHelper.showError(context, 'Could not update the resolved status. Please try again.');
             }
           },
           onTextEdited: (index, newText) async {
@@ -2239,7 +2257,10 @@ class _ProjectSettingsSheetState extends State<ProjectSettingsSheet> with Widget
                 SnackbarHelper.showSuccess(context, 'Subtitle text updated');
               }
             } catch (e) {
-              SnackbarHelper.showError(context, 'Failed to update subtitle text: $e');
+              if (kDebugMode) {
+                debugPrint('Project Settings failed to update subtitle text: $e');
+              }
+              SnackbarHelper.showError(context, 'Could not update the subtitle text. Please try again.');
             }
           },
         ),
@@ -2271,9 +2292,12 @@ class _ProjectSettingsSheetState extends State<ProjectSettingsSheet> with Widget
       
       Navigator.pop(context);
     } catch (e) {
+      if (kDebugMode) {
+        debugPrint('Project Settings failed to save project changes: $e');
+      }
       SnackbarHelper.showSnackBar(
         context,
-        'Error saving changes: $e',
+        'Could not save the project changes. Please try again.',
         backgroundColor: Colors.red,
       );
     }
