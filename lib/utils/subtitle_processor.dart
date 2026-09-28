@@ -27,7 +27,6 @@
 // - Adapt error handling to iOS conventions
 // - Use Core Data for processed subtitle storage
 
-import 'dart:convert'; // Text encoding and JSON operations
 import 'dart:io'; // File system operations
 import 'package:flutter/foundation.dart'; // Flutter debugging utilities
 import 'package:flutter/material.dart'; // UI framework for context handling
@@ -35,7 +34,7 @@ import 'package:shared_preferences/shared_preferences.dart'; // For storing SAF 
 import 'package:subtitle_studio/database/models/models.dart'; // Data models
 import 'package:subtitle_studio/models/subtitle_import_result.dart';
 import 'package:subtitle_studio/services/subtitle_import_repository.dart';
-import 'package:charset_converter/charset_converter.dart'; // Character encoding detection
+import 'package:subtitle_studio/services/subtitle_encoding_decoder.dart';
 import 'package:subtitle_studio/utils/subtitle_sorting.dart'; // Enhanced subtitle sorting
 
 /// Process and import subtitle file with comprehensive cleaning and validation options
@@ -96,21 +95,18 @@ Future<SubtitleImportResult> processAndImportSubtitle(
   required SubtitleImportRepository repository,
 }) async {
   try {
-    // Step 1: File Reading and Encoding Detection
-    String srtContent; // Decoded file content
-    String? encoding; // Detected character encoding
-    final file = File(filePath); // File system reference
-    final fileName = file.uri.pathSegments.last; // Extract filename for display
+    final file = File(filePath);
+    final fileName = file.uri.pathSegments.last;
 
+    late final DecodedSubtitleContent decoded;
     try {
-      // Attempt multi-encoding detection and content reading
-      // This handles various subtitle file encodings commonly used worldwide
-      srtContent = await _detectAndReadFileEncoding(file);
-      encoding =
-          "UTF-8"; // Default assumption, actual detection in helper function
+      decoded = await SubtitleEncodingDecoder.decodeFile(file);
     } catch (e) {
       throw Exception('Failed to decode SRT file: $e');
     }
+
+    final srtContent = decoded.content;
+    final encoding = decoded.encoding;
 
     final parsedLines = _processSubtitleLines(
       srtContent,
@@ -152,19 +148,18 @@ Future<SubtitleImportResult> processSubtitleWithoutContext(
       print('Processing subtitle without context: $filePath');
     }
 
-    // Read file with appropriate encoding
-    String srtContent;
-    String? encoding;
     final file = File(filePath);
     final fileName = file.uri.pathSegments.last;
 
+    late final DecodedSubtitleContent decoded;
     try {
-      // Try different encodings
-      srtContent = await _detectAndReadFileEncoding(file);
-      encoding = "UTF-8"; // Default assumption
+      decoded = await SubtitleEncodingDecoder.decodeFile(file);
     } catch (e) {
       throw Exception('Failed to decode SRT file: $e');
     }
+
+    final srtContent = decoded.content;
+    final encoding = decoded.encoding;
 
     final parsedLines = _processSubtitleLines(
       srtContent,
@@ -308,54 +303,6 @@ List<SubtitleLine> _processSubtitleLines(
   }
 
   return _reindexSubtitles(lines);
-}
-
-/// Detect file encoding and read content
-/// Attempts to detect file encoding and read content efficiently
-/// Uses streaming approach for large files to improve performance
-Future<String> _detectAndReadFileEncoding(File file) async {
-  try {
-    // Get file size to determine reading strategy
-    final fileStat = await file.stat();
-    final fileSizeInMB = fileStat.size / (1024 * 1024);
-
-    // For files larger than 5MB, use streaming approach
-    if (fileSizeInMB > 5) {
-      // Try UTF-8 with streaming read for performance
-      final stream = file.openRead();
-      final buffer = StringBuffer();
-      await for (final chunk in stream.transform(utf8.decoder)) {
-        buffer.write(chunk);
-      }
-      return buffer.toString();
-    }
-
-    // For smaller files, use regular approach with encoding detection
-    // Attempt UTF-8 decoding
-    return await file.readAsString(encoding: utf8);
-  } catch (e) {
-    try {
-      // Attempt ISO-8859-1 (Latin-1) decoding
-      final bytes = await file.readAsBytes();
-      return await CharsetConverter.decode("latin1", bytes);
-    } catch (e) {
-      try {
-        // Attempt Windows-1252 decoding
-        final bytes = await file.readAsBytes();
-        return await CharsetConverter.decode("windows-1252", bytes);
-      } catch (e) {
-        try {
-          // Attempt UTF-16 decoding
-          final bytes = await file.readAsBytes();
-          return await CharsetConverter.decode("utf16", bytes);
-        } catch (e) {
-          // Fallback to raw bytes if nothing works
-          final bytes = await file.readAsBytes();
-          return String.fromCharCodes(bytes);
-        }
-      }
-    }
-  }
 }
 
 /// Parses SRT content into structured subtitle lines with performance optimizations
