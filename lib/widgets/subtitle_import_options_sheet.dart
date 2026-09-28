@@ -61,12 +61,14 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
     
     try {
       final subtitleData = await pickSRT(context);
-      if (mounted) {
+      if (!mounted) return;
+
+      if (subtitleData != null) {
         setState(() {
           _selectedFilePath = subtitleData['filePath'];
           _fileName = subtitleData['fileName'] ?? '';
-          _safUri = subtitleData['safUri']; // Store SAF URI separately
-          _fileContent = subtitleData['content']; // Store the content that was already read
+          _safUri = subtitleData['safUri'];
+          _fileContent = subtitleData['content'];
           _isLoading = false;
         });
       } else {
