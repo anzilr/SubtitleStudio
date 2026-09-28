@@ -214,14 +214,13 @@ extension _EditMenuActions on _EditScreenState {
               subtitleCollectionId: widget.subtitleCollectionId,
               videoPlayerState: _videoPlayerKey.currentState,
               onSecondarySubtitlesLoaded: (secondarySubtitles) {
-                _setEditorState(() {
-                  _originalSecondarySubtitles = secondarySubtitles;
-                  _secondarySubtitles = _generateSimpleSubtitles(secondarySubtitles);
-                  if (_videoPlayerKey.currentState != null) {
-                    _videoPlayerKey.currentState!.updateSecondarySubtitles(_secondarySubtitles);
-                  }
-                });
-                SnackbarHelper.showSuccess(context, 'Secondary subtitles loaded');
+                _controller.setSecondarySubtitlesLocally(secondarySubtitles);
+                _videoPlayerKey.currentState
+                    ?.updateSecondarySubtitles(_secondarySubtitles);
+                SnackbarHelper.showSuccess(
+                  context,
+                  'Secondary subtitles loaded',
+                );
               },
             );
         },
@@ -229,22 +228,13 @@ extension _EditMenuActions on _EditScreenState {
     }
   }
 
-    // Load saved secondary subtitle (external path or original flag)
-    // baseSubtitles can be provided (the freshly fetched subtitles) to ensure original-text restoration uses the right data
-    Future<void> _loadSavedSecondarySubtitle([List<SubtitleLine>? baseSubtitles]) async {
-      // Riverpod migration - secondary subtitles already loaded by controller initialization
-      // Just sync local state from controller state
-      final state = _editState;
-      if (!mounted) return;
-      
-      _setEditorState(() {
-        _secondarySubtitles = state.secondarySubtitles;
-        _originalSecondarySubtitles = state.originalSecondarySubtitles;
-      });
-      
-      // Ensure video player gets updates
-      _ensureVideoPlayerSubtitles();
-    }
+  // Secondary subtitles are loaded by EditController initialization.
+  Future<void> _loadSavedSecondarySubtitle([
+    List<SubtitleLine>? baseSubtitles,
+  ]) async {
+    if (!mounted) return;
+    _ensureVideoPlayerSubtitles();
+  }
 
   Future<void> _showSyncModal() async {
     if (!mounted) return;

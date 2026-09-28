@@ -789,11 +789,49 @@ class EditController extends Notifier<EditState> {
     );
   }
 
-  /// Toggle secondary subtitles visibility
+  /// Toggle secondary subtitles visibility.
   void toggleSecondarySubtitles() {
-    final newShowState = !state.showSecondarySubtitles;
-    _setState(state.copyWith(showSecondarySubtitles: newShowState));
+    setSecondarySubtitlesVisible(!state.showSecondarySubtitles);
+  }
 
+  /// Set secondary subtitle visibility explicitly.
+  void setSecondarySubtitlesVisible(bool visible) {
+    if (state.showSecondarySubtitles == visible) return;
+    _setState(state.copyWith(showSecondarySubtitles: visible));
+  }
+
+  /// Adopt already-parsed secondary subtitle data without persisting it.
+  ///
+  /// Legacy sheets still own the path/original preference write. This keeps
+  /// Riverpod as the sole in-memory owner until those persistence paths are
+  /// migrated behind repositories.
+  void setSecondarySubtitlesLocally(
+    List<SimpleSubtitleLine> originalSubtitles, {
+    bool show = true,
+  }) {
+    final immutableOriginals =
+        List<SimpleSubtitleLine>.unmodifiable(originalSubtitles);
+    final generated =
+        _subtitleRepo.generateSimpleSubtitles(immutableOriginals);
+
+    _setState(
+      state.copyWith(
+        originalSecondarySubtitles: immutableOriginals,
+        secondarySubtitles: generated,
+        showSecondarySubtitles: show,
+      ),
+    );
+  }
+
+  /// Clear in-memory secondary subtitle state.
+  void clearSecondarySubtitlesLocally() {
+    _setState(
+      state.copyWith(
+        originalSecondarySubtitles: const [],
+        secondarySubtitles: const [],
+        showSecondarySubtitles: false,
+      ),
+    );
   }
 
   /// Load secondary subtitle from external file

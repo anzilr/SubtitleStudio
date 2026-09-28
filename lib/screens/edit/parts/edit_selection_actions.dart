@@ -324,21 +324,15 @@ extension _EditSelectionActions on _EditScreenState {
     _controller.selectRange(start, end);
   }
 
-  // Add this method to toggle secondary subtitle visibility
   void _toggleSecondarySubtitles(bool value) {
-    // Visibility is transient presentation state; subtitle data itself remains Riverpod-owned.
-    _setEditorState(() {
-      _showSecondarySubtitles = value;
-      if (_videoPlayerKey.currentState != null) {
-        if (value) {
-          // Use controller state for subtitles
-          final state = _editState;
-          _videoPlayerKey.currentState!.updateSecondarySubtitles(state.secondarySubtitles);
-        } else {
-          _videoPlayerKey.currentState!.updateSecondarySubtitles([]);
-        }
-      }
-    });
+    _controller.setSecondarySubtitlesVisible(value);
+
+    final videoState = _videoPlayerKey.currentState;
+    if (videoState == null) return;
+
+    videoState.updateSecondarySubtitles(
+      value ? _editState.secondarySubtitles : const [],
+    );
   }
 
   // Main menu popup

@@ -180,24 +180,22 @@ extension _EditProjectActions on _EditScreenState {
                 _setEditorState(() {});
               },
               onSecondarySubtitlesLoaded: (secondarySubtitles) {
-                _setEditorState(() {
-                  _originalSecondarySubtitles = secondarySubtitles;
-                  _secondarySubtitles = _generateSimpleSubtitles(secondarySubtitles);
-                  if (_videoPlayerKey.currentState != null) {
-                    _videoPlayerKey.currentState!.updateSecondarySubtitles(_secondarySubtitles);
-                  }
-                });
-                SnackbarHelper.showSuccess(context, 'Secondary subtitles loaded');
+                _controller.setSecondarySubtitlesLocally(secondarySubtitles);
+                _videoPlayerKey.currentState
+                    ?.updateSecondarySubtitles(_secondarySubtitles);
+                SnackbarHelper.showSuccess(
+                  context,
+                  'Secondary subtitles loaded',
+                );
               },
               onSecondarySubtitlesCleared: () {
-                _setEditorState(() {
-                  _originalSecondarySubtitles = [];
-                  _secondarySubtitles = [];
-                  if (_videoPlayerKey.currentState != null) {
-                    _videoPlayerKey.currentState!.updateSecondarySubtitles(_secondarySubtitles);
-                  }
-                });
-                SnackbarHelper.showSuccess(context, 'Secondary subtitles cleared');
+                _controller.clearSecondarySubtitlesLocally();
+                _videoPlayerKey.currentState
+                    ?.updateSecondarySubtitles(const []);
+                SnackbarHelper.showSuccess(
+                  context,
+                  'Secondary subtitles cleared',
+                );
               },
               onSaveProject: () {
                 _handleSaveProject();

@@ -158,9 +158,6 @@ extension _EditResponsiveLayout on _EditScreenState {
                                 // Update controller
                                 _controller.updateSubtitleLineLocally(subtitleIndex, subtitleLines[subtitleIndex]);
                                 
-                                // Regenerate subtitles for video player
-                                _subtitles = _generateSubtitles(subtitleLines);
-                                
                                 // Update video player with new subtitles
                                 if (_videoPlayerKey.currentState != null) {
                                   _videoPlayerKey.currentState!.updateSubtitles(_subtitles);
@@ -291,9 +288,6 @@ extension _EditResponsiveLayout on _EditScreenState {
                         // Update controller
                         _controller.updateSubtitleLineLocally(subtitleIndex, subtitleLines[subtitleIndex]);
                         
-                        // Regenerate subtitles for video player
-                        _subtitles = _generateSubtitles(subtitleLines);
-                        
                         // Update video player with new subtitles
                         if (_videoPlayerKey.currentState != null) {
                           _videoPlayerKey.currentState!.updateSubtitles(_subtitles);
@@ -410,9 +404,6 @@ extension _EditResponsiveLayout on _EditScreenState {
                               });
                               // Update controller
                               _controller.updateSubtitleLineLocally(subtitleIndex, subtitleLines[subtitleIndex]);
-                              
-                              // Regenerate subtitles for video player
-                              _subtitles = _generateSubtitles(subtitleLines);
                               
                               // Update video player with new subtitles
                               if (_videoPlayerKey.currentState != null) {
@@ -583,9 +574,6 @@ extension _EditResponsiveLayout on _EditScreenState {
                           });
                           // Update controller
                           _controller.updateSubtitleLineLocally(subtitleIndex, subtitleLines[subtitleIndex]);
-                          
-                          // Regenerate subtitles for video player
-                          _subtitles = _generateSubtitles(subtitleLines);
                           
                           // Update video player with new subtitles
                           if (_videoPlayerKey.currentState != null) {
