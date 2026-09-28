@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart' as fp;
 import 'package:subtitle_studio/database/models/models.dart';
-import 'package:subtitle_studio/database/database_instance.dart';
 import 'package:subtitle_studio/utils/platform_file_handler.dart';
 import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
@@ -379,26 +378,6 @@ class ProjectManager {
         print('Update existing project error: $e');
       }
       return false;
-    }
-  }
-  
-  /// Update session with project file path
-  static Future<void> updateSessionProjectPath({
-    required int sessionId,
-    required String projectFilePath,
-  }) async {
-    try {
-      final session = await isar.sessions.get(sessionId);
-      if (session != null) {
-        session.projectFilePath = projectFilePath;
-        await isar.writeTxn(() async {
-          await isar.sessions.put(session);
-        });
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('Update session project path error: $e');
-      }
     }
   }
   
