@@ -1,10 +1,15 @@
-Riverpod migration checkpoint 13b
+Riverpod migration checkpoint 14
 Date: 2026-09-28
 Checks:
 - flutter analyze
 - flutter test
 
-Correction:
-- AI explanation sheet now passes the current saved Gemini API key explicitly to credential-aware model discovery.
+Scope since checkpoint 13b:
+- Decoupled Editor/Edit Line repositories from video widget types
+- Normalized persisted cue number indexing
+- Made Riverpod the sole Editor subtitle/secondary/video state owner
+- Extracted Edit Line original text section
+- Extracted Edit Line time controls section
+- Extracted Edit Line edited text section
 
 Platform builds intentionally disabled.
