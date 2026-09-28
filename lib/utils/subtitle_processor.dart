@@ -34,6 +34,7 @@ import 'package:flutter/material.dart'; // UI framework for context handling
 import 'package:shared_preferences/shared_preferences.dart'; // For storing SAF URIs
 import 'package:subtitle_studio/database/database_helper.dart'; // Database operations
 import 'package:subtitle_studio/database/models/models.dart'; // Data models
+import 'package:subtitle_studio/models/subtitle_import_result.dart';
 import 'package:charset_converter/charset_converter.dart'; // Character encoding detection
 import 'package:subtitle_studio/utils/subtitle_sorting.dart'; // Enhanced subtitle sorting
 
@@ -85,7 +86,7 @@ import 'package:subtitle_studio/utils/subtitle_sorting.dart'; // Enhanced subtit
 ///     // 4. Store in Core Data
 /// }
 /// ```
-Future<Map?> processAndImportSubtitle(
+Future<SubtitleImportResult> processAndImportSubtitle(
   String filePath,
   BuildContext context, {
   bool removeHearingImpairedLines =
@@ -147,11 +148,12 @@ Future<Map?> processAndImportSubtitle(
       projectFilePath: null, // No project file path for regular imports
     );
 
-    // Update the last edited session
-    final sessionId = subtitleData['sessionId'];
-    await updateLastEditedSession(sessionId);
+    final result = SubtitleImportResult.fromLegacyMap(subtitleData);
 
-    return subtitleData;
+    // Preserve the existing last-edited-session update behavior.
+    await updateLastEditedSession(result.sessionId);
+
+    return result;
   } catch (e) {
     if (kDebugMode) {
       print('Error processing subtitle: $e');
@@ -162,7 +164,7 @@ Future<Map?> processAndImportSubtitle(
 
 /// Processes and imports subtitle file without requiring a BuildContext
 /// For use when the widget that initiated the operation might be unmounted
-Future<Map?> processSubtitleWithoutContext(
+Future<SubtitleImportResult> processSubtitleWithoutContext(
   String filePath, {
   bool removeHearingImpairedLines = false,
   bool mergeOverlappingSubtitles = false,
@@ -221,11 +223,12 @@ Future<Map?> processSubtitleWithoutContext(
       projectFilePath: null, // No project file path for regular imports
     );
 
-    // Update the last edited session
-    final sessionId = subtitleData['sessionId'];
-    await updateLastEditedSession(sessionId);
+    final result = SubtitleImportResult.fromLegacyMap(subtitleData);
 
-    return subtitleData;
+    // Preserve the existing last-edited-session update behavior.
+    await updateLastEditedSession(result.sessionId);
+
+    return result;
   } catch (e) {
     if (kDebugMode) {
       print('Error processing subtitle without context: $e');
@@ -236,7 +239,7 @@ Future<Map?> processSubtitleWithoutContext(
 
 /// SAF-compatible version: Processes and imports subtitle content with context
 /// Uses file content instead of file path for Storage Access Framework compatibility
-Future<Map?> processAndImportSubtitleContent(
+Future<SubtitleImportResult> processAndImportSubtitleContent(
   String content,
   String fileName,
   String displayPath,
@@ -282,7 +285,7 @@ Future<Map?> processAndImportSubtitleContent(
         projectFilePath: null, // No project file path for content imports
       );
 
-      return subtitleData;
+      return SubtitleImportResult.fromLegacyMap(subtitleData);
     } else {
       throw Exception(
         'No valid subtitle entries found in the processed content.',
@@ -298,7 +301,7 @@ Future<Map?> processAndImportSubtitleContent(
 
 /// SAF-compatible version: Processes subtitle content without requiring BuildContext
 /// For use when the widget that initiated the operation might be unmounted
-Future<Map?> processSubtitleContentWithoutContext(
+Future<SubtitleImportResult> processSubtitleContentWithoutContext(
   String content,
   String fileName,
   String displayPath, {
@@ -339,11 +342,12 @@ Future<Map?> processSubtitleContentWithoutContext(
         projectFilePath: null, // No project file path for content imports
       );
 
-      // Update the last edited session
-      final sessionId = subtitleData['sessionId'];
-      await updateLastEditedSession(sessionId);
+      final result = SubtitleImportResult.fromLegacyMap(subtitleData);
 
-      return subtitleData;
+      // Preserve the existing last-edited-session update behavior.
+      await updateLastEditedSession(result.sessionId);
+
+      return result;
     } else {
       throw Exception(
         'No valid subtitle entries found in the processed content.',
