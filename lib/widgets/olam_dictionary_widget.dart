@@ -25,18 +25,19 @@
 import 'dart:io';
 import 'dart:convert'; // For utf8 and latin1 encoding/decoding
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart'; // For Clipboard
 import 'package:dio/dio.dart';
 import 'package:archive/archive.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/database/models/preferences_model.dart';
-import 'package:subtitle_studio/database/database_helper.dart';
+import 'package:subtitle_studio/widgets/olam/olam_dictionary_repository.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 
 /// Dictionary widget for Olam offline dictionary lookup
-class OlamDictionaryWidget extends StatefulWidget {
+class OlamDictionaryWidget extends ConsumerStatefulWidget {
   /// Callback when user selects a translation
   final Function(String) onSelectTranslation;
   
@@ -50,10 +51,10 @@ class OlamDictionaryWidget extends StatefulWidget {
   });
 
   @override
-  State<OlamDictionaryWidget> createState() => _OlamDictionaryWidgetState();
+  ConsumerState<OlamDictionaryWidget> createState() => _OlamDictionaryWidgetState();
 }
 
-class _OlamDictionaryWidgetState extends State<OlamDictionaryWidget>
+class _OlamDictionaryWidgetState extends ConsumerState<OlamDictionaryWidget>
     with TickerProviderStateMixin {
   // Controllers
   late TextEditingController _searchController;
@@ -133,7 +134,7 @@ class _OlamDictionaryWidgetState extends State<OlamDictionaryWidget>
   /// Check how many entries are in the database
   Future<void> _checkDatabaseCount() async {
     try {
-      final count = await isar.dictionaryEntrys.count();
+      final count = await ref.read(olamDictionaryRepositoryProvider).countEntries();
       setState(() {
         _databaseEntryCount = count;
       });
@@ -153,53 +154,35 @@ class _OlamDictionaryWidgetState extends State<OlamDictionaryWidget>
 
   /// Test if database operations work
   Future<void> _testDatabaseFunctionality() async {
+    if (_databaseEntryCount > 0) {
+      logInfo('Database already contains data, skipping test');
+      return;
+    }
+
     try {
-      // Only test if database is empty to avoid clearing existing data
-      if (_databaseEntryCount > 0) {
-        logInfo('Database already contains data, skipping test');
-        return;
-      }
-      
-      // Test inserting a single entry
-      final testEntry = DictionaryEntry(
-        word: 'test',
-        meaning: 'പരീക്ഷ',
-        partOfSpeech: 'n',
-        dictionaryType: 'EN-ML',
+      final writable = await ref
+          .read(olamDictionaryRepositoryProvider)
+          .probeWritable();
+
+      logInfo(
+        writable
+            ? 'Dictionary database write probe completed'
+            : 'Dictionary database write probe failed',
       );
-      
-      await isar.writeTxn(() async {
-        await isar.dictionaryEntrys.put(testEntry);
-      });
-      
-      final countAfterTest = await isar.dictionaryEntrys.count();
-      logInfo('Database count after test insert: $countAfterTest');
-      
-      // Only clean up the specific test entry, not all data
-      if (countAfterTest == 1) {
-        await isar.writeTxn(() async {
-          await isar.dictionaryEntrys.delete(testEntry.id);
-        });
-        logInfo('Cleaned up test entry');
-      } else {
-        logInfo('Not clearing database - contains actual data');
-      }
-      
-      logInfo('Database test completed');
     } catch (e) {
-      logError('Database test failed: $e');
+      logError('Dictionary database test failed: $e');
     }
   }
 
   /// Verify database integrity and Unicode handling
   Future<void> _verifyDatabaseIntegrity() async {
     try {
-      final count = await isar.dictionaryEntrys.count();
+      final count = await ref.read(olamDictionaryRepositoryProvider).countEntries();
       logInfo('Total entries in database: $count');
       
       if (count > 0) {
         // Use the search functions to get sample entries
-        final sampleEntries = await searchDictionaryByWord('', 'EN-ML');
+        final sampleEntries = await ref.read(olamDictionaryRepositoryProvider).searchByWord('', 'EN-ML');
         final limitedSample = sampleEntries.take(5).toList();
         
         logInfo('Sample entries for Unicode verification:');
@@ -221,8 +204,8 @@ class _OlamDictionaryWidgetState extends State<OlamDictionaryWidget>
         }
         
         // Count entries by type
-        final enmlEntries = await searchDictionaryByWord('', 'EN-ML');
-        final mlmlEntries = await searchDictionaryByWord('', 'ML-ML');
+        final enmlEntries = await ref.read(olamDictionaryRepositoryProvider).searchByWord('', 'EN-ML');
+        final mlmlEntries = await ref.read(olamDictionaryRepositoryProvider).searchByWord('', 'ML-ML');
         logInfo('EN-ML entries: ${enmlEntries.length}');
         logInfo('ML-ML entries: ${mlmlEntries.length}');
       }
@@ -345,21 +328,21 @@ class _OlamDictionaryWidgetState extends State<OlamDictionaryWidget>
       switch (_selectedTab) {
         case 'EN-ML':
           // Search English word, return Malayalam meaning
-          results = await searchDictionaryByWord(query, 'EN-ML', 
+          results = await ref.read(olamDictionaryRepositoryProvider).searchByWord(query, 'EN-ML', 
                                                 wholeWord: _wholeWordSearch, 
                                                 caseSensitive: _caseSensitiveSearch);
           break;
           
         case 'ML-EN':
           // Search Malayalam meaning, return English word
-          results = await searchDictionaryByMeaning(query, 'EN-ML', 
+          results = await ref.read(olamDictionaryRepositoryProvider).searchByMeaning(query, 'EN-ML', 
                                                    wholeWord: _wholeWordSearch, 
                                                    caseSensitive: _caseSensitiveSearch);
           break;
           
         case 'ML-ML':
           // Search Malayalam word, return Malayalam meaning
-          results = await searchDictionaryByWord(query, 'ML-ML', 
+          results = await ref.read(olamDictionaryRepositoryProvider).searchByWord(query, 'ML-ML', 
                                                 wholeWord: _wholeWordSearch, 
                                                 caseSensitive: _caseSensitiveSearch);
           break;
@@ -377,7 +360,7 @@ class _OlamDictionaryWidgetState extends State<OlamDictionaryWidget>
         setState(() {
           _isLoading = false;
         });
-        SnackbarHelper.showError(context, 'Search failed: $e');
+        SnackbarHelper.showError(context, 'Dictionary search failed. Please try again.');
       }
     }
   }
@@ -412,7 +395,7 @@ class _OlamDictionaryWidgetState extends State<OlamDictionaryWidget>
       logInfo('Starting dictionary database update...');
       
       // Clear existing dictionary entries
-      await clearDictionaryEntries();
+      await ref.read(olamDictionaryRepositoryProvider).clearEntries();
 
       // Download and process EN-ML dictionary
       await _downloadAndProcessDictionary(_enmlUrl, 'enml', 'EN-ML');
@@ -436,7 +419,7 @@ class _OlamDictionaryWidgetState extends State<OlamDictionaryWidget>
     } catch (e) {
       logError('Dictionary update failed: $e');
       if (mounted) {
-        SnackbarHelper.showError(context, 'Update failed: $e');
+        SnackbarHelper.showError(context, 'Dictionary update failed. Please try again.');
       }
     } finally {
       if (mounted) {
@@ -581,11 +564,11 @@ class _OlamDictionaryWidgetState extends State<OlamDictionaryWidget>
 
     if (entries.isNotEmpty) {
       // Use helper function for batch insert
-      await addDictionaryEntries(entries);
+      await ref.read(olamDictionaryRepositoryProvider).addEntries(entries);
       logInfo('Successfully stored ${entries.length} $dictionaryType dictionary entries in database');
       
       // Verify the data was actually inserted
-      final countAfterInsert = await isar.dictionaryEntrys.count();
+      final countAfterInsert = await ref.read(olamDictionaryRepositoryProvider).countEntries();
       logInfo('Database count after insert: $countAfterInsert');
     } else {
       logError('No valid entries found for $dictionaryType dictionary');
