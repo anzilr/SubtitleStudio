@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:flutter/services.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/database/models/preferences_model.dart';
@@ -17,7 +19,7 @@ part 'project_settings/parts/project_settings_path_helpers.dart';
 part 'project_settings/parts/project_settings_media_actions.dart';
 part 'project_settings/parts/project_settings_marked_actions.dart';
 
-class ProjectSettingsSheet extends StatefulWidget {
+class ProjectSettingsSheet extends ConsumerStatefulWidget {
   final Session session;
   final SubtitleCollection subtitleCollection;
   final VoidCallback onProjectUpdated;
@@ -38,10 +40,10 @@ class ProjectSettingsSheet extends StatefulWidget {
   });
 
   @override
-  State<ProjectSettingsSheet> createState() => _ProjectSettingsSheetState();
+  ConsumerState<ProjectSettingsSheet> createState() => _ProjectSettingsSheetState();
 }
 
-class _ProjectSettingsSheetState extends State<ProjectSettingsSheet> with WidgetsBindingObserver {
+class _ProjectSettingsSheetState extends ConsumerState<ProjectSettingsSheet> with WidgetsBindingObserver {
   late TextEditingController _projectNameController;
   late TextEditingController _srtFileNameController;
   late String _selectedEncoding;
@@ -128,7 +130,8 @@ class _ProjectSettingsSheetState extends State<ProjectSettingsSheet> with Widget
       }
       
       // Check session info (for project file path)
-      final session = await isar.sessions.get(widget.session.id);
+      final session =
+          await ref.read(projectRepositoryProvider).getSession(widget.session.id);
       if (session != null && session.projectFilePath != widget.session.projectFilePath) {
         widget.session.projectFilePath = session.projectFilePath;
         hasChanges = true;
@@ -225,7 +228,8 @@ class _ProjectSettingsSheetState extends State<ProjectSettingsSheet> with Widget
     
     try {
       // Refresh session from database
-      final session = await isar.sessions.get(widget.session.id);
+      final session =
+          await ref.read(projectRepositoryProvider).getSession(widget.session.id);
       if (session != null) {
         // Update the widget's session data if needed
         widget.session.projectFilePath = session.projectFilePath;
