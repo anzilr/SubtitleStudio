@@ -1,13 +1,10 @@
-Riverpod migration checkpoint 16b
+Riverpod migration checkpoint 16c
 Date: 2026-09-28
 Checks:
 - flutter analyze
 - flutter test
 
-Corrections after checkpoint 16:
-- Fixed session-selection import/part directive ordering
-- Routed extraction subtitle collection metadata updates through SubtitleRepository
-- Made extraction sheet Riverpod-aware for repository access
-- Removed unnecessary Help catalog import
+Final correction:
+- Reused existing SubtitleRepository.updateCollection implementation instead of duplicating it
 
 Platform builds intentionally disabled.
