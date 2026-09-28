@@ -107,6 +107,7 @@ class EditSubtitleScreen extends riverpod.ConsumerStatefulWidget {
 class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen> {
   EditLineController get _editLineController =>
       ref.read(editLineControllerProvider.notifier);
+  EditLineState get _editLineState => ref.read(editLineControllerProvider);
 
   void _setEditLineState(VoidCallback update) {
     if (!mounted) return;
@@ -273,22 +274,13 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
     _endTimeError = null;
     _timeOrderError = null;
 
-    // Initialize edit mode from widget property
-    _isEditMode = widget.editMode || widget.isNewSubtitle;
+    // Persistence, subtitle data, and preferences were already loaded by
+    // EditLineController in EditSubtitleScreenHost. Hydrate only the local UI
+    // handles required by this compatibility screen.
+    _hydrateFromControllerState();
 
-    // Make time visible for new subtitles or in edit mode
-    if (widget.isNewSubtitle || _isEditMode) {
-      _isTimeVisible = true;
-    }
-
-    // Initialize video player state
-    _initializeVideoPlayer();
-
-    // Register hotkey shortcuts
-    _registerHotkeyShortcuts();
-
-    // Batch all async initialization operations for better performance
-    _initializeAsyncData();
+    // Register route-specific hotkeys after local UI state is ready.
+    unawaited(_registerHotkeyShortcuts());
   }
 
   // Optimized async initialization with batched operations

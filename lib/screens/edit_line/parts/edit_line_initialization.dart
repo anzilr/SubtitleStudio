@@ -1,26 +1,95 @@
 part of '../../screen_edit_line.dart';
 
 extension _EditLineInitialization on EditSubtitleScreenState {
-  Future<void> _initializeAsyncData() async {
-    try {
-      // Preferences are loaded once through the injected repository instead of
-      // issuing many independent global preference reads.
-      final futures = <Future>[
-        _loadAllUiPreferences(),
-        _fetchSubtitleLine(widget.subtitleId, widget.index - 1),
-      ];
-
-      await Future.wait(futures);
-
-      // Initialize character counts
-      _instantCharacterCountUpdate();
-    } catch (e) {
-      await logError(
-        'Error during initialization',
-        error: e,
-        context: 'EditSubtitleScreen._initializeAsync',
+  void _hydrateFromControllerState() {
+    final state = _editLineState;
+    final collection = state.subtitleCollection;
+    if (collection == null) {
+      throw StateError(
+        'EditLineController completed without a subtitle collection.',
       );
     }
+
+    _subtitle = collection;
+    _isEditMode = state.isEditMode;
+    isEditingEnabled = state.isEditingEnabled;
+    _isTimeVisible = state.isTimeVisible;
+    isRawEnabled = state.isRawEnabled;
+
+    _startTimeError = state.startTimeError;
+    _endTimeError = state.endTimeError;
+    _timeOrderError = state.timeOrderError;
+
+    _isMsoneEnabled = state.preferences.isMsoneEnabled;
+    _showOriginalLine = state.showOriginalLine;
+    _autoSaveWithNavigation = state.preferences.showOriginalLine
+        ? state.preferences.autoSaveWithNavigation
+        : true;
+    _isSaveToFileEnabled = state.preferences.saveToFileEnabled;
+    _autoResizeOnKeyboard = state.preferences.autoResizeOnKeyboard;
+    _showOriginalTextField = state.showOriginalTextField;
+
+    _resizeRatio = state.resizeRatio;
+    _isResizeRatioLoaded = true;
+    _mobileVideoResizeRatio = state.mobileVideoResizeRatio;
+    _isMobileResizeRatioLoaded = true;
+    _layoutPreference = state.layoutPreference;
+    _colorHistory
+      ..clear()
+      ..addAll(state.colorHistory);
+
+    _selectedVideoPath = state.videoPath;
+    _isVideoLoaded = state.isVideoLoaded;
+    _isVideoVisible = state.isVideoVisible;
+    _isVideoPlaying = state.isVideoPlaying;
+    _subtitles = List<Subtitle>.from(state.subtitles);
+
+    _secondarySubtitles =
+        List<SimpleSubtitleLine>.from(state.secondarySubtitles);
+    _secondarySubtitlesForPlayer =
+        List<Subtitle>.from(state.secondarySubtitlesForPlayer);
+    _showSecondarySubtitles = state.showSecondarySubtitles;
+
+    _isRepeatModeEnabled = state.isRepeatModeEnabled;
+    _isCustomRangeMode = state.isCustomRangeMode;
+    _customRangeStartIndex = state.customRangeStartIndex;
+    _customRangeEndIndex = state.customRangeEndIndex;
+
+    var line = state.subtitleLine;
+    if (line == null && (state.isNewSubtitle || state.isEditMode)) {
+      line = SubtitleLine()
+        ..index = collection.lines.isEmpty ? 1 : collection.lines.length + 1
+        ..startTime = state.startTime
+        ..endTime = state.endTime
+        ..original = state.originalText
+        ..edited = state.editedText;
+    }
+    _subtitleLine = line;
+
+    _originalController.text = line?.original ?? state.originalText;
+    _editedController.text =
+        (line?.edited ?? state.editedText).replaceAll('<br>', '\n');
+    _startTimeController.text = line?.startTime ?? state.startTime;
+    _endTimeController.text = line?.endTime ?? state.endTime;
+    _currentIndexController.text =
+        (line?.index ?? (collection.lines.length + 1)).toString();
+
+    _parseTimeString(_startTimeController.text, true);
+    _parseTimeString(_endTimeController.text, false);
+    _storeInitialValues();
+    _applyShowOriginalLine();
+
+    _needSubtitleRegeneration = false;
+
+    if (_isVideoLoaded) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        unawaited(_syncVideoPlayerWhenReady());
+        _seekVideoToSubtitle();
+      });
+    }
+
+    _instantCharacterCountUpdate();
   }
 
   Future<void> _seekWhenVideoPlayerReady(Duration position) async {
