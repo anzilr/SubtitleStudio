@@ -4,7 +4,7 @@ import 'package:subtitle_studio/database/models/models.dart';
 import 'package:isar_community/isar.dart';
 import '../utils/logging_helpers.dart';
 import '../utils/snackbar_helper.dart';
-import '../services/checkpoint_manager.dart';
+import '../services/checkpoint_repository.dart';
 
 import '../widgets/add_line_confirmation_sheet.dart';
 import '../widgets/delete_confirmation_sheet.dart';

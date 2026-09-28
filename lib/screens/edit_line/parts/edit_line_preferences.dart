@@ -38,11 +38,6 @@ extension _EditLinePreferences on EditSubtitleScreenState {
     _applyShowOriginalLine();
   }
 
-  Future<void> _loadAllUiPreferences() async {
-    final preferences = await _loadPreferenceSnapshot();
-    _applyPreferenceSnapshot(preferences);
-  }
-
   Future<void> _reloadAllSettings() async {
     final preferences = await _loadPreferenceSnapshot();
     _applyPreferenceSnapshot(preferences);

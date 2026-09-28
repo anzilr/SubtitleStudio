@@ -1,37 +1,6 @@
 part of '../../screen_edit_line.dart';
 
 extension _EditLineVideoActions on EditSubtitleScreenState {
-  void _initializeVideoPlayer() {
-    _isVideoLoaded = widget.isVideoLoaded;
-    _selectedVideoPath = widget.videoPath;
-    _isVideoVisible = _isVideoLoaded; // Show video by default if loaded
-
-    // Initialize video playing state
-    _isVideoPlaying = false;
-
-    // Initialize secondary subtitles if provided
-    if (widget.secondarySubtitles != null &&
-        widget.secondarySubtitles!.isNotEmpty) {
-      _secondarySubtitles = widget.secondarySubtitles!;
-      _showSecondarySubtitles = true;
-      _generateSecondarySubtitles();
-    } else {
-      _showSecondarySubtitles = false;
-    }
-
-    // Generate initial subtitles if subtitle data is available
-    if (_subtitle != null) {
-      _markSubtitlesForRegeneration();
-      _generateSubtitles();
-    }
-
-    if (_isVideoLoaded) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        unawaited(_syncVideoPlayerWhenReady());
-      });
-    }
-  }
-
   void _generateSubtitles() {
     if (_subtitle?.lines != null && _needSubtitleRegeneration) {
       final newSubtitles =
