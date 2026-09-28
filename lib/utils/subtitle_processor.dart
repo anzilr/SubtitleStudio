@@ -32,9 +32,9 @@ import 'dart:io'; // File system operations
 import 'package:flutter/foundation.dart'; // Flutter debugging utilities
 import 'package:flutter/material.dart'; // UI framework for context handling
 import 'package:shared_preferences/shared_preferences.dart'; // For storing SAF URIs
-import 'package:subtitle_studio/database/database_helper.dart'; // Database operations
 import 'package:subtitle_studio/database/models/models.dart'; // Data models
 import 'package:subtitle_studio/models/subtitle_import_result.dart';
+import 'package:subtitle_studio/services/subtitle_import_repository.dart';
 import 'package:charset_converter/charset_converter.dart'; // Character encoding detection
 import 'package:subtitle_studio/utils/subtitle_sorting.dart'; // Enhanced subtitle sorting
 
@@ -93,6 +93,7 @@ Future<SubtitleImportResult> processAndImportSubtitle(
       false, // Remove [Speaker] and (sound) annotations
   bool mergeOverlappingSubtitles =
       false, // Merge subtitles with timing conflicts
+  required SubtitleImportRepository repository,
 }) async {
   try {
     // Step 1: File Reading and Encoding Detection
@@ -135,23 +136,17 @@ Future<SubtitleImportResult> processAndImportSubtitle(
       parsedLines = _reindexSubtitles(parsedLines);
     }
 
-    // Store processed subtitle in database with proper platform-specific file path handling
-    final subtitleData = await storeSubtitleData(
-      parsedLines,
-      fileName,
-      encoding,
-      filePath, // Store full file path (not just directory) as filePath
-      originalFileUri:
-          Platform.isAndroid
-              ? filePath
-              : filePath, // Use same value for both on regular files
-      projectFilePath: null, // No project file path for regular imports
+    final result = await repository.storeSubtitleData(
+      lines: parsedLines,
+      fileName: fileName,
+      encoding: encoding,
+      filePath: filePath,
+      originalFileUri: filePath,
+      projectFilePath: null,
     );
 
-    final result = SubtitleImportResult.fromLegacyMap(subtitleData);
-
     // Preserve the existing last-edited-session update behavior.
-    await updateLastEditedSession(result.sessionId);
+    await repository.updateLastEditedSession(result.sessionId);
 
     return result;
   } catch (e) {
@@ -168,6 +163,7 @@ Future<SubtitleImportResult> processSubtitleWithoutContext(
   String filePath, {
   bool removeHearingImpairedLines = false,
   bool mergeOverlappingSubtitles = false,
+  required SubtitleImportRepository repository,
 }) async {
   try {
     if (kDebugMode) {
@@ -210,23 +206,17 @@ Future<SubtitleImportResult> processSubtitleWithoutContext(
       parsedLines = _reindexSubtitles(parsedLines);
     }
 
-    // Store processed subtitle in database with proper platform-specific file path handling
-    final subtitleData = await storeSubtitleData(
-      parsedLines,
-      fileName,
-      encoding,
-      filePath, // Store full file path (not just directory) as filePath
-      originalFileUri:
-          Platform.isAndroid
-              ? filePath
-              : filePath, // Use same value for both on non-Android, actual URI on Android
-      projectFilePath: null, // No project file path for regular imports
+    final result = await repository.storeSubtitleData(
+      lines: parsedLines,
+      fileName: fileName,
+      encoding: encoding,
+      filePath: filePath,
+      originalFileUri: filePath,
+      projectFilePath: null,
     );
 
-    final result = SubtitleImportResult.fromLegacyMap(subtitleData);
-
     // Preserve the existing last-edited-session update behavior.
-    await updateLastEditedSession(result.sessionId);
+    await repository.updateLastEditedSession(result.sessionId);
 
     return result;
   } catch (e) {
@@ -249,6 +239,7 @@ Future<SubtitleImportResult> processAndImportSubtitleContent(
   bool mergeOverlappingSubtitles =
       false, // Merge subtitles with timing conflicts
   String? contentUri, // Android SAF content URI for persistence
+  required SubtitleImportRepository repository,
 }) async {
   try {
     // Step 1: Content Processing (no file system access needed)
@@ -274,18 +265,14 @@ Future<SubtitleImportResult> processAndImportSubtitleContent(
         parsedLines = _mergeOverlappingSubtitles(parsedLines);
       }
 
-      // Step 4: Database Import with Metadata
-      // Creates Session and SubtitleCollection entries with comprehensive metadata
-      final subtitleData = await storeSubtitleData(
-        parsedLines,
-        fileName,
-        encoding,
-        displayPath,
-        originalFileUri: contentUri, // Store original content URI in database
-        projectFilePath: null, // No project file path for content imports
+      return repository.storeSubtitleData(
+        lines: parsedLines,
+        fileName: fileName,
+        encoding: encoding,
+        filePath: displayPath,
+        originalFileUri: contentUri,
+        projectFilePath: null,
       );
-
-      return SubtitleImportResult.fromLegacyMap(subtitleData);
     } else {
       throw Exception(
         'No valid subtitle entries found in the processed content.',
@@ -308,6 +295,7 @@ Future<SubtitleImportResult> processSubtitleContentWithoutContext(
   bool removeHearingImpairedLines = false,
   bool mergeOverlappingSubtitles = false,
   String? contentUri, // Android SAF content URI for persistence
+  required SubtitleImportRepository repository,
 }) async {
   try {
     // Step 1: Content Processing (no file system access needed)
@@ -332,20 +320,17 @@ Future<SubtitleImportResult> processSubtitleContentWithoutContext(
         parsedLines = _mergeOverlappingSubtitles(parsedLines);
       }
 
-      // Step 4: Database Import with Metadata (without context)
-      final subtitleData = await storeSubtitleData(
-        parsedLines,
-        fileName,
-        encoding,
-        displayPath,
-        originalFileUri: contentUri, // Store original content URI in database
-        projectFilePath: null, // No project file path for content imports
+      final result = await repository.storeSubtitleData(
+        lines: parsedLines,
+        fileName: fileName,
+        encoding: encoding,
+        filePath: displayPath,
+        originalFileUri: contentUri,
+        projectFilePath: null,
       );
 
-      final result = SubtitleImportResult.fromLegacyMap(subtitleData);
-
       // Preserve the existing last-edited-session update behavior.
-      await updateLastEditedSession(result.sessionId);
+      await repository.updateLastEditedSession(result.sessionId);
 
       return result;
     } else {
