@@ -114,6 +114,55 @@ class SubtitleRepository {
     return saved;
   }
 
+  /// Update several subtitle lines in one collection transaction.
+  ///
+  /// Cue numbers are matched by [SubtitleLine.index], so callers can submit a
+  /// sparse set of modified lines without rewriting unrelated entries.
+  Future<bool> updateMultipleLines(
+    int collectionId,
+    List<SubtitleLine> updatedLines,
+  ) async {
+    if (updatedLines.isEmpty) return true;
+
+    try {
+      return await _isar.writeTxn(() async {
+        final collection = await _isar.subtitleCollections.get(collectionId);
+        if (collection == null) return false;
+
+        final updatesByCueNumber = <int, SubtitleLine>{
+          for (final line in updatedLines) line.index: line,
+        };
+
+        var updatedCount = 0;
+        for (int i = 0; i < collection.lines.length; i++) {
+          final replacement =
+              updatesByCueNumber[collection.lines[i].index];
+          if (replacement != null) {
+            collection.lines[i] = replacement;
+            updatedCount++;
+          }
+        }
+
+        if (updatedCount != updatesByCueNumber.length) {
+          logWarning(
+            'SubtitleRepository: Batch update matched $updatedCount of '
+            '${updatesByCueNumber.length} requested lines',
+          );
+        }
+
+        await _isar.subtitleCollections.put(collection);
+        return updatedCount == updatesByCueNumber.length;
+      });
+    } catch (e, stackTrace) {
+      await logError(
+        'SubtitleRepository: Batch update failed',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
+  }
+
   /// Mark a subtitle line
   Future<bool> markLine(int collectionId, int index, bool marked) async {
     logInfo('SubtitleRepository: Marking line $index in collection $collectionId as $marked');
