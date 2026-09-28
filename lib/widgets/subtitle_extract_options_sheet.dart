@@ -909,7 +909,7 @@ class _SubtitleExtractOptionsSheetState
         print('Merge overlapping subtitles: $mergeOverlapping');
       }
 
-      SubtitleImportResult? subtitleData;
+      late SubtitleImportResult subtitleData;
       try {
         // Try to use context if available, otherwise use the contextless version
         String srtContent;
@@ -959,7 +959,7 @@ class _SubtitleExtractOptionsSheetState
             'Subtitle processing result: ${'success'}',
           );
           print(
-            'Subtitle collection ID: ${subtitleData!.subtitleCollectionId}',
+            'Subtitle collection ID: ${subtitleData.subtitleCollectionId}',
           );
           print('Filename: ${subtitleData.fileName}');
           print('Session ID: ${subtitleData.sessionId}');
@@ -968,22 +968,18 @@ class _SubtitleExtractOptionsSheetState
         // Update the originalFileUri with the SAF URI if available
         if (_currentSafUri != null && _currentSafUri != outputFilePath) {
           try {
-            final subtitleCollectionId = subtitleData!.subtitleCollectionId;
-            if (subtitleCollectionId != null) {
-              // Get the subtitle collection from database
-              final subtitle = await ref
+            final subtitleCollectionId = subtitleData.subtitleCollectionId;
+            final subtitle = await ref
+                .read(subtitleRepositoryProvider)
+                .fetchSubtitleCollection(subtitleCollectionId);
+            if (subtitle != null) {
+              subtitle.originalFileUri = _currentSafUri!;
+              await ref
                   .read(subtitleRepositoryProvider)
-                  .fetchSubtitleCollection(subtitleCollectionId);
-              if (subtitle != null) {
-                // Update the originalFileUri
-                subtitle.originalFileUri = _currentSafUri!;
-                await ref
-                    .read(subtitleRepositoryProvider)
-                    .updateCollection(subtitle);
+                  .updateCollection(subtitle);
 
-                if (kDebugMode) {
-                  print('Updated originalFileUri to: $_currentSafUri');
-                }
+              if (kDebugMode) {
+                print('Updated originalFileUri to: $_currentSafUri');
               }
             }
           } catch (e) {
@@ -995,7 +991,7 @@ class _SubtitleExtractOptionsSheetState
         }
 
         // Reuse the persisted session so navigation retains the real Isar ID.
-        extractedSession = subtitleData!.session;
+        extractedSession = subtitleData.session;
 
         await SubtitleExtractionFileService.cleanupTemporaryFile(
           tempOutputFile,

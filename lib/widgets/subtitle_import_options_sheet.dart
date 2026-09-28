@@ -232,7 +232,7 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
         contentUri: contentUri, // Store SAF URI for future access
       );
 
-      if (subtitleData != null && mounted) {
+      if (mounted) {
         // Handle project saving based on user preference
         if (_selectedProjectPath != null) {
           // Manual project saving - prompt user to select directory
