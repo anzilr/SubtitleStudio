@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/utils/project_manager.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 
@@ -8,6 +10,10 @@ import 'package:subtitle_studio/database/models/models.dart';
 /// that create or import subtitle data. It should be used on widgets that
 /// handle subtitle import/creation workflows.
 mixin AutoProjectSaver<T extends StatefulWidget> on State<T> {
+  ProjectRepository get _projectRepository =>
+      ProviderScope.containerOf(context, listen: false)
+          .read(projectRepositoryProvider);
+
   
   /// Auto-save project after subtitle data is created
   /// This should be called after successfully importing/creating subtitle data
@@ -27,7 +33,7 @@ mixin AutoProjectSaver<T extends StatefulWidget> on State<T> {
 
       if (projectPath != null) {
         // Update the session with the project file path
-        await ProjectManager.updateSessionProjectPath(
+        await _projectRepository.updateSessionProjectPath(
           sessionId: session.id,
           projectFilePath: projectPath,
         );
@@ -88,7 +94,7 @@ mixin AutoProjectSaver<T extends StatefulWidget> on State<T> {
       );
       
       if (projectPath != null) {
-        await ProjectManager.updateSessionProjectPath(
+        await _projectRepository.updateSessionProjectPath(
           sessionId: session.id,
           projectFilePath: projectPath,
         );
@@ -128,10 +134,12 @@ class ProjectCreationHelper {
         );
         
         if (projectPath != null) {
-          await ProjectManager.updateSessionProjectPath(
-            sessionId: session.id,
-            projectFilePath: projectPath,
-          );
+          await ProviderScope.containerOf(context, listen: false)
+              .read(projectRepositoryProvider)
+              .updateSessionProjectPath(
+                sessionId: session.id,
+                projectFilePath: projectPath,
+              );
         }
       }
     } catch (e) {

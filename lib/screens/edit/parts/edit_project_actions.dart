@@ -144,10 +144,10 @@ extension _EditProjectActions on _EditScreenState {
 
         if (projectPath != null) {
           // Update the session with the project file path
-          await ProjectManager.updateSessionProjectPath(
-            sessionId: widget.sessionId,
-            projectFilePath: projectPath,
-          );
+          await ref.read(projectRepositoryProvider).updateSessionProjectPath(
+                sessionId: widget.sessionId,
+                projectFilePath: projectPath,
+              );
         }
       }
     } catch (e) {
