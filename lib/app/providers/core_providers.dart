@@ -4,6 +4,7 @@ import 'package:subtitle_studio/app/repositories/app_preferences_repository.dart
 import 'package:subtitle_studio/app/repositories/app_data_maintenance_repository.dart';
 import 'package:subtitle_studio/app/repositories/project_repository.dart';
 import 'package:subtitle_studio/services/checkpoint_repository.dart';
+import 'package:subtitle_studio/services/subtitle_import_repository.dart';
 
 /// Root database dependency for Riverpod-managed code.
 ///
@@ -40,4 +41,10 @@ final checkpointRepositoryProvider = Provider<CheckpointRepository>((ref) {
 
 final projectRepositoryProvider = Provider<ProjectRepository>((ref) {
   return ProjectRepository(ref.watch(isarProvider));
+});
+
+
+final subtitleImportRepositoryProvider =
+    Provider<SubtitleImportRepository>((ref) {
+  return SubtitleImportRepository(ref.watch(isarProvider));
 });
