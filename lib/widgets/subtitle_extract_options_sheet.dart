@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
 // Removed platform_check - using pure SAF implementation without permission checks
 import 'package:subtitle_studio/utils/ffmpeg_helper.dart';
+import 'package:subtitle_studio/services/subtitle_extraction_file_service.dart';
 import 'package:subtitle_studio/utils/subtitle_processor.dart';
 import 'package:subtitle_studio/widgets/subtitle_tracks_sheet.dart';
 import 'package:subtitle_studio/database/models/models.dart';
@@ -15,7 +16,6 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 // Removed permission_handler - not needed with pure SAF implementation
 import 'package:path/path.dart' as path;
-import 'package:path_provider/path_provider.dart';
 import 'package:file_picker/file_picker.dart' as fp;
 import 'dart:convert';
 
@@ -463,52 +463,13 @@ class _SubtitleExtractOptionsSheetState
     Session? extractedSession;
 
     try {
-      // Handle directory and filename based on save method and platform
-      String outputDir;
-      String outputFileName;
-
-      if (useDirectSave && Platform.isAndroid) {
-        // For SAF, outputFilePath is just the filename, create a temp directory
-        outputFileName = outputFilePath;
-        try {
-          final tempDir = await getTemporaryDirectory();
-          outputDir = tempDir.path;
-        } catch (e) {
-          if (kDebugMode) {
-            print('Error getting temp directory, using fallback: $e');
-          }
-          outputDir = '/data/data/org.msone.subeditor/cache';
-        }
-      } else if (Platform.isIOS) {
-        // For iOS, use temp directory for extraction, then use file picker for final save
-        outputFileName = path.basename(outputFilePath);
-        try {
-          final tempDir = await getTemporaryDirectory();
-          outputDir = tempDir.path;
-        } catch (e) {
-          if (kDebugMode) {
-            print('Error getting iOS temp directory, using fallback: $e');
-          }
-          final appDocsDir = await getApplicationDocumentsDirectory();
-          outputDir = appDocsDir.path;
-        }
-      } else {
-        // For desktop, use temp directory for extraction, then copy to final location
-        outputFileName = path.basename(outputFilePath);
-        try {
-          final tempDir = await getTemporaryDirectory();
-          outputDir = tempDir.path;
-          if (kDebugMode) {
-            print('Using temp directory for desktop extraction: $outputDir');
-          }
-        } catch (e) {
-          if (kDebugMode) {
-            print('Error getting temp directory, using system temp: $e');
-          }
-          // Fallback to system temp directory
-          outputDir = Directory.systemTemp.path;
-        }
-      }
+      final extractionPaths =
+          await SubtitleExtractionFileService.resolveExtractionPaths(
+        outputFilePath: outputFilePath,
+        useDirectSave: useDirectSave,
+      );
+      var outputDir = extractionPaths.outputDirectory;
+      final outputFileName = extractionPaths.outputFileName;
 
       if (kDebugMode) {
         print('Starting extraction in separate method');
@@ -519,103 +480,37 @@ class _SubtitleExtractOptionsSheetState
         print('Checking directory access...');
       }
 
-      // SAF implementation doesn't require storage permissions
-      // All file operations are handled through user-selected content URIs
-      
-      // Directory permission checking (skip detailed checks for SAF and iOS)
-      if (!useDirectSave || (!Platform.isAndroid && !Platform.isIOS)) {
+      try {
+        outputDir =
+            await SubtitleExtractionFileService.prepareOutputDirectory(
+          outputDirectory: outputDir,
+          useDirectSave: useDirectSave,
+        );
+      } catch (e) {
+        if (kDebugMode) {
+          print('Directory permission check failed: $e');
+          print('This may be due to Android storage permissions');
+        }
+
         try {
-          // Check if directory exists first
-          final outputDirObj = Directory(outputDir);
-          final dirExists = await outputDirObj.exists();
+          await AppLogger.instance.warning(
+            'Cannot write to selected directory',
+            context: 'SubtitleExtractOptionsSheet._extractSubtitleWithAsync',
+          );
+          if (rootContext.mounted) {
+            LoadingOverlay.hide(rootContext);
 
-          if (kDebugMode) {
-            print('Directory exists: $dirExists');
-          }
-
-          if (!dirExists) {
-            try {
-              await outputDirObj.create(recursive: true);
-              if (kDebugMode) {
-                print('Created output directory: $outputDir');
-              }
-            } catch (e) {
-              if (kDebugMode) {
-                print('Error creating directory: $e');
-              }
-              throw Exception('Cannot create directory: $e');
-            }
-          }
-
-          // Generate a unique temporary filename
-          final timestamp = DateTime.now().millisecondsSinceEpoch;
-          final testFileName = '$outputDir/test_write_$timestamp.tmp';
-
-          if (kDebugMode) {
-            print('Testing write permissions with file: $testFileName');
-          }
-
-          // Try to create a test file to verify write permissions
-          final testFile = File(testFileName);
-          await testFile.writeAsString('test');
-
-          // Verify the file was created
-          final testFileExists = await testFile.exists();
-          if (kDebugMode) {
-            print('Test file created successfully: $testFileExists');
-          }
-
-          // Clean up the test file
-          if (testFileExists) {
-            await testFile.delete();
-            if (kDebugMode) {
-              print('Test file deleted');
-            }
-          }
-        } catch (e) {
-          if (kDebugMode) {
-            print('Directory permission check failed: $e');
-            print('This may be due to Android storage permissions');
-          }
-
-          // Try to hide loading overlay and show an error
-          try {
-            await AppLogger.instance.warning(
-              'Cannot write to selected directory',
-              context: 'SubtitleExtractOptionsSheet._extractSubtitleWithAsync',
+            SnackbarHelper.showError(
+              rootContext,
+              'Cannot write to selected directory. Please select a different location.',
+              duration: const Duration(seconds: 5),
             );
-            if (rootContext.mounted) {
-              LoadingOverlay.hide(rootContext);
-
-              SnackbarHelper.showError(
-                rootContext,
-                'Cannot write to selected directory. Please select a different location.',
-                duration: const Duration(seconds: 5),
-              );
-            }
-          } catch (_) {
-            // If this fails, we can't show errors to the user
           }
-
-          return; // Return instead of throwing to allow user to try again
+        } catch (_) {
+          // If this fails, we can't show errors to the user
         }
-      } else {
-        // For SAF, ensure cache directory exists
-        try {
-          final cacheDir = Directory(outputDir);
-          if (!await cacheDir.exists()) {
-            await cacheDir.create(recursive: true);
-            if (kDebugMode) {
-              print('Created cache directory for SAF temp files: $outputDir');
-            }
-          }
-        } catch (e) {
-          if (kDebugMode) {
-            print('Error creating cache directory: $e');
-          }
-          // Use a fallback temp directory
-          outputDir = '/tmp';
-        }
+
+        return;
       }
 
       // For desktop, check if file will already exist and ask for confirmation BEFORE extraction
