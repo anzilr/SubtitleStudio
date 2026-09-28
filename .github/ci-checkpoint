@@ -1,4 +1,4 @@
-Riverpod migration checkpoint 21
+Riverpod migration checkpoint 21b
 Date: 2026-09-28
 Checks:
 - flutter analyze
@@ -10,6 +10,6 @@ Focus:
 - import UI typed result consumption
 - extraction UI typed result consumption
 - persisted extraction Session reused for navigation
-- removal of nullable/map compatibility from import result consumers
+- file picker null/mounted guard preserved
 
 Platform builds intentionally disabled.
