@@ -328,8 +328,9 @@ class AppLogger {
     // keep the key/label for diagnostics while hiding its value.
     redacted = redacted.replaceAllMapped(
       RegExp(
-        r'(?i)(token|api[_ -]?key|authorization|secret)'
+        r'(token|api[_ -]?key|authorization|secret)'
         r'(\s*[:=]\s*)([^\s,;]+)',
+        caseSensitive: false,
       ),
       (match) => '${match.group(1)}${match.group(2)}<redacted>',
     );
