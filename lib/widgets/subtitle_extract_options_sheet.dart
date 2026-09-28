@@ -7,6 +7,7 @@ import 'package:subtitle_studio/services/subtitle_extraction_file_service.dart';
 import 'package:subtitle_studio/utils/subtitle_processor.dart';
 import 'package:subtitle_studio/widgets/subtitle_tracks_sheet.dart';
 import 'package:subtitle_studio/database/models/models.dart';
+import 'package:subtitle_studio/models/subtitle_import_result.dart';
 import 'package:subtitle_studio/screens/edit/providers/subtitle_repository_provider.dart';
 import 'package:subtitle_studio/widgets/loading_overlay.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
@@ -908,7 +909,7 @@ class _SubtitleExtractOptionsSheetState
         print('Merge overlapping subtitles: $mergeOverlapping');
       }
 
-      Map? subtitleData;
+      SubtitleImportResult? subtitleData;
       try {
         // Try to use context if available, otherwise use the contextless version
         String srtContent;
@@ -958,16 +959,16 @@ class _SubtitleExtractOptionsSheetState
             'Subtitle processing result: ${'success'}',
           );
           print(
-            'Subtitle collection ID: ${subtitleData!['subtitleCollectionId']}',
+            'Subtitle collection ID: ${subtitleData!.subtitleCollectionId}',
           );
-          print('Filename: ${subtitleData['fileName']}');
-          print('Session ID: ${subtitleData['sessionId']}');
+          print('Filename: ${subtitleData.fileName}');
+          print('Session ID: ${subtitleData.sessionId}');
                 }
 
         // Update the originalFileUri with the SAF URI if available
         if (_currentSafUri != null && _currentSafUri != outputFilePath) {
           try {
-            final subtitleCollectionId = subtitleData!['subtitleCollectionId'];
+            final subtitleCollectionId = subtitleData!.subtitleCollectionId;
             if (subtitleCollectionId != null) {
               // Get the subtitle collection from database
               final subtitle = await ref
@@ -993,12 +994,8 @@ class _SubtitleExtractOptionsSheetState
           }
         }
 
-        // Create session object
-        extractedSession = Session(
-          subtitleCollectionId: subtitleData!['subtitleCollectionId'],
-          fileName: subtitleData['fileName'] ?? '',
-          lastEditedIndex: subtitleData['lastEditedIndex'] ?? 0,
-        );
+        // Reuse the persisted session so navigation retains the real Isar ID.
+        extractedSession = subtitleData!.session;
 
         await SubtitleExtractionFileService.cleanupTemporaryFile(
           tempOutputFile,

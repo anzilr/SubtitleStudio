@@ -61,7 +61,7 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
     
     try {
       final subtitleData = await pickSRT(context);
-      if (subtitleData != null && mounted) {
+      if (mounted) {
         setState(() {
           _selectedFilePath = subtitleData['filePath'];
           _fileName = subtitleData['fileName'] ?? '';
@@ -236,39 +236,27 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
         // Handle project saving based on user preference
         if (_selectedProjectPath != null) {
           // Manual project saving - prompt user to select directory
-          final session = subtitleData['session'] as Session?;
-          final subtitleCollection = subtitleData['subtitleCollection'] as SubtitleCollection?;
-          
-          if (session != null && subtitleCollection != null) {
-            final projectPath = await ProjectManager.saveProject(
-              context: context,
-              session: session,
-              subtitleCollection: subtitleCollection,
-              forceNewLocation: true,
-            );
-            
-            if (projectPath != null) {
-              await ref.read(projectRepositoryProvider).updateSessionProjectPath(
-                    sessionId: session.id,
-                    projectFilePath: projectPath,
-                  );
-            }
+          final session = subtitleData.session;
+          final subtitleCollection = subtitleData.subtitleCollection;
+
+          final projectPath = await ProjectManager.saveProject(
+            context: context,
+            session: session,
+            subtitleCollection: subtitleCollection,
+            forceNewLocation: true,
+          );
+
+          if (projectPath != null) {
+            await ref.read(projectRepositoryProvider).updateSessionProjectPath(
+                  sessionId: session.id,
+                  projectFilePath: projectPath,
+                );
           }
         }
         // If _selectedProjectPath is null, skip project saving entirely
         // The subtitle data is already imported and ready to use
 
-        // Create session for navigation (fallback if not in subtitleData)
-        Session session;
-        if (subtitleData['session'] != null) {
-          session = subtitleData['session'] as Session;
-        } else {
-          session = Session(
-            subtitleCollectionId: subtitleData['subtitleCollectionId'],
-            fileName: subtitleData['fileName'] ?? '',
-            lastEditedIndex: subtitleData['lastEditedIndex'],
-          );
-        }
+        final session = subtitleData.session;
 
         Navigator.pop(context);
         widget.onSubtitleImported(session);
