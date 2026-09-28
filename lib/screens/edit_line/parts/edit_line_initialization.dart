@@ -76,8 +76,8 @@ extension _EditLineInitialization on EditSubtitleScreenState {
 
     _parseTimeString(_startTimeController.text, true);
     _parseTimeString(_endTimeController.text, false);
-    _storeInitialValues();
     _applyShowOriginalLine();
+    _storeInitialValues();
 
     _needSubtitleRegeneration = false;
 
