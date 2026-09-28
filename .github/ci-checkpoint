@@ -1,4 +1,4 @@
-Riverpod migration checkpoint 20
+Riverpod migration checkpoint 20b
 Date: 2026-09-28
 Checks:
 - flutter analyze
@@ -6,10 +6,11 @@ Checks:
 
 Focus:
 - injected ProjectRepository for session/project metadata
-- project settings/import metadata persistence migration
+- project settings/import/editor/auto-save metadata persistence migration
 - removal of ProjectManager global Isar persistence
 - pure ProjectDocumentBuilder + fidelity tests
 - ProjectFileService platform write boundary
 - ProjectManager delegation to document/file services
+- analyzer corrections from checkpoint 20
 
 Platform builds intentionally disabled.
