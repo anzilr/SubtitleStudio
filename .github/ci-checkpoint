@@ -1,15 +1,13 @@
-Riverpod migration checkpoint 14
+Riverpod migration checkpoint 14b
 Date: 2026-09-28
 Checks:
 - flutter analyze
 - flutter test
 
-Scope since checkpoint 13b:
-- Decoupled Editor/Edit Line repositories from video widget types
-- Normalized persisted cue number indexing
-- Made Riverpod the sole Editor subtitle/secondary/video state owner
-- Extracted Edit Line original text section
-- Extracted Edit Line time controls section
-- Extracted Edit Line edited text section
+Corrections after checkpoint 14:
+- Added explicit Riverpod APIs for secondary subtitle data and visibility
+- Removed stale writes to derived secondary-subtitle getters
+- Removed stale generated-subtitle assignments from responsive layouts
+- Completed Riverpod-only subtitle/video state ownership across Editor parts
 
 Platform builds intentionally disabled.
