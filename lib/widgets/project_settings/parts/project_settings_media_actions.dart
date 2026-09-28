@@ -65,7 +65,7 @@ extension _ProjectSettingsMediaActions on _ProjectSettingsSheetState {
       );
       if (!mounted) return;
 
-      setState(() {
+      _setProjectSettingsState(() {
         _videoPath = videoPath;
       });
 
@@ -90,7 +90,7 @@ extension _ProjectSettingsMediaActions on _ProjectSettingsSheetState {
       final savedPath = await PreferencesModel.getVideoPath(widget.session.subtitleCollectionId);
       if (mounted) {
         final oldPath = _videoPath;
-        setState(() {
+        _setProjectSettingsState(() {
           _videoPath = savedPath;
         });
         if (kDebugMode) {
@@ -113,7 +113,7 @@ extension _ProjectSettingsMediaActions on _ProjectSettingsSheetState {
 
   Future<void> _clearVideoFile() async {
     await PreferencesModel.removeVideoPath(widget.session.subtitleCollectionId);
-    setState(() {
+    _setProjectSettingsState(() {
       _videoPath = null;
     });
     
@@ -239,7 +239,7 @@ extension _ProjectSettingsMediaActions on _ProjectSettingsSheetState {
           await PreferencesModel.saveSecondarySubtitlePath(widget.session.subtitleCollectionId, filePath);
           await PreferencesModel.setSecondaryIsOriginal(widget.session.subtitleCollectionId, false);
           
-          setState(() {
+          _setProjectSettingsState(() {
             _secondarySubtitlePath = filePath;
             _isSecondaryFromOriginal = false;
           });
@@ -291,7 +291,7 @@ extension _ProjectSettingsMediaActions on _ProjectSettingsSheetState {
       await PreferencesModel.setSecondaryIsOriginal(widget.session.subtitleCollectionId, true);
       await PreferencesModel.removeSecondarySubtitlePath(widget.session.subtitleCollectionId);
       
-      setState(() {
+      _setProjectSettingsState(() {
         _secondarySubtitlePath = null;
         _isSecondaryFromOriginal = true;
       });
@@ -318,7 +318,7 @@ extension _ProjectSettingsMediaActions on _ProjectSettingsSheetState {
     await PreferencesModel.removeSecondarySubtitlePath(widget.session.subtitleCollectionId);
     await PreferencesModel.setSecondaryIsOriginal(widget.session.subtitleCollectionId, false);
     
-    setState(() {
+    _setProjectSettingsState(() {
       _secondarySubtitlePath = null;
       _isSecondaryFromOriginal = false;
     });

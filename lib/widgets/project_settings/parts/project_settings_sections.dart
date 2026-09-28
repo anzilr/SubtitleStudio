@@ -154,7 +154,7 @@ extension _ProjectSettingsSections on _ProjectSettingsSheetState {
                     }).toList(),
                     onChanged: (value) {
                       if (value != null) {
-                        setState(() {
+                        _setProjectSettingsState(() {
                           _selectedEncoding = value;
                         });
                         _updateEncoding(value);

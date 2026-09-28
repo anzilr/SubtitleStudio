@@ -60,6 +60,11 @@ class _ProjectSettingsSheetState extends State<ProjectSettingsSheet> with Widget
     'ASCII',
   ];
 
+  void _setProjectSettingsState(VoidCallback update) {
+    if (!mounted) return;
+    setState(update);
+  }
+
   @override
   void initState() {
     super.initState();

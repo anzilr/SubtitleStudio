@@ -718,7 +718,7 @@ extension _ProjectSettingsPathHelpers on _ProjectSettingsSheetState {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      error,
+                      'Unable to open this file location. Copy the path and open it manually if needed.',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Colors.red.shade700,
                         height: 1.4,

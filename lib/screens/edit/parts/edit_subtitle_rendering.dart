@@ -12,20 +12,4 @@ extension _EditSubtitleRendering on _EditScreenState {
     }
   }
 
-  // Add this method to generate subtitles from SimpleSubtitleLine
-  List<Subtitle> _generateSimpleSubtitles(List<SimpleSubtitleLine> subtitleLines) {
-    return subtitleLines.asMap().entries.map((entry) {
-      final index = entry.key; // Use array index instead of database index
-      final line = entry.value;
-      return Subtitle(
-        index: index, // This ensures video player uses same indexing as list
-        start: parseTimeString(line.startTime),
-        end: parseTimeString(line.endTime),
-        text: line.text,
-        marked: false, // SimpleSubtitleLine doesn't have marked field
-      );
-    }).toList();
-  }
-
-
 }

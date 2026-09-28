@@ -28,7 +28,7 @@ extension _ProjectSettingsMarkedActions on _ProjectSettingsSheetState {
               await updateSubtitleLineComment(widget.session.subtitleCollectionId, index, comment);
               // Refresh marked lines list
               _markedLines = await getMarkedSubtitleLines(widget.session.subtitleCollectionId);
-              setState(() {}); // Trigger rebuild to show updated comments
+              _setProjectSettingsState(() {}); // Trigger rebuild to show updated comments
               
               SnackbarHelper.showSuccess(context, 
                 comment != null ? 'Comment updated' : 'Comment deleted');
@@ -45,7 +45,7 @@ extension _ProjectSettingsMarkedActions on _ProjectSettingsSheetState {
               await unmarkSubtitleLine(widget.session.subtitleCollectionId, index);
               // Refresh marked lines list
               _markedLines = await getMarkedSubtitleLines(widget.session.subtitleCollectionId);
-              setState(() {}); // Trigger rebuild to remove unmarked line
+              _setProjectSettingsState(() {}); // Trigger rebuild to remove unmarked line
               
               SnackbarHelper.showSuccess(context, 'Line unmarked and comment deleted');
             } catch (e) {
@@ -61,7 +61,7 @@ extension _ProjectSettingsMarkedActions on _ProjectSettingsSheetState {
               await updateSubtitleLineResolved(widget.session.subtitleCollectionId, index, resolved);
               // Refresh marked lines list
               _markedLines = await getMarkedSubtitleLines(widget.session.subtitleCollectionId);
-              setState(() {}); // Trigger rebuild to show updated resolved status
+              _setProjectSettingsState(() {}); // Trigger rebuild to show updated resolved status
               
               SnackbarHelper.showSuccess(context, 
                 resolved ? 'Comment marked as resolved' : 'Comment marked as unresolved');
@@ -100,7 +100,7 @@ extension _ProjectSettingsMarkedActions on _ProjectSettingsSheetState {
                 
                 // Refresh marked lines list
                 _markedLines = await getMarkedSubtitleLines(widget.session.subtitleCollectionId);
-                setState(() {}); // Trigger rebuild to show updated text
+                _setProjectSettingsState(() {}); // Trigger rebuild to show updated text
                 
                 SnackbarHelper.showSuccess(context, 'Subtitle text updated');
               }
