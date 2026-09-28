@@ -13,75 +13,6 @@ class SubtitleExtractionPaths {
     required this.outputDirectory,
     required this.outputFileName,
   });
-  static Future<String> copyDesktopResult({
-    required String tempOutputFile,
-    required String outputFilePath,
-  }) async {
-    final normalizedOutputFilePath =
-        FFmpegHelper.normalizePath(outputFilePath);
-    final destinationFile = File(normalizedOutputFilePath);
-    final tempFile = File(tempOutputFile);
-    final normalizedTempPath = FFmpegHelper.normalizePath(tempOutputFile);
-
-    if (kDebugMode) {
-      print('Desktop extraction complete');
-      print('Temp file path: $tempOutputFile');
-      print('Normalized temp path: $normalizedTempPath');
-      print('Final output path: $normalizedOutputFilePath');
-    }
-
-    if (!await tempFile.exists()) {
-      throw Exception('Temp file not found: $tempOutputFile');
-    }
-
-    final tempFileSize = await tempFile.length();
-    if (kDebugMode) {
-      print('Temp file size: $tempFileSize bytes');
-    }
-
-    if (tempFileSize == 0) {
-      await tempFile.delete();
-      throw Exception(
-        'FFmpeg extraction produced an empty file. '
-        'The subtitle track may be empty or corrupted.',
-      );
-    }
-
-    if (await destinationFile.exists()) {
-      await destinationFile.delete();
-      if (kDebugMode) {
-        print('Deleted existing file at: $normalizedOutputFilePath');
-      }
-    }
-
-    await tempFile.copy(normalizedOutputFilePath);
-    if (kDebugMode) {
-      print(
-        'Copied file from temp to final location: '
-        '$normalizedOutputFilePath',
-      );
-      print('Verifying copied file...');
-    }
-
-    final copiedFileSize = await destinationFile.length();
-    if (kDebugMode) {
-      print('Copied file size: $copiedFileSize bytes');
-    }
-
-    if (copiedFileSize != tempFileSize && kDebugMode) {
-      print(
-        'WARNING: File size mismatch! '
-        'Temp: $tempFileSize, Copied: $copiedFileSize',
-      );
-    }
-
-    await tempFile.delete();
-    if (kDebugMode) {
-      print('Cleaned up temp file: $tempOutputFile');
-    }
-
-    return normalizedOutputFilePath;
-  }
 
 }
 
@@ -222,4 +153,75 @@ class SubtitleExtractionFileService {
       return '/tmp';
     }
   }
+
+  static Future<String> copyDesktopResult({
+    required String tempOutputFile,
+    required String outputFilePath,
+  }) async {
+    final normalizedOutputFilePath =
+        FFmpegHelper.normalizePath(outputFilePath);
+    final destinationFile = File(normalizedOutputFilePath);
+    final tempFile = File(tempOutputFile);
+    final normalizedTempPath = FFmpegHelper.normalizePath(tempOutputFile);
+
+    if (kDebugMode) {
+      print('Desktop extraction complete');
+      print('Temp file path: $tempOutputFile');
+      print('Normalized temp path: $normalizedTempPath');
+      print('Final output path: $normalizedOutputFilePath');
+    }
+
+    if (!await tempFile.exists()) {
+      throw Exception('Temp file not found: $tempOutputFile');
+    }
+
+    final tempFileSize = await tempFile.length();
+    if (kDebugMode) {
+      print('Temp file size: $tempFileSize bytes');
+    }
+
+    if (tempFileSize == 0) {
+      await tempFile.delete();
+      throw Exception(
+        'FFmpeg extraction produced an empty file. '
+        'The subtitle track may be empty or corrupted.',
+      );
+    }
+
+    if (await destinationFile.exists()) {
+      await destinationFile.delete();
+      if (kDebugMode) {
+        print('Deleted existing file at: $normalizedOutputFilePath');
+      }
+    }
+
+    await tempFile.copy(normalizedOutputFilePath);
+    if (kDebugMode) {
+      print(
+        'Copied file from temp to final location: '
+        '$normalizedOutputFilePath',
+      );
+      print('Verifying copied file...');
+    }
+
+    final copiedFileSize = await destinationFile.length();
+    if (kDebugMode) {
+      print('Copied file size: $copiedFileSize bytes');
+    }
+
+    if (copiedFileSize != tempFileSize && kDebugMode) {
+      print(
+        'WARNING: File size mismatch! '
+        'Temp: $tempFileSize, Copied: $copiedFileSize',
+      );
+    }
+
+    await tempFile.delete();
+    if (kDebugMode) {
+      print('Cleaned up temp file: $tempOutputFile');
+    }
+
+    return normalizedOutputFilePath;
+  }
+
 }
