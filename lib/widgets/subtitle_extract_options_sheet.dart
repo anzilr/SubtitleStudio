@@ -9,7 +9,6 @@ import 'package:subtitle_studio/widgets/loading_overlay.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/utils/app_logger.dart';
 import 'package:subtitle_studio/utils/platform_file_handler.dart';
-import 'package:subtitle_studio/database/database_helper.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 // Removed permission_handler - not needed with pure SAF implementation
@@ -187,7 +186,7 @@ class _SubtitleExtractOptionsSheetState
       );
       if (!mounted) return;
 
-      SnackbarHelper.showError(context, 'Error selecting video: $e');
+      SnackbarHelper.showError(context, 'Could not open the selected video. Please try again.');
 
       setState(() {
         _isLoading = false;
@@ -973,8 +972,6 @@ class _SubtitleExtractOptionsSheetState
             
             finalOutputPath = normalizedOutputFilePath;
             
-            // Add a small delay to ensure file system operations complete
-            await Future.delayed(const Duration(milliseconds: 100));
           }
         } else {
           throw Exception(
