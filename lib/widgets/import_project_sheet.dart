@@ -49,8 +49,11 @@ class _ImportProjectSheetState extends State<ImportProjectSheet> {
   String? _selectedMsoneFilePath;
   bool _isImporting = false;
   bool _isLoadingFile = false;
-  Map<String, dynamic>? _projectData;
+  ProjectDocument? _projectDocument;
   String? _fileName;
+
+  Map<String, dynamic>? get _projectData =>
+      _projectDocument?.toLegacyMap();
 
   @override
   void initState() {
@@ -68,7 +71,7 @@ class _ImportProjectSheetState extends State<ImportProjectSheet> {
     try {
       setState(() {
         _isLoadingFile = true;
-        _projectData = null;
+        _projectDocument = null;
       });
 
       // Process the file path - convert content URI to temp file if needed
@@ -99,7 +102,7 @@ class _ImportProjectSheetState extends State<ImportProjectSheet> {
   Future<void> _selectMsoneFile() async {
     setState(() {
       _isLoadingFile = true;
-      _projectData = null;
+      _projectDocument = null;
     });
 
     try {
@@ -182,7 +185,7 @@ class _ImportProjectSheetState extends State<ImportProjectSheet> {
     }
 
     setState(() {
-      _projectData = document.toLegacyMap();
+      _projectDocument = document;
     });
   }
 
