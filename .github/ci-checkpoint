@@ -1,4 +1,4 @@
-Riverpod migration checkpoint 19
+Riverpod migration checkpoint 19b
 Date: 2026-09-28
 Checks:
 - flutter analyze
@@ -11,5 +11,6 @@ Focus:
 - project checkpoint repository routing
 - validated ProjectDocument codec
 - centralized project import validation
+- analyzer corrections from checkpoint 19
 
 Platform builds intentionally disabled.
