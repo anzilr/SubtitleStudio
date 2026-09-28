@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/app/repositories/app_preferences_repository.dart';
 import 'package:subtitle_studio/app/repositories/app_data_maintenance_repository.dart';
+import 'package:subtitle_studio/services/checkpoint_repository.dart';
 
 /// Root database dependency for Riverpod-managed code.
 ///
@@ -29,4 +30,8 @@ final appPreferencesRepositoryProvider =
 final appDataMaintenanceRepositoryProvider =
     Provider<AppDataMaintenanceRepository>((ref) {
   return AppDataMaintenanceRepository(ref.watch(isarProvider));
+});
+
+final checkpointRepositoryProvider = Provider<CheckpointRepository>((ref) {
+  return const CheckpointRepository();
 });

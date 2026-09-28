@@ -9,7 +9,7 @@ import 'package:subtitle_studio/utils/logging_helpers.dart';
 import 'package:subtitle_studio/widgets/video/subtitle.dart'; // For Subtitle
 import 'package:subtitle_studio/utils/subtitle_parser.dart'; // For SimpleSubtitleLine
 import 'package:subtitle_studio/utils/platform_file_handler.dart';
-import 'package:subtitle_studio/services/checkpoint_manager.dart';
+import 'package:subtitle_studio/services/checkpoint_repository.dart';
 
 /// Repository layer for EditLineScreen operations
 /// 
@@ -32,8 +32,13 @@ import 'package:subtitle_studio/services/checkpoint_manager.dart';
 class EditLineRepository {
   final Isar _isar;
   final EditLinePreferencesRepository _preferences;
+  final CheckpointRepository _checkpoints;
 
-  EditLineRepository(this._isar, this._preferences);
+  EditLineRepository(
+    this._isar,
+    this._preferences,
+    this._checkpoints,
+  );
 
   /// Fetch a single subtitle line by collection ID and index
   /// 
@@ -237,7 +242,7 @@ class EditLineRepository {
       });
 
       if (saved && shouldCreateCheckpoint && lineBeforeChanges != null) {
-        await CheckpointManager.createEditCheckpoint(
+        await _checkpoints.createEditCheckpoint(
           sessionId: sessionId,
           subtitleCollectionId: collectionId,
           beforeLine: lineBeforeChanges!,

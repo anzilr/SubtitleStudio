@@ -4,7 +4,7 @@ import 'package:subtitle_studio/utils/subtitle_sorting.dart';
 import 'package:subtitle_studio/widgets/video/subtitle.dart';
 import 'package:subtitle_studio/utils/subtitle_parser.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
-import 'package:subtitle_studio/services/checkpoint_manager.dart';
+import 'package:subtitle_studio/services/checkpoint_repository.dart';
 import 'package:subtitle_studio/utils/time_parser.dart';
 import 'package:subtitle_studio/screens/edit/models/subtitle_entry.dart';
 import 'package:subtitle_studio/screens/edit/services/source_view_reconciler.dart';
@@ -23,8 +23,9 @@ import 'package:subtitle_studio/screens/edit/services/source_view_reconciler.dar
 /// - Generate subtitles for video player
 class SubtitleRepository {
   final Isar _isar;
+  final CheckpointRepository _checkpoints;
 
-  SubtitleRepository(this._isar);
+  SubtitleRepository(this._isar, this._checkpoints);
 
   /// Fetch all subtitle lines for a collection
   Future<List<SubtitleLine>> fetchLines(int collectionId) async {
@@ -103,7 +104,7 @@ class SubtitleRepository {
     if (saved &&
         shouldCreateCheckpoint &&
         lineBeforeChanges != null) {
-      await CheckpointManager.createEditCheckpoint(
+      await _checkpoints.createEditCheckpoint(
         sessionId: sessionId,
         subtitleCollectionId: collectionId,
         beforeLine: lineBeforeChanges!,
@@ -559,7 +560,7 @@ class SubtitleRepository {
   ) async {
     logInfo('SubtitleRepository: Creating checkpoint "$description" for collection $collectionId');
     try {
-      await CheckpointManager.createCheckpoint(
+      await _checkpoints.createCheckpoint(
         subtitleCollectionId: collectionId,
         sessionId: sessionId,
         operationType: operationType,
@@ -580,7 +581,7 @@ class SubtitleRepository {
   ) async {
     logInfo('SubtitleRepository: Creating initial checkpoint snapshot for collection $collectionId');
     try {
-      await CheckpointManager.createInitialSnapshot(
+      await _checkpoints.createInitialSnapshot(
         subtitleCollectionId: collectionId,
         sessionId: sessionId,
       );
