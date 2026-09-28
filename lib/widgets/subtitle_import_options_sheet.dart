@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/utils/load_srt_file.dart';
 import 'package:subtitle_studio/utils/subtitle_processor.dart';
 import 'package:subtitle_studio/utils/intent_handler.dart';
@@ -9,7 +11,7 @@ import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/utils/project_manager.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 
-class SubtitleImportOptionsSheet extends StatefulWidget {
+class SubtitleImportOptionsSheet extends ConsumerStatefulWidget {
   final Function(Session) onSubtitleImported;
   final String? initialFilePath;
   final String? initialFileName;
@@ -24,10 +26,10 @@ class SubtitleImportOptionsSheet extends StatefulWidget {
   });
 
   @override
-  State<SubtitleImportOptionsSheet> createState() => _SubtitleImportOptionsSheetState();
+  ConsumerState<SubtitleImportOptionsSheet> createState() => _SubtitleImportOptionsSheetState();
 }
 
-class _SubtitleImportOptionsSheetState extends State<SubtitleImportOptionsSheet> {
+class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptionsSheet> {
   bool _removeHearingImpairedLines = false;
   bool _mergeOverlappingSubtitles = false;
   String? _selectedProjectPath;  // Store selected project directory path
@@ -246,10 +248,10 @@ class _SubtitleImportOptionsSheetState extends State<SubtitleImportOptionsSheet>
             );
             
             if (projectPath != null) {
-              await ProjectManager.updateSessionProjectPath(
-                sessionId: session.id,
-                projectFilePath: projectPath,
-              );
+              await ref.read(projectRepositoryProvider).updateSessionProjectPath(
+                    sessionId: session.id,
+                    projectFilePath: projectPath,
+                  );
             }
           }
         }
