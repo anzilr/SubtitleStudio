@@ -8,10 +8,11 @@ import 'package:subtitle_studio/utils/project_manager.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/screens/edit/edit_screen_host.dart';
 import 'package:subtitle_studio/widgets/session_selection/session_project_import_repository.dart';
-part 'session_selection/locate_srt_sheet.dart';
 import 'package:subtitle_studio/utils/srt_compiler.dart';
 import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
 import 'package:subtitle_studio/utils/platform_file_handler.dart';
+
+part 'session_selection/locate_srt_sheet.dart';
 
 /// Session Selection Sheet Widget
 /// 
