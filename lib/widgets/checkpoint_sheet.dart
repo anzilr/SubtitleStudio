@@ -126,24 +126,29 @@ class _CheckpointSheetState extends State<CheckpointSheet> {
         }
       }
 
+      if (!mounted) return;
+
       setState(() {
         _checkpoints = checkpoints;
         _currentCheckpointId = currentCheckpoint?.id;
         _buildTree();
         _isLoading = false;
       });
-      
-      // Scroll to current point after the UI is built
+
       if (currentCheckpoint != null) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          _scrollToCurrentCheckpoint();
+          if (mounted) {
+            _scrollToCurrentCheckpoint();
+          }
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isLoading = false);
-      if (mounted) {
-        SnackbarHelper.showError(context, 'Failed to load history: $e');
-      }
+      SnackbarHelper.showError(
+        context,
+        'Could not load checkpoint history. Please try again.',
+      );
     }
   }
   
