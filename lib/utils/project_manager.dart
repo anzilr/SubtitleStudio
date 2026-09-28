@@ -9,7 +9,7 @@ import 'package:subtitle_studio/utils/platform_file_handler.dart';
 import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/widgets/session_selection_sheet.dart';
-import 'package:subtitle_studio/services/checkpoint_manager.dart';
+import 'package:subtitle_studio/services/checkpoint_repository.dart';
 
 /// Project Manager for .msone files
 /// 
@@ -20,6 +20,8 @@ import 'package:subtitle_studio/services/checkpoint_manager.dart';
 /// - Managing project metadata and versioning
 class ProjectManager {
   static const String projectVersion = '2.0';
+  static const CheckpointRepository _checkpointRepository =
+      CheckpointRepository();
   
   /// Auto-save project file after importing/creating subtitles
   /// This is called automatically when new content is imported
@@ -172,7 +174,8 @@ class ProjectManager {
   static Future<List<Map<String, dynamic>>> _fetchCheckpoints(int sessionId) async {
     try {
       print('[ProjectManager] Fetching checkpoints for session $sessionId...');
-      final checkpoints = await CheckpointManager.getCheckpointsForSession(sessionId);
+      final checkpoints =
+          await _checkpointRepository.getCheckpointsForSession(sessionId);
       print('[ProjectManager] Found ${checkpoints.length} checkpoints for session $sessionId');
       
       if (checkpoints.isEmpty) {
