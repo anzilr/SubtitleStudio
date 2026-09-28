@@ -1,19 +1,12 @@
-Riverpod migration checkpoint 15
+Riverpod migration checkpoint 15b
 Date: 2026-09-28
 Checks:
 - flutter analyze
 - flutter test
 
-Scope since checkpoint 14b:
-- Await Project Settings video-load callback instead of polling
-- Await Project Settings save-project callback instead of fixed delay
-- Hide raw exceptions from Project Settings UI
-- Split Project Settings section builders
-- Split Project Settings path/location helpers
-- Split Project Settings media/secondary actions
-- Split Project Settings marked/save actions
-- Remove periodic 2-second database polling
-- Remove stale polling helper methods
-- Remove retry-delay video refresh loop
+Corrections after checkpoint 15:
+- Route Project Settings part-file UI updates through State-owned wrapper
+- Remove stale undefined file-location error identifier
+- Remove unused legacy simple-subtitle generator
 
 Platform builds intentionally disabled.
