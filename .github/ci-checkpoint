@@ -1,13 +1,14 @@
-Riverpod migration checkpoint 17
+Riverpod migration checkpoint 18
 Date: 2026-09-28
 Checks:
 - flutter analyze
 - flutter test
 
 Focus:
-- Android startup logger fix
-- Route-scoped Riverpod configuration dependencies
-- Nested ProviderScope regression coverage
-- Subtitle extraction filesystem refactor
+- dependency-first refactor roadmap v2
+- controller-owned Editor initialization
+- controller-owned Edit Line initialization
+- Source View scoped-provider regression
+- canonical VideoRepository with compatibility export
 
 Platform builds intentionally disabled.
