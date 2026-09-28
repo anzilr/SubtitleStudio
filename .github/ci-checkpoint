@@ -1,4 +1,4 @@
-Riverpod migration checkpoint 20b
+Riverpod migration checkpoint 20c
 Date: 2026-09-28
 Checks:
 - flutter analyze
@@ -11,6 +11,6 @@ Focus:
 - pure ProjectDocumentBuilder + fidelity tests
 - ProjectFileService platform write boundary
 - ProjectManager delegation to document/file services
-- analyzer corrections from checkpoint 20
+- analyzer corrections from checkpoint 20/20b
 
 Platform builds intentionally disabled.
