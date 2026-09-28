@@ -1,16 +1,15 @@
-Riverpod migration checkpoint 20c
+Riverpod migration checkpoint 21
 Date: 2026-09-28
 Checks:
 - flutter analyze
 - flutter test
 
 Focus:
-- injected ProjectRepository for session/project metadata
-- project settings/import/editor/auto-save metadata persistence migration
-- removal of ProjectManager global Isar persistence
-- pure ProjectDocumentBuilder + fidelity tests
-- ProjectFileService platform write boundary
-- ProjectManager delegation to document/file services
-- analyzer corrections from checkpoint 20/20b
+- typed SubtitleImportResult contract
+- processor entry points no longer return nullable maps
+- import UI typed result consumption
+- extraction UI typed result consumption
+- persisted extraction Session reused for navigation
+- removal of nullable/map compatibility from import result consumers
 
 Platform builds intentionally disabled.
