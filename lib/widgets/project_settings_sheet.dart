@@ -12,7 +12,6 @@ import 'package:subtitle_studio/utils/subtitle_parser.dart';
 import 'package:subtitle_studio/widgets/marked_lines_sheet.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';
-import 'dart:async';
 part 'project_settings/parts/project_settings_sections.dart';
 part 'project_settings/parts/project_settings_path_helpers.dart';
 part 'project_settings/parts/project_settings_media_actions.dart';
@@ -52,7 +51,6 @@ class _ProjectSettingsSheetState extends State<ProjectSettingsSheet> with Widget
   bool _isLoading = true;
   Map<String, dynamic>? _sessionInfo;
   List<SubtitleLine> _markedLines = [];
-  Timer? _refreshTimer;
 
   final List<String> _availableEncodings = [
     'UTF-8',
@@ -70,14 +68,11 @@ class _ProjectSettingsSheetState extends State<ProjectSettingsSheet> with Widget
     _srtFileNameController = TextEditingController(text: widget.subtitleCollection.fileName);
     _selectedEncoding = widget.subtitleCollection.encoding;
     _loadProjectData();
-    
-    // Start periodic refresh to detect external changes
-    _startPeriodicRefresh();
+
   }
 
   @override
   void dispose() {
-    _stopPeriodicRefresh();
     WidgetsBinding.instance.removeObserver(this);
     _projectNameController.dispose();
     _srtFileNameController.dispose();
