@@ -55,4 +55,30 @@ class CheckpointRepository {
       preOperationState: preOperationState,
     );
   }
+  Future<List<Checkpoint>> getCheckpointsForSession(int sessionId) {
+    return CheckpointManager.getCheckpointsForSession(sessionId);
+  }
+
+  Future<bool> undoToCheckpoint({
+    required int checkpointId,
+    required int sessionId,
+  }) {
+    return CheckpointManager.undoToCheckpoint(
+      checkpointId: checkpointId,
+      sessionId: sessionId,
+    );
+  }
+
+  Future<int> createManualCheckpoint({
+    required int sessionId,
+    required int subtitleCollectionId,
+    String? customDescription,
+  }) {
+    return CheckpointManager.createManualCheckpoint(
+      sessionId: sessionId,
+      subtitleCollectionId: subtitleCollectionId,
+      customDescription: customDescription,
+    );
+  }
+
 }
