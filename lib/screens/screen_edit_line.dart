@@ -64,6 +64,7 @@ part 'edit_line/parts/edit_line_time_helpers.dart';
 part 'edit_line/parts/edit_line_shortcuts.dart';
 part 'edit_line/parts/edit_line_initialization.dart';
 part 'edit_line/parts/edit_line_actions.dart';
+part 'edit_line/parts/edit_line_original_section.dart';
 part 'edit_line/parts/edit_line_layout.dart';
 
 // Edit subtitle line screen with video player integration
