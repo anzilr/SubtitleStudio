@@ -1,23 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:io';
 // ignore: depend_on_referenced_packages
 import 'package:path/path.dart' as path;
-import 'package:subtitle_studio/database/database_helper.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/utils/project_manager.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/screens/edit/edit_screen_host.dart';
+import 'package:subtitle_studio/widgets/session_selection/session_project_import_repository.dart';
 import 'package:subtitle_studio/utils/srt_compiler.dart';
 import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
 import 'package:subtitle_studio/utils/platform_file_handler.dart';
-import 'package:subtitle_studio/services/checkpoint_manager.dart';
 
 /// Session Selection Sheet Widget
 /// 
 /// This widget provides a bottom modal sheet for selecting an existing session
 /// to replace with imported project data. It displays all sessions from the 
 /// database and allows the user to choose which one to update.
-class SessionSelectionSheet extends StatefulWidget {
+class SessionSelectionSheet extends ConsumerStatefulWidget {
   final Map<String, dynamic> projectData;
   final String? originalFileUri;
   final Function(Session)? onSessionReplaced;
@@ -34,10 +34,10 @@ class SessionSelectionSheet extends StatefulWidget {
   });
 
   @override
-  State<SessionSelectionSheet> createState() => _SessionSelectionSheetState();
+  ConsumerState<SessionSelectionSheet> createState() => _SessionSelectionSheetState();
 }
 
-class _SessionSelectionSheetState extends State<SessionSelectionSheet> {
+class _SessionSelectionSheetState extends ConsumerState<SessionSelectionSheet> {
   List<Session> _sessions = [];
   bool _isLoading = true;
   bool _isReplacing = false;
@@ -68,7 +68,9 @@ class _SessionSelectionSheetState extends State<SessionSelectionSheet> {
       String? existingFileName;
       String? existingFilePath;
       if (existingSession != null) {
-        final existingSubtitle = await isar.subtitleCollections.get(existingSession.subtitleCollectionId);
+        final existingSubtitle = await ref
+            .read(sessionProjectImportRepositoryProvider)
+            .getSubtitleCollection(existingSession.subtitleCollectionId);
         if (existingSubtitle != null) {
           existingFileName = existingSubtitle.fileName;
           existingFilePath = existingSubtitle.filePath ?? existingSubtitle.originalFileUri;
@@ -132,7 +134,7 @@ class _SessionSelectionSheetState extends State<SessionSelectionSheet> {
       return null;
     } catch (e) {
       if (mounted) {
-        SnackbarHelper.showError(context, 'Error selecting SRT file: $e');
+        SnackbarHelper.showError(context, 'Could not select the subtitle file. Please try again.');
       }
       return null;
     }
@@ -192,7 +194,7 @@ class _SessionSelectionSheetState extends State<SessionSelectionSheet> {
           }
         } catch (e) {
           if (mounted) {
-            SnackbarHelper.showError(context, 'Error creating SRT file: $e');
+            SnackbarHelper.showError(context, 'Could not create the subtitle file. Please try again.');
           }
           return null;
         }
@@ -219,7 +221,7 @@ class _SessionSelectionSheetState extends State<SessionSelectionSheet> {
       return null;
     } catch (e) {
       if (mounted) {
-        SnackbarHelper.showError(context, 'Error creating SRT file: $e');
+        SnackbarHelper.showError(context, 'Could not create the subtitle file. Please try again.');
       }
       return null;
     }
@@ -227,154 +229,23 @@ class _SessionSelectionSheetState extends State<SessionSelectionSheet> {
 
   Future<void> _loadSessions() async {
     try {
-      final sessions = await getAllSessions();
+      final sessions = await ref
+          .read(sessionProjectImportRepositoryProvider)
+          .fetchSessions();
+      if (!mounted) return;
       setState(() {
         _sessions = sessions;
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
       });
-      if (mounted) {
-        SnackbarHelper.showError(context, 'Failed to load sessions: $e');
-      }
-    }
-  }
-
-  /// Import checkpoints from project data into the database
-  Future<void> _importCheckpoints(int sessionId, int subtitleCollectionId) async {
-    try {
-      print('[Import] Starting checkpoint import for session $sessionId, collection $subtitleCollectionId');
-      print('[Import] Project data keys: ${widget.projectData.keys.toList()}');
-      
-      // Check if checkpoints exist in project data
-      if (!widget.projectData.containsKey('checkpoints')) {
-        print('[Import] No checkpoints key found in project data');
-        return;
-      }
-
-      final checkpointsData = widget.projectData['checkpoints'] as List<dynamic>;
-      
-      if (checkpointsData.isEmpty) {
-        print('[Import] Checkpoints list is empty');
-        return;
-      }
-
-      print('[Import] Importing ${checkpointsData.length} checkpoints...');
-
-      // Map to store old checkpoint ID to new checkpoint ID
-      final Map<int, int> checkpointIdMap = {};
-      int importedCount = 0;
-
-      await isar.writeTxn(() async {
-        for (final checkpointData in checkpointsData) {
-          try {
-            final checkpoint = Checkpoint(
-              sessionId: sessionId,
-              subtitleCollectionId: subtitleCollectionId,
-              timestamp: DateTime.parse(checkpointData['timestamp']),
-              operationType: checkpointData['operationType'] ?? 'unknown',
-              description: checkpointData['description'] ?? '',
-              parentCheckpointId: null, // Will be updated in second pass
-              isActive: checkpointData['isActive'] ?? false,
-              checkpointType: checkpointData['checkpointType'] ?? 'delta',
-              metadata: checkpointData['metadata'],
-              deltas: (checkpointData['deltas'] as List<dynamic>).map((deltaData) {
-                final delta = SubtitleLineDelta();
-                delta.changeType = deltaData['changeType'] ?? '';
-                delta.lineIndex = deltaData['lineIndex'] ?? 0;
-                
-                // Restore beforeState
-                if (deltaData['beforeState'] != null) {
-                  final beforeLine = SubtitleLine();
-                  beforeLine.index = deltaData['beforeState']['index'] ?? 0;
-                  beforeLine.startTime = deltaData['beforeState']['startTime'] ?? '';
-                  beforeLine.endTime = deltaData['beforeState']['endTime'] ?? '';
-                  beforeLine.original = deltaData['beforeState']['original'] ?? '';
-                  beforeLine.edited = deltaData['beforeState']['edited'];
-                  beforeLine.marked = deltaData['beforeState']['marked'] ?? false;
-                  beforeLine.comment = deltaData['beforeState']['comment'];
-                  beforeLine.resolved = deltaData['beforeState']['resolved'] ?? false;
-                  delta.beforeState = beforeLine;
-                }
-                
-                // Restore afterState
-                if (deltaData['afterState'] != null) {
-                  final afterLine = SubtitleLine();
-                  afterLine.index = deltaData['afterState']['index'] ?? 0;
-                  afterLine.startTime = deltaData['afterState']['startTime'] ?? '';
-                  afterLine.endTime = deltaData['afterState']['endTime'] ?? '';
-                  afterLine.original = deltaData['afterState']['original'] ?? '';
-                  afterLine.edited = deltaData['afterState']['edited'];
-                  afterLine.marked = deltaData['afterState']['marked'] ?? false;
-                  afterLine.comment = deltaData['afterState']['comment'];
-                  afterLine.resolved = deltaData['afterState']['resolved'] ?? false;
-                  delta.afterState = afterLine;
-                }
-                
-                return delta;
-              }).toList(),
-              snapshot: (checkpointData['snapshot'] as List<dynamic>).map((lineData) {
-                final line = SubtitleLine();
-                line.index = lineData['index'] ?? 0;
-                line.startTime = lineData['startTime'] ?? '';
-                line.endTime = lineData['endTime'] ?? '';
-                line.original = lineData['original'] ?? '';
-                line.edited = lineData['edited'];
-                line.marked = lineData['marked'] ?? false;
-                line.comment = lineData['comment'];
-                line.resolved = lineData['resolved'] ?? false;
-                return line;
-              }).toList(),
-            );
-
-            // Store the checkpoint and map old ID to new ID
-            final newId = await isar.checkpoints.put(checkpoint);
-            
-            // Store the mapping for parent relationships
-            // We assume the order of checkpoints is maintained, so we can use index
-            final oldId = checkpointsData.indexOf(checkpointData);
-            checkpointIdMap[oldId] = newId;
-            
-            importedCount++;
-          } catch (e) {
-            print('[Import] Error importing checkpoint: $e');
-          }
-        }
-
-        // Second pass: Update parent checkpoint IDs
-        final allCheckpoints = await CheckpointManager.getCheckpointsForSession(sessionId);
-        allCheckpoints.sort((a, b) => a.timestamp.compareTo(b.timestamp));
-
-        for (int i = 0; i < checkpointsData.length && i < allCheckpoints.length; i++) {
-          final checkpointData = checkpointsData[i];
-          final oldParentId = checkpointData['parentCheckpointId'];
-          
-          if (oldParentId != null) {
-            // Find the index of the parent in the original data
-            int parentIndex = -1;
-            for (int j = 0; j < checkpointsData.length; j++) {
-              // Since we don't have the original ID, we match by timestamp and description
-              final potentialParent = checkpointsData[j];
-              if (DateTime.parse(potentialParent['timestamp']).isBefore(
-                    DateTime.parse(checkpointData['timestamp']))) {
-                parentIndex = j;
-              }
-            }
-            
-            if (parentIndex >= 0 && checkpointIdMap.containsKey(parentIndex)) {
-              allCheckpoints[i].parentCheckpointId = checkpointIdMap[parentIndex];
-              await isar.checkpoints.put(allCheckpoints[i]);
-            }
-          }
-        }
-      });
-
-      print('[Import] Successfully imported $importedCount checkpoints');
-    } catch (e) {
-      print('[Import] Error importing checkpoints: $e');
-      // Don't fail the entire import if checkpoints fail
+      SnackbarHelper.showError(
+        context,
+        'Could not load your sessions. Please try again.',
+      );
     }
   }
 
@@ -396,109 +267,30 @@ class _SessionSelectionSheetState extends State<SessionSelectionSheet> {
         return;
       }
 
-      final sessionData = widget.projectData['session'] as Map<String, dynamic>;
-      final subtitleCollectionData = widget.projectData['subtitleCollection'] as Map<String, dynamic>;
-
-      // Prepare subtitle lines
-      final linesData = subtitleCollectionData['lines'] as List<dynamic>;
-      final subtitleLines = linesData.map((lineData) {
-        final line = SubtitleLine();
-        line.index = lineData['index'] ?? 0;
-        line.startTime = lineData['startTime'] ?? '';
-        line.endTime = lineData['endTime'] ?? '';
-        line.original = lineData['original'] ?? '';
-        line.edited = lineData['edited'];
-        line.marked = lineData['marked'] ?? false;
-        line.comment = lineData['comment'];
-        line.resolved = lineData['resolved'] ?? false;
-        return line;
-      }).toList();
-
-      // Get the existing subtitle collection
-      final existingSubtitle = await isar.subtitleCollections.get(session.subtitleCollectionId);
-      if (existingSubtitle != null) {
-        // Update the existing subtitle collection with new data
-        if (srtFileInfo['useExistingProject'] == 'true') {
-          // Keep the existing subtitle collection's file name - no change needed
-          // existingSubtitle.fileName remains unchanged
-        } else if (srtFileInfo['useImportingFile'] == 'true') {
-          // Use the importing file's name
-          existingSubtitle.fileName = subtitleCollectionData['fileName'] ?? existingSubtitle.fileName;
-        } else {
-          // User selected a new file location - use the new file name
-          existingSubtitle.fileName = srtFileInfo['fileName'] ?? subtitleCollectionData['fileName'] ?? existingSubtitle.fileName;
-        }
-        existingSubtitle.encoding = subtitleCollectionData['encoding'] ?? existingSubtitle.encoding;
-        existingSubtitle.lines = subtitleLines;
-        
-        // Update file paths based on user choice
-        if (srtFileInfo['useExistingProject'] == 'true') {
-          // Keep the existing file references unchanged
-          // No updates to originalFileUri or filePath
-        } else if (srtFileInfo['useImportingFile'] == 'true') {
-          // Use the importing file's path information
-          existingSubtitle.originalFileUri = subtitleCollectionData['originalFileUri'] ?? subtitleCollectionData['filePath'];
-          existingSubtitle.filePath = subtitleCollectionData['filePath'];
-        } else if (srtFileInfo['safUri'] != null || srtFileInfo['filePath'] != null) {
-          // User selected a new file location - update with selected SRT file information
-          // On Android, prefer SAF URI over file path for originalFileUri
-          if (Platform.isAndroid && srtFileInfo['safUri'] != null) {
-            existingSubtitle.originalFileUri = srtFileInfo['safUri'];
-          } else {
-            existingSubtitle.originalFileUri = srtFileInfo['fileUri'] ?? srtFileInfo['filePath'];
-          }
-          existingSubtitle.filePath = srtFileInfo['filePath'];
-        }
-
-        await isar.writeTxn(() async {
-          await isar.subtitleCollections.put(existingSubtitle);
-        });
-
-        // Update the session with the appropriate file name based on user choice
-        if (srtFileInfo['useExistingProject'] == 'true') {
-          // Keep the existing session's file name - no change needed
-          // session.fileName remains unchanged
-        } else if (srtFileInfo['useImportingFile'] == 'true') {
-          // Use the importing file's name
-          session.fileName = subtitleCollectionData['fileName'] ?? session.fileName;
-        } else {
-          // User selected a new file location - use the new file name
-          session.fileName = srtFileInfo['fileName'] ?? subtitleCollectionData['fileName'] ?? session.fileName;
-        }
-        if (sessionData['lastEditedIndex'] != null) {
-          session.lastEditedIndex = sessionData['lastEditedIndex'];
-        }
-        if (sessionData['editMode'] != null) {
-          session.editMode = sessionData['editMode'];
-        }
-        // Update project file path - store the .msone file path/URI
-        session.projectFilePath = widget.originalFileUri;
-
-        await isar.writeTxn(() async {
-          await isar.sessions.put(session);
-        });
-
-        // Small delay to ensure database transaction is fully committed
-        await Future.delayed(const Duration(milliseconds: 100));
-
-        // Import checkpoints if available in project data
-        await _importCheckpoints(session.id, session.subtitleCollectionId);
+      final updatedSession = await ref
+          .read(sessionProjectImportRepositoryProvider)
+          .replaceSession(
+            session: session,
+            projectData: widget.projectData,
+            srtFileInfo: srtFileInfo,
+            originalProjectUri: widget.originalFileUri,
+          );
 
         if (mounted) {
           SnackbarHelper.showSuccess(
             context,
-            'Session "${session.fileName}" updated successfully!',
+            'Session "${updatedSession.fileName}" updated successfully!',
             duration: const Duration(seconds: 3),
           );
           
           // Callback to parent widget first
           if (widget.onSessionReplaced != null) {
-            widget.onSessionReplaced!(session);
+            widget.onSessionReplaced!(updatedSession);
           }
           
           // Callback to refresh home screen sessions
           if (widget.onProjectImported != null) {
-            widget.onProjectImported!(session);
+            widget.onProjectImported!(updatedSession);
           }
           
           // Navigate to EditScreen with the updated session
@@ -506,20 +298,17 @@ class _SessionSelectionSheetState extends State<SessionSelectionSheet> {
             context,
             MaterialPageRoute(
               builder: (context) => EditScreenHost(
-                subtitleCollectionId: session.subtitleCollectionId,
-                sessionId: session.id,
-                lastEditedIndex: session.lastEditedIndex,
+                subtitleCollectionId: updatedSession.subtitleCollectionId,
+                sessionId: updatedSession.id,
+                lastEditedIndex: updatedSession.lastEditedIndex,
               ),
             ),
             (route) => route.isFirst, // Remove all routes except the first one
           );
         }
-      } else {
-        throw Exception('Session subtitle collection not found');
-      }
     } catch (e) {
       if (mounted) {
-        SnackbarHelper.showError(context, 'Failed to replace session: $e');
+        SnackbarHelper.showError(context, 'Could not replace the selected session. Please try again.');
       }
     } finally {
       if (mounted) {
@@ -547,94 +336,13 @@ class _SessionSelectionSheetState extends State<SessionSelectionSheet> {
         return;
       }
 
-      final sessionData = widget.projectData['session'] as Map<String, dynamic>;
-      final subtitleCollectionData = widget.projectData['subtitleCollection'] as Map<String, dynamic>;
-
-      // Prepare subtitle lines
-      final linesData = subtitleCollectionData['lines'] as List<dynamic>;
-      final subtitleLines = linesData.map((lineData) {
-        final line = SubtitleLine();
-        line.index = lineData['index'] ?? 0;
-        line.startTime = lineData['startTime'] ?? '';
-        line.endTime = lineData['endTime'] ?? '';
-        line.original = lineData['original'] ?? '';
-        line.edited = lineData['edited'];
-        line.marked = lineData['marked'] ?? false;
-        line.comment = lineData['comment'];
-        line.resolved = lineData['resolved'] ?? false;
-        return line;
-      }).toList();
-
-      // Use the user-selected SRT file information
-      String subtitleFileUri;
-      String selectedFileName;
-      String selectedFilePath;
-      
-      if (srtFileInfo['useExistingProject'] == 'true') {
-        // This shouldn't happen in import as new, but handle it gracefully
-        subtitleFileUri = '';
-        selectedFileName = subtitleCollectionData['fileName'] ?? 'Imported Project';
-        selectedFilePath = '';
-      } else if (srtFileInfo['useImportingFile'] == 'true') {
-        // Use the importing file's path information
-        if (Platform.isAndroid) {
-          // For importing file, we don't have direct SAF URI access, use fallback
-          subtitleFileUri = subtitleCollectionData['originalFileUri'] ?? subtitleCollectionData['filePath'] ?? '';
-        } else {
-          subtitleFileUri = subtitleCollectionData['originalFileUri'] ?? subtitleCollectionData['filePath'] ?? '';
-        }
-        selectedFileName = subtitleCollectionData['fileName'] ?? 'Imported Project';
-        selectedFilePath = subtitleCollectionData['filePath'] ?? '';
-      } else {
-        // User selected a new location
-        // On Android, prefer SAF URI over file path for originalFileUri
-        if (Platform.isAndroid && srtFileInfo['safUri'] != null) {
-          subtitleFileUri = srtFileInfo['safUri']!;
-        } else {
-          subtitleFileUri = srtFileInfo['fileUri'] ?? srtFileInfo['filePath'] ?? '';
-        }
-        selectedFileName = srtFileInfo['fileName'] ?? subtitleCollectionData['fileName'] ?? 'Imported Project';
-        selectedFilePath = srtFileInfo['filePath'] ?? '';
-      }
-
-      // Store subtitle collection in database
-      final subtitleData = await storeSubtitleData(
-        subtitleLines,
-        selectedFileName, // Use the selected file name
-        subtitleCollectionData['encoding'] ?? 'UTF-8',
-        selectedFilePath.isNotEmpty ? selectedFilePath : subtitleCollectionData['filePath'], // Use selected file path or fallback
-        editMode: sessionData['editMode'] ?? true,
-        originalFileUri: subtitleFileUri,
-        projectFilePath: null, // No project file path for imports
-      );
-
-      // Get the created session from the database using the returned sessionId
-      final session = await isar.sessions.get(subtitleData['sessionId']);
-      
-      if (session == null) {
-        throw Exception('Failed to retrieve created session');
-      }
-
-      // Update session with imported data and selected file name
-      if (sessionData['lastEditedIndex'] != null) {
-        session.lastEditedIndex = sessionData['lastEditedIndex'];
-      }
-      
-      // Update the session fileName with the selected file name
-      session.fileName = selectedFileName;
-      
-      // Store the project file path to link session to the .msone file
-      session.projectFilePath = widget.originalFileUri;
-      
-      await isar.writeTxn(() async {
-        await isar.sessions.put(session);
-      });
-
-      // Small delay to ensure database transaction is fully committed
-      await Future.delayed(const Duration(milliseconds: 100));
-
-      // Import checkpoints if available in project data
-      await _importCheckpoints(session.id, session.subtitleCollectionId);
+      final createdSession = await ref
+          .read(sessionProjectImportRepositoryProvider)
+          .importAsNewSession(
+            projectData: widget.projectData,
+            srtFileInfo: srtFileInfo,
+            originalProjectUri: widget.originalFileUri,
+          );
 
       if (mounted) {
         SnackbarHelper.showSuccess(
@@ -645,12 +353,12 @@ class _SessionSelectionSheetState extends State<SessionSelectionSheet> {
         
         // Callback to parent widget first
         if (widget.onSessionCreated != null) {
-          widget.onSessionCreated!(session);
+          widget.onSessionCreated!(createdSession);
         }
         
         // Callback to refresh home screen sessions
         if (widget.onProjectImported != null) {
-          widget.onProjectImported!(session);
+          widget.onProjectImported!(updatedSession);
         }
         
         // Navigate to EditScreen with the new session
@@ -658,9 +366,9 @@ class _SessionSelectionSheetState extends State<SessionSelectionSheet> {
           context,
           MaterialPageRoute(
             builder: (context) => EditScreenHost(
-              subtitleCollectionId: session.subtitleCollectionId,
-              sessionId: session.id,
-              lastEditedIndex: session.lastEditedIndex,
+              subtitleCollectionId: updatedSession.subtitleCollectionId,
+              sessionId: updatedSession.id,
+              lastEditedIndex: updatedSession.lastEditedIndex,
             ),
           ),
           (route) => route.isFirst, // Remove all routes except the first one
@@ -668,7 +376,7 @@ class _SessionSelectionSheetState extends State<SessionSelectionSheet> {
       }
     } catch (e) {
       if (mounted) {
-        SnackbarHelper.showError(context, 'Failed to import as new session: $e');
+        SnackbarHelper.showError(context, 'Could not import the project as a new session. Please try again.');
       }
     } finally {
       if (mounted) {
