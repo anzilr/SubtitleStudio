@@ -416,7 +416,7 @@ class _SubtitleExtractOptionsSheetState
       );
     } catch (e) {
       if (kDebugMode) {
-        print('Error extracting subtitle: $e');
+        print('Subtitle extraction failed. Please try again.');
         if (e is Exception) {
           print('Exception details: ${e.toString()}');
         }
@@ -1007,7 +1007,7 @@ class _SubtitleExtractOptionsSheetState
         // Try to hide loading overlay and show an error
         try {
           await AppLogger.instance.error(
-            'Failed to extract subtitle: $e',
+            'Subtitle extraction failed. Please try another track or file.',
             context: 'SubtitleExtractOptionsSheet._extractSubtitleWithAsync',
           );
           if (rootContext.mounted) {
@@ -1309,7 +1309,7 @@ class _SubtitleExtractOptionsSheetState
         // Try to hide loading overlay and show an error
         try {
           await AppLogger.instance.error(
-            'Failed to process subtitle file: $e',
+            'The extracted subtitle could not be processed. Please try another track or file.',
             context: 'SubtitleExtractOptionsSheet._extractSubtitleWithAsync',
           );
           if (rootContext.mounted) {
