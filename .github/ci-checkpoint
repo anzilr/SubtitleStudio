@@ -1,13 +1,19 @@
-Riverpod migration checkpoint 14b
+Riverpod migration checkpoint 15
 Date: 2026-09-28
 Checks:
 - flutter analyze
 - flutter test
 
-Corrections after checkpoint 14:
-- Added explicit Riverpod APIs for secondary subtitle data and visibility
-- Removed stale writes to derived secondary-subtitle getters
-- Removed stale generated-subtitle assignments from responsive layouts
-- Completed Riverpod-only subtitle/video state ownership across Editor parts
+Scope since checkpoint 14b:
+- Await Project Settings video-load callback instead of polling
+- Await Project Settings save-project callback instead of fixed delay
+- Hide raw exceptions from Project Settings UI
+- Split Project Settings section builders
+- Split Project Settings path/location helpers
+- Split Project Settings media/secondary actions
+- Split Project Settings marked/save actions
+- Remove periodic 2-second database polling
+- Remove stale polling helper methods
+- Remove retry-delay video refresh loop
 
 Platform builds intentionally disabled.
