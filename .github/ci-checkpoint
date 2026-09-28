@@ -1,15 +1,16 @@
-Riverpod migration checkpoint 21b
+Riverpod migration checkpoint 22
 Date: 2026-09-28
 Checks:
 - flutter analyze
 - flutter test
 
 Focus:
-- typed SubtitleImportResult contract
-- processor entry points no longer return nullable maps
-- import UI typed result consumption
-- extraction UI typed result consumption
-- persisted extraction Session reused for navigation
-- file picker null/mounted guard preserved
+- injected SubtitleImportRepository
+- subtitle processor no longer imports database_helper.dart
+- create/import/extract flows share typed persistence boundary
+- centralized subtitle transform pipeline
+- extracted encoding decoder service
+- actual decoded encoding persisted for file imports
+- UTF-8 encoding decoder regression coverage
 
 Platform builds intentionally disabled.
