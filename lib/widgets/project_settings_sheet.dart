@@ -79,21 +79,6 @@ class _ProjectSettingsSheetState extends State<ProjectSettingsSheet> with Widget
     super.dispose();
   }
 
-  /// Start a timer to periodically check for external changes
-  void _startPeriodicRefresh() {
-    _refreshTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
-      if (mounted) {
-        _refreshDataSilently();
-      }
-    });
-  }
-
-  /// Stop the periodic refresh timer
-  void _stopPeriodicRefresh() {
-    _refreshTimer?.cancel();
-    _refreshTimer = null;
-  }
-
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && mounted) {
