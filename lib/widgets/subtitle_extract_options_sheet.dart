@@ -867,98 +867,38 @@ class _SubtitleExtractOptionsSheetState
         return; // Return instead of throwing
       }
 
-      // Verify the file exists - normalize the path first for consistent checking
-      final normalizedOutputPath = FFmpegHelper.normalizePath(outputFilePath);
-      final extractedFile = File(normalizedOutputPath);
-      
-      // Skip file verification for iOS since the file picker handles saving
-      // and we don't have access to verify files outside the app sandbox
-      bool fileExists = true;
-      int fileSize = 0;
-      
-      if (!Platform.isIOS) {
-        // Add retry logic for file existence and size check to handle timing issues
-        int retryCount = 0;
-        const maxRetries = 10;
-        const retryDelay = Duration(milliseconds: 200);
-        
-        while (retryCount < maxRetries) {
-          fileExists = await extractedFile.exists();
-          
-          if (fileExists) {
-            fileSize = await extractedFile.length();
-            
-            // If file exists and has content, we're done
-            if (fileSize > 0) {
-              break;
-            }
-            
-            // File exists but has 0 bytes - might be a timing issue
-            if (retryCount < maxRetries - 1) {
-              if (kDebugMode) {
-                print('File exists but shows 0 bytes, retrying... (attempt ${retryCount + 1}/$maxRetries)');
-              }
-              await Future.delayed(retryDelay);
-            }
-          } else {
-            // File doesn't exist yet
-            if (retryCount < maxRetries - 1) {
-              if (kDebugMode) {
-                print('File not found, retrying... (attempt ${retryCount + 1}/$maxRetries)');
-              }
-              await Future.delayed(retryDelay);
-            }
-          }
-          
-          retryCount++;
-        }
+      final verification =
+          await SubtitleExtractionFileService.verifyOutputFile(
+        outputFilePath: outputFilePath,
+      );
 
-        if (kDebugMode) {
-          print('Original output path: $outputFilePath');
-          print('Normalized output path: $normalizedOutputPath');
-          print('File exists: $fileExists (after $retryCount attempts)');
-          if (fileExists) {
-            print('File size: $fileSize bytes');
-          }
-        }
+      if (!verification.isValid) {
+        final errorMessage = verification.exists
+            ? 'Subtitle extraction failed - extracted file is empty (0 bytes)'
+            : 'Subtitle extraction failed - extracted file could not be found at: '
+                '${verification.normalizedOutputPath}';
 
-        if (!fileExists || fileSize == 0) {
-          // Provide more detailed error information
-          String errorMessage;
-          if (!fileExists) {
-            errorMessage = 'Subtitle extraction failed - extracted file could not be found at: $normalizedOutputPath';
-          } else {
-            errorMessage = 'Subtitle extraction failed - extracted file is empty (0 bytes)';
-          }
-          
-          // Try to hide loading overlay and show an error
-          try {
-            await AppLogger.instance.error(
-              errorMessage,
-              context: 'SubtitleExtractOptionsSheet._extractSubtitleWithAsync',
+        try {
+          await AppLogger.instance.error(
+            errorMessage,
+            context: 'SubtitleExtractOptionsSheet._extractSubtitleWithAsync',
+          );
+          if (rootContext.mounted) {
+            LoadingOverlay.hide(rootContext);
+
+            SnackbarHelper.showError(
+              rootContext,
+              verification.exists
+                  ? 'Extracted file is empty. The subtitle track may not contain any data.'
+                  : 'File could not be found after extraction. Please try again or select a different location.',
+              duration: const Duration(seconds: 5),
             );
-            if (rootContext.mounted) {
-              LoadingOverlay.hide(rootContext);
-
-              SnackbarHelper.showError(
-                rootContext,
-                !fileExists 
-                  ? 'File could not be found after extraction. Please try again or select a different location.'
-                  : 'Extracted file is empty. The subtitle track may not contain any data.',
-                duration: const Duration(seconds: 5),
-              );
-            }
-          } catch (_) {
-            // If this fails, we can't show errors to the user
           }
+        } catch (_) {
+          // If this fails, we can't show errors to the user
+        }
 
-          return; // Return instead of throwing
-        }
-      } else {
-        if (kDebugMode) {
-          print('iOS: Skipping file verification - file picker handles saving');
-          print('Final output path: $normalizedOutputPath');
-        }
+        return;
       }
 
       // Process the subtitle file with selected options

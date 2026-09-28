@@ -16,6 +16,24 @@ class SubtitleExtractionPaths {
 
 }
 
+class SubtitleExtractionVerification {
+  final String normalizedOutputPath;
+  final bool exists;
+  final int fileSize;
+  final int attempts;
+  final bool skipped;
+
+  const SubtitleExtractionVerification({
+    required this.normalizedOutputPath,
+    required this.exists,
+    required this.fileSize,
+    required this.attempts,
+    required this.skipped,
+  });
+
+  bool get isValid => skipped || (exists && fileSize > 0);
+}
+
 class SubtitleExtractionFileService {
   const SubtitleExtractionFileService._();
 
@@ -222,6 +240,85 @@ class SubtitleExtractionFileService {
     }
 
     return normalizedOutputFilePath;
+  }
+
+
+  static Future<SubtitleExtractionVerification> verifyOutputFile({
+    required String outputFilePath,
+    int maxRetries = 10,
+    Duration retryDelay = const Duration(milliseconds: 200),
+  }) async {
+    final normalizedOutputPath = FFmpegHelper.normalizePath(outputFilePath);
+
+    if (Platform.isIOS) {
+      if (kDebugMode) {
+        print(
+          'iOS: Skipping file verification - file picker handles saving',
+        );
+        print('Final output path: $normalizedOutputPath');
+      }
+      return SubtitleExtractionVerification(
+        normalizedOutputPath: normalizedOutputPath,
+        exists: true,
+        fileSize: 0,
+        attempts: 0,
+        skipped: true,
+      );
+    }
+
+    final extractedFile = File(normalizedOutputPath);
+    var fileExists = false;
+    var fileSize = 0;
+    var attempts = 0;
+
+    while (attempts < maxRetries) {
+      fileExists = await extractedFile.exists();
+
+      if (fileExists) {
+        fileSize = await extractedFile.length();
+        if (fileSize > 0) {
+          attempts++;
+          break;
+        }
+
+        if (attempts < maxRetries - 1) {
+          if (kDebugMode) {
+            print(
+              'File exists but shows 0 bytes, retrying... '
+              '(attempt ${attempts + 1}/$maxRetries)',
+            );
+          }
+          await Future.delayed(retryDelay);
+        }
+      } else if (attempts < maxRetries - 1) {
+        if (kDebugMode) {
+          print(
+            'File not found, retrying... '
+            '(attempt ${attempts + 1}/$maxRetries)',
+          );
+        }
+        await Future.delayed(retryDelay);
+      }
+
+      attempts++;
+    }
+
+    if (kDebugMode) {
+      print('Original output path: $outputFilePath');
+      print('Normalized output path: $normalizedOutputPath');
+      print('File exists: $fileExists (after $attempts attempts)');
+      if (fileExists) {
+        print('File size: $fileSize bytes');
+      }
+    }
+
+    return SubtitleExtractionVerification(
+      normalizedOutputPath: normalizedOutputPath,
+      exists: fileExists,
+      fileSize: fileSize,
+      attempts: attempts,
+      skipped: false,
+    );
   }
 
 }
