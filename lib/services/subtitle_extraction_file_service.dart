@@ -368,4 +368,24 @@ class SubtitleExtractionFileService {
     return content;
   }
 
+
+  static Future<void> cleanupTemporaryFile(
+    String tempOutputFile, {
+    String successMessage = 'Cleaned up temporary extraction file',
+  }) async {
+    try {
+      final tempFile = File(tempOutputFile);
+      if (!await tempFile.exists()) return;
+
+      await tempFile.delete();
+      if (kDebugMode) {
+        print('$successMessage: $tempOutputFile');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Warning: Could not clean up temporary file: $e');
+      }
+    }
+  }
+
 }

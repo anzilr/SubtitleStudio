@@ -1000,21 +1000,10 @@ class _SubtitleExtractOptionsSheetState
           lastEditedIndex: subtitleData['lastEditedIndex'] ?? 0,
         );
 
-        // Clean up temporary file after successful processing
-        try {
-          final tempFile = File(tempOutputFile);
-          if (await tempFile.exists()) {
-            await tempFile.delete();
-            if (kDebugMode) {
-              print('Cleaned up temporary extraction file: $tempOutputFile');
-            }
-          }
-        } catch (e) {
-          if (kDebugMode) {
-            print('Warning: Could not clean up temporary file: $e');
-          }
-          // Continue with the process even if cleanup fails
-        }
+        await SubtitleExtractionFileService.cleanupTemporaryFile(
+          tempOutputFile,
+          successMessage: 'Cleaned up temporary extraction file',
+        );
 
         // Hide loading overlay and call callback
         try {
@@ -1040,20 +1029,10 @@ class _SubtitleExtractOptionsSheetState
           print('Error processing subtitle file: $e');
         }
 
-        // Clean up temp file on error
-        try {
-          final tempFile = File(tempOutputFile);
-          if (await tempFile.exists()) {
-            await tempFile.delete();
-            if (kDebugMode) {
-              print('Cleaned up temporary file after error: $tempOutputFile');
-            }
-          }
-        } catch (cleanupError) {
-          if (kDebugMode) {
-            print('Warning: Could not clean up temp file after error: $cleanupError');
-          }
-        }
+        await SubtitleExtractionFileService.cleanupTemporaryFile(
+          tempOutputFile,
+          successMessage: 'Cleaned up temporary file after error',
+        );
 
         // Try to hide loading overlay and show an error
         try {
