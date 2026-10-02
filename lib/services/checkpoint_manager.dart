@@ -39,6 +39,7 @@ import 'package:subtitle_studio/utils/logging_helpers.dart';
 import 'package:subtitle_studio/database/models/preferences_model.dart';
 import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
 import 'package:subtitle_studio/services/checkpoint_policy.dart';
+import 'package:subtitle_studio/services/checkpoint_timeline.dart';
 import 'dart:convert';
 
 class CheckpointManager {
@@ -627,67 +628,28 @@ class CheckpointManager {
   static Future<int> _countCheckpointsSinceLastSnapshot({
     required int sessionId,
   }) async {
-    // Get all checkpoints, filter for snapshots manually
-    final allCheckpoints = await isar.checkpoints
-        .filter()
-        .sessionIdEqualTo(sessionId)
-        .sortByTimestampDesc()
-        .findAll();
-    
-    // Find the most recent snapshot
-    Checkpoint? lastSnapshot;
-    for (final checkpoint in allCheckpoints) {
-      if (checkpoint.checkpointType == 'snapshot') {
-        lastSnapshot = checkpoint;
-        break; // Found most recent snapshot
-      }
-    }
-    
-    if (lastSnapshot == null) {
-      // No snapshot yet, return count of all checkpoints
-      return allCheckpoints.length;
-    }
-    
-    // Count checkpoints after last snapshot
-    int count = 0;
-    for (final checkpoint in allCheckpoints) {
-      if (checkpoint.timestamp.isAfter(lastSnapshot.timestamp)) {
-        count++;
-      }
-    }
-    
-    return count;
+    final allCheckpoints = await getCheckpointsForSession(sessionId);
+    return CheckpointTimeline.countSinceLastSnapshot(allCheckpoints);
   }
-  
+
   /// Finds the nearest snapshot at or before a target checkpoint
   /// Returns null if no snapshot found
   static Future<Checkpoint?> _findNearestSnapshot({
     required int sessionId,
     required int targetCheckpointId,
   }) async {
-    // Build path from target back to root
-    final pathToRoot = <Checkpoint>[];
-    int? currentId = targetCheckpointId;
-    
-    while (currentId != null) {
-      final checkpoint = await isar.checkpoints.get(currentId);
-      if (checkpoint == null) break;
-      
-      pathToRoot.add(checkpoint);
-      
-      // If this checkpoint is a snapshot, we found it!
-      if (checkpoint.checkpointType == 'snapshot') {
-        return checkpoint;
-      }
-      
-      currentId = checkpoint.parentCheckpointId;
+    final checkpoints = await getCheckpointsForSession(sessionId);
+    final snapshot = CheckpointTimeline.findNearestSnapshot(
+      checkpoints: checkpoints,
+      targetCheckpointId: targetCheckpointId,
+    );
+
+    if (snapshot == null) {
+      logError('No snapshot found in path to checkpoint $targetCheckpointId');
     }
-    
-    // No snapshot found in the path - this shouldn't happen if initial snapshot was created
-    logError('No snapshot found in path to checkpoint $targetCheckpointId');
-    return null;
+    return snapshot;
   }
-  
+
   /// Gets all delta checkpoints between a snapshot and target checkpoint
   /// Returns checkpoints in chronological order (oldest first)
   /// 
@@ -699,66 +661,38 @@ class CheckpointManager {
     required int toCheckpointId,
     bool excludeTarget = false,
   }) async {
-    if (fromSnapshotId == toCheckpointId) {
-      return []; // No deltas between a checkpoint and itself
-    }
-    
-    // Build path from target back to snapshot
-    final pathFromTarget = <Checkpoint>[];
-    int? currentId = toCheckpointId;
-    
-    // If excludeTarget is true, start from the parent of the target
-    if (excludeTarget) {
-      final targetCheckpoint = await isar.checkpoints.get(toCheckpointId);
-      if (targetCheckpoint != null) {
-        currentId = targetCheckpoint.parentCheckpointId;
-      }
-    }
-    
-    while (currentId != null && currentId != fromSnapshotId) {
-      final checkpoint = await isar.checkpoints.get(currentId);
-      if (checkpoint == null) break;
-      
-      // Only include delta checkpoints, not snapshots
-      if (checkpoint.checkpointType == 'delta') {
-        pathFromTarget.add(checkpoint);
-      }
-      
-      currentId = checkpoint.parentCheckpointId;
-    }
-    
-    // Reverse to get chronological order (oldest first)
-    return pathFromTarget.reversed.toList();
+    final checkpoints = await getCheckpointsForSession(sessionId);
+    return CheckpointTimeline.deltaPath(
+      checkpoints: checkpoints,
+      fromSnapshotId: fromSnapshotId,
+      toCheckpointId: toCheckpointId,
+      excludeTarget: excludeTarget,
+    );
   }
-  
+
   /// Deletes all checkpoints after a given checkpoint (future checkpoints)
   /// Used when creating new changes after restoring to an older checkpoint
-  static Future<void> _deleteFutureCheckpoints(int sessionId, int afterCheckpointId) async {
-    // Get all checkpoints for the session
+  static Future<void> _deleteFutureCheckpoints(
+    int sessionId,
+    int afterCheckpointId,
+  ) async {
     final allCheckpoints = await getCheckpointsForSession(sessionId);
-    
-    // Build a set of checkpoint IDs to delete (all descendants of afterCheckpointId)
-    final idsToDelete = <int>{};
-    
-    void collectDescendants(int parentId) {
-      for (final checkpoint in allCheckpoints) {
-        if (checkpoint.parentCheckpointId == parentId) {
-          idsToDelete.add(checkpoint.id);
-          collectDescendants(checkpoint.id); // Recursively collect descendants
-        }
-      }
-    }
-    
-    collectDescendants(afterCheckpointId);
-    
+    final idsToDelete = CheckpointTimeline.descendantIds(
+      checkpoints: allCheckpoints,
+      parentCheckpointId: afterCheckpointId,
+    );
+
     if (idsToDelete.isNotEmpty) {
       await isar.writeTxn(() async {
         await isar.checkpoints.deleteAll(idsToDelete.toList());
       });
-      logInfo('Deleted ${idsToDelete.length} future checkpoints after checkpoint $afterCheckpointId');
+      logInfo(
+        'Deleted ${idsToDelete.length} future checkpoints '
+        'after checkpoint $afterCheckpointId',
+      );
     }
   }
-  
+
   /// Gets the current head checkpoint (most recent active)
   static Future<Checkpoint?> _getCurrentHeadCheckpoint(int sessionId) async {
     return await isar.checkpoints
