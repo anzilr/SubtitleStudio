@@ -55,7 +55,7 @@ jobs:
         if: matrix.platform == 'linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev libjson-glib-dev liblzma-dev libstdc++-12-dev
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -80,4 +80,21 @@ jobs:
         run: flutter pub get
 
       - name: Build ${{ matrix.platform }}
+        if: matrix.platform != 'macos'
         run: ${{ matrix.command }}
+
+      - name: Build macos without CI signing
+        if: matrix.platform == 'macos'
+        shell: bash
+        run: |
+          CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            flutter build macos --debug --config-only
+          xcodebuild \
+            -workspace macos/Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Debug \
+            -destination "platform=macOS" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
