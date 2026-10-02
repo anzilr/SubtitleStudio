@@ -52,7 +52,7 @@ extension _EditSubtitleActions on _EditScreenState {
         
         if (success) {
           // Create a checkpoint for the effect
-          await CheckpointRepository.fromGlobal().createCheckpoint(
+          await ref.read(checkpointRepositoryProvider).createCheckpoint(
             sessionId: widget.sessionId,
             subtitleCollectionId: widget.subtitleCollectionId,
             operationType: 'effect',
@@ -136,7 +136,7 @@ extension _EditSubtitleActions on _EditScreenState {
         ..endTime = endTimeStr;
       
       // Create checkpoint before adding
-      await CheckpointRepository.fromGlobal().createAddCheckpoint(
+      await ref.read(checkpointRepositoryProvider).createAddCheckpoint(
         sessionId: widget.sessionId,
         subtitleCollectionId: widget.subtitleCollectionId,
         addedLine: newLine,
