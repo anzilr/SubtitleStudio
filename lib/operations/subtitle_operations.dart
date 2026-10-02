@@ -6,6 +6,7 @@ import 'package:subtitle_studio/database/models/models.dart';
 import 'package:isar_community/isar.dart';
 import '../utils/logging_helpers.dart';
 import '../utils/snackbar_helper.dart';
+import '../services/checkpoint_repository.dart';
 
 import '../widgets/add_line_confirmation_sheet.dart';
 import '../widgets/delete_confirmation_sheet.dart';
@@ -13,7 +14,7 @@ import '../widgets/merge_confirmation_sheet.dart';
 import '../widgets/split_confirmation_sheet.dart';
 
 class SubtitleOperations {
-  static dynamic _checkpointRepository(BuildContext context) =>
+  static CheckpointRepository _checkpointRepository(BuildContext context) =>
       ProviderScope.containerOf(context, listen: false)
           .read(checkpointRepositoryProvider);
   static final RegExp positionRegex = RegExp(r'^\{\\an[1-9]\}');

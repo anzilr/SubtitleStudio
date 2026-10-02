@@ -88,6 +88,7 @@ class SubtitleBannerOperations {
   }
     /// Insert banners into the subtitle collection
   static Future<bool> insertBanners({
+    required CheckpointRepository checkpointRepository,
     required int subtitleCollectionId,
     required int sessionId,
     required List<SubtitleLine> currentSubtitleLines,
@@ -165,7 +166,7 @@ class SubtitleBannerOperations {
           ..afterState = banner);
       }
       
-      await CheckpointRepository.fromGlobal().createCheckpoint(
+      await checkpointRepository.createCheckpoint(
         sessionId: sessionId,
         subtitleCollectionId: subtitleCollectionId,
         operationType: 'add',
