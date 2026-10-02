@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/operations/subtitle_operations.dart';
 import 'package:subtitle_studio/widgets/positioning_buttons_widget.dart';
 import 'package:subtitle_studio/widgets/subtitle_effects_sheet.dart';
 import 'package:subtitle_studio/operations/subtitle_effect_operations.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
-import 'package:subtitle_studio/services/checkpoint_repository.dart';
 
 class SubtitleActionsMenu extends StatelessWidget {
   final TextEditingController editedController;
@@ -281,7 +282,9 @@ class SubtitleActionsMenu extends StatelessWidget {
         
         if (success) {
           // Create a checkpoint for the effect
-          await CheckpointRepository.fromGlobal().createCheckpoint(
+          await ProviderScope.containerOf(context, listen: false)
+              .read(checkpointRepositoryProvider)
+              .createCheckpoint(
             sessionId: sessionId,
             subtitleCollectionId: subtitleId,
             operationType: 'effect',

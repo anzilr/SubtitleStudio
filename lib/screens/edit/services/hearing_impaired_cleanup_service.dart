@@ -99,6 +99,7 @@ class HearingImpairedCleanupService {
   }
 
   static Future<HearingImpairedCleanupResult> execute({
+    required CheckpointRepository checkpointRepository,
     required int sessionId,
     required int subtitleCollectionId,
     required List<SubtitleLine> currentLines,
@@ -107,7 +108,7 @@ class HearingImpairedCleanupService {
 
     if (plan.deltas.isNotEmpty) {
       try {
-        await CheckpointRepository.fromGlobal().createCheckpoint(
+        await checkpointRepository.createCheckpoint(
           sessionId: sessionId,
           subtitleCollectionId: subtitleCollectionId,
           operationType: 'batch',

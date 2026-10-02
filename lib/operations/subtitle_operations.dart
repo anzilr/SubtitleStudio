@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/database/database_helper.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:isar_community/isar.dart';
 import '../utils/logging_helpers.dart';
 import '../utils/snackbar_helper.dart';
-import '../services/checkpoint_repository.dart';
 
 import '../widgets/add_line_confirmation_sheet.dart';
 import '../widgets/delete_confirmation_sheet.dart';
@@ -12,8 +13,9 @@ import '../widgets/merge_confirmation_sheet.dart';
 import '../widgets/split_confirmation_sheet.dart';
 
 class SubtitleOperations {
-  static CheckpointRepository get _checkpointRepository =>
-      CheckpointRepository.fromGlobal();
+  static dynamic _checkpointRepository(BuildContext context) =>
+      ProviderScope.containerOf(context, listen: false)
+          .read(checkpointRepositoryProvider);
   static final RegExp positionRegex = RegExp(r'^\{\\an[1-9]\}');
 
   static void showDeleteConfirmation({
@@ -55,7 +57,7 @@ class SubtitleOperations {
     logInfo('Deleting subtitle line: ${currentLine.index} from collection ${collection.id}');
     
     // Create checkpoint BEFORE deleting
-    await _checkpointRepository.createDeleteCheckpoint(
+    await _checkpointRepository(context).createDeleteCheckpoint(
       sessionId: sessionId,
       subtitleCollectionId: subtitleId,
       deletedLine: currentLine,
@@ -234,7 +236,7 @@ class SubtitleOperations {
         ..endTime = firstPartTime.split(' → ')[1];
 
       // Create checkpoint BEFORE splitting
-      await _checkpointRepository.createSplitCheckpoint(
+      await _checkpointRepository(context).createSplitCheckpoint(
         sessionId: sessionId,
         subtitleCollectionId: subtitleId,
         originalLine: originalLine,
@@ -363,7 +365,7 @@ class SubtitleOperations {
             mergePrevious ? currentLine.endTime : mergeTargetLine.endTime;
 
       // Create checkpoint BEFORE merging
-      await _checkpointRepository.createMergeCheckpoint(
+      await _checkpointRepository(context).createMergeCheckpoint(
         sessionId: sessionId,
         subtitleCollectionId: subtitleId,
         firstLine: originalFirst,
@@ -574,7 +576,7 @@ class SubtitleOperations {
       final insertAtIndex = addBefore ? currentIndex : currentIndex + 1;
       
       // Create checkpoint BEFORE adding
-      await _checkpointRepository.createAddCheckpoint(
+      await _checkpointRepository(context).createAddCheckpoint(
         sessionId: sessionId,
         subtitleCollectionId: subtitleId,
         addedLine: newLine,
