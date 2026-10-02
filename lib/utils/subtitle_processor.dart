@@ -214,7 +214,7 @@ Future<SubtitleImportResult> processAndImportSubtitleContent(
     );
 
     if (parsedLines.isNotEmpty) {
-      return repository.storeSubtitleData(
+      return await repository.storeSubtitleData(
         lines: parsedLines,
         fileName: fileName,
         encoding: encoding,

@@ -52,7 +52,7 @@ extension _HomeNavigationActions on _HomeScreenContentState {
   
             controller.loadSessions();
   
-            final createdSessionId = subtitleData['sessionId'];
+            final createdSessionId = subtitleData.sessionId;
             if (createdSessionId is! int) {
               throw StateError(
                 'New subtitle creation did not return a valid session ID.',
@@ -66,11 +66,11 @@ extension _HomeNavigationActions on _HomeScreenContentState {
               navigator.push(
                 MaterialPageRoute(
                   builder: (context) => EditSubtitleScreenHost(
-                    subtitleId: subtitleData['subtitleCollectionId'],
+                    subtitleId: subtitleData.subtitleCollectionId,
                     index: 1,
                     sessionId: createdSessionId,
                     isNewSubtitle: true,
-                    editMode: subtitleData['editMode'] ?? true,
+                    editMode: subtitleData.editMode,
                   ),
                 ),
               );

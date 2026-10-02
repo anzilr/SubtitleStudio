@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
 // Removed platform_check - using pure SAF implementation without permission checks
 import 'package:subtitle_studio/utils/ffmpeg_helper.dart';
