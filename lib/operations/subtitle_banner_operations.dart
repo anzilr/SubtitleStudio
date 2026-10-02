@@ -1,7 +1,7 @@
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/database/database_helper.dart';
 import 'package:subtitle_studio/utils/time_parser.dart';
-import 'package:subtitle_studio/services/checkpoint_manager.dart';
+import 'package:subtitle_studio/services/checkpoint_repository.dart';
 import 'package:subtitle_studio/utils/subtitle_sorting.dart'; // Enhanced subtitle sorting
 
 class SubtitleBannerOperations {
@@ -165,7 +165,7 @@ class SubtitleBannerOperations {
           ..afterState = banner);
       }
       
-      await CheckpointManager.createCheckpoint(
+      await CheckpointRepository.fromGlobal().createCheckpoint(
         sessionId: sessionId,
         subtitleCollectionId: subtitleCollectionId,
         operationType: 'add',

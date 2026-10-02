@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:subtitle_studio/database/database_instance.dart';
 import 'package:subtitle_studio/database/models/models.dart';
-import 'package:subtitle_studio/services/checkpoint_manager.dart';
+import 'package:subtitle_studio/services/checkpoint_repository.dart';
 import 'package:subtitle_studio/utils/subtitle_processor.dart';
 
 class HearingImpairedCleanupResult {
@@ -107,7 +107,7 @@ class HearingImpairedCleanupService {
 
     if (plan.deltas.isNotEmpty) {
       try {
-        await CheckpointManager.createCheckpoint(
+        await CheckpointRepository.fromGlobal().createCheckpoint(
           sessionId: sessionId,
           subtitleCollectionId: subtitleCollectionId,
           operationType: 'batch',

@@ -5,7 +5,7 @@ import 'package:subtitle_studio/widgets/subtitle_effects_sheet.dart';
 import 'package:subtitle_studio/operations/subtitle_effect_operations.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
-import 'package:subtitle_studio/services/checkpoint_manager.dart';
+import 'package:subtitle_studio/services/checkpoint_repository.dart';
 
 class SubtitleActionsMenu extends StatelessWidget {
   final TextEditingController editedController;
@@ -281,7 +281,7 @@ class SubtitleActionsMenu extends StatelessWidget {
         
         if (success) {
           // Create a checkpoint for the effect
-          await CheckpointManager.createCheckpoint(
+          await CheckpointRepository.fromGlobal().createCheckpoint(
             sessionId: sessionId,
             subtitleCollectionId: subtitleId,
             operationType: 'effect',

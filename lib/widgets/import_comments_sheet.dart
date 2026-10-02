@@ -179,7 +179,7 @@ class ImportCommentsSheetState extends ConsumerState<ImportCommentsSheet> {
                   ),
 
                   // Comments Info (shown when file is selected)
-                  if (_projectData != null) ...[
+                  if (_projectDocument != null) ...[
                     const SizedBox(height: 20),
                     Container(
                       width: double.infinity,
@@ -291,7 +291,7 @@ class ImportCommentsSheetState extends ConsumerState<ImportCommentsSheet> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: ElevatedButton(
-                            onPressed: (_projectData != null && _totalCommentsCount > 0 && !_isLoading) 
+                            onPressed: (_projectDocument != null && _totalCommentsCount > 0 && !_isLoading) 
                                 ? _importComments 
                                 : null,
                             style: ElevatedButton.styleFrom(
