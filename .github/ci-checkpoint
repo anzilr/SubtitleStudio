@@ -1,14 +1,15 @@
-Riverpod migration checkpoint 23
+Riverpod migration checkpoint 24
 Date: 2026-10-02
 Checks:
 - flutter analyze
 - flutter test
 
 Focus:
-- current post-build-gate baseline
-- completed typed subtitle import result migration
-- subtitle import repository boundary
-- encoding decoder and transform pipeline
-- five-platform build gate completed separately and removed
+- project settings persistence through injected repositories
+- marked-lines preference injection
+- secondary-subtitle preference injection
+- AI explanation preference injection
+- Olam dictionary preference injection
+- routine CI restored to analyzer + tests only after five-platform build gate
 
-Future routine CI remains analyzer + tests only.
+Platform builds intentionally disabled.
