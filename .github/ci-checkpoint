@@ -1,16 +1,14 @@
-Riverpod migration checkpoint 22
-Date: 2026-09-28
+Riverpod migration checkpoint 23
+Date: 2026-10-02
 Checks:
 - flutter analyze
 - flutter test
 
 Focus:
-- injected SubtitleImportRepository
-- subtitle processor no longer imports database_helper.dart
-- create/import/extract flows share typed persistence boundary
-- centralized subtitle transform pipeline
-- extracted encoding decoder service
-- actual decoded encoding persisted for file imports
-- UTF-8 encoding decoder regression coverage
+- current post-build-gate baseline
+- completed typed subtitle import result migration
+- subtitle import repository boundary
+- encoding decoder and transform pipeline
+- five-platform build gate completed separately and removed
 
-Platform builds intentionally disabled.
+Future routine CI remains analyzer + tests only.
