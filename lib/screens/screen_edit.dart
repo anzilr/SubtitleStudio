@@ -38,7 +38,7 @@ import 'package:subtitle_studio/widgets/first_time_instructions.dart';
 import 'package:subtitle_studio/widgets/scrolling_title_widget.dart';
 import 'package:subtitle_studio/widgets/marked_lines_sheet.dart';
 import 'package:subtitle_studio/widgets/checkpoint_sheet.dart';
-import 'package:subtitle_studio/services/checkpoint_manager.dart';
+import 'package:subtitle_studio/services/checkpoint_repository.dart';
 import 'package:subtitle_studio/widgets/subtitle_effects_sheet.dart';
 import 'package:subtitle_studio/widgets/comment_dialog.dart';
 import 'package:subtitle_studio/widgets/import_comments_sheet.dart';

@@ -230,7 +230,7 @@ extension _WaveformEditing on WaveformWidgetState {
     try {
       // Create checkpoint BEFORE updating (if sessionId is provided)
       if (widget.sessionId != null) {
-        await CheckpointManager.createEditCheckpoint(
+        await CheckpointRepository.fromGlobal().createEditCheckpoint(
           sessionId: widget.sessionId!,
           subtitleCollectionId: widget.subtitleCollectionId!,
           beforeLine: beforeSubtitle,

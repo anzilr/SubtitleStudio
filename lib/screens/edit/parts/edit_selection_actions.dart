@@ -41,7 +41,7 @@ extension _EditSelectionActions on _EditScreenState {
 
   if (batchDeltas.isNotEmpty) {
     try {
-      await CheckpointManager.createCheckpoint(
+      await CheckpointRepository.fromGlobal().createCheckpoint(
         sessionId: widget.sessionId,
         subtitleCollectionId: widget.subtitleCollectionId,
         operationType: 'delete',
