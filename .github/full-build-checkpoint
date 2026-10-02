@@ -1,6 +1,6 @@
 Five-platform build gate
 Date: 2026-10-02
-Attempt: 3
+Attempt: 4
 Baseline:
 - Flutter 3.47.5
 - Android debug APK
@@ -9,9 +9,10 @@ Baseline:
 - macOS debug desktop without CI signing
 - iOS debug no-codesign
 
-Corrections validated so far:
-- macOS compiles successfully with CI signing disabled.
-- Linux installs json-glib for ffmpeg_kit.
-- Linux installs keybinder-3.0 for hotkey_manager.
+Linux native requirements discovered and included:
+- libjson-glib-dev for ffmpeg_kit
+- libkeybinder-3.0-dev for hotkey_manager
+- libmpv-dev for media_kit
 
+Android, iOS, macOS, and Windows are already green on the corrected gate.
 This file intentionally triggers only the isolated full-platform build workflow.
