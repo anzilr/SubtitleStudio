@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:flutter/services.dart';
 import 'package:subtitle_studio/database/models/models.dart';
-import 'package:subtitle_studio/database/models/preferences_model.dart';
 import 'package:subtitle_studio/utils/time_parser.dart';
 import 'package:subtitle_studio/utils/responsive_layout.dart';
 import 'package:subtitle_studio/widgets/comment_dialog.dart';
@@ -49,7 +50,7 @@ class _HoverableButtonState extends State<_HoverableButton> {
   }
 }
 
-class MarkedLinesSheet extends StatefulWidget {
+class MarkedLinesSheet extends ConsumerStatefulWidget {
   final List<SubtitleLine> markedLines;
   final List<SubtitleLine>? allLinesWithComments; // All lines that have comments (marked or unmarked)
   final Function(int) onLineSelected;
@@ -72,10 +73,10 @@ class MarkedLinesSheet extends StatefulWidget {
   });
 
   @override
-  MarkedLinesSheetState createState() => MarkedLinesSheetState();
+  ConsumerState<MarkedLinesSheet> createState() => MarkedLinesSheetState();
 }
 
-class MarkedLinesSheetState extends State<MarkedLinesSheet> {
+class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
   late List<SubtitleLine> _currentMarkedLines;
   bool _showAllComments = false; // Toggle to show all lines with comments
   String _resolvedFilter = 'all'; // Filter: 'all', 'resolved', 'unresolved'
@@ -136,7 +137,9 @@ class MarkedLinesSheetState extends State<MarkedLinesSheet> {
   }
 
   Future<void> _loadShowAllCommentsPreference() async {
-    final showAllComments = await PreferencesModel.getShowAllComments();
+    final showAllComments = await ref
+        .read(appPreferencesRepositoryProvider)
+        .getShowAllComments();
     if (mounted) {
       setState(() {
         _showAllComments = showAllComments;
@@ -345,7 +348,9 @@ class MarkedLinesSheetState extends State<MarkedLinesSheet> {
                               _showAllComments = newValue;
                             });
                             // Save the preference
-                            await PreferencesModel.setShowAllComments(newValue);
+                            await ref
+        .read(appPreferencesRepositoryProvider)
+        .setShowAllComments(newValue);
                           },
                           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),

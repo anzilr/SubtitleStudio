@@ -173,4 +173,12 @@ class AppPreferencesRepository {
       await _isar.preferences.clear();
     });
   }
+  Future<bool> getShowAllComments() async {
+    return (await _getPreferences()).showAllComments;
+  }
+
+  Future<void> setShowAllComments(bool value) =>
+      _updatePreferences((p) => p.showAllComments = value);
+
+
 }
