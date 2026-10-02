@@ -1,0 +1,11 @@
+Five-platform build gate
+Date: 2026-10-02
+Baseline:
+- Flutter 3.47.5
+- Android debug APK
+- Linux debug desktop
+- Windows debug desktop
+- macOS debug desktop
+- iOS debug no-codesign
+
+This file intentionally triggers only the isolated full-platform build workflow.
