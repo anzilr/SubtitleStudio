@@ -33,7 +33,7 @@ class AiExplanationPreferencesRepository {
     return (await _getPreferences()).aiExplanationPrompt;
   }
   Future<int> getAiExplanationContextLines() async {
-    return (await _getPreferences()).aiExplanationContextLines;
+    return (await _getPreferences()).aiExplanationContextLines ?? 3;
   }
 
   Future<void> setAiExplanationPrompt(String? value) async {
