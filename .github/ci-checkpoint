@@ -1,16 +1,15 @@
-Riverpod migration checkpoint 24b
+Riverpod migration checkpoint 25
 Date: 2026-10-02
 Checks:
 - flutter analyze
 - flutter test
 
 Focus:
-- project settings persistence through injected repositories
-- marked-lines preference injection
-- secondary-subtitle preference injection
-- AI explanation preference injection
-- Olam dictionary preference injection
-- typed import cleanup
-- analyzer corrections from checkpoint 24
+- pure checkpoint state reducer extraction
+- checkpoint snapshot/retention policy extraction
+- checkpoint timeline/tree traversal extraction
+- legacy DatabaseHelper checkpoint call routed through repository
+- checkpoint preferences isolated from static PreferencesModel
+- new checkpoint reducer/policy/timeline regression tests
 
 Platform builds intentionally disabled.
