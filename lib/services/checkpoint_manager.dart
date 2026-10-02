@@ -38,6 +38,7 @@ import 'package:subtitle_studio/database/database_instance.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 import 'package:subtitle_studio/database/models/preferences_model.dart';
 import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
+import 'package:subtitle_studio/services/checkpoint_policy.dart';
 import 'dart:convert';
 
 class CheckpointManager {
@@ -158,25 +159,21 @@ class CheckpointManager {
       final checkpointStrategy = await getCheckpointStrategy();
       final snapshotInterval = await getSnapshotInterval();
       
-      // Determine if this should be a snapshot based on strategy
-      bool shouldCreateSnapshot = forceSnapshot;
-      
-      if (!shouldCreateSnapshot) {
-        if (checkpointStrategy == 'snapshot') {
-          // Always create snapshots
-          shouldCreateSnapshot = true;
-        } else if (checkpointStrategy == 'delta') {
-          // Never create automatic snapshots (only manual/forced)
-          shouldCreateSnapshot = false;
-        } else {
-          // Hybrid mode: Count checkpoints since last snapshot
-          final checkpointsSinceSnapshot = await _countCheckpointsSinceLastSnapshot(
-            sessionId: sessionId,
-          );
-          
-          shouldCreateSnapshot = checkpointsSinceSnapshot >= snapshotInterval;
-        }
+      var checkpointsSinceSnapshot = 0;
+      if (!forceSnapshot &&
+          checkpointStrategy != 'snapshot' &&
+          checkpointStrategy != 'delta') {
+        checkpointsSinceSnapshot = await _countCheckpointsSinceLastSnapshot(
+          sessionId: sessionId,
+        );
       }
+
+      final shouldCreateSnapshot = CheckpointPolicy.shouldCreateSnapshot(
+        forceSnapshot: forceSnapshot,
+        strategy: checkpointStrategy,
+        checkpointsSinceSnapshot: checkpointsSinceSnapshot,
+        snapshotInterval: snapshotInterval,
+      );
       
       // Get current subtitle collection state (for fallback if preOperationState not provided)
       final collection = await isar.subtitleCollections.get(subtitleCollectionId);
@@ -940,25 +937,21 @@ class CheckpointManager {
       final allCheckpoints = await getCheckpointsForSession(sessionId);
       final maxCheckpoints = await getMaxCheckpoints();
       
-      // Only cleanup if there's a limit (0 = unlimited)
-      if (maxCheckpoints > 0 && allCheckpoints.length > maxCheckpoints) {
-        // Keep only the most recent checkpoints
-        final toDelete = allCheckpoints
-            .skip(maxCheckpoints)
-            .where((c) => 
-              c.operationType != 'manual' && // Keep manual checkpoints
-              !(c.operationType == 'snapshot' && c.description == 'Initial state') // Keep initial snapshot
-            )
-            .toList();
-        
-        if (toDelete.isNotEmpty) {
-          await isar.writeTxn(() async {
-            final idsToDelete = toDelete.map((c) => c.id).toList();
-            await isar.checkpoints.deleteAll(idsToDelete);
-          });
-          
-          logInfo('Cleaned up ${toDelete.length} old checkpoints (limit: $maxCheckpoints, preserved initial snapshot and manual checkpoints)');
-        }
+      final toDelete = CheckpointPolicy.cleanupCandidates(
+        checkpoints: allCheckpoints,
+        maxCheckpoints: maxCheckpoints,
+      );
+
+      if (toDelete.isNotEmpty) {
+        await isar.writeTxn(() async {
+          final idsToDelete = toDelete.map((c) => c.id).toList();
+          await isar.checkpoints.deleteAll(idsToDelete);
+        });
+
+        logInfo(
+          'Cleaned up ${toDelete.length} old checkpoints '
+          '(limit: $maxCheckpoints, preserved initial snapshot and manual checkpoints)',
+        );
       }
     } catch (e) {
       logError('Failed to cleanup checkpoints: $e');
