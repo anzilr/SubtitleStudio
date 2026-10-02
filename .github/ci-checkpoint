@@ -1,15 +1,14 @@
-Riverpod migration checkpoint 25
+Riverpod migration checkpoint 26
 Date: 2026-10-02
 Checks:
 - flutter analyze
 - flutter test
 
 Focus:
-- pure checkpoint state reducer extraction
-- checkpoint snapshot/retention policy extraction
-- checkpoint timeline/tree traversal extraction
-- legacy DatabaseHelper checkpoint call routed through repository
-- checkpoint preferences isolated from static PreferencesModel
-- new checkpoint reducer/policy/timeline regression tests
+- typed project comment import plan and repository
+- checkpoint manager converted from static global service to injected Isar instance
+- checkpoint repository now owns manager instance
+- temporary fromGlobal bridge retained only for legacy static orchestration
+- checkpoint pure reducer/policy/timeline tests retained
 
 Platform builds intentionally disabled.
