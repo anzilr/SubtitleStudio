@@ -31,7 +31,7 @@ import 'package:dio/dio.dart';
 import 'package:archive/archive.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:subtitle_studio/database/models/models.dart';
-import 'package:subtitle_studio/database/models/preferences_model.dart';
+import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/widgets/olam/olam_dictionary_repository.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
@@ -217,7 +217,7 @@ class _OlamDictionaryWidgetState extends ConsumerState<OlamDictionaryWidget>
   /// Load last update date from shared preferences
   Future<void> _loadLastUpdateDate() async {
     try {
-      final lastUpdate = await PreferencesModel.getOlamLastUpdateDate();
+      final lastUpdate = await ref.read(appPreferencesRepositoryProvider).getOlamLastUpdateDate();
       
       String displayDate = 'Never';
       if (lastUpdate != null) {
@@ -243,8 +243,8 @@ class _OlamDictionaryWidgetState extends ConsumerState<OlamDictionaryWidget>
   /// Load search filter preferences
   Future<void> _loadSearchFilters() async {
     try {
-      final wholeWordSearch = await PreferencesModel.getOlamWholeWordSearch();
-      final caseSensitiveSearch = await PreferencesModel.getOlamCaseSensitiveSearch();
+      final wholeWordSearch = await ref.read(appPreferencesRepositoryProvider).getOlamWholeWordSearch();
+      final caseSensitiveSearch = await ref.read(appPreferencesRepositoryProvider).getOlamCaseSensitiveSearch();
       
       setState(() {
         _wholeWordSearch = wholeWordSearch;
@@ -285,7 +285,7 @@ class _OlamDictionaryWidgetState extends ConsumerState<OlamDictionaryWidget>
   Future<void> _saveLastUpdateDate() async {
     try {
       final now = DateTime.now();
-      await PreferencesModel.setOlamLastUpdateDate(now.toIso8601String());
+      await ref.read(appPreferencesRepositoryProvider).setOlamLastUpdateDate(now.toIso8601String());
       
       // Format date for display (e.g., "Dec 25, 2024")
       final monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -839,7 +839,7 @@ class _OlamDictionaryWidgetState extends ConsumerState<OlamDictionaryWidget>
                   setState(() {
                     _wholeWordSearch = value ?? false;
                   });
-                  await PreferencesModel.setOlamWholeWordSearch(_wholeWordSearch);
+                  await ref.read(appPreferencesRepositoryProvider).setOlamWholeWordSearch(_wholeWordSearch);
                 }
               },
               title: Text(
@@ -862,7 +862,7 @@ class _OlamDictionaryWidgetState extends ConsumerState<OlamDictionaryWidget>
                   setState(() {
                     _caseSensitiveSearch = value ?? false;
                   });
-                  await PreferencesModel.setOlamCaseSensitiveSearch(_caseSensitiveSearch);
+                  await ref.read(appPreferencesRepositoryProvider).setOlamCaseSensitiveSearch(_caseSensitiveSearch);
                 }
               },
               title: Text(

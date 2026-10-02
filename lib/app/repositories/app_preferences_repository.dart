@@ -181,4 +181,26 @@ class AppPreferencesRepository {
       _updatePreferences((p) => p.showAllComments = value);
 
 
+  Future<String?> getOlamLastUpdateDate() async {
+    return (await _getPreferences()).olamLastUpdateDate;
+  }
+
+  Future<void> setOlamLastUpdateDate(String value) =>
+      _updatePreferences((p) => p.olamLastUpdateDate = value);
+
+  Future<bool> getOlamWholeWordSearch() async {
+    return (await _getPreferences()).olamWholeWordSearch;
+  }
+
+  Future<void> setOlamWholeWordSearch(bool value) =>
+      _updatePreferences((p) => p.olamWholeWordSearch = value);
+
+  Future<bool> getOlamCaseSensitiveSearch() async {
+    return (await _getPreferences()).olamCaseSensitiveSearch;
+  }
+
+  Future<void> setOlamCaseSensitiveSearch(bool value) =>
+      _updatePreferences((p) => p.olamCaseSensitiveSearch = value);
+
+
 }
