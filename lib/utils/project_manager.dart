@@ -19,19 +19,22 @@ import 'package:subtitle_studio/services/project_file_service.dart';
 /// - Managing project metadata and versioning
 class ProjectManager {
   static const String projectVersion = '2.0';
-  static CheckpointRepository get _checkpointRepository =>
-      CheckpointRepository.fromGlobal();
   
   /// Auto-save project file after importing/creating subtitles
   /// This is called automatically when new content is imported
   static Future<String?> autoSaveProject({
     required BuildContext context,
+    required CheckpointRepository checkpointRepository,
     required Session session,
     required SubtitleCollection subtitleCollection,
     String? suggestedFileName,
   }) async {
     try {
-      final projectData = await _createProjectData(session, subtitleCollection);
+      final projectData = await _createProjectData(
+        session,
+        subtitleCollection,
+        checkpointRepository,
+      );
       final fileName = (suggestedFileName ?? session.fileName)
           .replaceAll(RegExp(r'\.[^.]*$'), '') + '.msone';
       
@@ -68,12 +71,17 @@ class ProjectManager {
   /// Save project to existing location or prompt for new location
   static Future<String?> saveProject({
     required BuildContext context,
+    required CheckpointRepository checkpointRepository,
     required Session session,
     required SubtitleCollection subtitleCollection,
     bool forceNewLocation = false,
   }) async {
     try {
-      final projectData = await _createProjectData(session, subtitleCollection);
+      final projectData = await _createProjectData(
+        session,
+        subtitleCollection,
+        checkpointRepository,
+      );
       
       // If we have an existing project file path and not forcing new location
       if (!forceNewLocation && session.projectFilePath != null) {
@@ -128,8 +136,12 @@ class ProjectManager {
   static Future<Map<String, dynamic>> _createProjectData(
     Session session,
     SubtitleCollection subtitleCollection,
+    CheckpointRepository checkpointRepository,
   ) async {
-    final checkpoints = await _fetchCheckpoints(session.id);
+    final checkpoints = await _fetchCheckpoints(
+      session.id,
+      checkpointRepository,
+    );
 
     return ProjectDocumentBuilder.build(
       session: session,
@@ -140,10 +152,13 @@ class ProjectManager {
     );
   }
 
-  static Future<List<Checkpoint>> _fetchCheckpoints(int sessionId) async {
+  static Future<List<Checkpoint>> _fetchCheckpoints(
+    int sessionId,
+    CheckpointRepository checkpointRepository,
+  ) async {
     try {
       final checkpoints =
-          await _checkpointRepository.getCheckpointsForSession(sessionId);
+          await checkpointRepository.getCheckpointsForSession(sessionId);
 
       if (kDebugMode) {
         debugPrint(

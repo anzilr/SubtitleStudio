@@ -138,6 +138,7 @@ extension _EditProjectActions on _EditScreenState {
       if (context.mounted) {
         final projectPath = await ProjectManager.saveProject(
           context: context,
+          checkpointRepository: ref.read(checkpointRepositoryProvider),
           session: session,
           subtitleCollection: subtitleCollection,
         );

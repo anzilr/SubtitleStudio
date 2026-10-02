@@ -15,6 +15,10 @@ mixin AutoProjectSaver<T extends StatefulWidget> on State<T> {
       ProviderScope.containerOf(context, listen: false)
           .read(projectRepositoryProvider);
 
+  CheckpointRepository get _checkpointRepository =>
+      ProviderScope.containerOf(context, listen: false)
+          .read(checkpointRepositoryProvider);
+
   
   /// Auto-save project after subtitle data is created
   /// This should be called after successfully importing/creating subtitle data
@@ -27,6 +31,7 @@ mixin AutoProjectSaver<T extends StatefulWidget> on State<T> {
     try {
       final projectPath = await ProjectManager.autoSaveProject(
         context: context,
+        checkpointRepository: _checkpointRepository,
         session: session,
         subtitleCollection: subtitleCollection,
         suggestedFileName: suggestedFileName,
@@ -89,6 +94,7 @@ mixin AutoProjectSaver<T extends StatefulWidget> on State<T> {
     if (shouldSave == true && mounted) {
       final projectPath = await ProjectManager.saveProject(
         context: context,
+        checkpointRepository: _checkpointRepository,
         session: session,
         subtitleCollection: subtitleCollection,
         forceNewLocation: true,
@@ -129,6 +135,10 @@ class ProjectCreationHelper {
       if (autoSave) {
         final projectPath = await ProjectManager.autoSaveProject(
           context: context,
+          checkpointRepository: ProviderScope.containerOf(
+            context,
+            listen: false,
+          ).read(checkpointRepositoryProvider),
           session: session,
           subtitleCollection: subtitleCollection,
           suggestedFileName: suggestedFileName,
