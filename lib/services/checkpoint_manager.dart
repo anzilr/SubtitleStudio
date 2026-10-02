@@ -36,26 +36,29 @@ import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/database/database_instance.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
-import 'package:subtitle_studio/database/models/preferences_model.dart';
 import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
 import 'package:subtitle_studio/services/checkpoint_policy.dart';
 import 'package:subtitle_studio/services/checkpoint_timeline.dart';
+import 'package:subtitle_studio/services/checkpoint_preferences_repository.dart';
 import 'dart:convert';
 
 class CheckpointManager {
+  static CheckpointPreferencesRepository get _preferences =>
+      CheckpointPreferencesRepository(isar);
+
   // Get maximum checkpoints from preferences (0 = unlimited)
-  static Future<int> getMaxCheckpoints() async {
-    return await PreferencesModel.getMaxCheckpoints();
+  static Future<int> getMaxCheckpoints() {
+    return _preferences.getMaxCheckpoints();
   }
-  
+
   // Get snapshot interval from preferences
-  static Future<int> getSnapshotInterval() async {
-    return await PreferencesModel.getSnapshotInterval();
+  static Future<int> getSnapshotInterval() {
+    return _preferences.getSnapshotInterval();
   }
-  
+
   // Get checkpoint strategy from preferences ('hybrid', 'snapshot', or 'delta')
-  static Future<String> getCheckpointStrategy() async {
-    return await PreferencesModel.getCheckpointStrategy();
+  static Future<String> getCheckpointStrategy() {
+    return _preferences.getCheckpointStrategy();
   }
   
   /// Creates initial snapshot of the database state
