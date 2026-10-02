@@ -32,4 +32,38 @@ class AiExplanationPreferencesRepository {
   Future<String?> getAiExplanationPrompt() async {
     return (await _getPreferences()).aiExplanationPrompt;
   }
+  Future<int> getAiExplanationContextLines() async {
+    return (await _getPreferences()).aiExplanationContextLines;
+  }
+
+  Future<void> setAiExplanationPrompt(String? value) async {
+    await _updatePreferences((preferences) {
+      preferences.aiExplanationPrompt = value;
+    });
+  }
+
+  Future<void> setAiExplanationContextLines(int value) async {
+    await _updatePreferences((preferences) {
+      preferences.aiExplanationContextLines = value;
+    });
+  }
+
+  Future<void> setGeminiModel(String value) async {
+    await _updatePreferences((preferences) {
+      preferences.geminiModel = value;
+    });
+  }
+
+  Future<void> _updatePreferences(
+    void Function(Preferences preferences) update,
+  ) async {
+    final existing = await _isar.preferences.where().findFirst();
+    final preferences = existing ?? Preferences(autoSave: true);
+    update(preferences);
+
+    await _isar.writeTxn(() async {
+      await _isar.preferences.put(preferences);
+    });
+  }
+
 }

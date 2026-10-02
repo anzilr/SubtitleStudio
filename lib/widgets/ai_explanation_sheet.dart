@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart' show ConsumerStatefulWidget, ConsumerState;
+import 'package:flutter_riverpod/flutter_riverpod.dart' show ConsumerStatefulWidget, ConsumerState, ProviderScope;
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_gemini/flutter_gemini.dart';
 import 'package:subtitle_studio/features/ai_explanation/ai_explanation_controller.dart';
 import 'package:subtitle_studio/features/ai_explanation/ai_explanation_state.dart';
-import 'package:subtitle_studio/database/models/preferences_model.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/services/gemini_models_service.dart';
 
@@ -56,7 +55,9 @@ Keep the explanation concise and easy to understand.''';
     }
 
     // Check if API key is configured
-    final apiKey = await PreferencesModel.getGeminiApiKey();
+    final apiKey = await ProviderScope.containerOf(context)
+        .read(aiExplanationPreferencesRepositoryProvider)
+        .getGeminiApiKey();
     if (apiKey == null || apiKey.isEmpty) {
       if (!context.mounted) return;
       SnackbarHelper.showError(
@@ -172,9 +173,10 @@ class _AiExplanationSheetContentState extends ConsumerState<_AiExplanationSheetC
   }
 
   Future<void> _loadSettings() async {
-    final prompt = await PreferencesModel.getAiExplanationPrompt();
-    final model = await PreferencesModel.getGeminiModel();
-    final contextLines = await PreferencesModel.getAiExplanationContextLines();
+    final preferences = ref.read(aiExplanationPreferencesRepositoryProvider);
+    final prompt = await preferences.getAiExplanationPrompt();
+    final model = await preferences.getGeminiModel();
+    final contextLines = await preferences.getAiExplanationContextLines();
     
     setState(() {
       _customPrompt = prompt;
@@ -237,7 +239,9 @@ class _AiExplanationSheetContentState extends ConsumerState<_AiExplanationSheetC
   }
 
   Future<void> _savePrompt() async {
-    await PreferencesModel.setAiExplanationPrompt(_promptController.text);
+    await ref
+        .read(aiExplanationPreferencesRepositoryProvider)
+        .setAiExplanationPrompt(_promptController.text);
     setState(() {
       _customPrompt = _promptController.text;
       _isEditingPrompt = false;
@@ -247,7 +251,9 @@ class _AiExplanationSheetContentState extends ConsumerState<_AiExplanationSheetC
   }
 
   Future<void> _resetPrompt() async {
-    await PreferencesModel.setAiExplanationPrompt(null);
+    await ref
+        .read(aiExplanationPreferencesRepositoryProvider)
+        .setAiExplanationPrompt(null);
     setState(() {
       _customPrompt = null;
       _promptController.text = AiExplanationSheet.defaultPrompt;
@@ -287,12 +293,16 @@ class _AiExplanationSheetContentState extends ConsumerState<_AiExplanationSheetC
     });
 
     _recalculateContextLines();
-    PreferencesModel.setAiExplanationContextLines(newCount);
+    ref
+        .read(aiExplanationPreferencesRepositoryProvider)
+        .setAiExplanationContextLines(newCount);
   }
 
   Future<void> _changeModel(String? newModel) async {
     if (newModel == null || newModel == _currentModel) return;
-    await PreferencesModel.setGeminiModel(newModel);
+    await ref
+        .read(aiExplanationPreferencesRepositoryProvider)
+        .setGeminiModel(newModel);
     setState(() {
       _currentModel = newModel;
     });
@@ -329,7 +339,9 @@ class _AiExplanationSheetContentState extends ConsumerState<_AiExplanationSheetC
     });
 
     try {
-      final apiKey = await PreferencesModel.getGeminiApiKey();
+      final apiKey = await ref
+          .read(aiExplanationPreferencesRepositoryProvider)
+          .getGeminiApiKey();
       final models = await GeminiModelsService.fetchAvailableModels(
         apiKey: apiKey,
       );
@@ -352,7 +364,9 @@ class _AiExplanationSheetContentState extends ConsumerState<_AiExplanationSheetC
           if (!currentModelExists) {
             // Set to first available model
             final newModel = _availableModels.first.name ?? 'models/gemini-2.5-flash';
-            await PreferencesModel.setGeminiModel(newModel);
+            await ref
+        .read(aiExplanationPreferencesRepositoryProvider)
+        .setGeminiModel(newModel);
             setState(() {
               _currentModel = newModel;
             });
