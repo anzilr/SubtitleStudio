@@ -32,7 +32,7 @@
 // - vs Pure snapshots: 5MB (10x reduction)
 // - vs Pure deltas: Potential accuracy issues (now solved!)
 
-import 'package:isar_community/_isar.dart';
+import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';

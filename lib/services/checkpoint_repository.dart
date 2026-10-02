@@ -5,10 +5,9 @@ import 'package:subtitle_studio/services/checkpoint_manager.dart';
 
 /// Injectable checkpoint boundary used by migrated repositories.
 ///
-/// The legacy CheckpointManager still owns the checkpoint algorithm and global
-/// persistence internally. Keeping that implementation behind this facade lets
-/// feature repositories stop depending on static global APIs now, while the
-/// storage/policy split can be completed in a later, separately tested phase.
+/// Checkpoint algorithms and persistence are owned by an Isar-injected
+/// CheckpointManager instance. The [fromGlobal] factory is a temporary bridge
+/// for legacy static orchestration code that has not yet been Riverpod-injected.
 class CheckpointRepository {
   final CheckpointManager _manager;
 
