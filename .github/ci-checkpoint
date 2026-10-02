@@ -1,4 +1,4 @@
-Riverpod migration checkpoint 26
+Riverpod migration checkpoint 26b
 Date: 2026-10-02
 Checks:
 - flutter analyze
@@ -7,8 +7,8 @@ Checks:
 Focus:
 - typed project comment import plan and repository
 - checkpoint manager converted from static global service to injected Isar instance
-- checkpoint repository now owns manager instance
-- temporary fromGlobal bridge retained only for legacy static orchestration
+- remaining waveform/editor/banner/hearing/actions checkpoint callers routed through repository facade
+- stale import-comments typed migration guards corrected
 - checkpoint pure reducer/policy/timeline tests retained
 
 Platform builds intentionally disabled.
