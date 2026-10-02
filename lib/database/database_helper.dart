@@ -35,7 +35,8 @@ import 'dart:math';                           // Math utilities for ID generatio
 import 'dart:io';                             // File and Directory operations
 import 'package:path_provider/path_provider.dart'; // App directories access
 
-const CheckpointRepository _checkpointRepository = CheckpointRepository();
+CheckpointRepository get _checkpointRepository =>
+    CheckpointRepository.fromGlobal();
 
 /// Updates the macOsSrtBookmark for a SubtitleCollection
 Future<bool> updateSubtitleCollectionMacOsSrtBookmark(int subtitleCollectionId, String? bookmarkString) async {

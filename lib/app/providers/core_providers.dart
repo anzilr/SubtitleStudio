@@ -36,7 +36,7 @@ final appDataMaintenanceRepositoryProvider =
 });
 
 final checkpointRepositoryProvider = Provider<CheckpointRepository>((ref) {
-  return const CheckpointRepository();
+  return CheckpointRepository(ref.watch(isarProvider));
 });
 
 

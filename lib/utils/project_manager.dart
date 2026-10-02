@@ -19,8 +19,8 @@ import 'package:subtitle_studio/services/project_file_service.dart';
 /// - Managing project metadata and versioning
 class ProjectManager {
   static const String projectVersion = '2.0';
-  static const CheckpointRepository _checkpointRepository =
-      CheckpointRepository();
+  static CheckpointRepository get _checkpointRepository =>
+      CheckpointRepository.fromGlobal();
   
   /// Auto-save project file after importing/creating subtitles
   /// This is called automatically when new content is imported

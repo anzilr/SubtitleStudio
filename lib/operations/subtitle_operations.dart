@@ -12,8 +12,8 @@ import '../widgets/merge_confirmation_sheet.dart';
 import '../widgets/split_confirmation_sheet.dart';
 
 class SubtitleOperations {
-  static const CheckpointRepository _checkpointRepository =
-      CheckpointRepository();
+  static CheckpointRepository get _checkpointRepository =>
+      CheckpointRepository.fromGlobal();
   static final RegExp positionRegex = RegExp(r'^\{\\an[1-9]\}');
 
   static void showDeleteConfirmation({

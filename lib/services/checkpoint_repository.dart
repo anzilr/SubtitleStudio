@@ -1,4 +1,6 @@
+import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/database/models/models.dart';
+import 'package:subtitle_studio/database/database_instance.dart' as legacy_database;
 import 'package:subtitle_studio/services/checkpoint_manager.dart';
 
 /// Injectable checkpoint boundary used by migrated repositories.
@@ -8,13 +10,22 @@ import 'package:subtitle_studio/services/checkpoint_manager.dart';
 /// feature repositories stop depending on static global APIs now, while the
 /// storage/policy split can be completed in a later, separately tested phase.
 class CheckpointRepository {
-  const CheckpointRepository();
+  final CheckpointManager _manager;
+
+  CheckpointRepository(Isar isar) : _manager = CheckpointManager(isar);
+
+  /// Temporary bridge for legacy static orchestration code.
+  ///
+  /// New Riverpod-managed code must use the injected constructor.
+  factory CheckpointRepository.fromGlobal() {
+    return CheckpointRepository(legacy_database.isar);
+  }
 
   Future<int> createInitialSnapshot({
     required int sessionId,
     required int subtitleCollectionId,
   }) {
-    return CheckpointManager.createInitialSnapshot(
+    return _manager.createInitialSnapshot(
       sessionId: sessionId,
       subtitleCollectionId: subtitleCollectionId,
     );
@@ -26,7 +37,7 @@ class CheckpointRepository {
     required SubtitleLine beforeLine,
     required SubtitleLine afterLine,
   }) {
-    return CheckpointManager.createEditCheckpoint(
+    return _manager.createEditCheckpoint(
       sessionId: sessionId,
       subtitleCollectionId: subtitleCollectionId,
       beforeLine: beforeLine,
@@ -44,7 +55,7 @@ class CheckpointRepository {
     bool forceSnapshot = false,
     List<SubtitleLine>? preOperationState,
   }) {
-    return CheckpointManager.createCheckpoint(
+    return _manager.createCheckpoint(
       sessionId: sessionId,
       subtitleCollectionId: subtitleCollectionId,
       operationType: operationType,
@@ -56,14 +67,14 @@ class CheckpointRepository {
     );
   }
   Future<List<Checkpoint>> getCheckpointsForSession(int sessionId) {
-    return CheckpointManager.getCheckpointsForSession(sessionId);
+    return _manager.getCheckpointsForSession(sessionId);
   }
 
   Future<bool> undoToCheckpoint({
     required int checkpointId,
     required int sessionId,
   }) {
-    return CheckpointManager.undoToCheckpoint(
+    return _manager.undoToCheckpoint(
       checkpointId: checkpointId,
       sessionId: sessionId,
     );
@@ -74,7 +85,7 @@ class CheckpointRepository {
     required int subtitleCollectionId,
     String? customDescription,
   }) {
-    return CheckpointManager.createManualCheckpoint(
+    return _manager.createManualCheckpoint(
       sessionId: sessionId,
       subtitleCollectionId: subtitleCollectionId,
       customDescription: customDescription,
@@ -87,7 +98,7 @@ class CheckpointRepository {
     required SubtitleLine deletedLine,
     required int deletedIndex,
   }) {
-    return CheckpointManager.createDeleteCheckpoint(
+    return _manager.createDeleteCheckpoint(
       sessionId: sessionId,
       subtitleCollectionId: subtitleCollectionId,
       deletedLine: deletedLine,
@@ -102,7 +113,7 @@ class CheckpointRepository {
     required int insertIndex,
     List<SubtitleLine>? preOperationState,
   }) {
-    return CheckpointManager.createAddCheckpoint(
+    return _manager.createAddCheckpoint(
       sessionId: sessionId,
       subtitleCollectionId: subtitleCollectionId,
       addedLine: addedLine,
@@ -119,7 +130,7 @@ class CheckpointRepository {
     required SubtitleLine secondPart,
     List<SubtitleLine>? preOperationState,
   }) {
-    return CheckpointManager.createSplitCheckpoint(
+    return _manager.createSplitCheckpoint(
       sessionId: sessionId,
       subtitleCollectionId: subtitleCollectionId,
       originalLine: originalLine,
@@ -137,7 +148,7 @@ class CheckpointRepository {
     required SubtitleLine mergedLine,
     List<SubtitleLine>? preOperationState,
   }) {
-    return CheckpointManager.createMergeCheckpoint(
+    return _manager.createMergeCheckpoint(
       sessionId: sessionId,
       subtitleCollectionId: subtitleCollectionId,
       firstLine: firstLine,

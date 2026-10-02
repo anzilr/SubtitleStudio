@@ -32,9 +32,8 @@
 // - vs Pure snapshots: 5MB (10x reduction)
 // - vs Pure deltas: Potential accuracy issues (now solved!)
 
-import 'package:isar_community/isar.dart';
+import 'package:isar_community/_isar.dart';
 import 'package:subtitle_studio/database/models/models.dart';
-import 'package:subtitle_studio/database/database_instance.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
 import 'package:subtitle_studio/services/checkpoint_policy.dart';
@@ -43,39 +42,42 @@ import 'package:subtitle_studio/services/checkpoint_preferences_repository.dart'
 import 'dart:convert';
 
 class CheckpointManager {
-  static CheckpointPreferencesRepository get _preferences =>
-      CheckpointPreferencesRepository(isar);
+  final Isar _isar;
+  final CheckpointPreferencesRepository _preferences;
+
+  CheckpointManager(this._isar)
+      : _preferences = CheckpointPreferencesRepository(_isar);
 
   // Get maximum checkpoints from preferences (0 = unlimited)
-  static Future<int> getMaxCheckpoints() {
+  Future<int> getMaxCheckpoints() {
     return _preferences.getMaxCheckpoints();
   }
 
   // Get snapshot interval from preferences
-  static Future<int> getSnapshotInterval() {
+  Future<int> getSnapshotInterval() {
     return _preferences.getSnapshotInterval();
   }
 
   // Get checkpoint strategy from preferences ('hybrid', 'snapshot', or 'delta')
-  static Future<String> getCheckpointStrategy() {
+  Future<String> getCheckpointStrategy() {
     return _preferences.getCheckpointStrategy();
   }
   
   /// Creates initial snapshot of the database state
   /// This should be called when opening a session for the first time
-  static Future<int> createInitialSnapshot({
+  Future<int> createInitialSnapshot({
     required int sessionId,
     required int subtitleCollectionId,
   }) async {
     try {
-      final collection = await isar.subtitleCollections.get(subtitleCollectionId);
+      final collection = await _isar.subtitleCollections.get(subtitleCollectionId);
       if (collection == null) {
         logWarning('Subtitle collection not found for initial snapshot: $subtitleCollectionId');
         return 0; // Return 0 to indicate no snapshot was created
       }
       
       // Check if initial snapshot already exists
-      final existingInitial = await isar.checkpoints
+      final existingInitial = await _isar.checkpoints
           .filter()
           .sessionIdEqualTo(sessionId)
           .subtitleCollectionIdEqualTo(subtitleCollectionId)
@@ -104,8 +106,8 @@ class CheckpointManager {
       );
       
       int checkpointId = 0;
-      await isar.writeTxn(() async {
-        checkpointId = await isar.checkpoints.put(checkpoint);
+      await _isar.writeTxn(() async {
+        checkpointId = await _isar.checkpoints.put(checkpoint);
       });
       
       logInfo('Initial snapshot created: ID $checkpointId with ${collection.lines.length} lines');
@@ -130,7 +132,7 @@ class CheckpointManager {
   /// - [preOperationState]: Optional pre-operation state for snapshots (if null, current DB state is used)
   /// 
   /// Returns the ID of the created checkpoint
-  static Future<int> createCheckpoint({
+  Future<int> createCheckpoint({
     required int sessionId,
     required int subtitleCollectionId,
     required String operationType,
@@ -147,7 +149,7 @@ class CheckpointManager {
       // CHECK FOR FUTURE CHECKPOINTS: If current head has children, delete them
       // This happens when user restores to a checkpoint and then makes new changes
       if (currentHead != null) {
-        final futureCheckpoints = await isar.checkpoints
+        final futureCheckpoints = await _isar.checkpoints
             .filter()
             .parentCheckpointIdEqualTo(currentHead.id)
             .findAll();
@@ -180,7 +182,7 @@ class CheckpointManager {
       );
       
       // Get current subtitle collection state (for fallback if preOperationState not provided)
-      final collection = await isar.subtitleCollections.get(subtitleCollectionId);
+      final collection = await _isar.subtitleCollections.get(subtitleCollectionId);
       if (collection == null) {
         throw Exception('Subtitle collection not found');
       }
@@ -215,8 +217,8 @@ class CheckpointManager {
       );
       
       int checkpointId = 0;
-      await isar.writeTxn(() async {
-        checkpointId = await isar.checkpoints.put(checkpoint);
+      await _isar.writeTxn(() async {
+        checkpointId = await _isar.checkpoints.put(checkpoint);
       });
       
       logInfo('Checkpoint created: $operationType - $description (ID: $checkpointId, Type: ${checkpoint.checkpointType})');
@@ -233,14 +235,14 @@ class CheckpointManager {
   
   /// Creates a checkpoint for a delete operation
   /// This should be called BEFORE the delete operation is performed
-  static Future<int> createDeleteCheckpoint({
+  Future<int> createDeleteCheckpoint({
     required int sessionId,
     required int subtitleCollectionId,
     required SubtitleLine deletedLine,
     required int deletedIndex,
   }) async {
     // Get current state BEFORE delete operation
-    final collection = await isar.subtitleCollections.get(subtitleCollectionId);
+    final collection = await _isar.subtitleCollections.get(subtitleCollectionId);
     if (collection == null) {
       throw Exception('Subtitle collection not found');
     }
@@ -263,7 +265,7 @@ class CheckpointManager {
   
   /// Creates a checkpoint for an add operation
   /// This should be called BEFORE the add operation is performed
-  static Future<int> createAddCheckpoint({
+  Future<int> createAddCheckpoint({
     required int sessionId,
     required int subtitleCollectionId,
     required SubtitleLine addedLine,
@@ -273,7 +275,7 @@ class CheckpointManager {
     // Get current state BEFORE add operation (if not provided)
     List<SubtitleLine>? stateBeforeAdd = preOperationState;
     if (stateBeforeAdd == null) {
-      final collection = await isar.subtitleCollections.get(subtitleCollectionId);
+      final collection = await _isar.subtitleCollections.get(subtitleCollectionId);
       if (collection == null) {
         throw Exception('Subtitle collection not found');
       }
@@ -298,14 +300,14 @@ class CheckpointManager {
   
   /// Creates a checkpoint for an edit operation
   /// This should be called BEFORE the edit operation is performed
-  static Future<int> createEditCheckpoint({
+  Future<int> createEditCheckpoint({
     required int sessionId,
     required int subtitleCollectionId,
     required SubtitleLine beforeLine,
     required SubtitleLine afterLine,
   }) async {
     // Get current state BEFORE edit operation
-    final collection = await isar.subtitleCollections.get(subtitleCollectionId);
+    final collection = await _isar.subtitleCollections.get(subtitleCollectionId);
     if (collection == null) {
       throw Exception('Subtitle collection not found');
     }
@@ -328,7 +330,7 @@ class CheckpointManager {
   
   /// Creates a checkpoint for a split operation
   /// This should be called BEFORE the split operation is performed
-  static Future<int> createSplitCheckpoint({
+  Future<int> createSplitCheckpoint({
     required int sessionId,
     required int subtitleCollectionId,
     required SubtitleLine originalLine,
@@ -339,7 +341,7 @@ class CheckpointManager {
     // Get current state BEFORE split operation (if not provided)
     List<SubtitleLine>? stateBeforeSplit = preOperationState;
     if (stateBeforeSplit == null) {
-      final collection = await isar.subtitleCollections.get(subtitleCollectionId);
+      final collection = await _isar.subtitleCollections.get(subtitleCollectionId);
       if (collection == null) {
         throw Exception('Subtitle collection not found');
       }
@@ -371,7 +373,7 @@ class CheckpointManager {
   
   /// Creates a checkpoint for a merge operation
   /// This should be called BEFORE the merge operation is performed
-  static Future<int> createMergeCheckpoint({
+  Future<int> createMergeCheckpoint({
     required int sessionId,
     required int subtitleCollectionId,
     required SubtitleLine firstLine,
@@ -382,7 +384,7 @@ class CheckpointManager {
     // Get current state BEFORE merge operation (if not provided)
     List<SubtitleLine>? stateBeforeMerge = preOperationState;
     if (stateBeforeMerge == null) {
-      final collection = await isar.subtitleCollections.get(subtitleCollectionId);
+      final collection = await _isar.subtitleCollections.get(subtitleCollectionId);
       if (collection == null) {
         throw Exception('Subtitle collection not found');
       }
@@ -413,7 +415,7 @@ class CheckpointManager {
   }
   
   /// Creates a manual checkpoint (user-initiated)
-  static Future<int> createManualCheckpoint({
+  Future<int> createManualCheckpoint({
     required int sessionId,
     required int subtitleCollectionId,
     String? customDescription,
@@ -433,18 +435,18 @@ class CheckpointManager {
   /// Restores to a specific checkpoint using snapshot + delta approach
   /// This is 100% accurate because it loads from nearest snapshot
   /// Falls back to creating a snapshot if none exists (for old checkpoints)
-  static Future<bool> undoToCheckpoint({
+  Future<bool> undoToCheckpoint({
     required int checkpointId,
     required int sessionId,
   }) async {
     try {
-      final targetCheckpoint = await isar.checkpoints.get(checkpointId);
+      final targetCheckpoint = await _isar.checkpoints.get(checkpointId);
       if (targetCheckpoint == null) {
         logError('Checkpoint not found: $checkpointId');
         return false;
       }
       
-      final collection = await isar.subtitleCollections.get(targetCheckpoint.subtitleCollectionId);
+      final collection = await _isar.subtitleCollections.get(targetCheckpoint.subtitleCollectionId);
       if (collection == null) {
         logError('Subtitle collection not found');
         return false;
@@ -470,7 +472,7 @@ class CheckpointManager {
             subtitleCollectionId: targetCheckpoint.subtitleCollectionId,
           );
           
-          nearestSnapshot = await isar.checkpoints.get(snapshotId);
+          nearestSnapshot = await _isar.checkpoints.get(snapshotId);
           
           if (nearestSnapshot == null) {
             logError('Failed to create fallback snapshot');
@@ -490,8 +492,8 @@ class CheckpointManager {
             collection.lines = targetCheckpoint.snapshot.map((line) => CheckpointStateReducer.copyLine(line)).toList();
             CheckpointStateReducer.reindexCollection(collection);
             
-            await isar.writeTxn(() async {
-              await isar.subtitleCollections.put(collection);
+            await _isar.writeTxn(() async {
+              await _isar.subtitleCollections.put(collection);
             });
             
             logInfo('Restored directly from target checkpoint snapshot');
@@ -516,9 +518,9 @@ class CheckpointManager {
         CheckpointStateReducer.reindexCollection(collection);
         
         // Update active status - deactivate all checkpoints, then activate target
-        await isar.writeTxn(() async {
+        await _isar.writeTxn(() async {
           // Deactivate all checkpoints in this session
-          final allCheckpoints = await isar.checkpoints
+          final allCheckpoints = await _isar.checkpoints
               .filter()
               .sessionIdEqualTo(sessionId)
               .findAll();
@@ -531,9 +533,9 @@ class CheckpointManager {
           targetCheckpoint.isActive = true;
           
           // Save all changes
-          await isar.checkpoints.putAll(allCheckpoints);
-          await isar.checkpoints.put(targetCheckpoint);
-          await isar.subtitleCollections.put(collection);
+          await _isar.checkpoints.putAll(allCheckpoints);
+          await _isar.checkpoints.put(targetCheckpoint);
+          await _isar.subtitleCollections.put(collection);
         });
         
         logInfo('Restored directly from snapshot (marked as active, others deactivated)');
@@ -564,9 +566,9 @@ class CheckpointManager {
       CheckpointStateReducer.reindexCollection(collection);
       
       // Step 7: Update active status - deactivate all checkpoints, then activate target
-      await isar.writeTxn(() async {
+      await _isar.writeTxn(() async {
         // Deactivate all checkpoints in this session
-        final allCheckpoints = await isar.checkpoints
+        final allCheckpoints = await _isar.checkpoints
             .filter()
             .sessionIdEqualTo(sessionId)
             .findAll();
@@ -579,9 +581,9 @@ class CheckpointManager {
         targetCheckpoint.isActive = true;
         
         // Save all changes
-        await isar.checkpoints.putAll(allCheckpoints);
-        await isar.checkpoints.put(targetCheckpoint);
-        await isar.subtitleCollections.put(collection);
+        await _isar.checkpoints.putAll(allCheckpoints);
+        await _isar.checkpoints.put(targetCheckpoint);
+        await _isar.subtitleCollections.put(collection);
       });
       
       logInfo('Successfully restored to checkpoint: $checkpointId (marked as active, others deactivated)');
@@ -594,7 +596,7 @@ class CheckpointManager {
   
   /// Redoes to a specific checkpoint (same as undo, just different terminology)
   /// Returns true if successful, false otherwise
-  static Future<bool> redoToCheckpoint({
+  Future<bool> redoToCheckpoint({
     required int checkpointId,
     required int sessionId,
   }) async {
@@ -606,8 +608,8 @@ class CheckpointManager {
   }
   
   /// Gets all checkpoints for a session
-  static Future<List<Checkpoint>> getCheckpointsForSession(int sessionId) async {
-    return await isar.checkpoints
+  Future<List<Checkpoint>> getCheckpointsForSession(int sessionId) async {
+    return await _isar.checkpoints
         .filter()
         .sessionIdEqualTo(sessionId)
         .sortByTimestampDesc()
@@ -615,11 +617,11 @@ class CheckpointManager {
   }
   
   /// Deletes all checkpoints for a session (cleanup when session is deleted)
-  static Future<void> deleteCheckpointsForSession(int sessionId) async {
-    await isar.writeTxn(() async {
+  Future<void> deleteCheckpointsForSession(int sessionId) async {
+    await _isar.writeTxn(() async {
       final checkpoints = await getCheckpointsForSession(sessionId);
       final checkpointIds = checkpoints.map((c) => c.id).toList();
-      await isar.checkpoints.deleteAll(checkpointIds);
+      await _isar.checkpoints.deleteAll(checkpointIds);
     });
     
     logInfo('Deleted all checkpoints for session: $sessionId');
@@ -628,7 +630,7 @@ class CheckpointManager {
   // ==================== Private Helper Methods ====================
   
   /// Counts checkpoints since last snapshot
-  static Future<int> _countCheckpointsSinceLastSnapshot({
+  Future<int> _countCheckpointsSinceLastSnapshot({
     required int sessionId,
   }) async {
     final allCheckpoints = await getCheckpointsForSession(sessionId);
@@ -637,7 +639,7 @@ class CheckpointManager {
 
   /// Finds the nearest snapshot at or before a target checkpoint
   /// Returns null if no snapshot found
-  static Future<Checkpoint?> _findNearestSnapshot({
+  Future<Checkpoint?> _findNearestSnapshot({
     required int sessionId,
     required int targetCheckpointId,
   }) async {
@@ -658,7 +660,7 @@ class CheckpointManager {
   /// 
   /// If [excludeTarget] is true, the target checkpoint itself is NOT included
   /// This is used when restoring to get the BEFORE state of a checkpoint
-  static Future<List<Checkpoint>> _getDeltaCheckpointsBetween({
+  Future<List<Checkpoint>> _getDeltaCheckpointsBetween({
     required int sessionId,
     required int fromSnapshotId,
     required int toCheckpointId,
@@ -675,7 +677,7 @@ class CheckpointManager {
 
   /// Deletes all checkpoints after a given checkpoint (future checkpoints)
   /// Used when creating new changes after restoring to an older checkpoint
-  static Future<void> _deleteFutureCheckpoints(
+  Future<void> _deleteFutureCheckpoints(
     int sessionId,
     int afterCheckpointId,
   ) async {
@@ -686,8 +688,8 @@ class CheckpointManager {
     );
 
     if (idsToDelete.isNotEmpty) {
-      await isar.writeTxn(() async {
-        await isar.checkpoints.deleteAll(idsToDelete.toList());
+      await _isar.writeTxn(() async {
+        await _isar.checkpoints.deleteAll(idsToDelete.toList());
       });
       logInfo(
         'Deleted ${idsToDelete.length} future checkpoints '
@@ -697,8 +699,8 @@ class CheckpointManager {
   }
 
   /// Gets the current head checkpoint (most recent active)
-  static Future<Checkpoint?> _getCurrentHeadCheckpoint(int sessionId) async {
-    return await isar.checkpoints
+  Future<Checkpoint?> _getCurrentHeadCheckpoint(int sessionId) async {
+    return await _isar.checkpoints
         .filter()
         .sessionIdEqualTo(sessionId)
         .isActiveEqualTo(true)
@@ -711,7 +713,7 @@ class CheckpointManager {
   
   /* 
   /// Gets checkpoints between two points in the checkpoint tree (OLD APPROACH)
-  static Future<List<Checkpoint>> _getCheckpointsBetween({
+  Future<List<Checkpoint>> _getCheckpointsBetween({
     required int sessionId,
     int? fromCheckpointId,
     required int toCheckpointId,
@@ -782,7 +784,7 @@ class CheckpointManager {
   }
   
   /// Applies undo operation for a checkpoint (OLD APPROACH)
-  static Future<void> _applyCheckpointUndo(
+  Future<void> _applyCheckpointUndo(
     SubtitleCollection collection,
     Checkpoint checkpoint,
   ) async {
@@ -824,7 +826,7 @@ class CheckpointManager {
   }
   
   /// Applies redo operation for a checkpoint
-  static Future<void> _applyCheckpointRedo(
+  Future<void> _applyCheckpointRedo(
     SubtitleCollection collection,
     Checkpoint checkpoint,
   ) async {
@@ -869,7 +871,7 @@ class CheckpointManager {
   /// Auto-cleanup old checkpoints to prevent database bloat
   /// Preserves initial snapshot and manual checkpoints
   /// Uses limit-based cleanup only (no age-based cleanup)
-  static Future<void> _autoCleanupCheckpoints(int sessionId) async {
+  Future<void> _autoCleanupCheckpoints(int sessionId) async {
     try {
       final allCheckpoints = await getCheckpointsForSession(sessionId);
       final maxCheckpoints = await getMaxCheckpoints();
@@ -880,9 +882,9 @@ class CheckpointManager {
       );
 
       if (toDelete.isNotEmpty) {
-        await isar.writeTxn(() async {
+        await _isar.writeTxn(() async {
           final idsToDelete = toDelete.map((c) => c.id).toList();
-          await isar.checkpoints.deleteAll(idsToDelete);
+          await _isar.checkpoints.deleteAll(idsToDelete);
         });
 
         logInfo(
