@@ -1,4 +1,4 @@
-Riverpod migration checkpoint 24
+Riverpod migration checkpoint 24b
 Date: 2026-10-02
 Checks:
 - flutter analyze
@@ -10,6 +10,7 @@ Focus:
 - secondary-subtitle preference injection
 - AI explanation preference injection
 - Olam dictionary preference injection
-- routine CI restored to analyzer + tests only after five-platform build gate
+- typed import cleanup
+- analyzer corrections from checkpoint 24
 
 Platform builds intentionally disabled.
