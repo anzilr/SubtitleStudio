@@ -1,11 +1,16 @@
 Five-platform build gate
 Date: 2026-10-02
+Attempt: 2
 Baseline:
 - Flutter 3.47.5
 - Android debug APK
 - Linux debug desktop
 - Windows debug desktop
-- macOS debug desktop
+- macOS debug desktop without CI signing
 - iOS debug no-codesign
+
+Corrections from attempt 1:
+- Linux installs libjson-glib-dev for ffmpeg_kit.
+- macOS validates compilation with CODE_SIGNING_ALLOWED=NO on CI.
 
 This file intentionally triggers only the isolated full-platform build workflow.
