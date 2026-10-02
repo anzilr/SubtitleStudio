@@ -37,7 +37,7 @@ import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/database/database_instance.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 import 'package:subtitle_studio/database/models/preferences_model.dart';
-import 'package:subtitle_studio/utils/subtitle_sorting.dart'; // Enhanced subtitle sorting
+import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
 import 'dart:convert';
 
 class CheckpointManager {
@@ -94,7 +94,7 @@ class CheckpointManager {
         isActive: true,
         checkpointType: 'snapshot',
         deltas: [], // No deltas for snapshot
-        snapshot: collection.lines.map((line) => _copySubtitleLine(line)).toList(),
+        snapshot: collection.lines.map((line) => CheckpointStateReducer.copyLine(line)).toList(),
         metadata: jsonEncode({'reason': 'initial', 'lineCount': collection.lines.length}),
       );
       
@@ -189,10 +189,10 @@ class CheckpointManager {
       if (shouldCreateSnapshot) {
         if (preOperationState != null) {
           // Use provided pre-operation state (correct for snapshots)
-          stateToCapture = preOperationState.map((line) => _copySubtitleLine(line)).toList();
+          stateToCapture = preOperationState.map((line) => CheckpointStateReducer.copyLine(line)).toList();
         } else {
           // Fallback to current state (for manual checkpoints or when pre-state not available)
-          stateToCapture = collection.lines.map((line) => _copySubtitleLine(line)).toList();
+          stateToCapture = collection.lines.map((line) => CheckpointStateReducer.copyLine(line)).toList();
         }
       } else {
         stateToCapture = []; // Deltas don't need full snapshot
@@ -247,7 +247,7 @@ class CheckpointManager {
     final delta = SubtitleLineDelta()
       ..changeType = 'delete'
       ..lineIndex = deletedIndex
-      ..beforeState = _copySubtitleLine(deletedLine)
+      ..beforeState = CheckpointStateReducer.copyLine(deletedLine)
       ..afterState = null;
     
     return await createCheckpoint(
@@ -283,7 +283,7 @@ class CheckpointManager {
       ..changeType = 'add'
       ..lineIndex = insertIndex
       ..beforeState = null
-      ..afterState = _copySubtitleLine(addedLine);
+      ..afterState = CheckpointStateReducer.copyLine(addedLine);
     
     return await createCheckpoint(
       sessionId: sessionId,
@@ -312,8 +312,8 @@ class CheckpointManager {
     final delta = SubtitleLineDelta()
       ..changeType = 'modify'
       ..lineIndex = beforeLine.index - 1
-      ..beforeState = _copySubtitleLine(beforeLine)
-      ..afterState = _copySubtitleLine(afterLine);
+      ..beforeState = CheckpointStateReducer.copyLine(beforeLine)
+      ..afterState = CheckpointStateReducer.copyLine(afterLine);
     
     return await createCheckpoint(
       sessionId: sessionId,
@@ -349,13 +349,13 @@ class CheckpointManager {
       SubtitleLineDelta()
         ..changeType = 'modify'
         ..lineIndex = originalLine.index - 1
-        ..beforeState = _copySubtitleLine(originalLine)
-        ..afterState = _copySubtitleLine(firstPart),
+        ..beforeState = CheckpointStateReducer.copyLine(originalLine)
+        ..afterState = CheckpointStateReducer.copyLine(firstPart),
       SubtitleLineDelta()
         ..changeType = 'add'
         ..lineIndex = originalLine.index
         ..beforeState = null
-        ..afterState = _copySubtitleLine(secondPart),
+        ..afterState = CheckpointStateReducer.copyLine(secondPart),
     ];
     
     return await createCheckpoint(
@@ -392,12 +392,12 @@ class CheckpointManager {
       SubtitleLineDelta()
         ..changeType = 'modify'
         ..lineIndex = firstLine.index - 1
-        ..beforeState = _copySubtitleLine(firstLine)
-        ..afterState = _copySubtitleLine(mergedLine),
+        ..beforeState = CheckpointStateReducer.copyLine(firstLine)
+        ..afterState = CheckpointStateReducer.copyLine(mergedLine),
       SubtitleLineDelta()
         ..changeType = 'delete'
         ..lineIndex = secondLine.index - 1
-        ..beforeState = _copySubtitleLine(secondLine)
+        ..beforeState = CheckpointStateReducer.copyLine(secondLine)
         ..afterState = null,
     ];
     
@@ -486,8 +486,8 @@ class CheckpointManager {
           
           if (targetCheckpoint.checkpointType == 'snapshot' && targetCheckpoint.snapshot.isNotEmpty) {
             // Target is a snapshot, use it directly
-            collection.lines = targetCheckpoint.snapshot.map((line) => _copySubtitleLine(line)).toList();
-            _reindexLines(collection);
+            collection.lines = targetCheckpoint.snapshot.map((line) => CheckpointStateReducer.copyLine(line)).toList();
+            CheckpointStateReducer.reindexCollection(collection);
             
             await isar.writeTxn(() async {
               await isar.subtitleCollections.put(collection);
@@ -507,12 +507,12 @@ class CheckpointManager {
       
       // Step 2: Load the snapshot as base state
       // Snapshots store the BEFORE state, so this is already the pre-operation state
-      final restoredLines = nearestSnapshot.snapshot.map((line) => _copySubtitleLine(line)).toList();
+      final restoredLines = nearestSnapshot.snapshot.map((line) => CheckpointStateReducer.copyLine(line)).toList();
       
       // Step 3: If target is the snapshot itself, we're done - snapshot already has BEFORE state
       if (nearestSnapshot.id == checkpointId) {
         collection.lines = restoredLines;
-        _reindexLines(collection);
+        CheckpointStateReducer.reindexCollection(collection);
         
         // Update active status - deactivate all checkpoints, then activate target
         await isar.writeTxn(() async {
@@ -555,12 +555,12 @@ class CheckpointManager {
       // We're applying forward from snapshot to just BEFORE the target
       for (final checkpoint in deltasToApply) {
         logInfo('Applying delta: ${checkpoint.description}');
-        _applyDeltasToList(restoredLines, checkpoint.deltas);
+        CheckpointStateReducer.applyDeltasInPlace(restoredLines, checkpoint.deltas);
       }
       
       // Step 6: Update collection with restored state
       collection.lines = restoredLines;
-      _reindexLines(collection);
+      CheckpointStateReducer.reindexCollection(collection);
       
       // Step 7: Update active status - deactivate all checkpoints, then activate target
       await isar.writeTxn(() async {
@@ -734,36 +734,6 @@ class CheckpointManager {
     return pathFromTarget.reversed.toList();
   }
   
-  /// Applies a list of deltas to a list of subtitle lines
-  /// This modifies the list in place
-  static void _applyDeltasToList(List<SubtitleLine> lines, List<SubtitleLineDelta> deltas) {
-    for (final delta in deltas) {
-      switch (delta.changeType) {
-        case 'add':
-          // Add operation: insert the line
-          if (delta.afterState != null) {
-            final insertIndex = delta.lineIndex.clamp(0, lines.length);
-            lines.insert(insertIndex, _copySubtitleLine(delta.afterState!));
-          }
-          break;
-        
-        case 'delete':
-          // Delete operation: remove the line
-          if (delta.lineIndex < lines.length) {
-            lines.removeAt(delta.lineIndex);
-          }
-          break;
-        
-        case 'modify':
-          // Modify operation: replace the line
-          if (delta.afterState != null && delta.lineIndex < lines.length) {
-            lines[delta.lineIndex] = _copySubtitleLine(delta.afterState!);
-          }
-          break;
-      }
-    }
-  }
-  
   /// Deletes all checkpoints after a given checkpoint (future checkpoints)
   /// Used when creating new changes after restoring to an older checkpoint
   static Future<void> _deleteFutureCheckpoints(int sessionId, int afterCheckpointId) async {
@@ -899,14 +869,14 @@ class CheckpointManager {
           if (delta.beforeState != null) {
             // Clamp lineIndex to valid insertion range [0, lines.length]
             final insertIndex = delta.lineIndex.clamp(0, lines.length);
-            lines.insert(insertIndex, _copySubtitleLine(delta.beforeState!));
+            lines.insert(insertIndex, CheckpointStateReducer.copyLine(delta.beforeState!));
           }
           break;
         
         case 'modify':
           // Undo modify = restore previous state
           if (delta.beforeState != null && delta.lineIndex < lines.length) {
-            lines[delta.lineIndex] = _copySubtitleLine(delta.beforeState!);
+            lines[delta.lineIndex] = CheckpointStateReducer.copyLine(delta.beforeState!);
           }
           break;
       }
@@ -916,7 +886,7 @@ class CheckpointManager {
     collection.lines = lines;
     
     // Reindex lines
-    _reindexLines(collection);
+    CheckpointStateReducer.reindexCollection(collection);
   }
   
   /// Applies redo operation for a checkpoint
@@ -934,7 +904,7 @@ class CheckpointManager {
           if (delta.afterState != null) {
             // Clamp lineIndex to valid insertion range [0, lines.length]
             final insertIndex = delta.lineIndex.clamp(0, lines.length);
-            lines.insert(insertIndex, _copySubtitleLine(delta.afterState!));
+            lines.insert(insertIndex, CheckpointStateReducer.copyLine(delta.afterState!));
           }
           break;
         
@@ -948,7 +918,7 @@ class CheckpointManager {
         case 'modify':
           // Redo modify = apply new state
           if (delta.afterState != null && delta.lineIndex < lines.length) {
-            lines[delta.lineIndex] = _copySubtitleLine(delta.afterState!);
+            lines[delta.lineIndex] = CheckpointStateReducer.copyLine(delta.afterState!);
           }
           break;
       }
@@ -958,28 +928,9 @@ class CheckpointManager {
     collection.lines = lines;
     
     // Reindex lines
-    _reindexLines(collection);
+    CheckpointStateReducer.reindexCollection(collection);
   }
   */ // End of OLD METHODS
-  
-  /// Creates a deep copy of a SubtitleLine
-  static SubtitleLine _copySubtitleLine(SubtitleLine line) {
-    return SubtitleLine()
-      ..index = line.index
-      ..startTime = line.startTime
-      ..endTime = line.endTime
-      ..original = line.original
-      ..edited = line.edited
-      ..marked = line.marked
-      ..comment = line.comment
-      ..resolved = line.resolved;
-  }
-  
-  /// Reindexes all lines in a collection using intelligent sorting
-  /// Preserves overlaps and handles positioning tags correctly
-  static void _reindexLines(SubtitleCollection collection) {
-    collection.lines = sortAndReindexSubtitleLines(collection.lines);
-  }
   
   /// Auto-cleanup old checkpoints to prevent database bloat
   /// Preserves initial snapshot and manual checkpoints
