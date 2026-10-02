@@ -29,11 +29,13 @@ import 'package:subtitle_studio/database/models/models.dart'; // Data models
 import 'package:subtitle_studio/database/database_instance.dart';
 export 'database_instance.dart' show isar;
 import 'package:subtitle_studio/utils/logging_helpers.dart'; // Logging utilities
-import 'package:subtitle_studio/services/checkpoint_manager.dart'; // Checkpoint management
+import 'package:subtitle_studio/services/checkpoint_repository.dart'; // Checkpoint boundary
 import 'package:subtitle_studio/utils/subtitle_sorting.dart'; // Enhanced subtitle sorting
 import 'dart:math';                           // Math utilities for ID generation
 import 'dart:io';                             // File and Directory operations
 import 'package:path_provider/path_provider.dart'; // App directories access
+
+const CheckpointRepository _checkpointRepository = CheckpointRepository();
 
 /// Updates the macOsSrtBookmark for a SubtitleCollection
 Future<bool> updateSubtitleCollectionMacOsSrtBookmark(int subtitleCollectionId, String? bookmarkString) async {
@@ -255,7 +257,7 @@ Future<void> saveSubtitleChangesToDatabase(
   
   // Create checkpoint OUTSIDE the transaction to avoid nested transaction error
   if (shouldCreateCheckpoint && sessionId != null && lineBeforeChanges != null) {
-    await CheckpointManager.createEditCheckpoint(
+    await _checkpointRepository.createEditCheckpoint(
       sessionId: sessionId,
       subtitleCollectionId: subtitleId,
       beforeLine: lineBeforeChanges!,
