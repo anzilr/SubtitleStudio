@@ -3,7 +3,9 @@ part of '../../project_settings_sheet.dart';
 extension _ProjectSettingsMarkedActions on _ProjectSettingsSheetState {
   void _showMarkedLines() async {
     // Get both marked lines and all lines with comments
-    final allLinesWithComments = await getAllSubtitleLinesWithComments(widget.session.subtitleCollectionId);
+    final allLinesWithComments = await ref
+        .read(subtitleRepositoryProvider)
+        .getLinesWithComments(widget.session.subtitleCollectionId);
     
     if (!mounted) return;
     
@@ -25,9 +27,11 @@ extension _ProjectSettingsMarkedActions on _ProjectSettingsSheetState {
           onCommentUpdated: (index, comment) async {
             // Update comment in database and refresh marked lines
             try {
-              await updateSubtitleLineComment(widget.session.subtitleCollectionId, index, comment);
+              await ref
+                  .read(subtitleRepositoryProvider)
+                  .updateComment(widget.session.subtitleCollectionId, index, comment);
               // Refresh marked lines list
-              _markedLines = await getMarkedSubtitleLines(widget.session.subtitleCollectionId);
+              _markedLines = await ref.read(subtitleRepositoryProvider).getMarkedLines(widget.session.subtitleCollectionId);
               _setProjectSettingsState(() {}); // Trigger rebuild to show updated comments
               
               SnackbarHelper.showSuccess(context, 
@@ -42,9 +46,11 @@ extension _ProjectSettingsMarkedActions on _ProjectSettingsSheetState {
           onLineUnmarked: (index) async {
             // Unmark line and delete comment
             try {
-              await unmarkSubtitleLine(widget.session.subtitleCollectionId, index);
+              await ref
+                  .read(subtitleRepositoryProvider)
+                  .unmarkLine(widget.session.subtitleCollectionId, index);
               // Refresh marked lines list
-              _markedLines = await getMarkedSubtitleLines(widget.session.subtitleCollectionId);
+              _markedLines = await ref.read(subtitleRepositoryProvider).getMarkedLines(widget.session.subtitleCollectionId);
               _setProjectSettingsState(() {}); // Trigger rebuild to remove unmarked line
               
               SnackbarHelper.showSuccess(context, 'Line unmarked and comment deleted');
@@ -58,9 +64,11 @@ extension _ProjectSettingsMarkedActions on _ProjectSettingsSheetState {
           onResolvedUpdated: (index, resolved) async {
             // Update resolved status in database
             try {
-              await updateSubtitleLineResolved(widget.session.subtitleCollectionId, index, resolved);
+              await ref
+                  .read(subtitleRepositoryProvider)
+                  .updateResolved(widget.session.subtitleCollectionId, index, resolved);
               // Refresh marked lines list
-              _markedLines = await getMarkedSubtitleLines(widget.session.subtitleCollectionId);
+              _markedLines = await ref.read(subtitleRepositoryProvider).getMarkedLines(widget.session.subtitleCollectionId);
               _setProjectSettingsState(() {}); // Trigger rebuild to show updated resolved status
               
               SnackbarHelper.showSuccess(context, 
@@ -75,33 +83,28 @@ extension _ProjectSettingsMarkedActions on _ProjectSettingsSheetState {
           onTextEdited: (index, newText) async {
             // Update edited text in database and refresh marked lines
             try {
-              // Get the subtitle line from database
-              final subtitle = await isar.subtitleCollections.get(widget.session.subtitleCollectionId);
+              final repository = ref.read(subtitleRepositoryProvider);
+              final subtitle = await repository.fetchSubtitleCollection(
+                widget.session.subtitleCollectionId,
+              );
               if (subtitle != null && index < subtitle.lines.length) {
                 final updatedLine = subtitle.lines[index];
                 updatedLine.edited = newText;
-                
-                // Save to database
-                await saveSubtitleChangesToDatabase(
+
+                final saved = await repository.saveLineChanges(
                   widget.session.subtitleCollectionId,
                   updatedLine,
-                  (String time) {
-                    // Parse time format "HH:mm:ss,SSS" to DateTime
-                    final parts = time.split(',');
-                    final hms = parts[0].split(':');
-                    return DateTime(0, 1, 1, 
-                      int.parse(hms[0]), 
-                      int.parse(hms[1]), 
-                      int.parse(hms[2]), 
-                      int.parse(parts[1]));
-                  },
                   sessionId: widget.session.id,
                 );
-                
-                // Refresh marked lines list
-                _markedLines = await getMarkedSubtitleLines(widget.session.subtitleCollectionId);
-                _setProjectSettingsState(() {}); // Trigger rebuild to show updated text
-                
+                if (!saved) {
+                  throw StateError('Subtitle line update failed');
+                }
+
+                _markedLines = await repository.getMarkedLines(
+                  widget.session.subtitleCollectionId,
+                );
+                _setProjectSettingsState(() {});
+
                 SnackbarHelper.showSuccess(context, 'Subtitle text updated');
               }
             } catch (e) {
@@ -121,13 +124,11 @@ extension _ProjectSettingsMarkedActions on _ProjectSettingsSheetState {
       // Save project name
       final newProjectName = _projectNameController.text.trim();
       if (newProjectName.isNotEmpty && newProjectName != widget.session.fileName) {
-        final session = await isar.sessions.get(widget.session.id);
-        if (session != null) {
-          session.fileName = newProjectName;
-          await isar.writeTxn(() async {
-            await isar.sessions.put(session);
-          });
-        }
+        await ref.read(projectRepositoryProvider).updateSessionFileName(
+          sessionId: widget.session.id,
+          fileName: newProjectName,
+        );
+        widget.session.fileName = newProjectName;
       }
 
       widget.onProjectUpdated();

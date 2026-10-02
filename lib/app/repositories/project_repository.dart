@@ -32,4 +32,19 @@ class ProjectRepository {
       await _isar.sessions.put(session);
     });
   }
+  Future<void> updateSessionFileName({
+    required int sessionId,
+    required String fileName,
+  }) async {
+    await _isar.writeTxn(() async {
+      final session = await _isar.sessions.get(sessionId);
+      if (session == null) {
+        throw StateError('Session not found: $sessionId');
+      }
+
+      session.fileName = fileName;
+      await _isar.sessions.put(session);
+    });
+  }
+
 }

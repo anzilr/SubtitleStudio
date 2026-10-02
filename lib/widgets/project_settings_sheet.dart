@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/app/providers/core_providers.dart';
+import 'package:subtitle_studio/screens/edit/edit_controller.dart';
+import 'package:subtitle_studio/screens/edit/providers/subtitle_repository_provider.dart';
 import 'package:flutter/services.dart';
 import 'package:subtitle_studio/database/models/models.dart';
-import 'package:subtitle_studio/database/models/preferences_model.dart';
-import 'package:subtitle_studio/database/database_helper.dart';
 import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
 import 'package:subtitle_studio/utils/platform_file_handler.dart';
 import 'package:subtitle_studio/utils/saf_path_converter.dart';
@@ -113,15 +113,15 @@ class _ProjectSettingsSheetState extends ConsumerState<ProjectSettingsSheet> wit
       bool hasChanges = false;
       
       // Check video path
-      final currentVideoPath = await PreferencesModel.getVideoPath(widget.session.subtitleCollectionId);
+      final currentVideoPath = await ref.read(editorPreferencesRepositoryProvider).getVideoPath(widget.session.subtitleCollectionId);
       if (currentVideoPath != _videoPath) {
         _videoPath = currentVideoPath;
         hasChanges = true;
       }
       
       // Check secondary subtitle settings
-      final currentSecondaryPath = await PreferencesModel.getSecondarySubtitlePath(widget.session.subtitleCollectionId);
-      final currentIsOriginal = await PreferencesModel.getSecondaryIsOriginal(widget.session.subtitleCollectionId);
+      final currentSecondaryPath = await ref.read(editorPreferencesRepositoryProvider).getSecondarySubtitlePath(widget.session.subtitleCollectionId);
+      final currentIsOriginal = await ref.read(editorPreferencesRepositoryProvider).getSecondaryIsOriginal(widget.session.subtitleCollectionId);
       
       if (currentSecondaryPath != _secondarySubtitlePath || currentIsOriginal != _isSecondaryFromOriginal) {
         _secondarySubtitlePath = currentSecondaryPath;
@@ -138,7 +138,7 @@ class _ProjectSettingsSheetState extends ConsumerState<ProjectSettingsSheet> wit
       }
       
       // Check marked lines count (avoid loading full list unless necessary)
-      final currentMarkedLines = await getMarkedSubtitleLines(widget.session.subtitleCollectionId);
+      final currentMarkedLines = await ref.read(subtitleRepositoryProvider).getMarkedLines(widget.session.subtitleCollectionId);
       if (currentMarkedLines.length != _markedLines.length) {
         _markedLines = currentMarkedLines;
         hasChanges = true;
@@ -205,8 +205,8 @@ class _ProjectSettingsSheetState extends ConsumerState<ProjectSettingsSheet> wit
     if (!mounted) return;
     
     try {
-      _secondarySubtitlePath = await PreferencesModel.getSecondarySubtitlePath(widget.session.subtitleCollectionId);
-      _isSecondaryFromOriginal = await PreferencesModel.getSecondaryIsOriginal(widget.session.subtitleCollectionId);
+      _secondarySubtitlePath = await ref.read(editorPreferencesRepositoryProvider).getSecondarySubtitlePath(widget.session.subtitleCollectionId);
+      _isSecondaryFromOriginal = await ref.read(editorPreferencesRepositoryProvider).getSecondaryIsOriginal(widget.session.subtitleCollectionId);
       
       if (mounted) {
         setState(() {});
@@ -254,14 +254,14 @@ class _ProjectSettingsSheetState extends ConsumerState<ProjectSettingsSheet> wit
       _sessionInfo = await _getSessionInfo();
       
       // Load video path
-      _videoPath = await PreferencesModel.getVideoPath(widget.session.subtitleCollectionId);
+      _videoPath = await ref.read(editorPreferencesRepositoryProvider).getVideoPath(widget.session.subtitleCollectionId);
       
       // Load secondary subtitle settings
-      _secondarySubtitlePath = await PreferencesModel.getSecondarySubtitlePath(widget.session.subtitleCollectionId);
-      _isSecondaryFromOriginal = await PreferencesModel.getSecondaryIsOriginal(widget.session.subtitleCollectionId);
+      _secondarySubtitlePath = await ref.read(editorPreferencesRepositoryProvider).getSecondarySubtitlePath(widget.session.subtitleCollectionId);
+      _isSecondaryFromOriginal = await ref.read(editorPreferencesRepositoryProvider).getSecondaryIsOriginal(widget.session.subtitleCollectionId);
       
       // Load marked lines
-      _markedLines = await getMarkedSubtitleLines(widget.session.subtitleCollectionId);
+      _markedLines = await ref.read(subtitleRepositoryProvider).getMarkedLines(widget.session.subtitleCollectionId);
       
       setState(() {
         _isLoading = false;
@@ -282,7 +282,9 @@ class _ProjectSettingsSheetState extends ConsumerState<ProjectSettingsSheet> wit
 
   Future<Map<String, dynamic>> _getSessionInfo() async {
     try {
-      final subtitleLines = await fetchSubtitleLines(widget.subtitleCollection.id);
+      final subtitleLines = await ref
+          .read(subtitleRepositoryProvider)
+          .fetchLines(widget.subtitleCollection.id);
       final editedCount = subtitleLines.where((line) => line.edited != null && line.edited!.isNotEmpty).length;
       final totalLines = subtitleLines.length;
       final progress = totalLines > 0 ? editedCount / totalLines : 0.0;

@@ -59,7 +59,7 @@ extension _ProjectSettingsMediaActions on _ProjectSettingsSheetState {
 
       if (videoPath == null || videoPath.isEmpty) return;
 
-      await PreferencesModel.saveVideoPath(
+      await ref.read(editorPreferencesRepositoryProvider).saveVideoPath(
         widget.session.subtitleCollectionId,
         videoPath,
       );
@@ -87,7 +87,9 @@ extension _ProjectSettingsMediaActions on _ProjectSettingsSheetState {
   /// Reload video path from preferences
   Future<void> _loadVideoPath() async {
     try {
-      final savedPath = await PreferencesModel.getVideoPath(widget.session.subtitleCollectionId);
+      final savedPath = await ref
+          .read(editorPreferencesRepositoryProvider)
+          .getVideoPath(widget.session.subtitleCollectionId);
       if (mounted) {
         final oldPath = _videoPath;
         _setProjectSettingsState(() {
@@ -112,7 +114,9 @@ extension _ProjectSettingsMediaActions on _ProjectSettingsSheetState {
   }
 
   Future<void> _clearVideoFile() async {
-    await PreferencesModel.removeVideoPath(widget.session.subtitleCollectionId);
+    await ref
+        .read(editorPreferencesRepositoryProvider)
+        .removeVideoPath(widget.session.subtitleCollectionId);
     _setProjectSettingsState(() {
       _videoPath = null;
     });
@@ -236,8 +240,14 @@ extension _ProjectSettingsMediaActions on _ProjectSettingsSheetState {
 
         if (parsedSubtitles.isNotEmpty) {
           widget.onSecondarySubtitlesLoaded?.call(parsedSubtitles);
-          await PreferencesModel.saveSecondarySubtitlePath(widget.session.subtitleCollectionId, filePath);
-          await PreferencesModel.setSecondaryIsOriginal(widget.session.subtitleCollectionId, false);
+          await ref.read(editorPreferencesRepositoryProvider).saveSecondarySubtitlePath(
+            widget.session.subtitleCollectionId,
+            filePath,
+          );
+          await ref.read(editorPreferencesRepositoryProvider).setSecondaryIsOriginal(
+            widget.session.subtitleCollectionId,
+            false,
+          );
           
           _setProjectSettingsState(() {
             _secondarySubtitlePath = filePath;
@@ -288,8 +298,13 @@ extension _ProjectSettingsMediaActions on _ProjectSettingsSheetState {
 
     if (originalTextSubtitles.isNotEmpty) {
       widget.onSecondarySubtitlesLoaded?.call(originalTextSubtitles);
-      await PreferencesModel.setSecondaryIsOriginal(widget.session.subtitleCollectionId, true);
-      await PreferencesModel.removeSecondarySubtitlePath(widget.session.subtitleCollectionId);
+      await ref.read(editorPreferencesRepositoryProvider).setSecondaryIsOriginal(
+        widget.session.subtitleCollectionId,
+        true,
+      );
+      await ref.read(editorPreferencesRepositoryProvider).removeSecondarySubtitlePath(
+        widget.session.subtitleCollectionId,
+      );
       
       _setProjectSettingsState(() {
         _secondarySubtitlePath = null;
@@ -315,8 +330,13 @@ extension _ProjectSettingsMediaActions on _ProjectSettingsSheetState {
 
   Future<void> _clearSecondarySubtitle() async {
     widget.onSecondarySubtitlesCleared?.call();
-    await PreferencesModel.removeSecondarySubtitlePath(widget.session.subtitleCollectionId);
-    await PreferencesModel.setSecondaryIsOriginal(widget.session.subtitleCollectionId, false);
+    await ref.read(editorPreferencesRepositoryProvider).removeSecondarySubtitlePath(
+        widget.session.subtitleCollectionId,
+      );
+    await ref.read(editorPreferencesRepositoryProvider).setSecondaryIsOriginal(
+        widget.session.subtitleCollectionId,
+        false,
+      );
     
     _setProjectSettingsState(() {
       _secondarySubtitlePath = null;
@@ -336,7 +356,9 @@ extension _ProjectSettingsMediaActions on _ProjectSettingsSheetState {
   Future<void> _updateEncoding(String encoding) async {
     try {
       widget.subtitleCollection.encoding = encoding;
-      await updateSubtitleCollection(widget.subtitleCollection);
+      await ref
+          .read(subtitleRepositoryProvider)
+          .updateCollection(widget.subtitleCollection);
       
       SnackbarHelper.showSnackBar(
         context,
