@@ -431,6 +431,79 @@ class SubtitleRepository {
     }
   }
 
+  /// Replace one subtitle line with two split parts.
+  ///
+  /// Checkpoint creation is coordinated by the calling operation so this
+  /// method owns persistence only.
+  Future<bool> splitLine(
+    int collectionId,
+    SubtitleLine firstPart,
+    SubtitleLine secondPart,
+    int originalIndex,
+  ) async {
+    try {
+      return await _isar.writeTxn(() async {
+        final collection = await _isar.subtitleCollections.get(collectionId);
+        if (collection == null ||
+            originalIndex < 0 ||
+            originalIndex >= collection.lines.length) {
+          return false;
+        }
+
+        final lines = List<SubtitleLine>.from(collection.lines);
+        lines[originalIndex] = firstPart;
+        lines.insert(originalIndex + 1, secondPart);
+        collection.lines = sortAndReindexSubtitleLines(lines);
+        await _isar.subtitleCollections.put(collection);
+        return true;
+      });
+    } catch (e) {
+      logError('SubtitleRepository: Error splitting line: $e');
+      return false;
+    }
+  }
+
+  /// Replace two subtitle lines with one merged line.
+  ///
+  /// Checkpoint creation is coordinated by the calling operation so this
+  /// method owns persistence only.
+  Future<bool> mergeLines(
+    int collectionId,
+    SubtitleLine mergedLine,
+    int firstLineIndex,
+    int secondLineIndex,
+  ) async {
+    try {
+      return await _isar.writeTxn(() async {
+        final collection = await _isar.subtitleCollections.get(collectionId);
+        if (collection == null ||
+            firstLineIndex < 0 ||
+            secondLineIndex < 0 ||
+            firstLineIndex >= collection.lines.length ||
+            secondLineIndex >= collection.lines.length ||
+            firstLineIndex == secondLineIndex) {
+          return false;
+        }
+
+        final lines = List<SubtitleLine>.from(collection.lines);
+        final maxIndex =
+            firstLineIndex > secondLineIndex ? firstLineIndex : secondLineIndex;
+        final minIndex =
+            firstLineIndex < secondLineIndex ? firstLineIndex : secondLineIndex;
+        lines.removeAt(maxIndex);
+        lines.removeAt(minIndex);
+        lines.insert(minIndex, mergedLine);
+
+        collection.lines = sortAndReindexSubtitleLines(lines);
+        await _isar.subtitleCollections.put(collection);
+        return true;
+      });
+    } catch (e) {
+      logError('SubtitleRepository: Error merging lines: $e');
+      return false;
+    }
+  }
+
   /// Insert a subtitle line and normalize ordering/indexes once.
   Future<bool> addLine(
     int collectionId,
