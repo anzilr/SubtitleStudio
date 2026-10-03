@@ -77,7 +77,6 @@ void main() {
     repository = EditLineRepository(
       harness.isar,
       EditLinePreferencesRepository(harness.isar),
-      CheckpointRepository(harness.isar),
     );
   });
 
