@@ -100,6 +100,69 @@ void main() {
     );
   });
 
+  test('insertAsHead keeps exactly one HEAD and checks expected HEAD',
+      () async {
+    final first = Checkpoint(
+      sessionId: 7,
+      subtitleCollectionId: 70,
+      timestamp: DateTime.utc(2026, 10, 3, 9),
+      operationType: 'snapshot',
+      description: 'Initial state',
+      isActive: true,
+      checkpointType: 'snapshot',
+      deltas: const [],
+      snapshot: [_line(1, 'Initial')],
+    );
+
+    final firstId = await store.putCheckpoint(first);
+
+    final second = Checkpoint(
+      sessionId: 7,
+      subtitleCollectionId: 70,
+      timestamp: DateTime.utc(2026, 10, 3, 10),
+      operationType: 'edit',
+      description: 'Second',
+      parentCheckpointId: firstId,
+      checkpointType: 'delta',
+      deltas: const [],
+      snapshot: const [],
+    );
+
+    final secondId = await store.insertAsHead(
+      sessionId: 7,
+      expectedHeadId: firstId,
+      checkpoint: second,
+    );
+
+    final checkpoints = await store.getCheckpointsForSession(7);
+    final active =
+        checkpoints.where((checkpoint) => checkpoint.isActive).toList();
+
+    expect(active, hasLength(1));
+    expect(active.single.id, secondId);
+
+    final staleCommit = Checkpoint(
+      sessionId: 7,
+      subtitleCollectionId: 70,
+      timestamp: DateTime.utc(2026, 10, 3, 11),
+      operationType: 'edit',
+      description: 'Stale',
+      parentCheckpointId: firstId,
+      checkpointType: 'delta',
+      deltas: const [],
+      snapshot: const [],
+    );
+
+    expect(
+      () => store.insertAsHead(
+        sessionId: 7,
+        expectedHeadId: firstId,
+        checkpoint: staleCommit,
+      ),
+      throwsA(isA<CheckpointConcurrentModificationException>()),
+    );
+  });
+
   test('session checkpoint deletion does not remove another session history',
       () async {
     final first = Checkpoint(
