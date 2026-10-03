@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/database/models/models.dart';
+import 'package:subtitle_studio/database/stores/preferences_store.dart';
 import 'package:subtitle_studio/models/subtitle_import_result.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 
@@ -10,8 +11,10 @@ import 'package:subtitle_studio/utils/logging_helpers.dart';
 /// outside this repository. This class owns only Isar-backed import state.
 class SubtitleImportRepository {
   final Isar _isar;
+  final PreferencesStore _preferencesStore;
 
-  const SubtitleImportRepository(this._isar);
+  SubtitleImportRepository(this._isar)
+      : _preferencesStore = PreferencesStore(_isar);
 
   Future<SubtitleImportResult> storeSubtitleData({
     required List<SubtitleLine> lines,
@@ -76,12 +79,8 @@ class SubtitleImportRepository {
       return;
     }
 
-    await _isar.writeTxn(() async {
-      final preferences =
-          await _isar.preferences.where().findFirst() ??
-          Preferences(autoSave: true);
-      preferences.lastEditedSession = sessionId;
-      await _isar.preferences.put(preferences);
-    });
+    await _preferencesStore.update(
+      (preferences) => preferences.lastEditedSession = sessionId,
+    );
   }
 }
