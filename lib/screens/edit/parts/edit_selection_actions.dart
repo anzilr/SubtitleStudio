@@ -252,6 +252,7 @@ extension _EditSelectionActions on _EditScreenState {
       onApply: (newStartTime, newEndTime) async {
         final result =
             await SubtitleSyncOperations.shiftSelectedTimecodes(
+          subtitleRepository: ref.read(subtitleRepositoryProvider),
           subtitleId: widget.subtitleCollectionId,
           allSubtitleLines: subtitleLines,
           selectedIndices: selectedIndices,
