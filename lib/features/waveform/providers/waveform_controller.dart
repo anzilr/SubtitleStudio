@@ -8,7 +8,9 @@ import 'package:subtitle_studio/features/waveform/repositories/waveform_preferen
 
 /// Disposable audio processor dependency for the Waveform feature.
 final waveformAudioProcessorProvider = Provider<AudioProcessor>((ref) {
-  final processor = AudioProcessor();
+  final processor = AudioProcessor(
+    ref.watch(waveformPreferencesRepositoryProvider),
+  );
   ref.onDispose(processor.dispose);
   return processor;
 });
@@ -195,8 +197,9 @@ class WaveformController extends Notifier<WaveformState> {
           event.subtitleCollectionId!,
         );
         if (savedZoom != null) {
-          defaultZoomIndex = (savedZoom['zoomIndex'] as int).clamp(0, buffer.zoomLevelCount - 1);
-          defaultVerticalZoom = (savedZoom['verticalZoom'] as double).clamp(0.5, 3.0);
+          defaultZoomIndex =
+              savedZoom.zoomIndex.clamp(0, buffer.zoomLevelCount - 1);
+          defaultVerticalZoom = savedZoom.verticalZoom.clamp(0.5, 3.0);
         }
       }
 
