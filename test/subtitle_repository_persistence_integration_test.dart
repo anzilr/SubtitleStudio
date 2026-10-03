@@ -1,7 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/screens/edit/repositories/subtitle_repository.dart';
 import 'package:subtitle_studio/services/checkpoint_repository.dart';
+import 'package:subtitle_studio/services/checkpoint_history_metadata.dart';
 
 import 'support/test_isar_harness.dart';
 
@@ -79,6 +81,88 @@ void main() {
   });
 
   group('SubtitleRepository persistence', () {
+    test('text edit is an atomic v2 delta commit', () async {
+      final collectionId = await _seedCollection(harness);
+      late int sessionId;
+      await harness.isar.writeTxn(() async {
+        sessionId = await harness.isar.sessions.put(
+          Session(
+            subtitleCollectionId: collectionId,
+            fileName: 'repository-test.srt',
+          ),
+        );
+      });
+
+      final checkpoints = CheckpointRepository(harness.isar);
+      final initialId = await checkpoints.createInitialSnapshot(
+        sessionId: sessionId,
+        subtitleCollectionId: collectionId,
+      );
+
+      final updated = _line(
+        index: 1,
+        text: 'A edited',
+        start: '00:00:01,000',
+        end: '00:00:01,900',
+      );
+
+      expect(
+        await repository.saveLineChanges(
+          collectionId,
+          updated,
+          sessionId: sessionId,
+        ),
+        isTrue,
+      );
+
+      final history = await harness.isar.checkpoints
+          .filter()
+          .sessionIdEqualTo(sessionId)
+          .sortByTimestamp()
+          .findAll();
+      expect(history, hasLength(2));
+
+      final edit = history.last;
+      expect(edit.parentCheckpointId, initialId);
+      expect(edit.checkpointType, 'delta');
+      expect(edit.snapshot, isEmpty);
+      expect(CheckpointHistoryMetadata.isPostOperation(edit), isTrue);
+      expect(
+        history.where((checkpoint) => checkpoint.isActive).single.id,
+        edit.id,
+      );
+
+      expect(
+        await checkpoints.undoToCheckpoint(
+          checkpointId: initialId,
+          sessionId: sessionId,
+        ),
+        isTrue,
+      );
+      expect(
+        (await repository.fetchSubtitleCollection(collectionId))
+            ?.lines
+            .first
+            .original,
+        'A',
+      );
+
+      expect(
+        await checkpoints.redoToCheckpoint(
+          checkpointId: edit.id,
+          sessionId: sessionId,
+        ),
+        isTrue,
+      );
+      expect(
+        (await repository.fetchSubtitleCollection(collectionId))
+            ?.lines
+            .first
+            .original,
+        'A edited',
+      );
+    });
+
     test('deleteLine removes and reindexes remaining cues', () async {
       final collectionId = await _seedCollection(harness);
 
