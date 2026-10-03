@@ -64,6 +64,25 @@ void main() {
       expect(all.single.subtitleCollectionId, 42);
     });
 
+    test('updates keep a single row for the same subtitle collection', () async {
+      final store = VideoPreferencesStore(harness.isar);
+
+      await Future.wait(
+        List.generate(
+          20,
+          (index) => store.update(42, (preferences) {
+            preferences.waveformZoomIndex = index;
+          }),
+        ),
+      );
+
+      final all = await harness.isar.videoPreferences.where().findAll();
+
+      expect(all, hasLength(1));
+      expect(all.single.subtitleCollectionId, 42);
+      expect(all.single.waveformZoomIndex, isNotNull);
+    });
+
     test('keeps independent rows for different subtitle collections', () async {
       final store = VideoPreferencesStore(harness.isar);
 
