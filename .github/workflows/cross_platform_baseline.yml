@@ -42,7 +42,7 @@ jobs:
         shell: bash
         run: |
           if [ -d test ] && find test -name '*_test.dart' -print -quit | grep -q .; then
-            flutter test
+            flutter test -j 1
           else
             echo "No committed Flutter tests found yet; skipping test execution."
           fi
