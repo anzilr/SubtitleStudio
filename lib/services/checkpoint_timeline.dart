@@ -73,6 +73,23 @@ class CheckpointTimeline {
     return pathFromTarget.reversed.toList();
   }
 
+  static Set<int> ancestorPathIds({
+    required List<Checkpoint> checkpoints,
+    required int? fromCheckpointId,
+  }) {
+    final byId = {
+      for (final checkpoint in checkpoints) checkpoint.id: checkpoint,
+    };
+    final ancestors = <int>{};
+
+    int? currentId = fromCheckpointId;
+    while (currentId != null && ancestors.add(currentId)) {
+      currentId = byId[currentId]?.parentCheckpointId;
+    }
+
+    return ancestors;
+  }
+
   static Set<int> descendantIds({
     required List<Checkpoint> checkpoints,
     required int parentCheckpointId,
