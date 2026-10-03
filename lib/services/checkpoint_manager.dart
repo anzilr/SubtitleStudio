@@ -38,6 +38,7 @@ import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
+import 'package:subtitle_studio/services/checkpoint_history_metadata.dart';
 import 'package:subtitle_studio/services/checkpoint_policy.dart';
 import 'package:subtitle_studio/services/checkpoint_timeline.dart';
 import 'package:subtitle_studio/services/checkpoint_preferences_repository.dart';
@@ -112,7 +113,12 @@ class CheckpointManager {
         checkpointType: 'snapshot',
         deltas: [], // No deltas for snapshot
         snapshot: collection.lines.map((line) => CheckpointStateReducer.copyLine(line)).toList(),
-        metadata: jsonEncode({'reason': 'initial', 'lineCount': collection.lines.length}),
+        metadata: CheckpointHistoryMetadata.encodePostOperation(
+          operationMetadata: {
+            'reason': 'initial',
+            'lineCount': collection.lines.length,
+          },
+        ),
       );
       
       final checkpointId = await _store.insertAsHead(
@@ -176,12 +182,16 @@ class CheckpointManager {
         );
       }
 
-      final shouldCreateSnapshot = CheckpointPolicy.shouldCreateSnapshot(
-        forceSnapshot: forceSnapshot,
-        strategy: checkpointStrategy,
-        checkpointsSinceSnapshot: checkpointsSinceSnapshot,
-        snapshotInterval: snapshotInterval,
-      );
+      final crossingFromPostOperation =
+          currentHead != null &&
+          CheckpointHistoryMetadata.isPostOperation(currentHead);
+      final shouldCreateSnapshot = crossingFromPostOperation ||
+          CheckpointPolicy.shouldCreateSnapshot(
+            forceSnapshot: forceSnapshot,
+            strategy: checkpointStrategy,
+            checkpointsSinceSnapshot: checkpointsSinceSnapshot,
+            snapshotInterval: snapshotInterval,
+          );
       
       // Get current subtitle collection state (for fallback if preOperationState not provided)
       final collection = await _store.getSubtitleCollection(subtitleCollectionId);
@@ -471,6 +481,14 @@ class CheckpointManager {
         return false;
       }
 
+      if (CheckpointHistoryMetadata.isPostOperation(targetCheckpoint)) {
+        return await _restorePostOperationCheckpoint(
+          targetCheckpoint: targetCheckpoint,
+          sessionId: sessionId,
+          collection: collection,
+        );
+      }
+
       final nearestSnapshot = await _findNearestSnapshot(
         sessionId: sessionId,
         targetCheckpointId: checkpointId,
@@ -534,6 +552,74 @@ class CheckpointManager {
       return false;
     } catch (error) {
       logError('Failed to restore to checkpoint: $error');
+      return false;
+    }
+  }
+
+  Future<bool> _restorePostOperationCheckpoint({
+    required Checkpoint targetCheckpoint,
+    required int sessionId,
+    required SubtitleCollection collection,
+  }) async {
+    try {
+      final checkpoints = await getCheckpointsForSession(sessionId);
+      final nearestSnapshot = CheckpointTimeline.findNearestSnapshot(
+        checkpoints: checkpoints,
+        targetCheckpointId: targetCheckpoint.id,
+      );
+
+      if (nearestSnapshot == null ||
+          nearestSnapshot.snapshot.isEmpty ||
+          !CheckpointHistoryMetadata.isPostOperation(nearestSnapshot)) {
+        logError(
+          'Cannot restore v2 checkpoint ${targetCheckpoint.id}: '
+          'no compatible post-operation snapshot exists.',
+        );
+        return false;
+      }
+
+      final restoredLines =
+          CheckpointStateReducer.copyLines(nearestSnapshot.snapshot);
+
+      if (nearestSnapshot.id != targetCheckpoint.id) {
+        final path = CheckpointTimeline.deltaPath(
+          checkpoints: checkpoints,
+          fromSnapshotId: nearestSnapshot.id,
+          toCheckpointId: targetCheckpoint.id,
+          excludeTarget: false,
+        );
+
+        for (final checkpoint in path) {
+          if (!CheckpointHistoryMetadata.isPostOperation(checkpoint)) {
+            throw StateError(
+              'Checkpoint ${checkpoint.id} crosses into legacy '
+              'pre-operation history without a snapshot boundary.',
+            );
+          }
+          CheckpointStateReducer.applyDeltasStrictInPlace(
+            restoredLines,
+            checkpoint.deltas,
+          );
+        }
+      }
+
+      collection.lines = restoredLines;
+      CheckpointStateReducer.reindexExactOrder(collection);
+      await _store.restoreCollectionAndActivateOnly(
+        sessionId: sessionId,
+        targetCheckpoint: targetCheckpoint,
+        collection: collection,
+      );
+
+      logInfo(
+        'Moved checkpoint HEAD to v2 commit ${targetCheckpoint.id}',
+      );
+      return true;
+    } on CheckpointIntegrityException catch (error) {
+      logError('V2 checkpoint integrity validation failed: $error');
+      return false;
+    } on StateError catch (error) {
+      logError('V2 checkpoint graph validation failed: $error');
       return false;
     }
   }
