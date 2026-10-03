@@ -1,24 +1,19 @@
 import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/database/models/models.dart';
+import 'package:subtitle_studio/database/stores/preferences_store.dart';
 
 /// Isar-backed checkpoint settings boundary.
 ///
 /// CheckpointManager reads only checkpoint-specific preferences through this
 /// repository instead of depending on the legacy static PreferencesModel API.
 class CheckpointPreferencesRepository {
-  final Isar _isar;
+  final PreferencesStore _preferencesStore;
 
-  const CheckpointPreferencesRepository(this._isar);
+  CheckpointPreferencesRepository(Isar isar)
+      : _preferencesStore = PreferencesStore(isar);
 
-  Future<Preferences> _getPreferences() async {
-    final existing = await _isar.preferences.where().findFirst();
-    if (existing != null) return existing;
-
-    final created = Preferences(autoSave: true);
-    await _isar.writeTxn(() async {
-      await _isar.preferences.put(created);
-    });
-    return created;
+  Future<Preferences> _getPreferences() {
+    return _preferencesStore.getOrCreate();
   }
 
   Future<int> getMaxCheckpoints() async {
