@@ -4,6 +4,7 @@ import 'package:subtitle_studio/app/repositories/app_preferences_repository.dart
 import 'package:subtitle_studio/app/repositories/app_data_maintenance_repository.dart';
 import 'package:subtitle_studio/app/repositories/project_repository.dart';
 import 'package:subtitle_studio/services/checkpoint_repository.dart';
+import 'package:subtitle_studio/services/project_save_coordinator.dart';
 import 'package:subtitle_studio/services/subtitle_import_repository.dart';
 import 'package:subtitle_studio/services/tutorial_preferences_repository.dart';
 import 'package:subtitle_studio/features/import_comments/project_comment_repository.dart';
