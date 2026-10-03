@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:subtitle_studio/themes/theme_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/operations/subtitle_operations.dart';
 import 'package:subtitle_studio/widgets/positioning_buttons_widget.dart';
 import 'package:subtitle_studio/widgets/subtitle_effects_sheet.dart';
 import 'package:subtitle_studio/operations/subtitle_effect_operations.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
-import 'package:subtitle_studio/services/checkpoint_manager.dart';
 
 class SubtitleActionsMenu extends StatelessWidget {
   final TextEditingController editedController;
@@ -55,7 +54,7 @@ class SubtitleActionsMenu extends StatelessWidget {
       icon: Icon(
         Icons.movie_edit,
         size: 32,
-        color: Provider.of<ThemeProvider>(context).themeMode == ThemeMode.light
+        color: Theme.of(context).brightness == Brightness.light
             ? const Color.fromARGB(255, 0, 45, 54)
             : const Color.fromARGB(255, 233, 216, 166),
       ),
@@ -274,8 +273,17 @@ class SubtitleActionsMenu extends StatelessWidget {
       }
       
       if (effectLines.isNotEmpty) {
+        final preOperationState = List<SubtitleLine>.from(collection.lines);
+        final effectDeltas = SubtitleEffectOperations.buildEffectDeltas(
+          originalLine: currentLine,
+          originalLineIndex: currentLine.index - 1,
+          effectLines: effectLines,
+        );
+
         // Apply the effect to the database
         final success = await SubtitleEffectOperations.applyEffectToSubtitleCollection(
+          isar: ProviderScope.containerOf(context, listen: false)
+              .read(isarProvider),
           subtitleCollectionId: subtitleId,
           originalLineIndex: currentLine.index - 1, // Convert to 0-based
           effectLines: effectLines,
@@ -283,13 +291,16 @@ class SubtitleActionsMenu extends StatelessWidget {
         
         if (success) {
           // Create a checkpoint for the effect
-          await CheckpointManager.createCheckpoint(
+          await ProviderScope.containerOf(context, listen: false)
+              .read(checkpointRepositoryProvider)
+              .createCheckpoint(
             sessionId: sessionId,
             subtitleCollectionId: subtitleId,
             operationType: 'effect',
             description: 'Applied $effectType effect to line ${currentLine.index} (${effectLines.length} lines)',
-            deltas: [], // Effects don't use deltas
-            forceSnapshot: true, // IMPORTANT: Force snapshot because effects replace entire sections
+            deltas: effectDeltas,
+            forceSnapshot: true,
+            preOperationState: preOperationState,
           );
           
           // Close the sheet and refresh

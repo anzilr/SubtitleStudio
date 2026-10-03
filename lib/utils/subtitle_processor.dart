@@ -27,14 +27,14 @@
 // - Adapt error handling to iOS conventions
 // - Use Core Data for processed subtitle storage
 
-import 'dart:convert'; // Text encoding and JSON operations
 import 'dart:io'; // File system operations
 import 'package:flutter/foundation.dart'; // Flutter debugging utilities
 import 'package:flutter/material.dart'; // UI framework for context handling
 import 'package:shared_preferences/shared_preferences.dart'; // For storing SAF URIs
-import 'package:subtitle_studio/database/database_helper.dart'; // Database operations
 import 'package:subtitle_studio/database/models/models.dart'; // Data models
-import 'package:charset_converter/charset_converter.dart'; // Character encoding detection
+import 'package:subtitle_studio/models/subtitle_import_result.dart';
+import 'package:subtitle_studio/services/subtitle_import_repository.dart';
+import 'package:subtitle_studio/services/subtitle_encoding_decoder.dart';
 import 'package:subtitle_studio/utils/subtitle_sorting.dart'; // Enhanced subtitle sorting
 
 /// Process and import subtitle file with comprehensive cleaning and validation options
@@ -85,73 +85,48 @@ import 'package:subtitle_studio/utils/subtitle_sorting.dart'; // Enhanced subtit
 ///     // 4. Store in Core Data
 /// }
 /// ```
-Future<Map?> processAndImportSubtitle(
+Future<SubtitleImportResult> processAndImportSubtitle(
   String filePath,
   BuildContext context, {
   bool removeHearingImpairedLines =
       false, // Remove [Speaker] and (sound) annotations
   bool mergeOverlappingSubtitles =
       false, // Merge subtitles with timing conflicts
+  required SubtitleImportRepository repository,
 }) async {
   try {
-    // Step 1: File Reading and Encoding Detection
-    String srtContent; // Decoded file content
-    String? encoding; // Detected character encoding
-    final file = File(filePath); // File system reference
-    final fileName = file.uri.pathSegments.last; // Extract filename for display
+    final file = File(filePath);
+    final fileName = file.uri.pathSegments.last;
 
+    late final DecodedSubtitleContent decoded;
     try {
-      // Attempt multi-encoding detection and content reading
-      // This handles various subtitle file encodings commonly used worldwide
-      srtContent = await _detectAndReadFileEncoding(file);
-      encoding =
-          "UTF-8"; // Default assumption, actual detection in helper function
+      decoded = await SubtitleEncodingDecoder.decodeFile(file);
     } catch (e) {
       throw Exception('Failed to decode SRT file: $e');
     }
 
-    // Step 2: SRT Format Parsing and Structure Validation
-    var parsedLines = _parseSrtContent(srtContent);
+    final srtContent = decoded.content;
+    final encoding = decoded.encoding;
 
-    // Step 3: Comprehensive Processing Pipeline
-    if (parsedLines.isNotEmpty) {
-      // Fix invalid indexing and time codes that could cause playback issues
-      parsedLines = _fixInvalidFormats(parsedLines);
-
-      // Optional: Remove hearing impaired accessibility text
-      // Detects and removes text in brackets [], parentheses (), and speaker labels
-      if (removeHearingImpairedLines) {
-        parsedLines = removeHearingImpairedText(parsedLines);
-      }
-
-      // Optional: Merge subtitles with overlapping timelines
-      // Intelligently combines subtitles that appear simultaneously
-      if (mergeOverlappingSubtitles) {
-        parsedLines = _mergeOverlappingSubtitles(parsedLines);
-      }
-
-      // Re-index lines to ensure sequential numbering for proper playback
-      parsedLines = _reindexSubtitles(parsedLines);
-    }
-
-    // Store processed subtitle in database with proper platform-specific file path handling
-    final subtitleData = await storeSubtitleData(
-      parsedLines,
-      fileName,
-      encoding,
-      filePath, // Store full file path (not just directory) as filePath
-      originalFileUri:
-          Platform.isAndroid
-              ? filePath
-              : filePath, // Use same value for both on regular files
-      projectFilePath: null, // No project file path for regular imports
+    final parsedLines = _processSubtitleLines(
+      srtContent,
+      removeHearingImpairedLines: removeHearingImpairedLines,
+      mergeOverlappingSubtitles: mergeOverlappingSubtitles,
     );
 
-    // Update the last edited session
-    final sessionId = subtitleData['sessionId'];
-    await updateLastEditedSession(sessionId);
+    final result = await repository.storeSubtitleData(
+      lines: parsedLines,
+      fileName: fileName,
+      encoding: encoding,
+      filePath: filePath,
+      originalFileUri: filePath,
+      projectFilePath: null,
+    );
 
-    return subtitleData;
+    // Preserve the existing last-edited-session update behavior.
+    await repository.updateLastEditedSession(result.sessionId);
+
+    return result;
   } catch (e) {
     if (kDebugMode) {
       print('Error processing subtitle: $e');
@@ -162,70 +137,49 @@ Future<Map?> processAndImportSubtitle(
 
 /// Processes and imports subtitle file without requiring a BuildContext
 /// For use when the widget that initiated the operation might be unmounted
-Future<Map?> processSubtitleWithoutContext(
+Future<SubtitleImportResult> processSubtitleWithoutContext(
   String filePath, {
   bool removeHearingImpairedLines = false,
   bool mergeOverlappingSubtitles = false,
+  required SubtitleImportRepository repository,
 }) async {
   try {
     if (kDebugMode) {
       print('Processing subtitle without context: $filePath');
     }
 
-    // Read file with appropriate encoding
-    String srtContent;
-    String? encoding;
     final file = File(filePath);
     final fileName = file.uri.pathSegments.last;
 
+    late final DecodedSubtitleContent decoded;
     try {
-      // Try different encodings
-      srtContent = await _detectAndReadFileEncoding(file);
-      encoding = "UTF-8"; // Default assumption
+      decoded = await SubtitleEncodingDecoder.decodeFile(file);
     } catch (e) {
       throw Exception('Failed to decode SRT file: $e');
     }
 
-    // Parse and process subtitle lines
-    var parsedLines = _parseSrtContent(srtContent);
+    final srtContent = decoded.content;
+    final encoding = decoded.encoding;
 
-    // Clean up subtitle lines based on options
-    if (parsedLines.isNotEmpty) {
-      // Fix invalid indexing and time codes
-      parsedLines = _fixInvalidFormats(parsedLines);
-
-      // Remove hearing impaired text if requested
-      if (removeHearingImpairedLines) {
-        parsedLines = removeHearingImpairedText(parsedLines);
-      }
-
-      // Merge overlapping subtitles if requested
-      if (mergeOverlappingSubtitles) {
-        parsedLines = _mergeOverlappingSubtitles(parsedLines);
-      }
-
-      // Re-index lines to ensure they are sequential
-      parsedLines = _reindexSubtitles(parsedLines);
-    }
-
-    // Store processed subtitle in database with proper platform-specific file path handling
-    final subtitleData = await storeSubtitleData(
-      parsedLines,
-      fileName,
-      encoding,
-      filePath, // Store full file path (not just directory) as filePath
-      originalFileUri:
-          Platform.isAndroid
-              ? filePath
-              : filePath, // Use same value for both on non-Android, actual URI on Android
-      projectFilePath: null, // No project file path for regular imports
+    final parsedLines = _processSubtitleLines(
+      srtContent,
+      removeHearingImpairedLines: removeHearingImpairedLines,
+      mergeOverlappingSubtitles: mergeOverlappingSubtitles,
     );
 
-    // Update the last edited session
-    final sessionId = subtitleData['sessionId'];
-    await updateLastEditedSession(sessionId);
+    final result = await repository.storeSubtitleData(
+      lines: parsedLines,
+      fileName: fileName,
+      encoding: encoding,
+      filePath: filePath,
+      originalFileUri: filePath,
+      projectFilePath: null,
+    );
 
-    return subtitleData;
+    // Preserve the existing last-edited-session update behavior.
+    await repository.updateLastEditedSession(result.sessionId);
+
+    return result;
   } catch (e) {
     if (kDebugMode) {
       print('Error processing subtitle without context: $e');
@@ -236,7 +190,7 @@ Future<Map?> processSubtitleWithoutContext(
 
 /// SAF-compatible version: Processes and imports subtitle content with context
 /// Uses file content instead of file path for Storage Access Framework compatibility
-Future<Map?> processAndImportSubtitleContent(
+Future<SubtitleImportResult> processAndImportSubtitleContent(
   String content,
   String fileName,
   String displayPath,
@@ -246,43 +200,28 @@ Future<Map?> processAndImportSubtitleContent(
   bool mergeOverlappingSubtitles =
       false, // Merge subtitles with timing conflicts
   String? contentUri, // Android SAF content URI for persistence
+  required SubtitleImportRepository repository,
 }) async {
   try {
     // Step 1: Content Processing (no file system access needed)
     String srtContent = content; // Content already provided
     String encoding = "UTF-8"; // Assume UTF-8 for content-based processing
 
-    // Step 2: SRT Format Parsing and Structure Validation
-    var parsedLines = _parseSrtContent(srtContent);
+    final parsedLines = _processSubtitleLines(
+      srtContent,
+      removeHearingImpairedLines: removeHearingImpairedLines,
+      mergeOverlappingSubtitles: mergeOverlappingSubtitles,
+    );
 
-    // Step 3: Comprehensive Processing Pipeline
     if (parsedLines.isNotEmpty) {
-      // Fix invalid indexing and time codes that could cause playback issues
-      parsedLines = _fixInvalidFormats(parsedLines);
-
-      // Optional: Remove hearing impaired accessibility text
-      // Detects and removes text in brackets [], parentheses (), and speaker labels
-      if (removeHearingImpairedLines) {
-        parsedLines = removeHearingImpairedText(parsedLines);
-      }
-
-      // Optional: Merge overlapping subtitles to prevent timing conflicts
-      if (mergeOverlappingSubtitles) {
-        parsedLines = _mergeOverlappingSubtitles(parsedLines);
-      }
-
-      // Step 4: Database Import with Metadata
-      // Creates Session and SubtitleCollection entries with comprehensive metadata
-      final subtitleData = await storeSubtitleData(
-        parsedLines,
-        fileName,
-        encoding,
-        displayPath,
-        originalFileUri: contentUri, // Store original content URI in database
-        projectFilePath: null, // No project file path for content imports
+      return await repository.storeSubtitleData(
+        lines: parsedLines,
+        fileName: fileName,
+        encoding: encoding,
+        filePath: displayPath,
+        originalFileUri: contentUri,
+        projectFilePath: null,
       );
-
-      return subtitleData;
     } else {
       throw Exception(
         'No valid subtitle entries found in the processed content.',
@@ -298,52 +237,40 @@ Future<Map?> processAndImportSubtitleContent(
 
 /// SAF-compatible version: Processes subtitle content without requiring BuildContext
 /// For use when the widget that initiated the operation might be unmounted
-Future<Map?> processSubtitleContentWithoutContext(
+Future<SubtitleImportResult> processSubtitleContentWithoutContext(
   String content,
   String fileName,
   String displayPath, {
   bool removeHearingImpairedLines = false,
   bool mergeOverlappingSubtitles = false,
   String? contentUri, // Android SAF content URI for persistence
+  required SubtitleImportRepository repository,
 }) async {
   try {
     // Step 1: Content Processing (no file system access needed)
     String srtContent = content; // Content already provided
     String encoding = "UTF-8"; // Assume UTF-8 for content-based processing
 
-    // Step 2: SRT Format Parsing and Structure Validation
-    var parsedLines = _parseSrtContent(srtContent);
+    final parsedLines = _processSubtitleLines(
+      srtContent,
+      removeHearingImpairedLines: removeHearingImpairedLines,
+      mergeOverlappingSubtitles: mergeOverlappingSubtitles,
+    );
 
-    // Step 3: Comprehensive Processing Pipeline
     if (parsedLines.isNotEmpty) {
-      // Fix invalid indexing and time codes that could cause playback issues
-      parsedLines = _fixInvalidFormats(parsedLines);
-
-      // Optional: Remove hearing impaired accessibility text
-      if (removeHearingImpairedLines) {
-        parsedLines = removeHearingImpairedText(parsedLines);
-      }
-
-      // Optional: Merge overlapping subtitles to prevent timing conflicts
-      if (mergeOverlappingSubtitles) {
-        parsedLines = _mergeOverlappingSubtitles(parsedLines);
-      }
-
-      // Step 4: Database Import with Metadata (without context)
-      final subtitleData = await storeSubtitleData(
-        parsedLines,
-        fileName,
-        encoding,
-        displayPath,
-        originalFileUri: contentUri, // Store original content URI in database
-        projectFilePath: null, // No project file path for content imports
+      final result = await repository.storeSubtitleData(
+        lines: parsedLines,
+        fileName: fileName,
+        encoding: encoding,
+        filePath: displayPath,
+        originalFileUri: contentUri,
+        projectFilePath: null,
       );
 
-      // Update the last edited session
-      final sessionId = subtitleData['sessionId'];
-      await updateLastEditedSession(sessionId);
+      // Preserve the existing last-edited-session update behavior.
+      await repository.updateLastEditedSession(result.sessionId);
 
-      return subtitleData;
+      return result;
     } else {
       throw Exception(
         'No valid subtitle entries found in the processed content.',
@@ -357,52 +284,25 @@ Future<Map?> processSubtitleContentWithoutContext(
   }
 }
 
-/// Detect file encoding and read content
-/// Attempts to detect file encoding and read content efficiently
-/// Uses streaming approach for large files to improve performance
-Future<String> _detectAndReadFileEncoding(File file) async {
-  try {
-    // Get file size to determine reading strategy
-    final fileStat = await file.stat();
-    final fileSizeInMB = fileStat.size / (1024 * 1024);
+List<SubtitleLine> _processSubtitleLines(
+  String content, {
+  required bool removeHearingImpairedLines,
+  required bool mergeOverlappingSubtitles,
+}) {
+  var lines = _parseSrtContent(content);
+  if (lines.isEmpty) return lines;
 
-    // For files larger than 5MB, use streaming approach
-    if (fileSizeInMB > 5) {
-      // Try UTF-8 with streaming read for performance
-      final stream = file.openRead();
-      final buffer = StringBuffer();
-      await for (final chunk in stream.transform(utf8.decoder)) {
-        buffer.write(chunk);
-      }
-      return buffer.toString();
-    }
+  lines = _fixInvalidFormats(lines);
 
-    // For smaller files, use regular approach with encoding detection
-    // Attempt UTF-8 decoding
-    return await file.readAsString(encoding: utf8);
-  } catch (e) {
-    try {
-      // Attempt ISO-8859-1 (Latin-1) decoding
-      final bytes = await file.readAsBytes();
-      return await CharsetConverter.decode("latin1", bytes);
-    } catch (e) {
-      try {
-        // Attempt Windows-1252 decoding
-        final bytes = await file.readAsBytes();
-        return await CharsetConverter.decode("windows-1252", bytes);
-      } catch (e) {
-        try {
-          // Attempt UTF-16 decoding
-          final bytes = await file.readAsBytes();
-          return await CharsetConverter.decode("utf16", bytes);
-        } catch (e) {
-          // Fallback to raw bytes if nothing works
-          final bytes = await file.readAsBytes();
-          return String.fromCharCodes(bytes);
-        }
-      }
-    }
+  if (removeHearingImpairedLines) {
+    lines = removeHearingImpairedText(lines);
   }
+
+  if (mergeOverlappingSubtitles) {
+    lines = _mergeOverlappingSubtitles(lines);
+  }
+
+  return _reindexSubtitles(lines);
 }
 
 /// Parses SRT content into structured subtitle lines with performance optimizations
@@ -647,10 +547,22 @@ List<SubtitleLine> removeHearingImpairedText(List<SubtitleLine> subtitles) {
     // Rejoin lines with newlines to preserve formatting
     final finalText = cleanedLines.join('\n').trim();
 
-    // Only include subtitles that have meaningful content after cleaning
+    // Only include subtitles that have meaningful content after cleaning.
+    // Return a new embedded object instead of mutating the caller's line. This
+    // is important for checkpoint/delta generation, which needs the original
+    // pre-cleanup object to remain unchanged for undo.
     if (finalText.isNotEmpty && !_isOnlySpecialCharacters(finalText)) {
-      subtitle.original = finalText;
-      cleanedSubtitles.add(subtitle);
+      cleanedSubtitles.add(
+        SubtitleLine()
+          ..index = subtitle.index
+          ..startTime = subtitle.startTime
+          ..endTime = subtitle.endTime
+          ..original = finalText
+          ..edited = subtitle.edited
+          ..marked = subtitle.marked
+          ..comment = subtitle.comment
+          ..resolved = subtitle.resolved,
+      );
     }
   }
 

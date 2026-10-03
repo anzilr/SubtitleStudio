@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:subtitle_studio/app/providers/core_providers.dart';
+import 'package:subtitle_studio/screens/edit/providers/subtitle_repository_provider.dart';
 import 'package:subtitle_studio/operations/subtitle_banner_operations.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 
@@ -134,6 +137,14 @@ class _BannerConfigurationSheetState extends State<BannerConfigurationSheet> {
       }
 
       final success = await SubtitleBannerOperations.insertBanners(
+        checkpointRepository: ProviderScope.containerOf(
+          context,
+          listen: false,
+        ).read(checkpointRepositoryProvider),
+        subtitleRepository: ProviderScope.containerOf(
+          context,
+          listen: false,
+        ).read(subtitleRepositoryProvider),
         subtitleCollectionId: widget.subtitleCollectionId,
         sessionId: widget.sessionId,
         currentSubtitleLines: widget.subtitleLines,
@@ -247,7 +258,7 @@ class _BannerConfigurationSheetState extends State<BannerConfigurationSheet> {
                         color: Theme.of(context).colorScheme.surface,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+                          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
                         ),
                       ),
                       child: Column(
@@ -277,9 +288,9 @@ class _BannerConfigurationSheetState extends State<BannerConfigurationSheet> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.orange.withOpacity(0.1),
+                        color: Colors.orange.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                        border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -318,9 +329,9 @@ class _BannerConfigurationSheetState extends State<BannerConfigurationSheet> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.1),
+                        color: Colors.blue.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                        border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -437,7 +448,7 @@ class _BannerConfigurationSheetState extends State<BannerConfigurationSheet> {
             decoration: BoxDecoration(
               border: Border(
                 top: BorderSide(
-                  color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+                  color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
                 ),
               ),
             ),
@@ -492,12 +503,12 @@ class _BannerConfigurationSheetState extends State<BannerConfigurationSheet> {
       decoration: BoxDecoration(
         color: isEnabled 
             ? Theme.of(context).colorScheme.surface
-            : Theme.of(context).colorScheme.surface.withOpacity(0.5),
+            : Theme.of(context).colorScheme.surface.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: isEnabled 
-              ? Theme.of(context).colorScheme.outline.withOpacity(0.3)
-              : Theme.of(context).colorScheme.outline.withOpacity(0.1),
+              ? Theme.of(context).colorScheme.outline.withValues(alpha: 0.3)
+              : Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
         ),
       ),
       child: Column(

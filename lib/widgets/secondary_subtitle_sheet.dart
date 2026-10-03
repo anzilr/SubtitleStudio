@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:subtitle_studio/screens/edit/edit_controller.dart';
 import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
 import 'package:subtitle_studio/utils/platform_file_handler.dart';
 import 'package:subtitle_studio/database/models/models.dart';
-import 'package:subtitle_studio/database/models/preferences_model.dart';
 import 'package:subtitle_studio/utils/platform_check.dart';
 import 'package:subtitle_studio/utils/subtitle_parser.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
@@ -10,7 +11,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:subtitle_studio/widgets/video_player_widget.dart';
 import 'dart:io';
 
-class SecondarySubtitleSheet extends StatelessWidget {
+class SecondarySubtitleSheet extends ConsumerWidget {
   final List<SubtitleLine> originalSubtitles;
   final Function(List<SimpleSubtitleLine>) onSecondarySubtitlesLoaded;
   final int subtitleCollectionId; // to persist per-collection settings
@@ -25,7 +26,7 @@ class SecondarySubtitleSheet extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     // Dynamic color variables for adaptive theming
     final primaryColor = Theme.of(context).primaryColor;
     final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
@@ -91,7 +92,7 @@ class SecondarySubtitleSheet extends StatelessWidget {
                 icon: Icons.file_open_outlined,
                 title: 'Load from File',
                 description: 'Import subtitle from an external file (.srt)',
-                onTap: () => _loadFromFile(context),
+                onTap: () => _loadFromFile(context, ref),
                 themeColor: primaryColor,
               ),
               const SizedBox(height: 12),
@@ -100,7 +101,7 @@ class SecondarySubtitleSheet extends StatelessWidget {
                 icon: Icons.compare_arrows,
                 title: 'Use Original Text',
                 description: 'Display original text from current subtitles as secondary track',
-                onTap: () => _useOriginalText(context),
+                onTap: () => _useOriginalText(context, ref),
                 themeColor: Colors.orange,
               ),
               // Only show video subtitle track option if video player is available and has subtitle tracks
@@ -111,7 +112,7 @@ class SecondarySubtitleSheet extends StatelessWidget {
                   icon: Icons.video_library_outlined,
                   title: 'Use Video Subtitle Track',
                   description: 'Select from subtitle tracks embedded in the video file',
-                  onTap: () => _showVideoSubtitleTrackDialog(context),
+                  onTap: () => _showVideoSubtitleTrackDialog(context, ref),
                   themeColor: Colors.purple,
                 ),
               ],
@@ -229,7 +230,7 @@ class SecondarySubtitleSheet extends StatelessWidget {
     );
   }
 
-  Future<void> _loadFromFile(BuildContext context) async {
+  Future<void> _loadFromFile(BuildContext context, WidgetRef ref) async {
     // Guard against context disposal at the beginning
     if (!context.mounted) return;
 
@@ -320,7 +321,7 @@ class SecondarySubtitleSheet extends StatelessWidget {
       if (parsedSubtitles.isNotEmpty) {
         // Delete any existing extracted subtitle file before loading a new one
         try {
-          final existingPath = await PreferencesModel.getSecondarySubtitlePath(subtitleCollectionId);
+          final existingPath = await ref.read(editorPreferencesRepositoryProvider).getSecondarySubtitlePath(subtitleCollectionId);
           if (existingPath != null && existingPath.isNotEmpty) {
             final existingFile = File(existingPath);
             if (await existingFile.exists() && existingPath.contains('extracted_subtitle_')) {
@@ -342,8 +343,8 @@ class SecondarySubtitleSheet extends StatelessWidget {
         }
         
         // Persist the path (or URI on Android) and mark that secondary is not original
-        PreferencesModel.saveSecondarySubtitlePath(subtitleCollectionId, pathToSave);
-        PreferencesModel.setSecondaryIsOriginal(subtitleCollectionId, false);
+        await ref.read(editorPreferencesRepositoryProvider).saveSecondarySubtitlePath(subtitleCollectionId, pathToSave);
+        await ref.read(editorPreferencesRepositoryProvider).setSecondaryIsOriginal(subtitleCollectionId, false);
         if (context.mounted) {
           Navigator.pop(context);
         }
@@ -359,7 +360,7 @@ class SecondarySubtitleSheet extends StatelessWidget {
     }
   }
 
-  Future<void> _useOriginalText(BuildContext context) async {
+  Future<void> _useOriginalText(BuildContext context, WidgetRef ref) async {
     List<SimpleSubtitleLine> originalTextSubtitles = [];
 
     // Create a new list with original text using SimpleSubtitleLine
@@ -379,7 +380,7 @@ class SecondarySubtitleSheet extends StatelessWidget {
     if (originalTextSubtitles.isNotEmpty) {
       // Delete any existing extracted subtitle file when switching to original text
       try {
-        final existingPath = await PreferencesModel.getSecondarySubtitlePath(subtitleCollectionId);
+        final existingPath = await ref.read(editorPreferencesRepositoryProvider).getSecondarySubtitlePath(subtitleCollectionId);
         if (existingPath != null && existingPath.isNotEmpty) {
           final existingFile = File(existingPath);
           if (await existingFile.exists() && existingPath.contains('extracted_subtitle_')) {
@@ -393,9 +394,9 @@ class SecondarySubtitleSheet extends StatelessWidget {
       
       onSecondarySubtitlesLoaded(originalTextSubtitles);
   // Persist that secondary subtitles should be the original text for this collection
-  PreferencesModel.setSecondaryIsOriginal(subtitleCollectionId, true);
+  await ref.read(editorPreferencesRepositoryProvider).setSecondaryIsOriginal(subtitleCollectionId, true);
   // Also clear any saved external path
-  PreferencesModel.removeSecondarySubtitlePath(subtitleCollectionId);
+  await ref.read(editorPreferencesRepositoryProvider).removeSecondarySubtitlePath(subtitleCollectionId);
       if (context.mounted) {
         Navigator.pop(context);
       }
@@ -432,7 +433,7 @@ class SecondarySubtitleSheet extends StatelessWidget {
   }
 
   /// Show dialog to select from available video subtitle tracks
-  void _showVideoSubtitleTrackDialog(BuildContext context) async {
+  void _showVideoSubtitleTrackDialog(BuildContext context, WidgetRef ref) async {
     if (videoPlayerState == null) return;
     
     // Show loading indicator while getting track information
@@ -523,7 +524,7 @@ class SecondarySubtitleSheet extends StatelessWidget {
                 itemCount: textTracks.length,
                 itemBuilder: (context, index) {
                   final track = textTracks[index];
-                  return _buildDetailedSubtitleTrackOption(dialogContext, track, index);
+                  return _buildDetailedSubtitleTrackOption(dialogContext, ref, track, index);
                 },
               ),
             ),
@@ -546,7 +547,7 @@ class SecondarySubtitleSheet extends StatelessWidget {
   }
 
   /// Build a single detailed subtitle track option widget from FFmpeg track info
-  Widget _buildDetailedSubtitleTrackOption(BuildContext context, Map<String, dynamic> track, int index) {
+  Widget _buildDetailedSubtitleTrackOption(BuildContext context, WidgetRef ref, Map<String, dynamic> track, int index) {
     // Extract track information
     final String title = track['title'] ?? 'Subtitle Track ${track['index'] ?? index}';
     final String? language = track['language'];
@@ -559,7 +560,7 @@ class SecondarySubtitleSheet extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(8),
-          onTap: () => _selectDetailedSubtitleTrack(context, track),
+          onTap: () => _selectDetailedSubtitleTrack(context, ref, track),
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -622,7 +623,7 @@ class SecondarySubtitleSheet extends StatelessWidget {
   }
 
   /// Select a detailed subtitle track and extract its content
-  Future<void> _selectDetailedSubtitleTrack(BuildContext dialogContext, Map<String, dynamic> track) async {
+  Future<void> _selectDetailedSubtitleTrack(BuildContext dialogContext, WidgetRef ref, Map<String, dynamic> track) async {
     Navigator.pop(dialogContext); // Close the track selection dialog
     
     // Get the root context from the navigator to avoid context conflicts
@@ -699,7 +700,7 @@ class SecondarySubtitleSheet extends StatelessWidget {
       
       // Delete any existing extracted subtitle file before creating a new one
       try {
-        final existingPath = await PreferencesModel.getSecondarySubtitlePath(subtitleCollectionId);
+        final existingPath = await ref.read(editorPreferencesRepositoryProvider).getSecondarySubtitlePath(subtitleCollectionId);
         if (existingPath != null && existingPath.isNotEmpty) {
           final existingFile = File(existingPath);
           if (await existingFile.exists() && existingPath.contains('extracted_subtitle_')) {
@@ -722,7 +723,7 @@ class SecondarySubtitleSheet extends StatelessWidget {
         await tempFile.writeAsString(subtitleContent);
         
         // Save the temp file path to SharedPreferences for future reloading
-        await PreferencesModel.saveSecondarySubtitlePath(subtitleCollectionId, tempFile.path);
+        await ref.read(editorPreferencesRepositoryProvider).saveSecondarySubtitlePath(subtitleCollectionId, tempFile.path);
       } catch (e) {
         // If saving to temp file fails, continue anyway but log the error
         print('Warning: Failed to save extracted subtitle to temp file: $e');
@@ -732,7 +733,7 @@ class SecondarySubtitleSheet extends StatelessWidget {
       onSecondarySubtitlesLoaded(parsedSubtitles);
       
       // Persist the track selection
-      PreferencesModel.setSecondaryIsOriginal(subtitleCollectionId, false);
+      await ref.read(editorPreferencesRepositoryProvider).setSecondaryIsOriginal(subtitleCollectionId, false);
       
       if (rootContext.mounted) {
         SnackbarHelper.showSuccess(

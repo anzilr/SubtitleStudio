@@ -6,8 +6,6 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import '../utils/app_logger.dart';
 
 /// A comprehensive feedback widget for user feedback and bug reports
@@ -18,7 +16,7 @@ import '../utils/app_logger.dart';
 /// - Optional log file attachment
 /// - Automatic system information collection
 /// - Email composition using mailto
-/// - In-app feedback submission without leaving the app
+/// - Feedback sharing through the user's email/share workflow
 class FeedbackWidget extends StatefulWidget {
   const FeedbackWidget({super.key});
 
@@ -42,10 +40,6 @@ class _FeedbackWidgetState extends State<FeedbackWidget> {
   
   // Email configuration
   static const String _developerEmail = 'quadbitlab@gmail.com';
-  
-  // Telegram Bot Configuration
-  static const String _telegramBotToken = '8465375001:AAGHKG7HzG3UYipW19utNPiHUYdwIIXXKb0';
-  static const String _telegramChannelId = '-1002618985489';
   
   // Categories
   final List<String> _categories = [
@@ -164,7 +158,12 @@ class _FeedbackWidgetState extends State<FeedbackWidget> {
         stackTrace: stackTrace,
         context: 'FeedbackWidget._pickScreenshots'
       );
-      _showSnackBar('Failed to pick screenshots: $e', Colors.red);
+      if (mounted) {
+        _showSnackBar(
+          'Could not add screenshots. Please try again.',
+          Colors.red,
+        );
+      }
     }
   }
 
@@ -300,214 +299,25 @@ class _FeedbackWidgetState extends State<FeedbackWidget> {
       try {
         final emailBody = await _composeEmailBody();
         await _shareWithAttachments(emailBody);
-      } catch (shareError) {
-        _showSnackBar('Failed to send feedback: $e', Colors.red);
+      } catch (shareError, shareStackTrace) {
+        await AppLogger.instance.error(
+          'Feedback fallback sharing failed: $shareError',
+          stackTrace: shareStackTrace,
+          context: 'FeedbackWidget._sendFeedback',
+        );
+        if (mounted) {
+          _showSnackBar(
+            'Could not send feedback. Please try again.',
+            Colors.red,
+          );
+        }
       }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
-  /// Send feedback directly to Telegram channel
-  Future<void> _sendToTelegram() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-    
-    if (_feedbackController.text.trim().isEmpty) {
-      _showSnackBar('Please enter your feedback', Colors.red);
-      return;
-    }
-    
-    try {
-      setState(() {
-        _isLoading = true;
-      });
-      
-      // Prepare logs if needed
-      if (_includeLogs) {
-        await _prepareLogs();
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
       }
-      
-      // Collect system information
-      final systemInfo = await _collectSystemInfo();
-      final timestamp = DateTime.now().toLocal();
-      
-      // Create stylized message
-      final message = await _createTelegramMessage(systemInfo, timestamp);
-      
-      // Prepare files for upload
-      final files = <File>[];
-      if (_includeLogs && _exportedLogPath != null) {
-        files.add(File(_exportedLogPath!));
-      }
-      files.addAll(_attachedScreenshots);
-      
-      if (files.isNotEmpty) {
-        // Send with attachments
-        await _sendTelegramWithFiles(message, files);
-      } else {
-        // Send text only
-        await _sendTelegramMessage(message);
-      }
-      
-      _showSnackBar('Feedback sent to developer successfully!', Colors.green, duration: 5);
-      _clearForm();
-      
-    } catch (e, stackTrace) {
-      await AppLogger.instance.error('Failed to send feedback to Telegram: $e', stackTrace: stackTrace, context: 'FeedbackWidget._sendToTelegram');
-      _showSnackBar('Failed to send feedback: $e', Colors.red, duration: 5);
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
-  /// Create stylized Telegram message
-  Future<String> _createTelegramMessage(Map<String, String> systemInfo, DateTime timestamp) async {
-    final categoryEmoji = _getCategoryEmoji(_selectedCategory);
-    final buffer = StringBuffer();
-    
-    // Header with emoji and category
-    buffer.writeln('$categoryEmoji <b>Subtitle Studio - $_selectedCategory</b>');
-    buffer.writeln();
-    
-    // Timestamp
-    buffer.writeln('📅 <b>Submitted:</b> ${timestamp.toString().split('.').first}');
-    buffer.writeln();
-    
-    // User Information (if provided)
-    if (_nameController.text.isNotEmpty || _emailController.text.isNotEmpty) {
-      buffer.writeln('👤 <b>User Information:</b>');
-      if (_nameController.text.isNotEmpty) {
-        buffer.writeln('  • Name: ${_nameController.text}');
-      }
-      if (_emailController.text.isNotEmpty) {
-        buffer.writeln('  • Email: ${_emailController.text}');
-      }
-      buffer.writeln();
-    }
-    
-    // Feedback Content
-    buffer.writeln('💬 <b>Feedback:</b>');
-    buffer.writeln(_feedbackController.text);
-    buffer.writeln();
-    
-    // System Information
-    buffer.writeln('📱 <b>System Information:</b>');
-    buffer.writeln('  • App: ${systemInfo['App Name']} v${systemInfo['Version']}');
-    buffer.writeln('  • Platform: ${systemInfo['Platform']} ${systemInfo['Platform Version']}');
-    if (systemInfo['Device'] != null) {
-      buffer.writeln('  • Device: ${systemInfo['Device']}');
-    }
-    if (systemInfo['Android Version'] != null) {
-      buffer.writeln('  • OS: ${systemInfo['Android Version']}');
-    } else if (systemInfo['iOS Version'] != null) {
-      buffer.writeln('  • OS: ${systemInfo['iOS Version']}');
-    }
-    buffer.writeln();
-    
-    // Attachments info
-    if (_includeLogs || _attachedScreenshots.isNotEmpty) {
-      buffer.writeln('📎 <b>Attachments:</b>');
-      if (_includeLogs && _exportedLogPath != null) {
-        buffer.writeln('  • Log file: ${_exportedLogPath!.split('/').last}');
-      }
-      if (_attachedScreenshots.isNotEmpty) {
-        buffer.writeln('  • Screenshots: ${_attachedScreenshots.length} file(s)');
-      }
-      buffer.writeln();
-    }
-    
-    // Hashtags for categorization
-    buffer.writeln('#${_selectedCategory.replaceAll(' ', '')} #MSoneSubEditor #Feedback');
-    
-    return buffer.toString();
-  }
-
-  /// Get emoji for feedback category
-  String _getCategoryEmoji(String category) {
-    switch (category) {
-      case 'Bug Report':
-        return '🐛';
-      case 'Feature Request':
-        return '💡';
-      case 'General Feedback':
-        return '💬';
-      case 'Performance Issue':
-        return '⚡';
-      case 'UI/UX Feedback':
-        return '🎨';
-      case 'Crash Report':
-        return '💥';
-      default:
-        return '📝';
-    }
-  }
-
-  /// Send text-only message to Telegram
-  Future<void> _sendTelegramMessage(String message) async {
-    final uri = Uri.parse('https://api.telegram.org/bot$_telegramBotToken/sendMessage');
-    
-    final response = await http.post(
-      uri,
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({
-        'chat_id': _telegramChannelId,
-        'text': message,
-        'parse_mode': 'HTML',
-      }),
-    );
-
-    if (response.statusCode != 200) {
-      final responseData = json.decode(response.body);
-      throw Exception('Telegram API error: ${responseData['description'] ?? 'Unknown error'}');
-    }
-  }
-
-  /// Send message with files to Telegram
-  Future<void> _sendTelegramWithFiles(String message, List<File> files) async {
-    if (files.length == 1) {
-      // Send single file with caption
-      await _sendSingleFileToTelegram(message, files.first);
-    } else {
-      // Send message first, then files
-      await _sendTelegramMessage(message);
-      
-      // Send each file separately
-      for (int i = 0; i < files.length; i++) {
-        final file = files[i];
-        final fileName = file.path.split('/').last;
-        final caption = 'Attachment ${i + 1}/${files.length}: $fileName';
-        await _sendSingleFileToTelegram(caption, file);
-      }
-    }
-  }
-
-  /// Send single file to Telegram
-  Future<void> _sendSingleFileToTelegram(String caption, File file) async {
-    final uri = Uri.parse('https://api.telegram.org/bot$_telegramBotToken/sendDocument');
-    
-    final request = http.MultipartRequest('POST', uri);
-    request.fields['chat_id'] = _telegramChannelId;
-    request.fields['caption'] = caption;
-    request.fields['parse_mode'] = 'HTML';
-    
-    request.files.add(await http.MultipartFile.fromPath(
-      'document',
-      file.path,
-      filename: file.path.split('/').last,
-    ));
-
-    final response = await request.send();
-    
-    if (response.statusCode != 200) {
-      final responseBody = await response.stream.bytesToString();
-      final responseData = json.decode(responseBody);
-      throw Exception('Telegram API error: ${responseData['description'] ?? 'Unknown error'}');
     }
   }
 
@@ -582,10 +392,12 @@ $emailBody''';
       
       // Share with files if available, otherwise just text
       if (files.isNotEmpty) {
-        await Share.shareXFiles(
-          files,
-          text: emailContent,
-          subject: 'Subtitle Studio - $_selectedCategory',
+        await SharePlus.instance.share(
+          ShareParams(
+            files: files,
+            text: emailContent,
+            subject: 'Subtitle Studio - $_selectedCategory',
+          ),
         );
         
         // Log the feedback submission
@@ -600,17 +412,27 @@ $emailBody''';
           duration: 6,
         );
       } else {
-        await Share.share(
-          emailContent,
-          subject: 'Subtitle Studio - $_selectedCategory',
+        await SharePlus.instance.share(
+          ShareParams(
+            text: emailContent,
+            subject: 'Subtitle Studio - $_selectedCategory',
+          ),
         );
         
         _showSnackBar('Feedback shared successfully!', Colors.green);
       }
       
       _clearForm();
-    } catch (e) {
-      _showSnackBar('Failed to share feedback: $e', Colors.red);
+    } catch (e, stackTrace) {
+      await AppLogger.instance.error(
+        'Failed to share feedback: $e',
+        stackTrace: stackTrace,
+        context: 'FeedbackWidget._shareWithAttachments',
+      );
+      _showSnackBar(
+        'Could not share feedback. Please try again.',
+        Colors.red,
+      );
     }
   }
 
@@ -1055,26 +877,6 @@ $emailBody''';
               ),
               const SizedBox(height: 16),
               
-              // Send to Telegram button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _sendToTelegram,
-                  icon: const Icon(Icons.telegram),
-                  label: const Text('Send'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue[600],
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    textStyle: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              
               // Email button
               SizedBox(
                 width: double.infinity,
@@ -1109,7 +911,7 @@ $emailBody''';
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Use "Send" to report directly to the developer via Telegram. Use "Email" to share via your email app. You can copy the email address above if needed.',
+                        'Use "Email" to share feedback through your email app. You can copy the developer email address above if needed.',
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.green[700],

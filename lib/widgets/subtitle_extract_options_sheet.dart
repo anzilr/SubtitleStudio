@@ -1,27 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
 // Removed platform_check - using pure SAF implementation without permission checks
 import 'package:subtitle_studio/utils/ffmpeg_helper.dart';
+import 'package:subtitle_studio/services/subtitle_extraction_file_service.dart';
 import 'package:subtitle_studio/utils/subtitle_processor.dart';
 import 'package:subtitle_studio/widgets/subtitle_tracks_sheet.dart';
 import 'package:subtitle_studio/database/models/models.dart';
+import 'package:subtitle_studio/models/subtitle_import_result.dart';
+import 'package:subtitle_studio/screens/edit/providers/subtitle_repository_provider.dart';
 import 'package:subtitle_studio/widgets/loading_overlay.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/utils/app_logger.dart';
 import 'package:subtitle_studio/utils/platform_file_handler.dart';
-import 'package:subtitle_studio/database/database_helper.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 // Removed permission_handler - not needed with pure SAF implementation
 import 'package:path/path.dart' as path;
-import 'package:path_provider/path_provider.dart';
 import 'package:file_picker/file_picker.dart' as fp;
 import 'dart:convert';
 
 // Global key for accessing navigator state
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-class SubtitleExtractOptionsSheet extends StatefulWidget {
+class SubtitleExtractOptionsSheet extends ConsumerStatefulWidget {
   final Function(Session) onSubtitleExtracted;
 
   const SubtitleExtractOptionsSheet({
@@ -30,12 +33,12 @@ class SubtitleExtractOptionsSheet extends StatefulWidget {
   });
 
   @override
-  State<SubtitleExtractOptionsSheet> createState() =>
+  ConsumerState<SubtitleExtractOptionsSheet> createState() =>
       _SubtitleExtractOptionsSheetState();
 }
 
 class _SubtitleExtractOptionsSheetState
-    extends State<SubtitleExtractOptionsSheet> {
+    extends ConsumerState<SubtitleExtractOptionsSheet> {
   bool _removeHearingImpairedLines = false;
   bool _mergeOverlappingSubtitles = false;
   bool _isLoading = false;
@@ -187,7 +190,7 @@ class _SubtitleExtractOptionsSheetState
       );
       if (!mounted) return;
 
-      SnackbarHelper.showError(context, 'Error selecting video: $e');
+      SnackbarHelper.showError(context, 'Could not open the selected video. Please try again.');
 
       setState(() {
         _isLoading = false;
@@ -417,7 +420,7 @@ class _SubtitleExtractOptionsSheetState
       );
     } catch (e) {
       if (kDebugMode) {
-        print('Error extracting subtitle: $e');
+        print('Subtitle extraction failed. Please try again.');
         if (e is Exception) {
           print('Exception details: ${e.toString()}');
         }
@@ -462,52 +465,13 @@ class _SubtitleExtractOptionsSheetState
     Session? extractedSession;
 
     try {
-      // Handle directory and filename based on save method and platform
-      String outputDir;
-      String outputFileName;
-
-      if (useDirectSave && Platform.isAndroid) {
-        // For SAF, outputFilePath is just the filename, create a temp directory
-        outputFileName = outputFilePath;
-        try {
-          final tempDir = await getTemporaryDirectory();
-          outputDir = tempDir.path;
-        } catch (e) {
-          if (kDebugMode) {
-            print('Error getting temp directory, using fallback: $e');
-          }
-          outputDir = '/data/data/org.msone.subeditor/cache';
-        }
-      } else if (Platform.isIOS) {
-        // For iOS, use temp directory for extraction, then use file picker for final save
-        outputFileName = path.basename(outputFilePath);
-        try {
-          final tempDir = await getTemporaryDirectory();
-          outputDir = tempDir.path;
-        } catch (e) {
-          if (kDebugMode) {
-            print('Error getting iOS temp directory, using fallback: $e');
-          }
-          final appDocsDir = await getApplicationDocumentsDirectory();
-          outputDir = appDocsDir.path;
-        }
-      } else {
-        // For desktop, use temp directory for extraction, then copy to final location
-        outputFileName = path.basename(outputFilePath);
-        try {
-          final tempDir = await getTemporaryDirectory();
-          outputDir = tempDir.path;
-          if (kDebugMode) {
-            print('Using temp directory for desktop extraction: $outputDir');
-          }
-        } catch (e) {
-          if (kDebugMode) {
-            print('Error getting temp directory, using system temp: $e');
-          }
-          // Fallback to system temp directory
-          outputDir = Directory.systemTemp.path;
-        }
-      }
+      final extractionPaths =
+          await SubtitleExtractionFileService.resolveExtractionPaths(
+        outputFilePath: outputFilePath,
+        useDirectSave: useDirectSave,
+      );
+      var outputDir = extractionPaths.outputDirectory;
+      final outputFileName = extractionPaths.outputFileName;
 
       if (kDebugMode) {
         print('Starting extraction in separate method');
@@ -518,103 +482,37 @@ class _SubtitleExtractOptionsSheetState
         print('Checking directory access...');
       }
 
-      // SAF implementation doesn't require storage permissions
-      // All file operations are handled through user-selected content URIs
-      
-      // Directory permission checking (skip detailed checks for SAF and iOS)
-      if (!useDirectSave || (!Platform.isAndroid && !Platform.isIOS)) {
+      try {
+        outputDir =
+            await SubtitleExtractionFileService.prepareOutputDirectory(
+          outputDirectory: outputDir,
+          useDirectSave: useDirectSave,
+        );
+      } catch (e) {
+        if (kDebugMode) {
+          print('Directory permission check failed: $e');
+          print('This may be due to Android storage permissions');
+        }
+
         try {
-          // Check if directory exists first
-          final outputDirObj = Directory(outputDir);
-          final dirExists = await outputDirObj.exists();
+          await AppLogger.instance.warning(
+            'Cannot write to selected directory',
+            context: 'SubtitleExtractOptionsSheet._extractSubtitleWithAsync',
+          );
+          if (rootContext.mounted) {
+            LoadingOverlay.hide(rootContext);
 
-          if (kDebugMode) {
-            print('Directory exists: $dirExists');
-          }
-
-          if (!dirExists) {
-            try {
-              await outputDirObj.create(recursive: true);
-              if (kDebugMode) {
-                print('Created output directory: $outputDir');
-              }
-            } catch (e) {
-              if (kDebugMode) {
-                print('Error creating directory: $e');
-              }
-              throw Exception('Cannot create directory: $e');
-            }
-          }
-
-          // Generate a unique temporary filename
-          final timestamp = DateTime.now().millisecondsSinceEpoch;
-          final testFileName = '$outputDir/test_write_$timestamp.tmp';
-
-          if (kDebugMode) {
-            print('Testing write permissions with file: $testFileName');
-          }
-
-          // Try to create a test file to verify write permissions
-          final testFile = File(testFileName);
-          await testFile.writeAsString('test');
-
-          // Verify the file was created
-          final testFileExists = await testFile.exists();
-          if (kDebugMode) {
-            print('Test file created successfully: $testFileExists');
-          }
-
-          // Clean up the test file
-          if (testFileExists) {
-            await testFile.delete();
-            if (kDebugMode) {
-              print('Test file deleted');
-            }
-          }
-        } catch (e) {
-          if (kDebugMode) {
-            print('Directory permission check failed: $e');
-            print('This may be due to Android storage permissions');
-          }
-
-          // Try to hide loading overlay and show an error
-          try {
-            await AppLogger.instance.warning(
-              'Cannot write to selected directory',
-              context: 'SubtitleExtractOptionsSheet._extractSubtitleWithAsync',
+            SnackbarHelper.showError(
+              rootContext,
+              'Cannot write to selected directory. Please select a different location.',
+              duration: const Duration(seconds: 5),
             );
-            if (rootContext.mounted) {
-              LoadingOverlay.hide(rootContext);
-
-              SnackbarHelper.showError(
-                rootContext,
-                'Cannot write to selected directory. Please select a different location.',
-                duration: const Duration(seconds: 5),
-              );
-            }
-          } catch (_) {
-            // If this fails, we can't show errors to the user
           }
-
-          return; // Return instead of throwing to allow user to try again
+        } catch (_) {
+          // If this fails, we can't show errors to the user
         }
-      } else {
-        // For SAF, ensure cache directory exists
-        try {
-          final cacheDir = Directory(outputDir);
-          if (!await cacheDir.exists()) {
-            await cacheDir.create(recursive: true);
-            if (kDebugMode) {
-              print('Created cache directory for SAF temp files: $outputDir');
-            }
-          }
-        } catch (e) {
-          if (kDebugMode) {
-            print('Error creating cache directory: $e');
-          }
-          // Use a fallback temp directory
-          outputDir = '/tmp';
-        }
+
+        return;
       }
 
       // For desktop, check if file will already exist and ask for confirmation BEFORE extraction
@@ -911,70 +809,12 @@ class _SubtitleExtractOptionsSheetState
             }
           } else {
             // On desktop, copy extracted file from temp to user-selected location
-            final normalizedOutputFilePath = FFmpegHelper.normalizePath(outputFilePath);
-            final destinationFile = File(normalizedOutputFilePath);
-            final normalizedTempPath = FFmpegHelper.normalizePath(tempOutputFile);
+            finalOutputPath =
+                await SubtitleExtractionFileService.copyDesktopResult(
+              tempOutputFile: tempOutputFile,
+              outputFilePath: outputFilePath,
+            );
             
-            if (kDebugMode) {
-              print('Desktop extraction complete');
-              print('Temp file path: $tempOutputFile');
-              print('Normalized temp path: $normalizedTempPath');
-              print('Final output path: $normalizedOutputFilePath');
-            }
-            
-            // Verify temp file has content before copying
-            if (!await tempFile.exists()) {
-              throw Exception('Temp file not found: $tempOutputFile');
-            }
-            
-            final tempFileSize = await tempFile.length();
-            if (kDebugMode) {
-              print('Temp file size: $tempFileSize bytes');
-            }
-            
-            if (tempFileSize == 0) {
-              // Clean up empty temp file
-              await tempFile.delete();
-              throw Exception('FFmpeg extraction produced an empty file. The subtitle track may be empty or corrupted.');
-            }
-            
-            // Delete destination file first if it exists (user already confirmed replacement)
-            if (await destinationFile.exists()) {
-              await destinationFile.delete();
-              if (kDebugMode) {
-                print('Deleted existing file at: $normalizedOutputFilePath');
-              }
-            }
-            
-            // Copy file from temp to final location
-            await tempFile.copy(normalizedOutputFilePath);
-            if (kDebugMode) {
-              print('Copied file from temp to final location: $normalizedOutputFilePath');
-              print('Verifying copied file...');
-            }
-            
-            // Verify the copied file
-            final copiedFileSize = await destinationFile.length();
-            if (kDebugMode) {
-              print('Copied file size: $copiedFileSize bytes');
-            }
-            
-            if (copiedFileSize != tempFileSize) {
-              if (kDebugMode) {
-                print('WARNING: File size mismatch! Temp: $tempFileSize, Copied: $copiedFileSize');
-              }
-            }
-            
-            // Clean up temp file
-            await tempFile.delete();
-            if (kDebugMode) {
-              print('Cleaned up temp file: $tempOutputFile');
-            }
-            
-            finalOutputPath = normalizedOutputFilePath;
-            
-            // Add a small delay to ensure file system operations complete
-            await Future.delayed(const Duration(milliseconds: 100));
           }
         } else {
           throw Exception(
@@ -1010,7 +850,7 @@ class _SubtitleExtractOptionsSheetState
         // Try to hide loading overlay and show an error
         try {
           await AppLogger.instance.error(
-            'Failed to extract subtitle: $e',
+            'Subtitle extraction failed. Please try another track or file.',
             context: 'SubtitleExtractOptionsSheet._extractSubtitleWithAsync',
           );
           if (rootContext.mounted) {
@@ -1029,98 +869,38 @@ class _SubtitleExtractOptionsSheetState
         return; // Return instead of throwing
       }
 
-      // Verify the file exists - normalize the path first for consistent checking
-      final normalizedOutputPath = FFmpegHelper.normalizePath(outputFilePath);
-      final extractedFile = File(normalizedOutputPath);
-      
-      // Skip file verification for iOS since the file picker handles saving
-      // and we don't have access to verify files outside the app sandbox
-      bool fileExists = true;
-      int fileSize = 0;
-      
-      if (!Platform.isIOS) {
-        // Add retry logic for file existence and size check to handle timing issues
-        int retryCount = 0;
-        const maxRetries = 10;
-        const retryDelay = Duration(milliseconds: 200);
-        
-        while (retryCount < maxRetries) {
-          fileExists = await extractedFile.exists();
-          
-          if (fileExists) {
-            fileSize = await extractedFile.length();
-            
-            // If file exists and has content, we're done
-            if (fileSize > 0) {
-              break;
-            }
-            
-            // File exists but has 0 bytes - might be a timing issue
-            if (retryCount < maxRetries - 1) {
-              if (kDebugMode) {
-                print('File exists but shows 0 bytes, retrying... (attempt ${retryCount + 1}/$maxRetries)');
-              }
-              await Future.delayed(retryDelay);
-            }
-          } else {
-            // File doesn't exist yet
-            if (retryCount < maxRetries - 1) {
-              if (kDebugMode) {
-                print('File not found, retrying... (attempt ${retryCount + 1}/$maxRetries)');
-              }
-              await Future.delayed(retryDelay);
-            }
-          }
-          
-          retryCount++;
-        }
+      final verification =
+          await SubtitleExtractionFileService.verifyOutputFile(
+        outputFilePath: outputFilePath,
+      );
 
-        if (kDebugMode) {
-          print('Original output path: $outputFilePath');
-          print('Normalized output path: $normalizedOutputPath');
-          print('File exists: $fileExists (after $retryCount attempts)');
-          if (fileExists) {
-            print('File size: $fileSize bytes');
-          }
-        }
+      if (!verification.isValid) {
+        final errorMessage = verification.exists
+            ? 'Subtitle extraction failed - extracted file is empty (0 bytes)'
+            : 'Subtitle extraction failed - extracted file could not be found at: '
+                '${verification.normalizedOutputPath}';
 
-        if (!fileExists || fileSize == 0) {
-          // Provide more detailed error information
-          String errorMessage;
-          if (!fileExists) {
-            errorMessage = 'Subtitle extraction failed - extracted file could not be found at: $normalizedOutputPath';
-          } else {
-            errorMessage = 'Subtitle extraction failed - extracted file is empty (0 bytes)';
-          }
-          
-          // Try to hide loading overlay and show an error
-          try {
-            await AppLogger.instance.error(
-              errorMessage,
-              context: 'SubtitleExtractOptionsSheet._extractSubtitleWithAsync',
+        try {
+          await AppLogger.instance.error(
+            errorMessage,
+            context: 'SubtitleExtractOptionsSheet._extractSubtitleWithAsync',
+          );
+          if (rootContext.mounted) {
+            LoadingOverlay.hide(rootContext);
+
+            SnackbarHelper.showError(
+              rootContext,
+              verification.exists
+                  ? 'Extracted file is empty. The subtitle track may not contain any data.'
+                  : 'File could not be found after extraction. Please try again or select a different location.',
+              duration: const Duration(seconds: 5),
             );
-            if (rootContext.mounted) {
-              LoadingOverlay.hide(rootContext);
-
-              SnackbarHelper.showError(
-                rootContext,
-                !fileExists 
-                  ? 'File could not be found after extraction. Please try again or select a different location.'
-                  : 'Extracted file is empty. The subtitle track may not contain any data.',
-                duration: const Duration(seconds: 5),
-              );
-            }
-          } catch (_) {
-            // If this fails, we can't show errors to the user
           }
+        } catch (_) {
+          // If this fails, we can't show errors to the user
+        }
 
-          return; // Return instead of throwing
-        }
-      } else {
-        if (kDebugMode) {
-          print('iOS: Skipping file verification - file picker handles saving');
-          print('Final output path: $normalizedOutputPath');
-        }
+        return;
       }
 
       // Process the subtitle file with selected options
@@ -1130,55 +910,19 @@ class _SubtitleExtractOptionsSheetState
         print('Merge overlapping subtitles: $mergeOverlapping');
       }
 
-      Map? subtitleData;
+      late SubtitleImportResult subtitleData;
       try {
         // Try to use context if available, otherwise use the contextless version
         String srtContent;
         String fileName = _fileName.isNotEmpty ? _fileName : 'extracted_subtitle.srt';
         
         try {
-          // Read content from the appropriate file based on platform
-          // For iOS: temp file is preserved until after processing
-          // For Android/Desktop: read from final destination (temp is already deleted)
-          File fileToRead;
-          
-          if (Platform.isIOS) {
-            // iOS preserves temp file for content reading
-            fileToRead = File(tempOutputFile);
-            if (kDebugMode) {
-              print('iOS: Reading from temp file: $tempOutputFile');
-            }
-          } else if (Platform.isAndroid && useDirectSave) {
-            // Android SAF: read from temp file (should still exist)
-            fileToRead = File(tempOutputFile);
-            if (kDebugMode) {
-              print('Android SAF: Reading from temp file: $tempOutputFile');
-            }
-          } else {
-            // Desktop: read from final destination (temp is deleted)
-            fileToRead = File(outputFilePath);
-            if (kDebugMode) {
-              print('Desktop: Reading from final destination: $outputFilePath');
-            }
-          }
-          
-          if (kDebugMode) {
-            print('Attempting to read file: ${fileToRead.path}');
-            print('File exists: ${await fileToRead.exists()}');
-          }
-          
-          if (await fileToRead.exists()) {
-            srtContent = await fileToRead.readAsString();
-            if (kDebugMode) {
-              print('Successfully read SRT content: ${srtContent.length} characters');
-            }
-          } else {
-            if (kDebugMode) {
-              print('File not found at: ${fileToRead.path}');
-              print('Current working directory: ${Directory.current.path}');
-            }
-            throw Exception('Subtitle file not found: ${fileToRead.path}');
-          }
+          srtContent =
+              await SubtitleExtractionFileService.readExtractedContent(
+            tempOutputFile: tempOutputFile,
+            outputFilePath: outputFilePath,
+            useDirectSave: useDirectSave,
+          );
         } catch (e) {
           throw Exception('Failed to read extracted subtitle content: $e');
         }
@@ -1193,6 +937,7 @@ class _SubtitleExtractOptionsSheetState
             removeHearingImpairedLines: removeHI,
             mergeOverlappingSubtitles: mergeOverlapping,
             contentUri: null, // No SAF URI for extracted files
+            repository: ref.read(subtitleImportRepositoryProvider),
           );
         } else {
           throw Exception('Context not available');
@@ -1210,33 +955,34 @@ class _SubtitleExtractOptionsSheetState
           outputFilePath, // Display path for UI  
           removeHearingImpairedLines: removeHI,
           mergeOverlappingSubtitles: mergeOverlapping,
+          repository: ref.read(subtitleImportRepositoryProvider),
         );
       }        if (kDebugMode) {
           print(
             'Subtitle processing result: ${'success'}',
           );
           print(
-            'Subtitle collection ID: ${subtitleData!['subtitleCollectionId']}',
+            'Subtitle collection ID: ${subtitleData.subtitleCollectionId}',
           );
-          print('Filename: ${subtitleData['fileName']}');
-          print('Session ID: ${subtitleData['sessionId']}');
+          print('Filename: ${subtitleData.fileName}');
+          print('Session ID: ${subtitleData.sessionId}');
                 }
 
         // Update the originalFileUri with the SAF URI if available
         if (_currentSafUri != null && _currentSafUri != outputFilePath) {
           try {
-            final subtitleCollectionId = subtitleData!['subtitleCollectionId'];
-            if (subtitleCollectionId != null) {
-              // Get the subtitle collection from database
-              final subtitle = await fetchSubtitle(subtitleCollectionId);
-              if (subtitle != null) {
-                // Update the originalFileUri
-                subtitle.originalFileUri = _currentSafUri!;
-                await updateSubtitleCollection(subtitle);
+            final subtitleCollectionId = subtitleData.subtitleCollectionId;
+            final subtitle = await ref
+                .read(subtitleRepositoryProvider)
+                .fetchSubtitleCollection(subtitleCollectionId);
+            if (subtitle != null) {
+              subtitle.originalFileUri = _currentSafUri!;
+              await ref
+                  .read(subtitleRepositoryProvider)
+                  .updateCollection(subtitle);
 
-                if (kDebugMode) {
-                  print('Updated originalFileUri to: $_currentSafUri');
-                }
+              if (kDebugMode) {
+                print('Updated originalFileUri to: $_currentSafUri');
               }
             }
           } catch (e) {
@@ -1247,28 +993,13 @@ class _SubtitleExtractOptionsSheetState
           }
         }
 
-        // Create session object
-        extractedSession = Session(
-          subtitleCollectionId: subtitleData!['subtitleCollectionId'],
-          fileName: subtitleData['fileName'] ?? '',
-          lastEditedIndex: subtitleData['lastEditedIndex'] ?? 0,
-        );
+        // Reuse the persisted session so navigation retains the real Isar ID.
+        extractedSession = subtitleData.session;
 
-        // Clean up temporary file after successful processing
-        try {
-          final tempFile = File(tempOutputFile);
-          if (await tempFile.exists()) {
-            await tempFile.delete();
-            if (kDebugMode) {
-              print('Cleaned up temporary extraction file: $tempOutputFile');
-            }
-          }
-        } catch (e) {
-          if (kDebugMode) {
-            print('Warning: Could not clean up temporary file: $e');
-          }
-          // Continue with the process even if cleanup fails
-        }
+        await SubtitleExtractionFileService.cleanupTemporaryFile(
+          tempOutputFile,
+          successMessage: 'Cleaned up temporary extraction file',
+        );
 
         // Hide loading overlay and call callback
         try {
@@ -1294,25 +1025,15 @@ class _SubtitleExtractOptionsSheetState
           print('Error processing subtitle file: $e');
         }
 
-        // Clean up temp file on error
-        try {
-          final tempFile = File(tempOutputFile);
-          if (await tempFile.exists()) {
-            await tempFile.delete();
-            if (kDebugMode) {
-              print('Cleaned up temporary file after error: $tempOutputFile');
-            }
-          }
-        } catch (cleanupError) {
-          if (kDebugMode) {
-            print('Warning: Could not clean up temp file after error: $cleanupError');
-          }
-        }
+        await SubtitleExtractionFileService.cleanupTemporaryFile(
+          tempOutputFile,
+          successMessage: 'Cleaned up temporary file after error',
+        );
 
         // Try to hide loading overlay and show an error
         try {
           await AppLogger.instance.error(
-            'Failed to process subtitle file: $e',
+            'The extracted subtitle could not be processed. Please try another track or file.',
             context: 'SubtitleExtractOptionsSheet._extractSubtitleWithAsync',
           );
           if (rootContext.mounted) {

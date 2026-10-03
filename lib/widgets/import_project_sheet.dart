@@ -1,12 +1,13 @@
-import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
 import 'package:subtitle_studio/utils/platform_file_handler.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/utils/intent_handler.dart';
-import 'package:subtitle_studio/utils/project_manager.dart';
 import 'package:subtitle_studio/database/models/models.dart';
+import 'package:subtitle_studio/services/project_document_codec.dart';
+import 'package:subtitle_studio/widgets/session_selection_sheet.dart';
 
 /// Import Project Sheet Widget
 /// 
@@ -49,7 +50,7 @@ class _ImportProjectSheetState extends State<ImportProjectSheet> {
   String? _selectedMsoneFilePath;
   bool _isImporting = false;
   bool _isLoadingFile = false;
-  Map<String, dynamic>? _projectData;
+  ProjectDocument? _projectDocument;
   String? _fileName;
 
   @override
@@ -68,7 +69,7 @@ class _ImportProjectSheetState extends State<ImportProjectSheet> {
     try {
       setState(() {
         _isLoadingFile = true;
-        _projectData = null;
+        _projectDocument = null;
       });
 
       // Process the file path - convert content URI to temp file if needed
@@ -99,7 +100,7 @@ class _ImportProjectSheetState extends State<ImportProjectSheet> {
   Future<void> _selectMsoneFile() async {
     setState(() {
       _isLoadingFile = true;
-      _projectData = null;
+      _projectDocument = null;
     });
 
     try {
@@ -153,25 +154,7 @@ class _ImportProjectSheetState extends State<ImportProjectSheet> {
       }
 
       final jsonString = await file.readAsString();
-      final data = jsonDecode(jsonString) as Map<String, dynamic>;
-
-      // Validate required fields
-      if (!data.containsKey('session') || 
-          !data.containsKey('subtitleCollection') ||
-          !data.containsKey('version')) {
-        throw Exception('Invalid .msone file format');
-      }
-
-      print('[Import] Loaded project data keys: ${data.keys.toList()}');
-      if (data.containsKey('checkpoints')) {
-        print('[Import] Found ${(data['checkpoints'] as List).length} checkpoints in file');
-      } else {
-        print('[Import] No checkpoints found in file');
-      }
-
-      setState(() {
-        _projectData = data;
-      });
+      _setProjectDocument(ProjectDocumentCodec.decode(jsonString));
     } catch (e) {
       if (mounted) {
         SnackbarHelper.showError(context, 'Error reading project file: $e');
@@ -182,25 +165,7 @@ class _ImportProjectSheetState extends State<ImportProjectSheet> {
   /// Load project data from file content (for SAF)
   Future<void> _loadProjectDataFromContent(String content, String fileName) async {
     try {
-      final data = jsonDecode(content) as Map<String, dynamic>;
-
-      // Validate required fields
-      if (!data.containsKey('session') || 
-          !data.containsKey('subtitleCollection') ||
-          !data.containsKey('version')) {
-        throw Exception('Invalid .msone file format');
-      }
-
-      print('[Import] Loaded project data keys: ${data.keys.toList()}');
-      if (data.containsKey('checkpoints')) {
-        print('[Import] Found ${(data['checkpoints'] as List).length} checkpoints in file');
-      } else {
-        print('[Import] No checkpoints found in file');
-      }
-
-      setState(() {
-        _projectData = data;
-      });
+      _setProjectDocument(ProjectDocumentCodec.decode(content));
     } catch (e) {
       if (mounted) {
         SnackbarHelper.showError(context, 'Error reading project file: $e');
@@ -208,9 +173,23 @@ class _ImportProjectSheetState extends State<ImportProjectSheet> {
     }
   }
 
+  void _setProjectDocument(ProjectDocument document) {
+    if (kDebugMode) {
+      debugPrint(
+        '[Import] Loaded project version ${document.version} '
+        'with ${document.totalLines} subtitle lines and '
+        '${document.checkpoints.length} checkpoints',
+      );
+    }
+
+    setState(() {
+      _projectDocument = document;
+    });
+  }
+
   /// Import the project data into the database
   Future<void> _importProject() async {
-    if (_projectData == null) {
+    if (_projectDocument == null) {
       SnackbarHelper.showError(context, 'No project data loaded');
       return;
     }
@@ -226,18 +205,21 @@ class _ImportProjectSheetState extends State<ImportProjectSheet> {
     } else if (_selectedMsoneFilePath != null) {
       // Use the selected .msone file URI (now correctly stores URI for SAF files)
       originalFileUri = _selectedMsoneFilePath;
-    } else if (_projectData!['subtitleCollection'] != null &&
-               (_projectData!['subtitleCollection'] as Map<String, dynamic>)['originalFileUri'] != null) {
-      // Fall back to any originalFileUri from the project data
-      originalFileUri = (_projectData!['subtitleCollection'] as Map<String, dynamic>)['originalFileUri'];
+    } else if (_projectDocument!.originalFileUri != null) {
+      originalFileUri = _projectDocument!.originalFileUri;
     }
 
-    // Show session selection sheet to replace existing session or import as new
-    await ProjectManager.showSessionSelectionSheet(
+    await showModalBottomSheet<Session>(
       context: context,
-      projectData: _projectData!,
-      originalFileUri: originalFileUri,
-      onProjectImported: widget.onProjectImported,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return SessionSelectionSheet(
+          projectDocument: _projectDocument!,
+          originalFileUri: originalFileUri,
+          onProjectImported: widget.onProjectImported,
+        );
+      },
     );
 
     // Navigation is now handled directly by the session selection sheet
@@ -246,15 +228,12 @@ class _ImportProjectSheetState extends State<ImportProjectSheet> {
 
   /// Get count of edited lines from project data
   int _getEditedLinesCount() {
-    if (_projectData == null) return 0;
-    
-    final subtitleCollectionData = _projectData!['subtitleCollection'] as Map<String, dynamic>;
-    final linesData = subtitleCollectionData['lines'] as List<dynamic>;
-    
-    return linesData.where((lineData) {
-      final edited = lineData['edited'];
-      return edited != null && edited.toString().isNotEmpty;
-    }).length;
+    final document = _projectDocument;
+    if (document == null) return 0;
+
+    return document.subtitleCollection.lines
+        .where((line) => line.edited?.isNotEmpty == true)
+        .length;
   }
 
   /// Build file selection section
@@ -344,17 +323,18 @@ class _ImportProjectSheetState extends State<ImportProjectSheet> {
 
   /// Build project preview section
   Widget _buildProjectPreview() {
-    if (_projectData == null) {
+    if (_projectDocument == null) {
       return const SizedBox.shrink();
     }
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
     
-    final sessionData = _projectData!['session'] as Map<String, dynamic>;
-    final subtitleCollectionData = _projectData!['subtitleCollection'] as Map<String, dynamic>;
-    final exportedAt = _projectData!['exportedAt'] as String?;
-    final version = _projectData!['version'] as String?;
+    final document = _projectDocument!;
+    final sessionData = document.session;
+    final subtitleCollectionData = document.subtitleCollection;
+    final exportedAt = document.exportedAt;
+    final version = document.version;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -372,17 +352,28 @@ class _ImportProjectSheetState extends State<ImportProjectSheet> {
             ),
           ),
           const SizedBox(height: 12),
-          _buildInfoRow('File Name', sessionData['fileName'] ?? 'Unknown', isFileName: true),
-          _buildInfoRow('Total Lines', '${(subtitleCollectionData['lines'] as List).length}'),
+          _buildInfoRow(
+            'File Name',
+            sessionData.fileName ?? 'Unknown',
+            isFileName: true,
+          ),
+          _buildInfoRow(
+            'Total Lines',
+            '${subtitleCollectionData.lines.length}',
+          ),
           _buildInfoRow('Edited Lines', '${_getEditedLinesCount()}'),
-          _buildInfoRow('Encoding', subtitleCollectionData['encoding'] ?? 'UTF-8'),
-          _buildInfoRow('Mode', (sessionData['editMode'] ?? true) ? 'Edit' : 'Translation'),
-          if (_projectData!.containsKey('checkpoints'))
-            _buildInfoRow('Checkpoints', '${(_projectData!['checkpoints'] as List).length}'),
+          _buildInfoRow('Encoding', subtitleCollectionData.encoding),
+          _buildInfoRow(
+            'Mode',
+            (sessionData.editMode ?? true) ? 'Edit' : 'Translation',
+          ),
+          _buildInfoRow(
+            'Checkpoints',
+            '${document.checkpoints.length}',
+          ),
           if (exportedAt != null)
             _buildInfoRow('Exported', _formatDateTime(exportedAt)),
-          if (version != null)
-            _buildInfoRow('Version', version),
+          _buildInfoRow('Version', version),
         ],
       ),
     );
@@ -489,7 +480,7 @@ class _ImportProjectSheetState extends State<ImportProjectSheet> {
             _buildFileSelectionSection(),
             
             // Project Preview (only show if file is loaded)
-            if (_projectData != null) ...[
+            if (_projectDocument != null) ...[
               const SizedBox(height: 24),
               _buildProjectPreview(),
             ],
@@ -501,7 +492,7 @@ class _ImportProjectSheetState extends State<ImportProjectSheet> {
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: (_isImporting || _projectData == null) ? null : _importProject,
+                onPressed: (_isImporting || _projectDocument == null) ? null : _importProject,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).primaryColor,
                   foregroundColor: Colors.white,

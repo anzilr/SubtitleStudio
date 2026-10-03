@@ -62,6 +62,12 @@ add_subdirectory("runner")
 
 # Generated plugin build rules, which manage building the plugins and adding
 # them to the application.
+#
+# MSVC 14.51+ turns the legacy <experimental/coroutine> deprecation used by
+# permission_handler_windows into a hard STL1011 error. Apply the compatibility
+# define at directory scope so generated plugin targets inherit it. Remove this
+# once the affected plugin migrates fully to the standard C++20 coroutine API.
+add_compile_definitions(_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS)
 include(flutter/generated_plugins.cmake)
 
 

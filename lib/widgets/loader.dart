@@ -1,7 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-
-import '../themes/theme_provider.dart';
 
 class Loader13 extends StatefulWidget {
   const Loader13({super.key});
@@ -59,9 +56,8 @@ class _Loader13State extends State<Loader13> with TickerProviderStateMixin {
                     width: 10,
                     height: 10,
                     decoration: BoxDecoration(
-                      color: Provider.of<ThemeProvider>(context).themeMode ==
-                              ThemeMode.light
-                          ? Color.fromARGB(255, 0, 45, 54)
+                      color: Theme.of(context).brightness == Brightness.light
+                          ? const Color.fromARGB(255, 0, 45, 54)
                           : Colors.white,
                       shape: BoxShape.circle,
                     ),

@@ -312,7 +312,7 @@ class _ResizableSplitViewState extends State<ResizableSplitView> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final dividerColor = widget.dividerColor ?? 
-            Theme.of(context).colorScheme.outline.withOpacity(0.2);
+            Theme.of(context).colorScheme.outline.withValues(alpha: 0.2);
             
         if (widget.vertical) {
           return Column(
@@ -330,7 +330,7 @@ class _ResizableSplitViewState extends State<ResizableSplitView> {
                   child: Container(
                     height: widget.dividerThickness,
                     color: _isDragging 
-                        ? Theme.of(context).colorScheme.primary.withOpacity(0.5)
+                        ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.5)
                         : dividerColor,
                     child: Center(
                       child: Container(
@@ -339,7 +339,7 @@ class _ResizableSplitViewState extends State<ResizableSplitView> {
                         decoration: BoxDecoration(
                           color: _isDragging 
                               ? Theme.of(context).colorScheme.primary
-                              : Theme.of(context).colorScheme.outline.withOpacity(0.4),
+                              : Theme.of(context).colorScheme.outline.withValues(alpha: 0.4),
                           borderRadius: BorderRadius.circular(1),
                         ),
                       ),
@@ -368,7 +368,7 @@ class _ResizableSplitViewState extends State<ResizableSplitView> {
                   child: Container(
                     width: widget.dividerThickness,
                     color: _isDragging 
-                        ? Theme.of(context).colorScheme.primary.withOpacity(0.5)
+                        ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.5)
                         : dividerColor,
                     child: Center(
                       child: Container(
@@ -377,7 +377,7 @@ class _ResizableSplitViewState extends State<ResizableSplitView> {
                         decoration: BoxDecoration(
                           color: _isDragging 
                               ? Theme.of(context).colorScheme.primary
-                              : Theme.of(context).colorScheme.outline.withOpacity(0.4),
+                              : Theme.of(context).colorScheme.outline.withValues(alpha: 0.4),
                           borderRadius: BorderRadius.circular(1),
                         ),
                       ),

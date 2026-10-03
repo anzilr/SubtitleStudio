@@ -520,7 +520,7 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
                   ),
                 ),
                 child: DropdownButtonFormField<String>(
-                  value: _selectedEncoding,
+                  initialValue: _selectedEncoding,
                   onChanged: (String? newValue) {
                     if (newValue != null) {
                       setState(() {

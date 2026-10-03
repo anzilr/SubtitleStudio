@@ -603,43 +603,47 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
                 ],
               ),
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: RadioListTile<String>(
-                      title: Text(
-                        "Word",
-                        style: TextStyle(color: onSurfaceColor),
+              RadioGroup<String>(
+                groupValue: _karaokeEffectType,
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() => _karaokeEffectType = value);
+                  }
+                },
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: RadioListTile<String>(
+                        title: Text(
+                          "Word",
+                          style: TextStyle(color: onSurfaceColor),
+                        ),
+                        subtitle: Text(
+                          "Highlight word by word",
+                          style: TextStyle(color: mutedColor, fontSize: 12),
+                        ),
+                        value: 'word',
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
                       ),
-                      subtitle: Text(
-                        "Highlight word by word",
-                        style: TextStyle(color: mutedColor, fontSize: 12),
-                      ),
-                      value: 'word',
-                      groupValue: _karaokeEffectType,
-                      onChanged: (value) => setState(() => _karaokeEffectType = value!),
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
                     ),
-                  ),
-                  Expanded(
-                    child: RadioListTile<String>(
-                      title: Text(
-                        "Character",
-                        style: TextStyle(color: onSurfaceColor),
+                    Expanded(
+                      child: RadioListTile<String>(
+                        title: Text(
+                          "Character",
+                          style: TextStyle(color: onSurfaceColor),
+                        ),
+                        subtitle: Text(
+                          "Highlight character by character",
+                          style: TextStyle(color: mutedColor, fontSize: 12),
+                        ),
+                        value: 'character',
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
                       ),
-                      subtitle: Text(
-                        "Highlight character by character",
-                        style: TextStyle(color: mutedColor, fontSize: 12),
-                      ),
-                      value: 'character',
-                      groupValue: _karaokeEffectType,
-                      onChanged: (value) => setState(() => _karaokeEffectType = value!),
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
@@ -1271,7 +1275,7 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.08)),
+        border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1282,7 +1286,7 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
               const SizedBox(width: 8),
               Text('Preview', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
               const Spacer(),
-              Text(_formatDuration(_lineDuration), style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6))),
+              Text(_formatDuration(_lineDuration), style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))),
             ],
           ),
           const SizedBox(height: 12),
@@ -1292,7 +1296,7 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
             width: double.infinity,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Theme.of(context).brightness == Brightness.dark ? Theme.of(context).colorScheme.onSurface.withOpacity(0.03) : Colors.grey.shade50,
+              color: Theme.of(context).brightness == Brightness.dark ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.03) : Colors.grey.shade50,
               borderRadius: BorderRadius.circular(8),
             ),
             child: _selectedEffect == 'karaoke' ? _karaokePreview(text) : _typewriterPreview(text),
@@ -1406,7 +1410,7 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
         style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 16),
         children: [
           TextSpan(text: visible, style: TextStyle(color: _typewriterColor)),
-          TextSpan(text: remaining, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6))),
+          TextSpan(text: remaining, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))),
         ],
       ),
     );
@@ -1424,7 +1428,7 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
       final selectedText = hasSelection ? selection.textInside(_textController.text) : '';
       
       effectConfig = {
-        'color': _karaokeColor.value.toRadixString(16).padLeft(8, '0'),
+        'color': _karaokeColor.toARGB32().toRadixString(16).padLeft(8, '0'),
         'endDelay': _endDelay,
         'effectType': _karaokeEffectType,
         // Add text selection information
@@ -1436,7 +1440,7 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
       };
     } else if (_selectedEffect == 'typewriter') {
       effectConfig = {
-        'color': _typewriterColor.value.toRadixString(16).padLeft(8, '0'),
+        'color': _typewriterColor.toARGB32().toRadixString(16).padLeft(8, '0'),
         'endDelay': _endDelay,
       };
     }

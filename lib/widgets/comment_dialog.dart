@@ -66,8 +66,8 @@ class CommentDialog extends StatefulWidget {
         DeviceOrientation.portraitDown,
       ]);
       
-      // Give a small delay for orientation change to complete
-      await Future.delayed(const Duration(milliseconds: 300));
+      // Wait for the first frame rendered with the new orientation.
+      await WidgetsBinding.instance.endOfFrame;
     }
     
     try {
@@ -566,24 +566,24 @@ class CommentDialogState extends State<CommentDialog> {
                   width: 1,
                 ),
               ),
-              child: RawKeyboardListener(
-                focusNode: FocusNode(),
-                onKey: (RawKeyEvent event) {
-                  if (event is RawKeyDownEvent) {
-                    // Check for Enter key
-                    if (event.logicalKey == LogicalKeyboardKey.enter) {
-                      // Check if Shift is pressed
-                      if (event.isShiftPressed) {
-                        // Shift+Enter: Allow new line (do nothing, let TextField handle it)
-                        return;
-                      } else {
-                        // Enter only: Save comment
-                        if (!_isLoading && _commentController.text.trim().isNotEmpty) {
-                          _saveComment();
-                        }
-                      }
-                    }
+              child: Focus(
+                onKeyEvent: (node, event) {
+                  if (event is! KeyDownEvent ||
+                      event.logicalKey != LogicalKeyboardKey.enter) {
+                    return KeyEventResult.ignored;
                   }
+
+                  if (HardwareKeyboard.instance.isShiftPressed) {
+                    return KeyEventResult.ignored;
+                  }
+
+                  if (!_isLoading &&
+                      _commentController.text.trim().isNotEmpty) {
+                    _saveComment();
+                    return KeyEventResult.handled;
+                  }
+
+                  return KeyEventResult.ignored;
                 },
                 child: TextField(
                   controller: _commentController,
