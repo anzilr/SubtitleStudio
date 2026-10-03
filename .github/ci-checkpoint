@@ -1,14 +1,16 @@
-Riverpod migration checkpoint 26b
-Date: 2026-10-02
+Riverpod migration checkpoint 27
+Date: 2026-10-03
 Checks:
 - flutter analyze
 - flutter test
 
 Focus:
-- typed project comment import plan and repository
-- checkpoint manager converted from static global service to injected Isar instance
-- remaining waveform/editor/banner/hearing/actions checkpoint callers routed through repository facade
-- stale import-comments typed migration guards corrected
-- checkpoint pure reducer/policy/timeline tests retained
+- reusable temporary Isar integration-test harness using production schemas
+- PreferencesStore singleton persistence boundary
+- VideoPreferencesStore per-subtitle persistence boundary
+- AppPreferencesRepository migrated to PreferencesStore
+- CheckpointPreferencesRepository migrated to PreferencesStore
+- WaveformPreferencesRepository migrated to VideoPreferencesStore
+- concurrent singleton/create/update integration coverage against real Isar
 
 Platform builds intentionally disabled.
