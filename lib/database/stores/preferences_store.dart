@@ -12,8 +12,12 @@ class PreferencesStore {
 
   const PreferencesStore(this._isar);
 
+  Future<Preferences?> findFirst() {
+    return _isar.preferences.where().findFirst();
+  }
+
   Future<Preferences> getOrCreate() async {
-    final existing = await _isar.preferences.where().findFirst();
+    final existing = await findFirst();
     if (existing != null) return existing;
 
     late Preferences preferences;
