@@ -1,5 +1,6 @@
 import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/database/models/models.dart';
+import 'package:subtitle_studio/database/stores/preferences_store.dart';
 
 class AppSettingsSnapshot {
   final bool msoneEnabled;
@@ -51,31 +52,19 @@ class TranslatorProfile {
 /// This intentionally keeps the existing schema and defaults unchanged while
 /// removing static PreferencesModel/global-Isar access from UI code.
 class AppPreferencesRepository {
-  final Isar _isar;
+  final PreferencesStore _preferencesStore;
 
-  const AppPreferencesRepository(this._isar);
+  AppPreferencesRepository(Isar isar)
+      : _preferencesStore = PreferencesStore(isar);
 
-  Future<Preferences> _getPreferences() async {
-    final existing = await _isar.preferences.where().findFirst();
-    if (existing != null) return existing;
-
-    final created = Preferences(autoSave: true);
-    await _isar.writeTxn(() async {
-      await _isar.preferences.put(created);
-    });
-    return created;
+  Future<Preferences> _getPreferences() {
+    return _preferencesStore.getOrCreate();
   }
 
   Future<void> _updatePreferences(
     void Function(Preferences preferences) update,
-  ) async {
-    final existing = await _isar.preferences.where().findFirst();
-    final preferences = existing ?? Preferences(autoSave: true);
-    update(preferences);
-
-    await _isar.writeTxn(() async {
-      await _isar.preferences.put(preferences);
-    });
+  ) {
+    return _preferencesStore.update(update);
   }
 
   Future<AppSettingsSnapshot> loadSettings() async {
@@ -168,10 +157,8 @@ class AppPreferencesRepository {
     });
   }
 
-  Future<void> clearAllPreferences() async {
-    await _isar.writeTxn(() async {
-      await _isar.preferences.clear();
-    });
+  Future<void> clearAllPreferences() {
+    return _preferencesStore.clear();
   }
   Future<bool> getShowAllComments() async {
     return (await _getPreferences()).showAllComments;
