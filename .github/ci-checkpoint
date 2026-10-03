@@ -1,15 +1,14 @@
-Riverpod migration checkpoint 29
+Riverpod migration checkpoint 30
 Date: 2026-10-03
 Checks:
 - flutter analyze
 - flutter test
 
 Focus:
-- typed waveform cache, zoom, and generation preference boundaries
-- AudioProcessor and ZoomBufferGenerator persistence injection
-- removal of static AI API-key preference access
-- injected tutorial persistence with first-run nested-transaction fix
-- injected FilePickerSAF last-directory persistence
-- real Isar integration coverage for waveform, tutorial, and picker preferences
+- repair checkpoint active-path persistence after static audit
+- inject missing CheckpointRepository dependencies in editor cleanup and project save
+- restore CheckpointRepository type import in auto project saver
+- import generated Isar collection extensions in persistence integration tests
+- verify checkpoint 29 analyzer failures are fully resolved
 
 Platform builds intentionally disabled.
