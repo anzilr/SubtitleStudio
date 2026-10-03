@@ -1,23 +1,19 @@
-Riverpod migration checkpoint 46
+Riverpod migration checkpoint 47
 Date: 2026-10-03
 Checks:
 - flutter analyze
 - flutter test -j 1
 
-Checkpoint redesign stage 1:
-- use a single movable HEAD marker instead of an active ancestor path
-- preserve descendants as alternate branches after history checkout
-- atomically compare-and-swap HEAD when appending a checkpoint
-- count snapshot intervals along the selected parent branch
-- make parent traversal cycle-safe and fail on missing ancestry
-- make retention graph-safe by pruning only unprotected leaves
-- strictly validate deltas during restore instead of silently clamping/ignoring
-- preserve exact checkpoint line order during restore
-- refuse unsafe fallback snapshots built from the current working state
-- validate imported checkpoint IDs, parents, and cycles before persistence
-- normalize imported history to a single HEAD
-
-Legacy checkpoints still use PRE-operation state semantics.
-The state-after-operation and atomic mutation+commit migration comes next.
+Checkpoint redesign stage 2a:
+- add versioned checkpoint metadata for legacy PRE-operation vs v2 AFTER-operation semantics
+- mark new initial snapshots as v2 post-state snapshots
+- add atomic working-tree + checkpoint + HEAD transaction service
+- migrate Editor line saves to atomic v2 commits
+- migrate Edit Line saves to atomic v2 commits
+- force snapshots for timing edits that can reorder cues
+- force a snapshot when crossing between legacy and v2 state semantics
+- restore v2 commits as state-after-operation while retaining legacy restore support
+- verify failed atomic edits leave both collection and history unchanged
+- reject corrupt imported history while preserving imported subtitle content
 
 Platform builds intentionally disabled.
