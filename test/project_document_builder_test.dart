@@ -51,7 +51,7 @@ void main() {
         snapshot: [before],
         checkpointType: 'delta',
         metadata: '{"source":"test"}',
-      );
+      )..id = 42;
 
       final session = Session(
         fileName: 'movie.srt',
@@ -84,27 +84,28 @@ void main() {
 
       expect(document.version, '2.0');
       expect(document.totalLines, 1);
-      expect(document.session['projectFilePath'], 'content://project.msone');
+      expect(
+        document.session.projectFilePath,
+        'content://project.msone',
+      );
 
-      final line =
-          (document.subtitleCollection['lines'] as List).single as Map;
-      expect(line['edited'], 'After');
-      expect(line['marked'], isTrue);
-      expect(line['comment'], 'Check wording');
-      expect(line['resolved'], isTrue);
+      final line = document.subtitleCollection.lines.single;
+      expect(line.edited, 'After');
+      expect(line.marked, isTrue);
+      expect(line.comment, 'Check wording');
+      expect(line.resolved, isTrue);
 
-      final exportedCheckpoint = document.checkpoints.single as Map;
-      expect(exportedCheckpoint['checkpointType'], 'delta');
-      expect(exportedCheckpoint['metadata'], '{"source":"test"}');
+      final exportedCheckpoint = document.checkpoints.single;
+      expect(exportedCheckpoint.id, 42);
+      expect(exportedCheckpoint.checkpointType, 'delta');
+      expect(exportedCheckpoint.metadata, '{"source":"test"}');
 
-      final exportedDelta =
-          (exportedCheckpoint['deltas'] as List).single as Map;
-      expect((exportedDelta['beforeState'] as Map)['original'], 'Before');
-      expect((exportedDelta['afterState'] as Map)['edited'], 'After');
+      final exportedDelta = exportedCheckpoint.deltas.single;
+      expect(exportedDelta.beforeState?.original, 'Before');
+      expect(exportedDelta.afterState?.edited, 'After');
 
-      final exportedSnapshot =
-          (exportedCheckpoint['snapshot'] as List).single as Map;
-      expect(exportedSnapshot['original'], 'Before');
+      final exportedSnapshot = exportedCheckpoint.snapshot.single;
+      expect(exportedSnapshot.original, 'Before');
     });
 
     test('derives stable metadata from the collection', () {
@@ -127,11 +128,10 @@ void main() {
         now: DateTime.utc(2026, 9, 28),
       );
 
-      final metadata = data['metadata'] as Map<String, dynamic>;
-      expect(metadata['totalLines'], 3);
-      expect(metadata['editedLines'], 1);
-      expect(metadata['markedLines'], 1);
-      expect(metadata['lastSaved'], '2026-09-28T00:00:00.000Z');
+      expect(data.metadata.totalLines, 3);
+      expect(data.metadata.editedLines, 1);
+      expect(data.metadata.markedLines, 1);
+      expect(data.metadata.lastSaved, '2026-09-28T00:00:00.000Z');
     });
   });
 }
