@@ -1,14 +1,16 @@
-Riverpod migration checkpoint 44
+Riverpod migration checkpoint 45
 Date: 2026-10-03
 Checks:
 - flutter analyze
 - flutter test -j 1
 
 Focus:
-- add CheckpointStore as the low-level Isar persistence boundary
-- move checkpoint creation, restore, active-head, cleanup, and session-history persistence out of CheckpointManager
-- remove raw Isar access and dead commented legacy methods from CheckpointManager
-- add direct CheckpointStore Isar integration coverage
-- verify existing checkpoint branching/restore regression suites remain green
+- add injected UI-free ProjectSaveCoordinator
+- add presentation-layer ProjectSaveFlow
+- migrate auto-save, import-save, and editor project-save callers
+- move project import session-selection modal ownership into ImportProjectSheet
+- remove ProjectManager helper usage from SessionSelectionSheet
+- delete the now-unused static ProjectManager facade
+- preserve typed .msone save/import behavior
 
 Platform builds intentionally disabled.
