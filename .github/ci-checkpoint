@@ -1,12 +1,13 @@
-Riverpod migration checkpoint 41
+Riverpod migration checkpoint 42
 Date: 2026-10-03
 Checks:
 - flutter analyze
 - flutter test -j 1
 
 Focus:
-- preserve malformed project comment filtering under typed DTOs
-- expose nullable valid project line index while retaining import fallback index
-- revalidate typed project save/import pipeline and checkpoint parent remapping
+- remove unused ProjectDocument.toLegacyMap compatibility bridge
+- remove stale global Isar migration note
+- final verification of typed project save/import pipeline
+- final verification of database global retirement, preference-store consolidation, and real Isar integration coverage
 
 Platform builds intentionally disabled.
