@@ -221,7 +221,7 @@ void main() {
       );
     });
 
-    test('new edit after undo replaces undone operation and descendants',
+    test('new edit after checkout preserves old descendants as a branch',
         () async {
       final initialId = await manager.createInitialSnapshot(
         sessionId: seeded.sessionId,
@@ -293,24 +293,36 @@ void main() {
         afterLine: branchAfter,
       );
 
-      expect(await harness.isar.checkpoints.get(secondCheckpointId), isNull);
-      expect(await harness.isar.checkpoints.get(thirdCheckpointId), isNull);
+      expect(
+        await harness.isar.checkpoints.get(secondCheckpointId),
+        isNotNull,
+      );
+      expect(
+        await harness.isar.checkpoints.get(thirdCheckpointId),
+        isNotNull,
+      );
 
       final branchCheckpoint =
           await harness.isar.checkpoints.get(branchCheckpointId);
       expect(branchCheckpoint, isNotNull);
-      expect(branchCheckpoint!.parentCheckpointId, firstCheckpointId);
+      expect(branchCheckpoint!.parentCheckpointId, secondCheckpointId);
 
       final checkpoints =
           await manager.getCheckpointsForSession(seeded.sessionId);
       expect(
         checkpoints.map((checkpoint) => checkpoint.id).toSet(),
-        {initialId, firstCheckpointId, branchCheckpointId},
+        {
+          initialId,
+          firstCheckpointId,
+          secondCheckpointId,
+          thirdCheckpointId,
+          branchCheckpointId,
+        },
       );
-      expect(
-        checkpoints.where((checkpoint) => checkpoint.isActive).length,
-        3,
-      );
+      final active =
+          checkpoints.where((checkpoint) => checkpoint.isActive).toList();
+      expect(active, hasLength(1));
+      expect(active.single.id, branchCheckpointId);
 
       await _writeLines(
         harness,
