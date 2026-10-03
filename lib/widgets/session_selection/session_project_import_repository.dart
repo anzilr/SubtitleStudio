@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/database/models/models.dart';
+import 'package:subtitle_studio/services/project_document_codec.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 
 final sessionProjectImportRepositoryProvider =
@@ -26,15 +27,12 @@ class SessionProjectImportRepository {
 
   Future<Session> replaceSession({
     required Session session,
-    required Map<String, dynamic> projectData,
+    required ProjectDocument projectDocument,
     required Map<String, String?> srtFileInfo,
     required String? originalProjectUri,
   }) async {
-    final sessionData =
-        Map<String, dynamic>.from(projectData['session'] as Map);
-    final subtitleData =
-        Map<String, dynamic>.from(projectData['subtitleCollection'] as Map);
-    final subtitleLines = _parseSubtitleLines(subtitleData['lines']);
+    final subtitleData = projectDocument.subtitleCollection;
+    final subtitleLines = _parseSubtitleLines(subtitleData.lines);
 
     final collection =
         await _isar.subtitleCollections.get(session.subtitleCollectionId);
@@ -47,14 +45,13 @@ class SessionProjectImportRepository {
       subtitleData: subtitleData,
       srtFileInfo: srtFileInfo,
     );
-    collection.encoding =
-        subtitleData['encoding'] as String? ?? collection.encoding;
+    collection.encoding = subtitleData.encoding;
     collection.lines = subtitleLines;
 
     _applySessionSelection(
       session: session,
       subtitleData: subtitleData,
-      sessionData: sessionData,
+      sessionData: projectDocument.session,
       srtFileInfo: srtFileInfo,
       originalProjectUri: originalProjectUri,
     );
@@ -67,22 +64,20 @@ class SessionProjectImportRepository {
     await _importCheckpoints(
       sessionId: session.id,
       subtitleCollectionId: session.subtitleCollectionId,
-      projectData: projectData,
+      checkpoints: projectDocument.checkpoints,
     );
 
     return session;
   }
 
   Future<Session> importAsNewSession({
-    required Map<String, dynamic> projectData,
+    required ProjectDocument projectDocument,
     required Map<String, String?> srtFileInfo,
     required String? originalProjectUri,
   }) async {
-    final sessionData =
-        Map<String, dynamic>.from(projectData['session'] as Map);
-    final subtitleData =
-        Map<String, dynamic>.from(projectData['subtitleCollection'] as Map);
-    final subtitleLines = _parseSubtitleLines(subtitleData['lines']);
+    final sessionData = projectDocument.session;
+    final subtitleData = projectDocument.subtitleCollection;
+    final subtitleLines = _parseSubtitleLines(subtitleData.lines);
 
     final fileSelection = _resolveNewFileSelection(
       subtitleData: subtitleData,
@@ -91,7 +86,7 @@ class SessionProjectImportRepository {
 
     final collection = SubtitleCollection(
       fileName: fileSelection.fileName,
-      encoding: subtitleData['encoding'] as String? ?? 'UTF-8',
+      encoding: subtitleData.encoding,
       filePath: fileSelection.filePath,
       originalFileUri: fileSelection.fileUri,
       lines: subtitleLines,
@@ -103,8 +98,8 @@ class SessionProjectImportRepository {
       session = Session(
         subtitleCollectionId: collectionId,
         fileName: fileSelection.fileName,
-        lastEditedIndex: sessionData['lastEditedIndex'] as int?,
-        editMode: sessionData['editMode'] as bool? ?? true,
+        lastEditedIndex: sessionData.lastEditedIndex,
+        editMode: sessionData.editMode ?? true,
         projectFilePath: originalProjectUri,
       );
       await _isar.sessions.put(session);
@@ -113,31 +108,33 @@ class SessionProjectImportRepository {
     await _importCheckpoints(
       sessionId: session.id,
       subtitleCollectionId: session.subtitleCollectionId,
-      projectData: projectData,
+      checkpoints: projectDocument.checkpoints,
     );
 
     return session;
   }
 
-  List<SubtitleLine> _parseSubtitleLines(dynamic rawLines) {
-    final source = rawLines is List ? rawLines : const <dynamic>[];
-    return source.map((raw) {
-      final data = Map<String, dynamic>.from(raw as Map);
-      return SubtitleLine()
-        ..index = data['index'] as int? ?? 0
-        ..startTime = data['startTime'] as String? ?? ''
-        ..endTime = data['endTime'] as String? ?? ''
-        ..original = data['original'] as String? ?? ''
-        ..edited = data['edited'] as String?
-        ..marked = data['marked'] as bool? ?? false
-        ..comment = data['comment'] as String?
-        ..resolved = data['resolved'] as bool? ?? false;
-    }).toList(growable: false);
+  List<SubtitleLine> _parseSubtitleLines(
+    List<ProjectSubtitleLineData> source,
+  ) {
+    return source.map(_toSubtitleLine).toList(growable: false);
+  }
+
+  SubtitleLine _toSubtitleLine(ProjectSubtitleLineData data) {
+    return SubtitleLine()
+      ..index = data.index
+      ..startTime = data.startTime
+      ..endTime = data.endTime
+      ..original = data.original
+      ..edited = data.edited
+      ..marked = data.marked
+      ..comment = data.comment
+      ..resolved = data.resolved;
   }
 
   void _applySubtitleFileSelection({
     required SubtitleCollection collection,
-    required Map<String, dynamic> subtitleData,
+    required ProjectSubtitleCollectionData subtitleData,
     required Map<String, String?> srtFileInfo,
   }) {
     if (srtFileInfo['useExistingProject'] == 'true') {
@@ -145,18 +142,16 @@ class SessionProjectImportRepository {
     }
 
     if (srtFileInfo['useImportingFile'] == 'true') {
-      collection.fileName =
-          subtitleData['fileName'] as String? ?? collection.fileName;
+      collection.fileName = subtitleData.fileName ?? collection.fileName;
       collection.originalFileUri =
-          subtitleData['originalFileUri'] as String? ??
-          subtitleData['filePath'] as String?;
-      collection.filePath = subtitleData['filePath'] as String?;
+          subtitleData.originalFileUri ?? subtitleData.filePath;
+      collection.filePath = subtitleData.filePath;
       return;
     }
 
     collection.fileName =
         srtFileInfo['fileName'] ??
-        subtitleData['fileName'] as String? ??
+        subtitleData.fileName ??
         collection.fileName;
 
     if (Platform.isAndroid && srtFileInfo['safUri'] != null) {
@@ -170,48 +165,44 @@ class SessionProjectImportRepository {
 
   void _applySessionSelection({
     required Session session,
-    required Map<String, dynamic> subtitleData,
-    required Map<String, dynamic> sessionData,
+    required ProjectSubtitleCollectionData subtitleData,
+    required ProjectSessionData sessionData,
     required Map<String, String?> srtFileInfo,
     required String? originalProjectUri,
   }) {
     if (srtFileInfo['useImportingFile'] == 'true') {
-      session.fileName =
-          subtitleData['fileName'] as String? ?? session.fileName;
+      session.fileName = subtitleData.fileName ?? session.fileName;
     } else if (srtFileInfo['useExistingProject'] != 'true') {
       session.fileName =
           srtFileInfo['fileName'] ??
-          subtitleData['fileName'] as String? ??
+          subtitleData.fileName ??
           session.fileName;
     }
 
-    if (sessionData['lastEditedIndex'] is int) {
-      session.lastEditedIndex = sessionData['lastEditedIndex'] as int;
+    if (sessionData.lastEditedIndex != null) {
+      session.lastEditedIndex = sessionData.lastEditedIndex;
     }
-    if (sessionData['editMode'] is bool) {
-      session.editMode = sessionData['editMode'] as bool;
+    if (sessionData.editMode != null) {
+      session.editMode = sessionData.editMode!;
     }
     session.projectFilePath = originalProjectUri;
   }
 
   _ResolvedFileSelection _resolveNewFileSelection({
-    required Map<String, dynamic> subtitleData,
+    required ProjectSubtitleCollectionData subtitleData,
     required Map<String, String?> srtFileInfo,
   }) {
     if (srtFileInfo['useImportingFile'] == 'true') {
       return _ResolvedFileSelection(
-        fileName:
-            subtitleData['fileName'] as String? ?? 'Imported Project',
-        filePath: subtitleData['filePath'] as String?,
-        fileUri:
-            subtitleData['originalFileUri'] as String? ??
-            subtitleData['filePath'] as String?,
+        fileName: subtitleData.fileName ?? 'Imported Project',
+        filePath: subtitleData.filePath,
+        fileUri: subtitleData.originalFileUri ?? subtitleData.filePath,
       );
     }
 
     final fileName =
         srtFileInfo['fileName'] ??
-        subtitleData['fileName'] as String? ??
+        subtitleData.fileName ??
         'Imported Project';
     final filePath = srtFileInfo['filePath'];
 
@@ -229,40 +220,46 @@ class SessionProjectImportRepository {
   Future<void> _importCheckpoints({
     required int sessionId,
     required int subtitleCollectionId,
-    required Map<String, dynamic> projectData,
+    required List<ProjectCheckpointData> checkpoints,
   }) async {
-    final raw = projectData['checkpoints'];
-    if (raw is! List || raw.isEmpty) return;
+    if (checkpoints.isEmpty) return;
 
     try {
       final imported = <Checkpoint>[];
-      final idMap = <Object, int>{};
+      final idMap = <int, int>{};
 
       await _isar.writeTxn(() async {
-        for (int i = 0; i < raw.length; i++) {
-          final data = Map<String, dynamic>.from(raw[i] as Map);
+        for (int i = 0; i < checkpoints.length; i++) {
+          final data = checkpoints[i];
+          final timestamp = data.timestamp;
+          if (timestamp == null) {
+            throw const FormatException(
+              'Project checkpoint is missing its timestamp.',
+            );
+          }
+
           final checkpoint = Checkpoint(
             sessionId: sessionId,
             subtitleCollectionId: subtitleCollectionId,
-            timestamp: DateTime.parse(data['timestamp'] as String),
-            operationType: data['operationType'] as String? ?? 'unknown',
-            description: data['description'] as String? ?? '',
+            timestamp: DateTime.parse(timestamp),
+            operationType: data.operationType,
+            description: data.description,
             parentCheckpointId: null,
-            isActive: data['isActive'] as bool? ?? false,
-            checkpointType: data['checkpointType'] as String? ?? 'delta',
-            metadata: data['metadata'] as String?,
-            deltas: _parseDeltas(data['deltas']),
-            snapshot: _parseSubtitleLines(data['snapshot']),
+            isActive: data.isActive,
+            checkpointType: data.checkpointType,
+            metadata: data.metadata,
+            deltas: data.deltas.map(_toDelta).toList(growable: false),
+            snapshot:
+                _parseSubtitleLines(data.snapshot),
           );
 
           final newId = await _isar.checkpoints.put(checkpoint);
           imported.add(checkpoint);
-          idMap[data['id'] ?? i] = newId;
+          idMap[data.id ?? i] = newId;
         }
 
-        for (int i = 0; i < raw.length && i < imported.length; i++) {
-          final data = Map<String, dynamic>.from(raw[i] as Map);
-          final parentKey = data['parentCheckpointId'];
+        for (int i = 0; i < checkpoints.length && i < imported.length; i++) {
+          final parentKey = checkpoints[i].parentCheckpointId;
           if (parentKey == null) continue;
 
           int? mappedParent = idMap[parentKey];
@@ -282,25 +279,14 @@ class SessionProjectImportRepository {
     }
   }
 
-  List<SubtitleLineDelta> _parseDeltas(dynamic rawDeltas) {
-    final source = rawDeltas is List ? rawDeltas : const <dynamic>[];
-    return source.map((raw) {
-      final data = Map<String, dynamic>.from(raw as Map);
-      final delta = SubtitleLineDelta()
-        ..changeType = data['changeType'] as String? ?? ''
-        ..lineIndex = data['lineIndex'] as int? ?? 0;
-
-      if (data['beforeState'] is Map) {
-        delta.beforeState =
-            _parseSubtitleLines([data['beforeState']]).single;
-      }
-      if (data['afterState'] is Map) {
-        delta.afterState =
-            _parseSubtitleLines([data['afterState']]).single;
-      }
-
-      return delta;
-    }).toList(growable: false);
+  SubtitleLineDelta _toDelta(ProjectDeltaData data) {
+    return SubtitleLineDelta()
+      ..changeType = data.changeType
+      ..lineIndex = data.lineIndex
+      ..beforeState =
+          data.beforeState == null ? null : _toSubtitleLine(data.beforeState!)
+      ..afterState =
+          data.afterState == null ? null : _toSubtitleLine(data.afterState!);
   }
 }
 
