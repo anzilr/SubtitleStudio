@@ -536,9 +536,7 @@ class CheckpointManager {
             collection.lines = targetCheckpoint.snapshot.map((line) => CheckpointStateReducer.copyLine(line)).toList();
             CheckpointStateReducer.reindexCollection(collection);
             
-            await _isar.writeTxn(() async {
-              await _isar.subtitleCollections.put(collection);
-            });
+            await _store.saveSubtitleCollection(collection);
             
             logInfo('Restored directly from target checkpoint snapshot');
             return true;
@@ -572,26 +570,11 @@ class CheckpointManager {
         collection.lines = restoredLines;
         CheckpointStateReducer.reindexCollection(collection);
         
-        // Update active status - deactivate all checkpoints, then activate target
-        await _isar.writeTxn(() async {
-          // Deactivate all checkpoints in this session
-          final allCheckpoints = await _isar.checkpoints
-              .filter()
-              .sessionIdEqualTo(sessionId)
-              .findAll();
-          
-          for (final cp in allCheckpoints) {
-            cp.isActive = false;
-          }
-          
-          // Activate only the target checkpoint
-          targetCheckpoint.isActive = true;
-          
-          // Save all changes
-          await _isar.checkpoints.putAll(allCheckpoints);
-          await _isar.checkpoints.put(targetCheckpoint);
-          await _isar.subtitleCollections.put(collection);
-        });
+        await _store.restoreCollectionAndActivateOnly(
+          sessionId: sessionId,
+          targetCheckpoint: targetCheckpoint,
+          collection: collection,
+        );
         
         logInfo('Restored directly from snapshot (marked as active, others deactivated)');
         return true;
@@ -620,26 +603,11 @@ class CheckpointManager {
       collection.lines = restoredLines;
       CheckpointStateReducer.reindexCollection(collection);
       
-      // Step 7: Update active status - deactivate all checkpoints, then activate target
-      await _isar.writeTxn(() async {
-        // Deactivate all checkpoints in this session
-        final allCheckpoints = await _isar.checkpoints
-            .filter()
-            .sessionIdEqualTo(sessionId)
-            .findAll();
-        
-        for (final cp in allCheckpoints) {
-          cp.isActive = false;
-        }
-        
-        // Activate only the target checkpoint
-        targetCheckpoint.isActive = true;
-        
-        // Save all changes
-        await _isar.checkpoints.putAll(allCheckpoints);
-        await _isar.checkpoints.put(targetCheckpoint);
-        await _isar.subtitleCollections.put(collection);
-      });
+      await _store.restoreCollectionAndActivateOnly(
+        sessionId: sessionId,
+        targetCheckpoint: targetCheckpoint,
+        collection: collection,
+      );
       
       logInfo('Successfully restored to checkpoint: $checkpointId (marked as active, others deactivated)');
       return true;
@@ -663,22 +631,13 @@ class CheckpointManager {
   }
   
   /// Gets all checkpoints for a session
-  Future<List<Checkpoint>> getCheckpointsForSession(int sessionId) async {
-    return await _isar.checkpoints
-        .filter()
-        .sessionIdEqualTo(sessionId)
-        .sortByTimestampDesc()
-        .findAll();
+  Future<List<Checkpoint>> getCheckpointsForSession(int sessionId) {
+    return _store.getCheckpointsForSession(sessionId);
   }
   
   /// Deletes all checkpoints for a session (cleanup when session is deleted)
   Future<void> deleteCheckpointsForSession(int sessionId) async {
-    await _isar.writeTxn(() async {
-      final checkpoints = await getCheckpointsForSession(sessionId);
-      final checkpointIds = checkpoints.map((c) => c.id).toList();
-      await _isar.checkpoints.deleteAll(checkpointIds);
-    });
-    
+    await _store.deleteCheckpointsForSession(sessionId);
     logInfo('Deleted all checkpoints for session: $sessionId');
   }
   
@@ -743,9 +702,7 @@ class CheckpointManager {
     );
 
     if (idsToDelete.isNotEmpty) {
-      await _isar.writeTxn(() async {
-        await _isar.checkpoints.deleteAll(idsToDelete.toList());
-      });
+      await _store.deleteCheckpointIds(idsToDelete);
       logInfo(
         'Deleted ${idsToDelete.length} future checkpoints '
         'after checkpoint $afterCheckpointId',
@@ -760,13 +717,8 @@ class CheckpointManager {
   }
 
   /// Gets the current head checkpoint (most recent active)
-  Future<Checkpoint?> _getCurrentHeadCheckpoint(int sessionId) async {
-    return await _isar.checkpoints
-        .filter()
-        .sessionIdEqualTo(sessionId)
-        .isActiveEqualTo(true)
-        .sortByTimestampDesc()
-        .findFirst();
+  Future<Checkpoint?> _getCurrentHeadCheckpoint(int sessionId) {
+    return _store.getCurrentHeadCheckpoint(sessionId);
   }
   
   // OLD METHODS - Kept for reference, not used in snapshot-based approach
@@ -943,10 +895,9 @@ class CheckpointManager {
       );
 
       if (toDelete.isNotEmpty) {
-        await _isar.writeTxn(() async {
-          final idsToDelete = toDelete.map((c) => c.id).toList();
-          await _isar.checkpoints.deleteAll(idsToDelete);
-        });
+        await _store.deleteCheckpointIds(
+          toDelete.map((checkpoint) => checkpoint.id),
+        );
 
         logInfo(
           'Cleaned up ${toDelete.length} old checkpoints '
