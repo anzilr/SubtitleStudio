@@ -108,7 +108,7 @@ void main() {
         subtitleCollectionId: seeded.subtitleCollectionId,
       );
 
-      expect(first, isNonZero);
+      expect(first, isNot(0));
       expect(second, first);
 
       final checkpoints = await manager.getCheckpointsForSession(
@@ -120,7 +120,10 @@ void main() {
       expect(snapshot.checkpointType, 'snapshot');
       expect(snapshot.description, 'Initial state');
       expect(snapshot.parentCheckpointId, isNull);
-      expect(snapshot.snapshot.map((line) => line.original), ['A', 'B']);
+      expect(
+        snapshot.snapshot.map((line) => line.original).toList(),
+        ['A', 'B'],
+      );
       expect(snapshot.deltas, isEmpty);
     });
 
@@ -184,8 +187,10 @@ void main() {
           await harness.isar.checkpoints.get(snapshotOperationId);
       expect(snapshotOperation, isNotNull);
       expect(snapshotOperation!.checkpointType, 'snapshot');
-      expect(snapshotOperation.snapshot.map((line) => line.original),
-          ['A1', 'B']);
+      expect(
+        snapshotOperation.snapshot.map((line) => line.original).toList(),
+        ['A1', 'B'],
+      );
       expect(snapshotOperation.deltas, hasLength(1));
       expect(snapshotOperation.deltas.single.afterState?.original, 'B1');
 
@@ -197,12 +202,18 @@ void main() {
 
       final restoredLines =
           await _readLines(harness, seeded.subtitleCollectionId);
-      expect(restoredLines.map((line) => line.original), ['A1', 'B1']);
+      expect(
+        restoredLines.map((line) => line.original).toList(),
+        ['A1', 'B1'],
+      );
 
       final checkpoints =
           await manager.getCheckpointsForSession(seeded.sessionId);
       final active = checkpoints.where((checkpoint) => checkpoint.isActive);
-      expect(active.map((checkpoint) => checkpoint.id), [thirdCheckpointId]);
+      expect(
+        active.map((checkpoint) => checkpoint.id).toList(),
+        [thirdCheckpointId],
+      );
     });
 
     test('new edit after undo replaces undone operation and descendants',
@@ -264,7 +275,10 @@ void main() {
 
       final beforeBranch =
           await _readLines(harness, seeded.subtitleCollectionId);
-      expect(beforeBranch.map((line) => line.original), ['A1', 'B']);
+      expect(
+        beforeBranch.map((line) => line.original).toList(),
+        ['A1', 'B'],
+      );
 
       final branchAfter = _line(2, 'B2');
       final branchCheckpointId = await manager.createEditCheckpoint(
