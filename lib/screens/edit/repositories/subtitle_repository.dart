@@ -539,70 +539,83 @@ class SubtitleRepository {
     }
   }
 
-  /// Batch delete multiple subtitle lines using one collection rewrite.
-  ///
-  /// [createCheckpoint] is retained for API compatibility; checkpoint creation
-  /// is coordinated by the calling workflow because this repository method
-  /// does not have the session ID required to create one.
+  /// Batch delete selected lines atomically with v2 history.
   Future<Map<String, int>> batchDeleteLines(
     int collectionId,
     List<int> indices, {
-    bool createCheckpoint = true,
+    required int sessionId,
   }) async {
     logInfo(
       'SubtitleRepository: Batch deleting ${indices.length} lines '
       'from collection $collectionId',
     );
 
+    final requested = indices.toSet();
+    if (requested.isEmpty) {
+      return const {'success': 0, 'failed': 0};
+    }
+
+    var successCount = 0;
+    var failedCount = requested.length;
+
     try {
-      final requested = indices.toSet();
-      if (requested.isEmpty) {
-        return const {'success': 0, 'failed': 0};
-      }
+      await _historyTransaction.commit(
+        sessionId: sessionId,
+        subtitleCollectionId: collectionId,
+        operationType: 'delete',
+        description: 'Batch deleted ${requested.length} lines',
+        buildMutation: (currentLines) {
+          final valid = requested
+              .where(
+                (index) => index >= 0 && index < currentLines.length,
+              )
+              .toList()
+            ..sort((a, b) => b.compareTo(a));
 
-      final result = await _isar.writeTxn(() async {
-        final collection = await _isar.subtitleCollections.get(collectionId);
-        if (collection == null) {
-          return {
-            'success': 0,
-            'failed': requested.length,
-          };
-        }
+          successCount = valid.length;
+          failedCount = requested.length - valid.length;
 
-        final valid = requested
-            .where(
-              (index) =>
-                  index >= 0 && index < collection.lines.length,
-            )
-            .toSet();
-
-        final remaining = <SubtitleLine>[];
-        for (int index = 0; index < collection.lines.length; index++) {
-          if (!valid.contains(index)) {
-            remaining.add(collection.lines[index]);
+          if (valid.isEmpty) {
+            return CheckpointMutationPlan(
+              nextLines: CheckpointStateReducer.copyLines(currentLines),
+              deltas: const <SubtitleLineDelta>[],
+            );
           }
-        }
 
-        if (valid.isNotEmpty) {
-          collection.lines = sortAndReindexSubtitleLines(remaining);
-          await _isar.subtitleCollections.put(collection);
-        }
+          final deltas = <SubtitleLineDelta>[
+            for (final index in valid)
+              SubtitleLineDelta()
+                ..changeType = 'delete'
+                ..lineIndex = index
+                ..beforeState =
+                    CheckpointStateReducer.copyLine(currentLines[index])
+                ..afterState = null,
+          ];
 
-        return {
-          'success': valid.length,
-          'failed': requested.length - valid.length,
-        };
-      });
+          final nextLines =
+              CheckpointStateReducer.copyLines(currentLines);
+          for (final index in valid) {
+            nextLines.removeAt(index);
+          }
 
-      logInfo(
-        'SubtitleRepository: Batch delete completed - '
-        'Success: ${result['success']}, Failed: ${result['failed']}',
+          return CheckpointMutationPlan(
+            nextLines: sortAndReindexSubtitleLines(nextLines),
+            deltas: deltas,
+            forceSnapshot: true,
+          );
+        },
       );
 
-      return result;
-    } catch (e) {
-      logError('SubtitleRepository: Batch delete error: $e');
-      rethrow;
+      return {
+        'success': successCount,
+        'failed': failedCount,
+      };
+    } catch (error) {
+      logError('SubtitleRepository: Atomic batch delete error: $error');
+      return {
+        'success': 0,
+        'failed': requested.length,
+      };
     }
   }
 
