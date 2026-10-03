@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/app/providers/core_providers.dart';
-import 'package:subtitle_studio/database/database_helper.dart';
+import 'package:subtitle_studio/screens/edit/providers/subtitle_repository_provider.dart';
+import 'package:subtitle_studio/screens/edit/repositories/subtitle_repository.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:isar_community/isar.dart';
 import '../utils/logging_helpers.dart';
@@ -17,6 +18,10 @@ class SubtitleOperations {
   static CheckpointRepository _checkpointRepository(BuildContext context) =>
       ProviderScope.containerOf(context, listen: false)
           .read(checkpointRepositoryProvider);
+
+  static SubtitleRepository _subtitleRepository(BuildContext context) =>
+      ProviderScope.containerOf(context, listen: false)
+          .read(subtitleRepositoryProvider);
   static final RegExp positionRegex = RegExp(r'^\{\\an[1-9]\}');
 
   static void showDeleteConfirmation({
@@ -65,7 +70,10 @@ class SubtitleOperations {
       deletedIndex: currentLine.index - 1,
     );
     
-    final success = await deleteSubtitleLineDB(subtitleId, currentLine.index - 1);
+    final success = await _subtitleRepository(context).deleteLine(
+      subtitleId,
+      currentLine.index - 1,
+    );
 
     if (!context.mounted) return;
 
@@ -249,13 +257,20 @@ class SubtitleOperations {
       currentLine.edited = firstPart.replaceAll('\n', '<br>');
       currentLine.endTime = firstPartTime.split(' → ')[1];
 
-      final success = await splitSubtitleLine(
-          subtitleId, currentLine, newLine, currentLine.index - 1);
+      final success = await _subtitleRepository(context).splitLine(
+        subtitleId,
+        currentLine,
+        newLine,
+        currentLine.index - 1,
+      );
 
       if (success) {
         
         // Update the lastEditedIndex to the first part of the split
-        await updateLastEditedIndex(sessionId, currentLine.index);
+        await _subtitleRepository(context).updateLastEditedIndex(
+          sessionId,
+          currentLine.index,
+        );
         
         refreshCallback();
         if (!context.mounted) return;
@@ -374,11 +389,12 @@ class SubtitleOperations {
         mergedLine: mergedLine,
       );
 
-      final success = await mergeSubtitleLines(
-          subtitleId,
-          mergedLine,
-          mergePrevious ? mergeIndex : currentIndex,
-          mergePrevious ? currentIndex : mergeIndex);
+      final success = await _subtitleRepository(context).mergeLines(
+        subtitleId,
+        mergedLine,
+        mergePrevious ? mergeIndex : currentIndex,
+        mergePrevious ? currentIndex : mergeIndex,
+      );
 
       if (success) {
         
@@ -424,8 +440,9 @@ class SubtitleOperations {
     bool isVideoLoaded = false,
     Duration? Function()? getCurrentVideoPosition,
   }) {
-    // Use fetchSubtitle from database_helper instead of direct DB access
-    fetchSubtitle(subtitleId).then((freshCollection) {
+    _subtitleRepository(context)
+        .fetchSubtitleCollection(subtitleId)
+        .then((freshCollection) {
       if (freshCollection == null) {
         _showErrorSnackbar(context, 'Collection not found');
         return;
@@ -584,7 +601,11 @@ class SubtitleOperations {
         insertIndex: insertAtIndex,
       );
       
-      final success = await addSubtitleLine(subtitleId, newLine, insertAtIndex);
+      final success = await _subtitleRepository(context).addLine(
+        subtitleId,
+        newLine,
+        insertAtIndex,
+      );
 
       if (success) {
         // Navigate to the newly added line using the callback with the correct index
