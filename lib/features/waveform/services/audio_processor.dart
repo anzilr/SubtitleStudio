@@ -8,10 +8,14 @@ import 'package:subtitle_studio/features/waveform/services/zoom_buffer_generator
 import 'package:subtitle_studio/utils/ffmpeg_helper.dart';
 import 'package:ffmpeg_kit_flutter_new_min_gpl/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new_min_gpl/ffmpeg_kit_config.dart';
-import 'package:subtitle_studio/database/models/preferences_model.dart';
+import 'package:subtitle_studio/features/waveform/repositories/waveform_preferences_repository.dart';
 
 /// Service for processing audio files into waveform data
 class AudioProcessor {
+  final WaveformPreferencesRepository _preferences;
+
+  AudioProcessor(this._preferences);
+
   /// Process audio file and generate waveform with zoom levels
   /// If subtitleCollectionId is provided, will check for cached data and save new data
   /// If audioTrackId is provided, will extract that specific audio track
@@ -30,9 +34,11 @@ class AudioProcessor {
 
       // Check for cached waveform data if subtitle collection ID is provided
       if (subtitleCollectionId != null) {
-        final cache = await PreferencesModel.getWaveformCache(subtitleCollectionId);
+        final cache = await _preferences.getWaveformCache(
+          subtitleCollectionId,
+        );
         if (cache != null) {
-          final pcmPath = cache['pcmPath'] as String;
+          final pcmPath = cache.pcmPath;
           final pcmFile = File(pcmPath);
           
           if (await pcmFile.exists()) {
@@ -44,9 +50,9 @@ class AudioProcessor {
             onProgress?.call(0.1);
             waveformData = await _loadFromCachedPCM(
               pcmPath,
-              cache['sampleRate'] as int,
-              cache['totalSamples'] as int,
-              cache['channels'] as int,
+              cache.sampleRate,
+              cache.totalSamples,
+              cache.channels,
             );
             onProgress?.call(0.2);
             
@@ -58,7 +64,7 @@ class AudioProcessor {
               print('AudioProcessor: Cached PCM file not found, will regenerate');
             }
             // Cache is invalid, clear it
-            await PreferencesModel.clearWaveformCache(subtitleCollectionId);
+            await _preferences.clearWaveformCache(subtitleCollectionId);
             
             // Extract and cache new PCM
             waveformData = await _extractAndCachePCM(audioFilePath, subtitleCollectionId, onProgress, audioTrackId);
@@ -175,7 +181,7 @@ class AudioProcessor {
   ) async {
     // For now, run on main isolate to avoid complexity
     // Can be moved to isolate later if performance is an issue
-    final zoomGenerator = ZoomBufferGenerator();
+    final zoomGenerator = ZoomBufferGenerator(_preferences);
     
     // Generate zoom levels with progress reporting (0.0 to 0.9 of this step)
     final zoomLevels = await zoomGenerator.generateZoomLevels(
@@ -442,7 +448,7 @@ class AudioProcessor {
 
       // Save cache information if requested
       if (cacheForCollection != null) {
-        await PreferencesModel.saveWaveformCache(
+        await _preferences.saveWaveformCache(
           subtitleCollectionId: cacheForCollection,
           pcmPath: outputPath,
           sampleRate: sampleRate,
