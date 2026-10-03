@@ -273,6 +273,13 @@ class SubtitleActionsMenu extends StatelessWidget {
       }
       
       if (effectLines.isNotEmpty) {
+        final preOperationState = List<SubtitleLine>.from(collection.lines);
+        final effectDeltas = SubtitleEffectOperations.buildEffectDeltas(
+          originalLine: currentLine,
+          originalLineIndex: currentLine.index - 1,
+          effectLines: effectLines,
+        );
+
         // Apply the effect to the database
         final success = await SubtitleEffectOperations.applyEffectToSubtitleCollection(
           isar: ProviderScope.containerOf(context, listen: false)
@@ -291,8 +298,9 @@ class SubtitleActionsMenu extends StatelessWidget {
             subtitleCollectionId: subtitleId,
             operationType: 'effect',
             description: 'Applied $effectType effect to line ${currentLine.index} (${effectLines.length} lines)',
-            deltas: [], // Effects don't use deltas
-            forceSnapshot: true, // IMPORTANT: Force snapshot because effects replace entire sections
+            deltas: effectDeltas,
+            forceSnapshot: true,
+            preOperationState: preOperationState,
           );
           
           // Close the sheet and refresh
