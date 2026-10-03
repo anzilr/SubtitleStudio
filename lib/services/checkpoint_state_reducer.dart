@@ -6,6 +6,15 @@ import 'package:subtitle_studio/utils/subtitle_sorting.dart';
 /// Persistence, checkpoint-tree traversal, and preference policy intentionally
 /// remain outside this class. Keeping these transforms isolated makes restore
 /// behavior testable without opening Isar.
+class CheckpointIntegrityException implements Exception {
+  final String message;
+
+  const CheckpointIntegrityException(this.message);
+
+  @override
+  String toString() => 'CheckpointIntegrityException: $message';
+}
+
 class CheckpointStateReducer {
   const CheckpointStateReducer._();
 
@@ -56,6 +65,105 @@ class CheckpointStateReducer {
           }
           break;
       }
+    }
+  }
+
+  static void applyDeltasStrictInPlace(
+    List<SubtitleLine> lines,
+    List<SubtitleLineDelta> deltas,
+  ) {
+    for (final delta in deltas) {
+      switch (delta.changeType) {
+        case 'add':
+          final afterState = delta.afterState;
+          if (afterState == null) {
+            throw const CheckpointIntegrityException(
+              'Add delta is missing afterState.',
+            );
+          }
+          if (delta.lineIndex < 0 || delta.lineIndex > lines.length) {
+            throw CheckpointIntegrityException(
+              'Add delta index ${delta.lineIndex} is outside '
+              '0..${lines.length}.',
+            );
+          }
+          lines.insert(delta.lineIndex, copyLine(afterState));
+          break;
+
+        case 'delete':
+          final beforeState = delta.beforeState;
+          if (beforeState == null) {
+            throw const CheckpointIntegrityException(
+              'Delete delta is missing beforeState.',
+            );
+          }
+          if (delta.lineIndex < 0 || delta.lineIndex >= lines.length) {
+            throw CheckpointIntegrityException(
+              'Delete delta index ${delta.lineIndex} is outside '
+              '0..${lines.length - 1}.',
+            );
+          }
+          if (!_samePersistedLine(lines[delta.lineIndex], beforeState)) {
+            throw CheckpointIntegrityException(
+              'Delete delta does not match the reconstructed line at '
+              'index ${delta.lineIndex}.',
+            );
+          }
+          lines.removeAt(delta.lineIndex);
+          break;
+
+        case 'modify':
+          final beforeState = delta.beforeState;
+          final afterState = delta.afterState;
+          if (beforeState == null || afterState == null) {
+            throw const CheckpointIntegrityException(
+              'Modify delta requires both beforeState and afterState.',
+            );
+          }
+          if (delta.lineIndex < 0 || delta.lineIndex >= lines.length) {
+            throw CheckpointIntegrityException(
+              'Modify delta index ${delta.lineIndex} is outside '
+              '0..${lines.length - 1}.',
+            );
+          }
+          if (!_samePersistedLine(lines[delta.lineIndex], beforeState)) {
+            throw CheckpointIntegrityException(
+              'Modify delta does not match the reconstructed line at '
+              'index ${delta.lineIndex}.',
+            );
+          }
+          lines[delta.lineIndex] = copyLine(afterState);
+          break;
+
+        default:
+          throw CheckpointIntegrityException(
+            'Unknown delta type: ${delta.changeType}.',
+          );
+      }
+    }
+  }
+
+  static bool _samePersistedLine(
+    SubtitleLine left,
+    SubtitleLine right,
+  ) {
+    return left.index == right.index &&
+        left.startTime == right.startTime &&
+        left.endTime == right.endTime &&
+        left.original == right.original &&
+        left.edited == right.edited &&
+        left.marked == right.marked &&
+        left.comment == right.comment &&
+        left.resolved == right.resolved;
+  }
+
+  /// Reindexes lines without changing their stored order.
+  ///
+  /// History restoration must reproduce the exact checkpoint ordering rather
+  /// than applying the editor's normal time-based sorting policy.
+  static void reindexExactOrder(SubtitleCollection collection) {
+    for (var i = 0; i < collection.lines.length; i++) {
+      collection.lines[i].index = i + 1;
     }
   }
 
