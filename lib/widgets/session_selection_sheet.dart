@@ -4,6 +4,7 @@ import 'dart:io';
 // ignore: depend_on_referenced_packages
 import 'package:path/path.dart' as path;
 import 'package:subtitle_studio/database/models/models.dart';
+import 'package:subtitle_studio/services/project_document_codec.dart';
 import 'package:subtitle_studio/utils/project_manager.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/screens/edit/edit_screen_host.dart';
@@ -20,7 +21,7 @@ part 'session_selection/locate_srt_sheet.dart';
 /// to replace with imported project data. It displays all sessions from the 
 /// database and allows the user to choose which one to update.
 class SessionSelectionSheet extends ConsumerStatefulWidget {
-  final Map<String, dynamic> projectData;
+  final ProjectDocument projectDocument;
   final String? originalFileUri;
   final Function(Session)? onSessionReplaced;
   final Function(Session)? onSessionCreated;
@@ -28,7 +29,7 @@ class SessionSelectionSheet extends ConsumerStatefulWidget {
 
   const SessionSelectionSheet({
     super.key,
-    required this.projectData,
+    required this.projectDocument,
     this.originalFileUri,
     this.onSessionReplaced,
     this.onSessionCreated,
@@ -58,13 +59,10 @@ class _SessionSelectionSheetState extends ConsumerState<SessionSelectionSheet> {
   Future<Map<String, String?>?> _selectSrtFilePath({Session? existingSession}) async {
     try {
       // Get the original filename and filepath from project data to help user identify the file
-      String? originalFileName;
-      String? originalFilePath;
-      if (widget.projectData['subtitleCollection'] != null) {
-        final subtitleData = widget.projectData['subtitleCollection'] as Map<String, dynamic>;
-        originalFileName = subtitleData['fileName'];
-        originalFilePath = subtitleData['filePath'] ?? subtitleData['originalFileUri'];
-      }
+      final subtitleData = widget.projectDocument.subtitleCollection;
+      final originalFileName = subtitleData.fileName;
+      final originalFilePath =
+          subtitleData.filePath ?? subtitleData.originalFileUri;
 
       // Get existing session's file path information if available
       String? existingFileName;
@@ -145,31 +143,29 @@ class _SessionSelectionSheetState extends ConsumerState<SessionSelectionSheet> {
   /// Create a new SRT file in the selected folder
   Future<Map<String, String?>?> _createSrtFile() async {
     try {
-      // Get the subtitle lines from project data
-      final subtitleCollectionData = widget.projectData['subtitleCollection'] as Map<String, dynamic>;
-      final linesData = subtitleCollectionData['lines'] as List<dynamic>;
-      
-      // Convert to SubtitleLine objects
-      List<SubtitleLine> subtitleLines = linesData.map((lineData) {
-        final data = Map<String, dynamic>.from(lineData);
+      final subtitleCollectionData =
+          widget.projectDocument.subtitleCollection;
+
+      final subtitleLines = subtitleCollectionData.lines.map((data) {
         return SubtitleLine()
-          ..index = data['index'] ?? 0
-          ..startTime = data['startTime'] ?? '00:00:00,000'
-          ..endTime = data['endTime'] ?? '00:00:02,000'
-          ..original = data['original'] ?? ''
-          ..edited = data['edited']
-          ..marked = data['marked'] ?? false;
-      }).toList();
+          ..index = data.index
+          ..startTime = data.startTime
+          ..endTime = data.endTime
+          ..original = data.original
+          ..edited = data.edited
+          ..marked = data.marked
+          ..comment = data.comment
+          ..resolved = data.resolved;
+      }).toList(growable: false);
       
       // Generate SRT content
       final srtContent = SrtCompiler.generateSrtContent(subtitleLines);
       
       // Get original filename for the SRT file
-      String originalFileName = subtitleCollectionData['fileName'] ?? '';
+      String originalFileName = subtitleCollectionData.fileName ?? '';
       if (originalFileName.isEmpty) {
-        // Fallback to session fileName if subtitle fileName is not available
-        final sessionData = widget.projectData['session'] as Map<String, dynamic>;
-        originalFileName = sessionData['fileName'] ?? 'subtitle';
+        originalFileName =
+            widget.projectDocument.session.fileName ?? 'subtitle';
       }
       
       // Ensure .srt extension
@@ -273,7 +269,7 @@ class _SessionSelectionSheetState extends ConsumerState<SessionSelectionSheet> {
           .read(sessionProjectImportRepositoryProvider)
           .replaceSession(
             session: session,
-            projectData: widget.projectData,
+            projectDocument: widget.projectDocument,
             srtFileInfo: srtFileInfo,
             originalProjectUri: widget.originalFileUri,
           );
@@ -341,7 +337,7 @@ class _SessionSelectionSheetState extends ConsumerState<SessionSelectionSheet> {
       final createdSession = await ref
           .read(sessionProjectImportRepositoryProvider)
           .importAsNewSession(
-            projectData: widget.projectData,
+            projectDocument: widget.projectDocument,
             srtFileInfo: srtFileInfo,
             originalProjectUri: widget.originalFileUri,
           );
