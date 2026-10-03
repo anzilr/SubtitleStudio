@@ -1,37 +1,26 @@
 import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/database/models/models.dart';
+import 'package:subtitle_studio/database/stores/preferences_store.dart';
 
 /// Isar-backed persistence for the Riverpod theme controller.
 class ThemePreferencesRepository {
-  final Isar _isar;
+  final PreferencesStore _preferencesStore;
 
-  const ThemePreferencesRepository(this._isar);
+  ThemePreferencesRepository(Isar isar)
+      : _preferencesStore = PreferencesStore(isar);
 
-  Future<Preferences> _getPreferences() async {
-    final existing = await _isar.preferences.where().findFirst();
-    if (existing != null) return existing;
-
-    final created = Preferences(autoSave: true);
-    await _isar.writeTxn(() async {
-      await _isar.preferences.put(created);
-    });
-    return created;
+  Future<Preferences> _getPreferences() {
+    return _preferencesStore.getOrCreate();
   }
 
   Future<void> _updatePreferences(
     void Function(Preferences preferences) update,
-  ) async {
-    final existing = await _isar.preferences.where().findFirst();
-    final preferences = existing ?? Preferences(autoSave: true);
-    update(preferences);
-
-    await _isar.writeTxn(() async {
-      await _isar.preferences.put(preferences);
-    });
+  ) {
+    return _preferencesStore.update(update);
   }
 
   Future<String?> getThemeMode() async {
-    return (await _isar.preferences.where().findFirst())?.themeMode;
+    return (await _preferencesStore.getOrCreate()).themeMode;
   }
 
   Future<void> saveThemeMode(String themeMode) async {
