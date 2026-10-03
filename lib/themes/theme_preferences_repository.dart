@@ -20,7 +20,7 @@ class ThemePreferencesRepository {
   }
 
   Future<String?> getThemeMode() async {
-    return (await _preferencesStore.getOrCreate()).themeMode;
+    return (await _preferencesStore.findFirst())?.themeMode;
   }
 
   Future<void> saveThemeMode(String themeMode) async {
