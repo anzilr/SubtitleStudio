@@ -1,4 +1,5 @@
 import 'package:subtitle_studio/database/models/models.dart';
+import 'package:subtitle_studio/services/checkpoint_timeline.dart';
 
 /// Pure policy decisions for checkpoint creation and retention.
 ///
@@ -24,26 +25,71 @@ class CheckpointPolicy {
     }
   }
 
-  /// Returns old checkpoints eligible for deletion.
+  /// Returns checkpoints that can be safely pruned without breaking any
+  /// retained parent chain.
   ///
-  /// [checkpoints] must be ordered newest-first, matching
-  /// CheckpointManager.getCheckpointsForSession.
+  /// The current HEAD ancestry, every manual checkpoint ancestry, and the
+  /// initial snapshot are protected. Cleanup removes only unprotected leaves,
+  /// oldest first, so it can never retain a child whose parent was deleted.
+  ///
+  /// If the protected graph itself exceeds [maxCheckpoints], no protected
+  /// checkpoint is deleted and the configured limit is intentionally exceeded.
   static List<Checkpoint> cleanupCandidates({
     required List<Checkpoint> checkpoints,
     required int maxCheckpoints,
+    int? headCheckpointId,
   }) {
     if (maxCheckpoints <= 0 || checkpoints.length <= maxCheckpoints) {
       return const <Checkpoint>[];
     }
 
-    return checkpoints
-        .skip(maxCheckpoints)
-        .where(
-          (checkpoint) =>
-              checkpoint.operationType != 'manual' &&
-              !(checkpoint.operationType == 'snapshot' &&
-                  checkpoint.description == 'Initial state'),
-        )
-        .toList();
+    int? resolvedHeadId = headCheckpointId;
+    if (resolvedHeadId == null) {
+      for (final checkpoint in checkpoints) {
+        if (checkpoint.isActive) {
+          resolvedHeadId = checkpoint.id;
+          break;
+        }
+      }
+    }
+
+    final protectedIds = CheckpointTimeline.protectedAncestryIds(
+      checkpoints: checkpoints,
+      headCheckpointId: resolvedHeadId,
+    );
+
+    final remainingById = {
+      for (final checkpoint in checkpoints) checkpoint.id: checkpoint,
+    };
+    final deleted = <Checkpoint>[];
+
+    while (remainingById.length > maxCheckpoints) {
+      final parentIdsWithChildren = <int>{};
+      for (final checkpoint in remainingById.values) {
+        final parentId = checkpoint.parentCheckpointId;
+        if (parentId != null && remainingById.containsKey(parentId)) {
+          parentIdsWithChildren.add(parentId);
+        }
+      }
+
+      final removableLeaves = remainingById.values
+          .where(
+            (checkpoint) =>
+                !protectedIds.contains(checkpoint.id) &&
+                !parentIdsWithChildren.contains(checkpoint.id),
+          )
+          .toList()
+        ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
+      if (removableLeaves.isEmpty) {
+        break;
+      }
+
+      final candidate = removableLeaves.first;
+      remainingById.remove(candidate.id);
+      deleted.add(candidate);
+    }
+
+    return deleted;
   }
 }
