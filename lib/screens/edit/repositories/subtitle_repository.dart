@@ -291,6 +291,224 @@ class SubtitleRepository {
     });
   }
 
+  Future<bool> deleteLineWithHistory({
+    required int collectionId,
+    required int index,
+    required int sessionId,
+  }) async {
+    try {
+      await _historyTransaction.commit(
+        sessionId: sessionId,
+        subtitleCollectionId: collectionId,
+        operationType: 'delete',
+        description: 'Deleted line ${index + 1}',
+        buildMutation: (currentLines) {
+          if (index < 0 || index >= currentLines.length) {
+            throw RangeError.index(index, currentLines, 'index');
+          }
+
+          final deleted = currentLines[index];
+          final nextLines =
+              CheckpointStateReducer.copyLines(currentLines)
+                ..removeAt(index);
+          final sorted = sortAndReindexSubtitleLines(nextLines);
+
+          return CheckpointMutationPlan(
+            nextLines: sorted,
+            deltas: [
+              SubtitleLineDelta()
+                ..changeType = 'delete'
+                ..lineIndex = index
+                ..beforeState =
+                    CheckpointStateReducer.copyLine(deleted)
+                ..afterState = null,
+            ],
+            forceSnapshot: true,
+          );
+        },
+      );
+      return true;
+    } catch (error) {
+      logError(
+        'SubtitleRepository: Atomic delete failed for line $index: $error',
+      );
+      return false;
+    }
+  }
+
+  Future<bool> addLineWithHistory({
+    required int collectionId,
+    required SubtitleLine line,
+    required int insertIndex,
+    required int sessionId,
+  }) async {
+    try {
+      await _historyTransaction.commit(
+        sessionId: sessionId,
+        subtitleCollectionId: collectionId,
+        operationType: 'add',
+        description: 'Added line at position ${insertIndex + 1}',
+        buildMutation: (currentLines) {
+          final targetIndex = insertIndex.clamp(0, currentLines.length);
+          final nextLines =
+              CheckpointStateReducer.copyLines(currentLines);
+          nextLines.insert(
+            targetIndex,
+            CheckpointStateReducer.copyLine(line),
+          );
+
+          return CheckpointMutationPlan(
+            nextLines: sortAndReindexSubtitleLines(nextLines),
+            deltas: [
+              SubtitleLineDelta()
+                ..changeType = 'add'
+                ..lineIndex = targetIndex
+                ..beforeState = null
+                ..afterState =
+                    CheckpointStateReducer.copyLine(line),
+            ],
+            forceSnapshot: true,
+          );
+        },
+      );
+      return true;
+    } catch (error) {
+      logError('SubtitleRepository: Atomic add failed: $error');
+      return false;
+    }
+  }
+
+  Future<bool> splitLineWithHistory({
+    required int collectionId,
+    required SubtitleLine firstPart,
+    required SubtitleLine secondPart,
+    required int originalIndex,
+    required int sessionId,
+  }) async {
+    try {
+      await _historyTransaction.commit(
+        sessionId: sessionId,
+        subtitleCollectionId: collectionId,
+        operationType: 'split',
+        description: 'Split line ${originalIndex + 1}',
+        buildMutation: (currentLines) {
+          if (originalIndex < 0 || originalIndex >= currentLines.length) {
+            throw RangeError.index(
+              originalIndex,
+              currentLines,
+              'originalIndex',
+            );
+          }
+
+          final original = currentLines[originalIndex];
+          final nextLines =
+              CheckpointStateReducer.copyLines(currentLines);
+          nextLines[originalIndex] =
+              CheckpointStateReducer.copyLine(firstPart);
+          nextLines.insert(
+            originalIndex + 1,
+            CheckpointStateReducer.copyLine(secondPart),
+          );
+
+          return CheckpointMutationPlan(
+            nextLines: sortAndReindexSubtitleLines(nextLines),
+            deltas: [
+              SubtitleLineDelta()
+                ..changeType = 'modify'
+                ..lineIndex = originalIndex
+                ..beforeState =
+                    CheckpointStateReducer.copyLine(original)
+                ..afterState =
+                    CheckpointStateReducer.copyLine(firstPart),
+              SubtitleLineDelta()
+                ..changeType = 'add'
+                ..lineIndex = originalIndex + 1
+                ..beforeState = null
+                ..afterState =
+                    CheckpointStateReducer.copyLine(secondPart),
+            ],
+            forceSnapshot: true,
+          );
+        },
+      );
+      return true;
+    } catch (error) {
+      logError('SubtitleRepository: Atomic split failed: $error');
+      return false;
+    }
+  }
+
+  Future<bool> mergeLinesWithHistory({
+    required int collectionId,
+    required SubtitleLine mergedLine,
+    required int firstLineIndex,
+    required int secondLineIndex,
+    required int sessionId,
+  }) async {
+    try {
+      await _historyTransaction.commit(
+        sessionId: sessionId,
+        subtitleCollectionId: collectionId,
+        operationType: 'merge',
+        description:
+            'Merged lines ${firstLineIndex + 1} and ${secondLineIndex + 1}',
+        buildMutation: (currentLines) {
+          if (firstLineIndex < 0 ||
+              secondLineIndex < 0 ||
+              firstLineIndex >= currentLines.length ||
+              secondLineIndex >= currentLines.length ||
+              firstLineIndex == secondLineIndex) {
+            throw StateError('Invalid merge indexes.');
+          }
+
+          final firstBefore = currentLines[firstLineIndex];
+          final secondBefore = currentLines[secondLineIndex];
+
+          final replayDeltas = <SubtitleLineDelta>[
+            SubtitleLineDelta()
+              ..changeType = 'modify'
+              ..lineIndex = firstLineIndex
+              ..beforeState =
+                  CheckpointStateReducer.copyLine(firstBefore)
+              ..afterState =
+                  CheckpointStateReducer.copyLine(mergedLine),
+            SubtitleLineDelta()
+              ..changeType = 'delete'
+              ..lineIndex = secondLineIndex
+              ..beforeState =
+                  CheckpointStateReducer.copyLine(secondBefore)
+              ..afterState = null,
+          ];
+
+          final nextLines =
+              CheckpointStateReducer.copyLines(currentLines);
+          final maxIndex = firstLineIndex > secondLineIndex
+              ? firstLineIndex
+              : secondLineIndex;
+          final minIndex = firstLineIndex < secondLineIndex
+              ? firstLineIndex
+              : secondLineIndex;
+          nextLines.removeAt(maxIndex);
+          nextLines.removeAt(minIndex);
+          nextLines.insert(
+            minIndex,
+            CheckpointStateReducer.copyLine(mergedLine),
+          );
+
+          return CheckpointMutationPlan(
+            nextLines: sortAndReindexSubtitleLines(nextLines),
+            deltas: replayDeltas,
+            forceSnapshot: true,
+          );
+        },
+      );
+      return true;
+    } catch (error) {
+      logError('SubtitleRepository: Atomic merge failed: $error');
+      return false;
+    }
+  }
+
   /// Delete a single subtitle line
   Future<bool> deleteLine(int collectionId, int index) async {
     logInfo('SubtitleRepository: Deleting line $index from collection $collectionId');
