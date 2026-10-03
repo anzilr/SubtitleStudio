@@ -5,7 +5,6 @@ import 'dart:io';
 import 'package:path/path.dart' as path;
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/services/project_document_codec.dart';
-import 'package:subtitle_studio/utils/project_manager.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/screens/edit/edit_screen_host.dart';
 import 'package:subtitle_studio/widgets/session_selection/session_project_import_repository.dart';
@@ -466,7 +465,7 @@ class _SessionSelectionSheetState extends ConsumerState<SessionSelectionSheet> {
                               ),
                             ),
                           ],
-                          if (ProjectManager.hasProjectFile(session)) ...[
+                          if (session.projectFilePath?.isNotEmpty == true) ...[
                             const SizedBox(width: 8),
                             Icon(
                               Icons.folder,
