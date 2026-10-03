@@ -10,6 +10,7 @@ import 'package:subtitle_studio/widgets/video/subtitle.dart'; // For Subtitle
 import 'package:subtitle_studio/utils/subtitle_parser.dart'; // For SimpleSubtitleLine
 import 'package:subtitle_studio/utils/platform_file_handler.dart';
 import 'package:subtitle_studio/services/checkpoint_repository.dart';
+import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
 
 /// Repository layer for EditLineScreen operations
 /// 
@@ -210,6 +211,7 @@ class EditLineRepository {
     SubtitleLine? beforeLine,
   }) async {
     SubtitleLine? lineBeforeChanges;
+    List<SubtitleLine>? preOperationState;
     var shouldCreateCheckpoint = false;
 
     try {
@@ -222,6 +224,8 @@ class EditLineRepository {
           return false;
         }
 
+        preOperationState =
+            CheckpointStateReducer.copyLines(collection.lines);
         lineBeforeChanges = beforeLine ?? collection.lines[arrayIndex];
         final timingChanged =
             lineBeforeChanges!.startTime != updatedLine.startTime ||
@@ -247,6 +251,7 @@ class EditLineRepository {
           subtitleCollectionId: collectionId,
           beforeLine: lineBeforeChanges!,
           afterLine: updatedLine,
+          preOperationState: preOperationState,
         );
       }
 
