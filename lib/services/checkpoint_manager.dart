@@ -7,7 +7,8 @@
 // Key Features:
 // - Snapshot-based accuracy: Full state stored periodically for 100% accuracy
 // - Delta-based efficiency: Only changes stored between snapshots
-// - Tree-based branching: Support for multiple undo/redo branches
+// - Git-style branching: restoring history moves one HEAD reference without
+//   deleting alternate descendants
 // - Automatic checkpoint creation: On major operations (delete, add, split, merge, effect)
 // - Manual checkpoints: User can create checkpoints on demand
 // - Efficient restoration: Apply deltas from nearest snapshot
@@ -18,12 +19,13 @@
 // - Branch points: Snapshot (ensures accuracy when branching)
 // - Regular checkpoints: Deltas only (space-efficient)
 //
-// Restoration Process:
-// 1. Find target checkpoint
-// 2. Find nearest snapshot before target (max 9 checkpoints back)
-// 3. Load snapshot as base state (snapshots store BEFORE state)
-// 4. Apply deltas forward from snapshot UP TO (but NOT including) target
-// 5. Result: Restores to the BEFORE state of the target checkpoint (100% accurate)
+// Legacy Restoration Semantics:
+// 1. Find the target checkpoint and its nearest ancestor snapshot.
+// 2. Validate the parent chain.
+// 3. Reconstruct using strict deltas.
+// 4. Move the single HEAD marker to the target without deleting descendants.
+// 5. Existing checkpoints still represent PRE-operation state until the v2
+//    state-after-operation migration is completed.
 //
 // Storage Efficiency:
 // - A typical subtitle file with 1000 lines might be ~50KB
@@ -549,14 +551,6 @@ class CheckpointManager {
   
   // ==================== Private Helper Methods ====================
   
-  /// Counts checkpoints since last snapshot
-  Future<int> _countCheckpointsSinceLastSnapshot({
-    required int sessionId,
-  }) async {
-    final allCheckpoints = await getCheckpointsForSession(sessionId);
-    return CheckpointTimeline.countSinceLastSnapshot(allCheckpoints);
-  }
-
   /// Finds the nearest snapshot at or before a target checkpoint
   /// Returns null if no snapshot found
   Future<Checkpoint?> _findNearestSnapshot({
