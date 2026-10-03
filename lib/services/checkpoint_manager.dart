@@ -139,54 +139,12 @@ class CheckpointManager {
     List<SubtitleLine>? preOperationState,
   }) async {
     try {
-      // Get the current active checkpoint (most recent active).
-      //
-      // Normal forward history keeps the active ancestor path. Restoring to a
-      // checkpoint intentionally collapses activity to the selected boundary.
-      // That distinction lets us tell whether a new edit continues forward or
-      // replaces an undone operation.
+      // HEAD is a single movable reference. Existing descendants are never
+      // deleted when the user creates a new change after restoring history;
+      // the new checkpoint simply becomes another child of the restored HEAD.
       final sessionCheckpoints = await getCheckpointsForSession(sessionId);
       final currentHead = await _getCurrentHeadCheckpoint(sessionId);
-      final activeCount =
-          sessionCheckpoints.where((checkpoint) => checkpoint.isActive).length;
-      final hasInactiveCheckpoints =
-          sessionCheckpoints.any((checkpoint) => !checkpoint.isActive);
-      final restoredBoundary = currentHead != null &&
-          activeCount == 1 &&
-          (hasInactiveCheckpoints || currentHead.parentCheckpointId != null);
-
-      int? parentCheckpointId = currentHead?.id;
-
-      if (currentHead != null && restoredBoundary) {
-        if (_isStateMarker(currentHead)) {
-          // Initial/manual checkpoints represent an exact state and therefore
-          // remain the parent of a new branch.
-          await _deleteFutureCheckpoints(sessionId, currentHead.id);
-          parentCheckpointId = currentHead.id;
-        } else {
-          // Operation checkpoints represent the state BEFORE their operation.
-          // After restoring to one, a new edit replaces that undone operation,
-          // so both the target operation and all of its descendants are future
-          // history and must be removed.
-          final idsToDelete = CheckpointTimeline.descendantIds(
-            checkpoints: sessionCheckpoints,
-            parentCheckpointId: currentHead.id,
-          )..add(currentHead.id);
-
-          if (idsToDelete.isNotEmpty) {
-            await _store.deleteCheckpointIds(idsToDelete);
-          }
-
-          parentCheckpointId = currentHead.parentCheckpointId;
-          logInfo(
-            'Replaced restored checkpoint ${currentHead.id} and '
-            '${idsToDelete.length - 1} descendant checkpoint(s)',
-          );
-        }
-      } else if (currentHead != null) {
-        // Defensive cleanup for stale descendants on a normal forward path.
-        await _deleteFutureCheckpoints(sessionId, currentHead.id);
-      }
+      final parentCheckpointId = currentHead?.id;
       
       // Get checkpoint strategy and snapshot interval from preferences
       final checkpointStrategy = await getCheckpointStrategy();
@@ -196,8 +154,10 @@ class CheckpointManager {
       if (!forceSnapshot &&
           checkpointStrategy != 'snapshot' &&
           checkpointStrategy != 'delta') {
-        checkpointsSinceSnapshot = await _countCheckpointsSinceLastSnapshot(
-          sessionId: sessionId,
+        checkpointsSinceSnapshot =
+            CheckpointTimeline.countSinceNearestSnapshot(
+          checkpoints: sessionCheckpoints,
+          fromCheckpointId: parentCheckpointId,
         );
       }
 
@@ -246,16 +206,9 @@ class CheckpointManager {
         metadata: metadata != null ? jsonEncode(metadata) : null,
       );
       
-      // Rebuild the active ancestor path before appending the new head.
-      final remainingCheckpoints = await getCheckpointsForSession(sessionId);
-      final activePathIds = CheckpointTimeline.ancestorPathIds(
-        checkpoints: remainingCheckpoints,
-        fromCheckpointId: parentCheckpointId,
-      );
-
-      final checkpointId = await _store.replaceActivePathAndInsert(
-        existingCheckpoints: remainingCheckpoints,
-        activePathIds: activePathIds,
+      final checkpointId = await _store.insertAsHead(
+        sessionId: sessionId,
+        expectedHeadId: currentHead?.id,
         checkpoint: checkpoint,
       );
       
@@ -473,11 +426,10 @@ class CheckpointManager {
     );
   }
   
-  /// Undoes to a specific checkpoint
-  /// Returns true if successful, false otherwise
-  /// Restores to a specific checkpoint using snapshot + delta approach
-  /// This is 100% accurate because it loads from nearest snapshot
-  /// Falls back to creating a snapshot if none exists (for old checkpoints)
+  /// Moves HEAD to [checkpointId] and restores its exact historical state.
+  ///
+  /// Existing descendants are preserved as alternate history branches.
+  /// Reconstruction fails closed if the parent chain or any delta is invalid.
   Future<bool> undoToCheckpoint({
     required int checkpointId,
     required int sessionId,
@@ -488,134 +440,89 @@ class CheckpointManager {
         logError('Checkpoint not found: $checkpointId');
         return false;
       }
-      
-      final collection = await _store.getSubtitleCollection(targetCheckpoint.subtitleCollectionId);
+      if (targetCheckpoint.sessionId != sessionId) {
+        logError(
+          'Checkpoint $checkpointId belongs to session '
+          '${targetCheckpoint.sessionId}, not $sessionId',
+        );
+        return false;
+      }
+
+      final collection = await _store.getSubtitleCollection(
+        targetCheckpoint.subtitleCollectionId,
+      );
       if (collection == null) {
         logError('Subtitle collection not found');
         return false;
       }
-      
-      // NEW APPROACH: Find nearest snapshot and apply deltas forward
-      logInfo('Restoring to checkpoint $checkpointId using snapshot-based approach');
-      
-      // Step 1: Find the nearest snapshot at or before the target
-      var nearestSnapshot = await _findNearestSnapshot(
+
+      final nearestSnapshot = await _findNearestSnapshot(
         sessionId: sessionId,
         targetCheckpointId: checkpointId,
       );
-      
-      // FALLBACK: If no snapshot found (old checkpoints from before redesign)
-      // Create an initial snapshot from current state
-      if (nearestSnapshot == null) {
-        logInfo('No snapshot found - creating initial snapshot from current state');
-        
-        try {
-          final snapshotId = await createInitialSnapshot(
-            sessionId: sessionId,
-            subtitleCollectionId: targetCheckpoint.subtitleCollectionId,
-          );
-          
-          nearestSnapshot = await _store.getCheckpoint(snapshotId);
-          
-          if (nearestSnapshot == null) {
-            logError('Failed to create fallback snapshot');
-            return false;
-          }
-          
-          logInfo('Created fallback snapshot ${nearestSnapshot.id}');
-        } catch (e) {
-          logError('Failed to create fallback snapshot: $e');
-          
-          // LAST RESORT: Try to restore using the target checkpoint's state
-          // This works if the target checkpoint itself has restoration data
-          logInfo('Attempting direct restoration from target checkpoint');
-          
-          if (targetCheckpoint.checkpointType == 'snapshot' && targetCheckpoint.snapshot.isNotEmpty) {
-            // Target is a snapshot, use it directly
-            collection.lines = targetCheckpoint.snapshot.map((line) => CheckpointStateReducer.copyLine(line)).toList();
-            CheckpointStateReducer.reindexCollection(collection);
-            
-            await _store.saveSubtitleCollection(collection);
-            
-            logInfo('Restored directly from target checkpoint snapshot');
-            return true;
-          } else {
-            // Cannot restore without a snapshot
-            logError('Cannot restore: no snapshots available and target is not a snapshot');
-            return false;
-          }
-        }
+      if (nearestSnapshot == null || nearestSnapshot.snapshot.isEmpty) {
+        logError(
+          'Cannot restore checkpoint $checkpointId: '
+          'its ancestry has no valid snapshot.',
+        );
+        return false;
       }
-      
-      logInfo('Using snapshot ${nearestSnapshot.id} as base (${nearestSnapshot.description})');
-      
-      // Step 2: Load the snapshot as base state
-      // Snapshots store the BEFORE state, so this is already the pre-operation state
-      final restoredLines = nearestSnapshot.snapshot.map((line) => CheckpointStateReducer.copyLine(line)).toList();
 
-      // Automatic snapshot checkpoints store the BEFORE state together with
-      // the operation delta. If the target is a descendant of that snapshot,
-      // replay the snapshot's own operation before walking later deltas.
+      final restoredLines =
+          CheckpointStateReducer.copyLines(nearestSnapshot.snapshot);
+
+      // Legacy checkpoints represent the state BEFORE their operation.
+      // When the snapshot is an ancestor rather than the target, its own
+      // operation must be replayed before later deltas.
       if (nearestSnapshot.id != checkpointId &&
           nearestSnapshot.deltas.isNotEmpty) {
-        CheckpointStateReducer.applyDeltasInPlace(
+        CheckpointStateReducer.applyDeltasStrictInPlace(
           restoredLines,
           nearestSnapshot.deltas,
         );
       }
-      
-      // Step 3: If target is the snapshot itself, we're done - snapshot already has BEFORE state
-      if (nearestSnapshot.id == checkpointId) {
-        collection.lines = restoredLines;
-        CheckpointStateReducer.reindexCollection(collection);
-        
-        await _store.restoreCollectionAndActivateOnly(
+
+      if (nearestSnapshot.id != checkpointId) {
+        final deltasToApply = await _getDeltaCheckpointsBetween(
           sessionId: sessionId,
-          targetCheckpoint: targetCheckpoint,
-          collection: collection,
+          fromSnapshotId: nearestSnapshot.id,
+          toCheckpointId: checkpointId,
+          excludeTarget: true,
         );
-        
-        logInfo('Restored directly from snapshot (marked as active, others deactivated)');
-        return true;
+
+        for (final checkpoint in deltasToApply) {
+          CheckpointStateReducer.applyDeltasStrictInPlace(
+            restoredLines,
+            checkpoint.deltas,
+          );
+        }
       }
-      
-      // Step 4: Get all delta checkpoints between snapshot and target
-      // IMPORTANT: Get deltas UP TO (but NOT including) the target checkpoint
-      // This gives us the BEFORE state of the target checkpoint
-      final deltasToApply = await _getDeltaCheckpointsBetween(
-        sessionId: sessionId,
-        fromSnapshotId: nearestSnapshot.id,
-        toCheckpointId: checkpointId,
-        excludeTarget: true, // Don't include target's deltas - we want the BEFORE state
-      );
-      
-      logInfo('Applying ${deltasToApply.length} deltas from snapshot (excluding target checkpoint to get BEFORE state)');
-      
-      // Step 5: Apply deltas in order (NOT in reverse!)
-      // We're applying forward from snapshot to just BEFORE the target
-      for (final checkpoint in deltasToApply) {
-        logInfo('Applying delta: ${checkpoint.description}');
-        CheckpointStateReducer.applyDeltasInPlace(restoredLines, checkpoint.deltas);
-      }
-      
-      // Step 6: Update collection with restored state
+
       collection.lines = restoredLines;
-      CheckpointStateReducer.reindexCollection(collection);
-      
+      CheckpointStateReducer.reindexExactOrder(collection);
+
       await _store.restoreCollectionAndActivateOnly(
         sessionId: sessionId,
         targetCheckpoint: targetCheckpoint,
         collection: collection,
       );
-      
-      logInfo('Successfully restored to checkpoint: $checkpointId (marked as active, others deactivated)');
+
+      logInfo(
+        'Moved checkpoint HEAD to $checkpointId without deleting descendants',
+      );
       return true;
-    } catch (e) {
-      logError('Failed to restore to checkpoint: $e');
+    } on CheckpointIntegrityException catch (error) {
+      logError('Checkpoint integrity validation failed: $error');
+      return false;
+    } on StateError catch (error) {
+      logError('Checkpoint graph validation failed: $error');
+      return false;
+    } catch (error) {
+      logError('Failed to restore to checkpoint: $error');
       return false;
     }
   }
-  
+
   /// Redoes to a specific checkpoint (same as undo, just different terminology)
   /// Returns true if successful, false otherwise
   Future<bool> redoToCheckpoint({
@@ -688,33 +595,6 @@ class CheckpointManager {
     );
   }
 
-  /// Deletes all checkpoints after a given checkpoint (future checkpoints)
-  /// Used when creating new changes after restoring to an older checkpoint
-  Future<void> _deleteFutureCheckpoints(
-    int sessionId,
-    int afterCheckpointId,
-  ) async {
-    final allCheckpoints = await getCheckpointsForSession(sessionId);
-    final idsToDelete = CheckpointTimeline.descendantIds(
-      checkpoints: allCheckpoints,
-      parentCheckpointId: afterCheckpointId,
-    );
-
-    if (idsToDelete.isNotEmpty) {
-      await _store.deleteCheckpointIds(idsToDelete);
-      logInfo(
-        'Deleted ${idsToDelete.length} future checkpoints '
-        'after checkpoint $afterCheckpointId',
-      );
-    }
-  }
-
-  bool _isStateMarker(Checkpoint checkpoint) {
-    return checkpoint.operationType == 'manual' ||
-        (checkpoint.operationType == 'snapshot' &&
-            checkpoint.description == 'Initial state');
-  }
-
   /// Gets the current head checkpoint (most recent active)
   Future<Checkpoint?> _getCurrentHeadCheckpoint(int sessionId) {
     return _store.getCurrentHeadCheckpoint(sessionId);
@@ -729,9 +609,11 @@ class CheckpointManager {
       final allCheckpoints = await getCheckpointsForSession(sessionId);
       final maxCheckpoints = await getMaxCheckpoints();
       
+      final head = await _getCurrentHeadCheckpoint(sessionId);
       final toDelete = CheckpointPolicy.cleanupCandidates(
         checkpoints: allCheckpoints,
         maxCheckpoints: maxCheckpoints,
+        headCheckpointId: head?.id,
       );
 
       if (toDelete.isNotEmpty) {
