@@ -566,6 +566,7 @@ class EditController extends Notifier<EditState> {
       final result = await _subtitleRepo.batchDeleteLines(
         subtitleCollectionId,
         indices,
+        sessionId: sessionId,
       );
 
       _setState(
