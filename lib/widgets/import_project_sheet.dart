@@ -53,9 +53,6 @@ class _ImportProjectSheetState extends State<ImportProjectSheet> {
   ProjectDocument? _projectDocument;
   String? _fileName;
 
-  Map<String, dynamic>? get _projectData =>
-      _projectDocument?.toLegacyMap();
-
   @override
   void initState() {
     super.initState();
@@ -192,7 +189,7 @@ class _ImportProjectSheetState extends State<ImportProjectSheet> {
 
   /// Import the project data into the database
   Future<void> _importProject() async {
-    if (_projectData == null) {
+    if (_projectDocument == null) {
       SnackbarHelper.showError(context, 'No project data loaded');
       return;
     }
@@ -208,16 +205,14 @@ class _ImportProjectSheetState extends State<ImportProjectSheet> {
     } else if (_selectedMsoneFilePath != null) {
       // Use the selected .msone file URI (now correctly stores URI for SAF files)
       originalFileUri = _selectedMsoneFilePath;
-    } else if (_projectData!['subtitleCollection'] != null &&
-               (_projectData!['subtitleCollection'] as Map<String, dynamic>)['originalFileUri'] != null) {
-      // Fall back to any originalFileUri from the project data
-      originalFileUri = (_projectData!['subtitleCollection'] as Map<String, dynamic>)['originalFileUri'];
+    } else if (_projectDocument!.originalFileUri != null) {
+      originalFileUri = _projectDocument!.originalFileUri;
     }
 
     // Show session selection sheet to replace existing session or import as new
     await ProjectManager.showSessionSelectionSheet(
       context: context,
-      projectData: _projectData!,
+      projectDocument: _projectDocument!,
       originalFileUri: originalFileUri,
       onProjectImported: widget.onProjectImported,
     );
@@ -228,15 +223,12 @@ class _ImportProjectSheetState extends State<ImportProjectSheet> {
 
   /// Get count of edited lines from project data
   int _getEditedLinesCount() {
-    if (_projectData == null) return 0;
-    
-    final subtitleCollectionData = _projectData!['subtitleCollection'] as Map<String, dynamic>;
-    final linesData = subtitleCollectionData['lines'] as List<dynamic>;
-    
-    return linesData.where((lineData) {
-      final edited = lineData['edited'];
-      return edited != null && edited.toString().isNotEmpty;
-    }).length;
+    final document = _projectDocument;
+    if (document == null) return 0;
+
+    return document.subtitleCollection.lines
+        .where((line) => line.edited?.isNotEmpty == true)
+        .length;
   }
 
   /// Build file selection section
@@ -326,17 +318,18 @@ class _ImportProjectSheetState extends State<ImportProjectSheet> {
 
   /// Build project preview section
   Widget _buildProjectPreview() {
-    if (_projectData == null) {
+    if (_projectDocument == null) {
       return const SizedBox.shrink();
     }
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
     
-    final sessionData = _projectData!['session'] as Map<String, dynamic>;
-    final subtitleCollectionData = _projectData!['subtitleCollection'] as Map<String, dynamic>;
-    final exportedAt = _projectData!['exportedAt'] as String?;
-    final version = _projectData!['version'] as String?;
+    final document = _projectDocument!;
+    final sessionData = document.session;
+    final subtitleCollectionData = document.subtitleCollection;
+    final exportedAt = document.exportedAt;
+    final version = document.version;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -354,13 +347,25 @@ class _ImportProjectSheetState extends State<ImportProjectSheet> {
             ),
           ),
           const SizedBox(height: 12),
-          _buildInfoRow('File Name', sessionData['fileName'] ?? 'Unknown', isFileName: true),
-          _buildInfoRow('Total Lines', '${(subtitleCollectionData['lines'] as List).length}'),
+          _buildInfoRow(
+            'File Name',
+            sessionData.fileName ?? 'Unknown',
+            isFileName: true,
+          ),
+          _buildInfoRow(
+            'Total Lines',
+            '${subtitleCollectionData.lines.length}',
+          ),
           _buildInfoRow('Edited Lines', '${_getEditedLinesCount()}'),
-          _buildInfoRow('Encoding', subtitleCollectionData['encoding'] ?? 'UTF-8'),
-          _buildInfoRow('Mode', (sessionData['editMode'] ?? true) ? 'Edit' : 'Translation'),
-          if (_projectData!.containsKey('checkpoints'))
-            _buildInfoRow('Checkpoints', '${(_projectData!['checkpoints'] as List).length}'),
+          _buildInfoRow('Encoding', subtitleCollectionData.encoding),
+          _buildInfoRow(
+            'Mode',
+            (sessionData.editMode ?? true) ? 'Edit' : 'Translation',
+          ),
+          _buildInfoRow(
+            'Checkpoints',
+            '${document.checkpoints.length}',
+          ),
           if (exportedAt != null)
             _buildInfoRow('Exported', _formatDateTime(exportedAt)),
           if (version != null)
@@ -471,7 +476,7 @@ class _ImportProjectSheetState extends State<ImportProjectSheet> {
             _buildFileSelectionSection(),
             
             // Project Preview (only show if file is loaded)
-            if (_projectData != null) ...[
+            if (_projectDocument != null) ...[
               const SizedBox(height: 24),
               _buildProjectPreview(),
             ],
@@ -483,7 +488,7 @@ class _ImportProjectSheetState extends State<ImportProjectSheet> {
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: (_isImporting || _projectData == null) ? null : _importProject,
+                onPressed: (_isImporting || _projectDocument == null) ? null : _importProject,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).primaryColor,
                   foregroundColor: Colors.white,
