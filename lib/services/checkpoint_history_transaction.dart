@@ -88,9 +88,13 @@ class CheckpointHistoryTransaction {
       );
 
       if (plan.deltas.isEmpty) {
-        throw const CheckpointIntegrityException(
-          'A history mutation must contain at least one delta.',
-        );
+        collection.lines =
+            CheckpointStateReducer.copyLines(plan.nextLines);
+        await _isar.subtitleCollections.put(collection);
+        checkpointId = 0;
+        persistedLines =
+            CheckpointStateReducer.copyLines(collection.lines);
+        return;
       }
 
       final replayed = CheckpointStateReducer.copyLines(currentLines);
@@ -161,7 +165,9 @@ class CheckpointHistoryTransaction {
           CheckpointStateReducer.copyLines(collection.lines);
     });
 
-    await _cleanup(sessionId);
+    if (checkpointId != 0) {
+      await _cleanup(sessionId);
+    }
 
     return CheckpointMutationResult(
       checkpointId: checkpointId,
