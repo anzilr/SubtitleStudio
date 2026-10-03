@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/features/ai_explanation/ai_explanation_controller.dart';
 import 'package:subtitle_studio/features/ai_explanation/ai_explanation_state.dart';
-import 'package:subtitle_studio/database/models/preferences_model.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 
 /// AI Explanation Button Widget
@@ -38,7 +37,9 @@ class _AiExplanationButtonState extends ConsumerState<AiExplanationButton> {
 
   /// Check if API key is configured
   Future<void> _checkApiKey() async {
-    final apiKey = await PreferencesModel.getGeminiApiKey();
+    final apiKey = await ref
+        .read(aiExplanationPreferencesRepositoryProvider)
+        .getGeminiApiKey();
     if (mounted) {
       setState(() {
         _hasApiKey = apiKey != null && apiKey.isNotEmpty;
