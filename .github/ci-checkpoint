@@ -1,13 +1,13 @@
-Riverpod migration checkpoint 42
+Riverpod migration checkpoint 43
 Date: 2026-10-03
 Checks:
 - flutter analyze
 - flutter test -j 1
 
 Focus:
-- remove unused ProjectDocument.toLegacyMap compatibility bridge
-- remove stale global Isar migration note
-- final verification of typed project save/import pipeline
-- final verification of database global retirement, preference-store consolidation, and real Isar integration coverage
+- clear final non-fatal analyzer warnings after typed project migration
+- await banner repository persistence inside guarded operation
+- remove redundant typed project version null check
+- final verification target: zero analyzer issues and full test suite green
 
 Platform builds intentionally disabled.
