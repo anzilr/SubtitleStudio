@@ -110,6 +110,30 @@ void main() {
       );
     });
 
+    test('collects ancestor path from a checkpoint to the root', () {
+      final checkpoints = [
+        _checkpoint(id: 1, type: 'snapshot', second: 1),
+        _checkpoint(id: 2, parentId: 1, type: 'delta', second: 2),
+        _checkpoint(id: 3, parentId: 2, type: 'delta', second: 3),
+        _checkpoint(id: 4, parentId: 2, type: 'delta', second: 4),
+      ];
+
+      expect(
+        CheckpointTimeline.ancestorPathIds(
+          checkpoints: checkpoints,
+          fromCheckpointId: 3,
+        ),
+        {1, 2, 3},
+      );
+      expect(
+        CheckpointTimeline.ancestorPathIds(
+          checkpoints: checkpoints,
+          fromCheckpointId: null,
+        ),
+        isEmpty,
+      );
+    });
+
     test('collects all descendants across branches', () {
       final checkpoints = [
         _checkpoint(id: 1, type: 'snapshot', second: 1),
