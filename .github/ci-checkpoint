@@ -1,14 +1,17 @@
-Riverpod migration checkpoint 33
+Riverpod migration checkpoint 34
 Date: 2026-10-03
 Checks:
 - flutter analyze
 - flutter test -j 1
 
 Focus:
-- remove retired PreferencesModel
-- remove final CheckpointRepository.fromGlobal bridge and dead database helper
-- inject Isar into subtitle effect and hearing-impaired cleanup persistence
-- make effect checkpoints capture pre-operation state and replayable deltas
-- add effect delta reconstruction tests
+- route subtitle delete/add/split/merge/fetch/session progress through SubtitleRepository
+- migrate banner persistence to SubtitleRepository
+- remove unused subtitle sync database helper import
+- remove obsolete database-coupled srt_parser.dart
+- remove retired database_helper.dart
+- localize Isar bootstrap in main and remove database_instance.dart
+- verify no executable PreferencesModel, DatabaseHelper, database_instance, or CheckpointRepository.fromGlobal dependency remains
+- add real Isar subtitle repository persistence parity tests
 
 Platform builds intentionally disabled.
