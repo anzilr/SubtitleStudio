@@ -1,13 +1,16 @@
-Riverpod migration checkpoint 36
+Riverpod migration checkpoint 37
 Date: 2026-10-03
 Checks:
 - flutter analyze
 - flutter test -j 1
 
 Focus:
-- fix remaining selected-subtitle sync repository injection
-- validate all subtitle sync batch updates through SubtitleRepository
-- revalidate removal of PreferencesModel, DatabaseHelper, database_instance, and CheckpointRepository.fromGlobal
-- revalidate subtitle repository persistence parity suite
+- add real Isar SessionRepository cascade deletion and summary coverage
+- cascade removeSession across checkpoints/video preferences and stale lastEditedSession
+- add ProjectRepository path/rename persistence coverage
+- add SubtitleImportRepository persistence and last-edited coverage
+- fix edit checkpoints to carry the true pre-operation collection state
+- add EditLineRepository save/add/delete integration coverage
+- verify forced edit snapshots persist pre-edit state while deltas persist post-edit state
 
 Platform builds intentionally disabled.
