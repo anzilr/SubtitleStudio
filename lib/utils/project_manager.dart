@@ -41,7 +41,7 @@ class ProjectManager {
       if (Platform.isAndroid) {
         return await _saveProjectWithSAF(
           context: context,
-          projectDocument: projectDocument,
+          projectData: projectData,
           fileName: fileName,
         );
       } else if (Platform.isIOS) {
@@ -300,7 +300,7 @@ class ProjectManager {
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
         return SessionSelectionSheet(
-          projectData: projectData,
+          projectDocument: projectDocument,
           originalFileUri: originalFileUri,
           onSessionReplaced: (session) {
             resultSession = session;
