@@ -1,13 +1,13 @@
-Riverpod migration checkpoint 35
+Riverpod migration checkpoint 36
 Date: 2026-10-03
 Checks:
 - flutter analyze
 - flutter test -j 1
 
 Focus:
-- fix checkpoint 34 subtitle sync analyzer regression
-- route shift/framerate batch persistence through SubtitleRepository.updateMultipleLines
-- inject SubtitleRepository into live subtitle sync UI calls
-- revalidate database global retirement and subtitle repository parity tests
+- fix remaining selected-subtitle sync repository injection
+- validate all subtitle sync batch updates through SubtitleRepository
+- revalidate removal of PreferencesModel, DatabaseHelper, database_instance, and CheckpointRepository.fromGlobal
+- revalidate subtitle repository persistence parity suite
 
 Platform builds intentionally disabled.
