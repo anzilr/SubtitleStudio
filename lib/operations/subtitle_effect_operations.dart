@@ -3,8 +3,41 @@ import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/utils/time_parser.dart';
 import 'package:subtitle_studio/operations/subtitle_sync_operations.dart'; // For formatDuration
 import 'package:subtitle_studio/utils/subtitle_sorting.dart'; // Enhanced subtitle sorting
+import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
 
 class SubtitleEffectOperations {
+  /// Builds the forward delta sequence for replacing one subtitle line with
+  /// the generated effect lines.
+  ///
+  /// Checkpoints represent the state before an operation. Retaining these
+  /// deltas on forced snapshots lets later descendants reconstruct the state
+  /// after the effect before applying newer changes.
+  static List<SubtitleLineDelta> buildEffectDeltas({
+    required SubtitleLine originalLine,
+    required int originalLineIndex,
+    required List<SubtitleLine> effectLines,
+  }) {
+    final deltas = <SubtitleLineDelta>[
+      SubtitleLineDelta()
+        ..changeType = 'delete'
+        ..lineIndex = originalLineIndex
+        ..beforeState = CheckpointStateReducer.copyLine(originalLine)
+        ..afterState = null,
+    ];
+
+    for (var i = 0; i < effectLines.length; i++) {
+      deltas.add(
+        SubtitleLineDelta()
+          ..changeType = 'add'
+          ..lineIndex = originalLineIndex + i
+          ..beforeState = null
+          ..afterState = CheckpointStateReducer.copyLine(effectLines[i]),
+      );
+    }
+
+    return deltas;
+  }
+
   /// Generate typewriter effect by creating multiple subtitle lines
   /// Each line shows progressively more characters with precise timing
   static Future<List<SubtitleLine>> generateTypewriterEffect({
