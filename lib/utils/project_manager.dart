@@ -133,7 +133,7 @@ class ProjectManager {
   }
   
   /// Create project data structure for .msone file
-  static Future<Map<String, dynamic>> _createProjectData(
+  static Future<ProjectDocument> _createProjectData(
     Session session,
     SubtitleCollection subtitleCollection,
     CheckpointRepository checkpointRepository,
@@ -179,7 +179,7 @@ class ProjectManager {
   /// Save project using SAF (Android)
   static Future<String?> _saveProjectWithSAF({
     required BuildContext context,
-    required Map<String, dynamic> projectData,
+    required ProjectDocument projectData,
     required String fileName,
   }) async {
     final result = await ProjectFileService.saveAndroidProject(
@@ -201,7 +201,7 @@ class ProjectManager {
   /// Save project using the iOS document picker.
   static Future<String?> _saveProjectWithFilePicker({
     required BuildContext context,
-    required Map<String, dynamic> projectData,
+    required ProjectDocument projectData,
     required String fileName,
   }) async {
     final result = await ProjectFileService.saveIosProject(
@@ -223,7 +223,7 @@ class ProjectManager {
   /// Save project using a user-selected desktop directory.
   static Future<String?> _saveProjectWithPicker({
     required BuildContext context,
-    required Map<String, dynamic> projectData,
+    required ProjectDocument projectData,
     required String fileName,
   }) async {
     final selectedPath = await FilePickerConvenience.pickExportFolder(
@@ -251,7 +251,7 @@ class ProjectManager {
   /// Update an existing project file when the platform grants durable access.
   static Future<bool> _updateExistingProject({
     required String projectFilePath,
-    required Map<String, dynamic> projectData,
+    required ProjectDocument projectData,
   }) async {
     try {
       return await ProjectFileService.updateExistingProject(
