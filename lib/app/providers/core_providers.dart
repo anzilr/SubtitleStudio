@@ -42,6 +42,12 @@ final projectRepositoryProvider = Provider<ProjectRepository>((ref) {
 });
 
 
+final projectSaveCoordinatorProvider =
+    Provider<ProjectSaveCoordinator>((ref) {
+  return ProjectSaveCoordinator(ref.watch(checkpointRepositoryProvider));
+});
+
+
 
 final projectCommentRepositoryProvider =
     Provider<ProjectCommentRepository>((ref) {
