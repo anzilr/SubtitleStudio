@@ -1,13 +1,12 @@
-Riverpod migration checkpoint 40
+Riverpod migration checkpoint 41
 Date: 2026-10-03
 Checks:
 - flutter analyze
 - flutter test -j 1
 
 Focus:
-- fix typed project pipeline analyzer fallout from checkpoint 39
-- use typed project lines in comment import
-- correct ProjectManager typed save/session-selection parameter wiring
-- verify typed project import parent remapping integration test
+- preserve malformed project comment filtering under typed DTOs
+- expose nullable valid project line index while retaining import fallback index
+- revalidate typed project save/import pipeline and checkpoint parent remapping
 
 Platform builds intentionally disabled.
