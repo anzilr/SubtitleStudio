@@ -30,10 +30,17 @@ class CheckpointTimeline {
     required List<Checkpoint> checkpoints,
     required int targetCheckpointId,
   }) {
-    final byId = {for (final checkpoint in checkpoints) checkpoint.id: checkpoint};
+    final byId = {
+      for (final checkpoint in checkpoints) checkpoint.id: checkpoint,
+    };
+    final visited = <int>{};
     int? currentId = targetCheckpointId;
 
     while (currentId != null) {
+      if (!visited.add(currentId)) {
+        return null;
+      }
+
       final checkpoint = byId[currentId];
       if (checkpoint == null) return null;
       if (checkpoint.checkpointType == 'snapshot') return checkpoint;
@@ -41,6 +48,39 @@ class CheckpointTimeline {
     }
 
     return null;
+  }
+
+  static int countSinceNearestSnapshot({
+    required List<Checkpoint> checkpoints,
+    required int? fromCheckpointId,
+  }) {
+    if (fromCheckpointId == null) return 0;
+
+    final byId = {
+      for (final checkpoint in checkpoints) checkpoint.id: checkpoint,
+    };
+    final visited = <int>{};
+    var count = 0;
+    int? currentId = fromCheckpointId;
+
+    while (currentId != null) {
+      if (!visited.add(currentId)) {
+        return count;
+      }
+
+      final checkpoint = byId[currentId];
+      if (checkpoint == null) {
+        return count;
+      }
+      if (checkpoint.checkpointType == 'snapshot') {
+        return count;
+      }
+
+      count++;
+      currentId = checkpoint.parentCheckpointId;
+    }
+
+    return count;
   }
 
   static List<Checkpoint> deltaPath({
@@ -59,15 +99,33 @@ class CheckpointTimeline {
       currentId = byId[toCheckpointId]?.parentCheckpointId;
     }
 
+    final visited = <int>{};
     while (currentId != null && currentId != fromSnapshotId) {
+      if (!visited.add(currentId)) {
+        throw StateError(
+          'Checkpoint history contains a parent cycle at $currentId.',
+        );
+      }
+
       final checkpoint = byId[currentId];
-      if (checkpoint == null) break;
+      if (checkpoint == null) {
+        throw StateError(
+          'Checkpoint history is missing parent $currentId.',
+        );
+      }
 
       if (checkpoint.checkpointType == 'delta') {
         pathFromTarget.add(checkpoint);
       }
 
       currentId = checkpoint.parentCheckpointId;
+    }
+
+    if (currentId != fromSnapshotId) {
+      throw StateError(
+        'Checkpoint $toCheckpointId is not connected to snapshot '
+        '$fromSnapshotId.',
+      );
     }
 
     return pathFromTarget.reversed.toList();
@@ -88,6 +146,52 @@ class CheckpointTimeline {
     }
 
     return ancestors;
+  }
+
+  static List<Checkpoint> childrenOf({
+    required List<Checkpoint> checkpoints,
+    required int parentCheckpointId,
+  }) {
+    final children = checkpoints
+        .where(
+          (checkpoint) =>
+              checkpoint.parentCheckpointId == parentCheckpointId,
+        )
+        .toList();
+    children.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    return children;
+  }
+
+  static Set<int> protectedAncestryIds({
+    required List<Checkpoint> checkpoints,
+    required int? headCheckpointId,
+    bool protectManualCheckpoints = true,
+  }) {
+    final protectedIds = ancestorPathIds(
+      checkpoints: checkpoints,
+      fromCheckpointId: headCheckpointId,
+    );
+
+    if (protectManualCheckpoints) {
+      for (final checkpoint in checkpoints) {
+        if (checkpoint.operationType != 'manual') continue;
+        protectedIds.addAll(
+          ancestorPathIds(
+            checkpoints: checkpoints,
+            fromCheckpointId: checkpoint.id,
+          ),
+        );
+      }
+    }
+
+    for (final checkpoint in checkpoints) {
+      if (checkpoint.operationType == 'snapshot' &&
+          checkpoint.description == 'Initial state') {
+        protectedIds.add(checkpoint.id);
+      }
+    }
+
+    return protectedIds;
   }
 
   static Set<int> descendantIds({
