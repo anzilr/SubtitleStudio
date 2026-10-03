@@ -225,11 +225,92 @@ class SessionProjectImportRepository {
     if (checkpoints.isEmpty) return;
 
     try {
+      final sourceIds = <int>{};
+      final parentById = <int, int?>{};
+
+      for (final data in checkpoints) {
+        final sourceId = data.id;
+        if (sourceId == null) {
+          throw const FormatException(
+            'Project checkpoint history has no stable checkpoint IDs. '
+            'Subtitle data can still be imported, but history cannot be '
+            'safely reconstructed.',
+          );
+        }
+        if (!sourceIds.add(sourceId)) {
+          throw FormatException(
+            'Project checkpoint history contains duplicate ID $sourceId.',
+          );
+        }
+        parentById[sourceId] = data.parentCheckpointId;
+      }
+
+      for (final entry in parentById.entries) {
+        final parentId = entry.value;
+        if (parentId != null && !sourceIds.contains(parentId)) {
+          throw FormatException(
+            'Project checkpoint ${entry.key} references missing parent '
+            '$parentId.',
+          );
+        }
+      }
+
+      for (final sourceId in sourceIds) {
+        final visited = <int>{};
+        int? currentId = sourceId;
+        while (currentId != null) {
+          if (!visited.add(currentId)) {
+            throw FormatException(
+              'Project checkpoint history contains a parent cycle at '
+              '$currentId.',
+            );
+          }
+          currentId = parentById[currentId];
+        }
+      }
+
       final imported = <Checkpoint>[];
       final idMap = <int, int>{};
+      int? importedHeadIndex;
+
+      for (var i = 0; i < checkpoints.length; i++) {
+        if (!checkpoints[i].isActive) continue;
+        if (importedHeadIndex == null) {
+          importedHeadIndex = i;
+          continue;
+        }
+
+        final currentTimestamp =
+            DateTime.tryParse(checkpoints[i].timestamp ?? '');
+        final selectedTimestamp =
+            DateTime.tryParse(checkpoints[importedHeadIndex].timestamp ?? '');
+        if (currentTimestamp != null &&
+            (selectedTimestamp == null ||
+                currentTimestamp.isAfter(selectedTimestamp))) {
+          importedHeadIndex = i;
+        }
+      }
+
+      if (importedHeadIndex == null) {
+        for (var i = 0; i < checkpoints.length; i++) {
+          final currentTimestamp =
+              DateTime.tryParse(checkpoints[i].timestamp ?? '');
+          if (currentTimestamp == null) continue;
+          if (importedHeadIndex == null) {
+            importedHeadIndex = i;
+            continue;
+          }
+          final selectedTimestamp =
+              DateTime.tryParse(checkpoints[importedHeadIndex].timestamp ?? '');
+          if (selectedTimestamp == null ||
+              currentTimestamp.isAfter(selectedTimestamp)) {
+            importedHeadIndex = i;
+          }
+        }
+      }
 
       await _isar.writeTxn(() async {
-        for (int i = 0; i < checkpoints.length; i++) {
+        for (var i = 0; i < checkpoints.length; i++) {
           final data = checkpoints[i];
           final timestamp = data.timestamp;
           if (timestamp == null) {
@@ -245,30 +326,32 @@ class SessionProjectImportRepository {
             operationType: data.operationType,
             description: data.description,
             parentCheckpointId: null,
-            isActive: data.isActive,
+            isActive: false,
             checkpointType: data.checkpointType,
             metadata: data.metadata,
             deltas: data.deltas.map(_toDelta).toList(growable: false),
-            snapshot:
-                _parseSubtitleLines(data.snapshot),
+            snapshot: _parseSubtitleLines(data.snapshot),
           );
 
           final newId = await _isar.checkpoints.put(checkpoint);
           imported.add(checkpoint);
-          idMap[data.id ?? i] = newId;
+          idMap[data.id!] = newId;
         }
 
-        for (int i = 0; i < checkpoints.length && i < imported.length; i++) {
+        for (var i = 0; i < checkpoints.length; i++) {
           final parentKey = checkpoints[i].parentCheckpointId;
-          if (parentKey == null) continue;
-
-          int? mappedParent = idMap[parentKey];
-          mappedParent ??= i > 0 ? imported[i - 1].id : null;
-
-          if (mappedParent != null) {
+          if (parentKey != null) {
+            final mappedParent = idMap[parentKey];
+            if (mappedParent == null) {
+              throw FormatException(
+                'Project checkpoint parent $parentKey could not be remapped.',
+              );
+            }
             imported[i].parentCheckpointId = mappedParent;
-            await _isar.checkpoints.put(imported[i]);
           }
+
+          imported[i].isActive = i == importedHeadIndex;
+          await _isar.checkpoints.put(imported[i]);
         }
       });
     } catch (error, stackTrace) {
