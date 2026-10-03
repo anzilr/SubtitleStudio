@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/database/stores/preferences_store.dart';
 import 'package:subtitle_studio/database/stores/video_preferences_store.dart';
