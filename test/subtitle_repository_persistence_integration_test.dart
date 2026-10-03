@@ -163,6 +163,213 @@ void main() {
       );
     });
 
+    test('atomic delete stores a v2 post-operation snapshot', () async {
+      final collectionId = await _seedCollection(harness);
+      late int sessionId;
+      await harness.isar.writeTxn(() async {
+        sessionId = await harness.isar.sessions.put(
+          Session(
+            subtitleCollectionId: collectionId,
+            fileName: 'delete-history.srt',
+          ),
+        );
+      });
+
+      final checkpoints = CheckpointRepository(harness.isar);
+      final initialId = await checkpoints.createInitialSnapshot(
+        sessionId: sessionId,
+        subtitleCollectionId: collectionId,
+      );
+
+      expect(
+        await repository.deleteLineWithHistory(
+          collectionId: collectionId,
+          index: 1,
+          sessionId: sessionId,
+        ),
+        isTrue,
+      );
+
+      final history = await harness.isar.checkpoints
+          .filter()
+          .sessionIdEqualTo(sessionId)
+          .sortByTimestamp()
+          .findAll();
+      final commit = history.last;
+      expect(CheckpointHistoryMetadata.isPostOperation(commit), isTrue);
+      expect(commit.checkpointType, 'snapshot');
+      expect(
+        commit.snapshot.map((line) => line.original).toList(),
+        ['A', 'C'],
+      );
+
+      expect(
+        await checkpoints.undoToCheckpoint(
+          checkpointId: initialId,
+          sessionId: sessionId,
+        ),
+        isTrue,
+      );
+      expect(
+        (await repository.fetchSubtitleCollection(collectionId))
+            ?.lines
+            .map((line) => line.original)
+            .toList(),
+        ['A', 'B', 'C'],
+      );
+
+      expect(
+        await checkpoints.redoToCheckpoint(
+          checkpointId: commit.id,
+          sessionId: sessionId,
+        ),
+        isTrue,
+      );
+      expect(
+        (await repository.fetchSubtitleCollection(collectionId))
+            ?.lines
+            .map((line) => line.original)
+            .toList(),
+        ['A', 'C'],
+      );
+    });
+
+    test('atomic add stores the exact sorted post-operation state', () async {
+      final collectionId = await _seedCollection(harness);
+      late int sessionId;
+      await harness.isar.writeTxn(() async {
+        sessionId = await harness.isar.sessions.put(
+          Session(
+            subtitleCollectionId: collectionId,
+            fileName: 'add-history.srt',
+          ),
+        );
+      });
+      await CheckpointRepository(harness.isar).createInitialSnapshot(
+        sessionId: sessionId,
+        subtitleCollectionId: collectionId,
+      );
+
+      final inserted = _line(
+        index: 2,
+        text: 'Between',
+        start: '00:00:01,950',
+        end: '00:00:01,990',
+      );
+      expect(
+        await repository.addLineWithHistory(
+          collectionId: collectionId,
+          line: inserted,
+          insertIndex: 1,
+          sessionId: sessionId,
+        ),
+        isTrue,
+      );
+
+      final history = await harness.isar.checkpoints
+          .filter()
+          .sessionIdEqualTo(sessionId)
+          .sortByTimestamp()
+          .findAll();
+      final commit = history.last;
+      expect(commit.checkpointType, 'snapshot');
+      expect(
+        commit.snapshot.map((line) => line.original).toList(),
+        ['A', 'Between', 'B', 'C'],
+      );
+    });
+
+    test('atomic split stores the exact post-operation state', () async {
+      final collectionId = await _seedCollection(harness);
+      late int sessionId;
+      await harness.isar.writeTxn(() async {
+        sessionId = await harness.isar.sessions.put(
+          Session(
+            subtitleCollectionId: collectionId,
+            fileName: 'split-history.srt',
+          ),
+        );
+      });
+      await CheckpointRepository(harness.isar).createInitialSnapshot(
+        sessionId: sessionId,
+        subtitleCollectionId: collectionId,
+      );
+
+      expect(
+        await repository.splitLineWithHistory(
+          collectionId: collectionId,
+          firstPart: _line(
+            index: 2,
+            text: 'B first',
+            start: '00:00:02,000',
+            end: '00:00:02,400',
+          ),
+          secondPart: _line(
+            index: 3,
+            text: 'B second',
+            start: '00:00:02,401',
+            end: '00:00:02,900',
+          ),
+          originalIndex: 1,
+          sessionId: sessionId,
+        ),
+        isTrue,
+      );
+
+      final history = await harness.isar.checkpoints
+          .filter()
+          .sessionIdEqualTo(sessionId)
+          .sortByTimestamp()
+          .findAll();
+      expect(
+        history.last.snapshot.map((line) => line.original).toList(),
+        ['A', 'B first', 'B second', 'C'],
+      );
+    });
+
+    test('atomic merge stores the exact post-operation state', () async {
+      final collectionId = await _seedCollection(harness);
+      late int sessionId;
+      await harness.isar.writeTxn(() async {
+        sessionId = await harness.isar.sessions.put(
+          Session(
+            subtitleCollectionId: collectionId,
+            fileName: 'merge-history.srt',
+          ),
+        );
+      });
+      await CheckpointRepository(harness.isar).createInitialSnapshot(
+        sessionId: sessionId,
+        subtitleCollectionId: collectionId,
+      );
+
+      expect(
+        await repository.mergeLinesWithHistory(
+          collectionId: collectionId,
+          mergedLine: _line(
+            index: 2,
+            text: 'B + C',
+            start: '00:00:02,000',
+            end: '00:00:03,900',
+          ),
+          firstLineIndex: 1,
+          secondLineIndex: 2,
+          sessionId: sessionId,
+        ),
+        isTrue,
+      );
+
+      final history = await harness.isar.checkpoints
+          .filter()
+          .sessionIdEqualTo(sessionId)
+          .sortByTimestamp()
+          .findAll();
+      expect(
+        history.last.snapshot.map((line) => line.original).toList(),
+        ['A', 'B + C'],
+      );
+    });
+
     test('deleteLine removes and reindexes remaining cues', () async {
       final collectionId = await _seedCollection(harness);
 
