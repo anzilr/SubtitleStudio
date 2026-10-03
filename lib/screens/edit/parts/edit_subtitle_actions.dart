@@ -43,6 +43,13 @@ extension _EditSubtitleActions on _EditScreenState {
       }
       
       if (effectLines.isNotEmpty) {
+        final preOperationState = List<SubtitleLine>.from(subtitleLines);
+        final effectDeltas = SubtitleEffectOperations.buildEffectDeltas(
+          originalLine: currentLine,
+          originalLineIndex: index,
+          effectLines: effectLines,
+        );
+
         // Apply the effect to the database
         final success = await SubtitleEffectOperations.applyEffectToSubtitleCollection(
           isar: ref.read(isarProvider),
@@ -58,8 +65,9 @@ extension _EditSubtitleActions on _EditScreenState {
             subtitleCollectionId: widget.subtitleCollectionId,
             operationType: 'effect',
             description: 'Applied $effectType effect to line ${index + 1} (${effectLines.length} lines)',
-            deltas: [], // Effects don't use deltas
-            forceSnapshot: true, // IMPORTANT: Force snapshot because effects replace entire sections
+            deltas: effectDeltas,
+            forceSnapshot: true,
+            preOperationState: preOperationState,
           );
           
           // Update the last edited index to the first effect line
