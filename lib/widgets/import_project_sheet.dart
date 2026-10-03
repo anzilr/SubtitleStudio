@@ -5,9 +5,9 @@ import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
 import 'package:subtitle_studio/utils/platform_file_handler.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/utils/intent_handler.dart';
-import 'package:subtitle_studio/utils/project_manager.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/services/project_document_codec.dart';
+import 'package:subtitle_studio/widgets/session_selection_sheet.dart';
 
 /// Import Project Sheet Widget
 /// 
@@ -209,12 +209,17 @@ class _ImportProjectSheetState extends State<ImportProjectSheet> {
       originalFileUri = _projectDocument!.originalFileUri;
     }
 
-    // Show session selection sheet to replace existing session or import as new
-    await ProjectManager.showSessionSelectionSheet(
+    await showModalBottomSheet<Session>(
       context: context,
-      projectDocument: _projectDocument!,
-      originalFileUri: originalFileUri,
-      onProjectImported: widget.onProjectImported,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return SessionSelectionSheet(
+          projectDocument: _projectDocument!,
+          originalFileUri: originalFileUri,
+          onProjectImported: widget.onProjectImported,
+        );
+      },
     );
 
     // Navigation is now handled directly by the session selection sheet
