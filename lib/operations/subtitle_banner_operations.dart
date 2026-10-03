@@ -201,7 +201,7 @@ class SubtitleBannerOperations {
       );
       if (subtitle != null) {
         subtitle.lines = sortedLines;
-        return subtitleRepository.updateCollection(subtitle);
+        return await subtitleRepository.updateCollection(subtitle);
       }
       
       return false;
