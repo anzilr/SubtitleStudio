@@ -132,7 +132,7 @@ void main() {
       expect(snapshot.deltas, isEmpty);
     });
 
-    test('restore replays an automatic snapshot operation for descendants',
+    test('legacy history gets a snapshot boundary after a v2 root',
         () async {
       final preferences = PreferencesStore(harness.isar);
       await preferences.update((value) {
@@ -148,7 +148,7 @@ void main() {
 
       final firstBefore = _line(1, 'A');
       final firstAfter = _line(1, 'A1');
-      await manager.createEditCheckpoint(
+      final boundarySnapshotId = await manager.createEditCheckpoint(
         sessionId: seeded.sessionId,
         subtitleCollectionId: seeded.subtitleCollectionId,
         beforeLine: firstBefore,
@@ -160,9 +160,20 @@ void main() {
         [firstAfter, _line(2, 'B')],
       );
 
+      final boundarySnapshot =
+          await harness.isar.checkpoints.get(boundarySnapshotId);
+      expect(boundarySnapshot, isNotNull);
+      expect(boundarySnapshot!.checkpointType, 'snapshot');
+      expect(
+        boundarySnapshot.snapshot.map((line) => line.original).toList(),
+        ['A', 'B'],
+      );
+      expect(boundarySnapshot.deltas, hasLength(1));
+      expect(boundarySnapshot.deltas.single.afterState?.original, 'A1');
+
       final secondBefore = _line(2, 'B');
       final secondAfter = _line(2, 'B1');
-      final snapshotOperationId = await manager.createEditCheckpoint(
+      final secondCheckpointId = await manager.createEditCheckpoint(
         sessionId: seeded.sessionId,
         subtitleCollectionId: seeded.subtitleCollectionId,
         beforeLine: secondBefore,
@@ -174,33 +185,13 @@ void main() {
         [firstAfter, secondAfter],
       );
 
-      final thirdBefore = _line(1, 'A1');
-      final thirdAfter = _line(1, 'A2');
-      final thirdCheckpointId = await manager.createEditCheckpoint(
-        sessionId: seeded.sessionId,
-        subtitleCollectionId: seeded.subtitleCollectionId,
-        beforeLine: thirdBefore,
-        afterLine: thirdAfter,
-      );
-      await _writeLines(
-        harness,
-        seeded.subtitleCollectionId,
-        [thirdAfter, secondAfter],
-      );
-
-      final snapshotOperation =
-          await harness.isar.checkpoints.get(snapshotOperationId);
-      expect(snapshotOperation, isNotNull);
-      expect(snapshotOperation!.checkpointType, 'snapshot');
-      expect(
-        snapshotOperation.snapshot.map((line) => line.original).toList(),
-        ['A1', 'B'],
-      );
-      expect(snapshotOperation.deltas, hasLength(1));
-      expect(snapshotOperation.deltas.single.afterState?.original, 'B1');
+      final secondCheckpoint =
+          await harness.isar.checkpoints.get(secondCheckpointId);
+      expect(secondCheckpoint, isNotNull);
+      expect(secondCheckpoint!.checkpointType, 'delta');
 
       final restored = await manager.undoToCheckpoint(
-        checkpointId: thirdCheckpointId,
+        checkpointId: secondCheckpointId,
         sessionId: seeded.sessionId,
       );
       expect(restored, isTrue);
@@ -209,16 +200,15 @@ void main() {
           await _readLines(harness, seeded.subtitleCollectionId);
       expect(
         restoredLines.map((line) => line.original).toList(),
-        ['A1', 'B1'],
+        ['A1', 'B'],
       );
 
       final checkpoints =
           await manager.getCheckpointsForSession(seeded.sessionId);
-      final active = checkpoints.where((checkpoint) => checkpoint.isActive);
-      expect(
-        active.map((checkpoint) => checkpoint.id).toList(),
-        [thirdCheckpointId],
-      );
+      final active =
+          checkpoints.where((checkpoint) => checkpoint.isActive).toList();
+      expect(active, hasLength(1));
+      expect(active.single.id, secondCheckpointId);
     });
 
     test('new edit after checkout preserves old descendants as a branch',
