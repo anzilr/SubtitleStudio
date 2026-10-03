@@ -1,12 +1,13 @@
-Riverpod migration checkpoint 31
+Riverpod migration checkpoint 32
 Date: 2026-10-03
 Checks:
 - flutter analyze
-- flutter test
+- flutter test -j 1
 
 Focus:
-- import Isar query extensions in persistence integration tests
-- verify checkpoint 30 production-code fixes remain clean
-- advance from analyzer into full Flutter test execution
+- initialize Isar Core for unit tests with downloadable native binary
+- serialize Flutter tests for Isar native initialization safety
+- make Isar integration-test teardown resilient to setup failure
+- verify persistence/checkpoint integration tests execute behaviorally
 
 Platform builds intentionally disabled.
