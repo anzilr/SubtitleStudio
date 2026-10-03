@@ -10,6 +10,12 @@ import 'package:subtitle_studio/database/models/models.dart';
 /// opened to keep integration tests aligned with the real application schema.
 class TestIsarHarness {
   static int _nextInstanceId = 0;
+  static Future<void>? _coreInitialization;
+
+  static Future<void> _ensureCoreInitialized() {
+    return _coreInitialization ??=
+        Isar.initializeIsarCore(download: true);
+  }
 
   final Directory directory;
   final Isar isar;
@@ -20,6 +26,8 @@ class TestIsarHarness {
   });
 
   static Future<TestIsarHarness> open() async {
+    await _ensureCoreInitialized();
+
     final directory = await Directory.systemTemp.createTemp(
       'subtitle_studio_isar_test_',
     );
