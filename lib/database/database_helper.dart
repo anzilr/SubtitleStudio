@@ -29,14 +29,10 @@ import 'package:subtitle_studio/database/models/models.dart'; // Data models
 import 'package:subtitle_studio/database/database_instance.dart';
 export 'database_instance.dart' show isar;
 import 'package:subtitle_studio/utils/logging_helpers.dart'; // Logging utilities
-import 'package:subtitle_studio/services/checkpoint_repository.dart'; // Checkpoint boundary
 import 'package:subtitle_studio/utils/subtitle_sorting.dart'; // Enhanced subtitle sorting
 import 'dart:math';                           // Math utilities for ID generation
 import 'dart:io';                             // File and Directory operations
 import 'package:path_provider/path_provider.dart'; // App directories access
-
-CheckpointRepository get _checkpointRepository =>
-    CheckpointRepository.fromGlobal();
 
 /// Updates the macOsSrtBookmark for a SubtitleCollection
 Future<bool> updateSubtitleCollectionMacOsSrtBookmark(int subtitleCollectionId, String? bookmarkString) async {
@@ -207,64 +203,6 @@ Future<void> updateLastEditedIndex(int sessionId, int newIndex) async {
       await isar.sessions.put(session);
     }
   });
-}
-
-Future<void> saveSubtitleChangesToDatabase(
-    int subtitleId,
-    SubtitleLine updatedLine,
-    DateTime Function(String) parseTimeFunction,
-    {int? sessionId, SubtitleLine? beforeLine}) async {
-  // Store checkpoint info before transaction
-  SubtitleLine? lineBeforeChanges;
-  bool shouldCreateCheckpoint = false;
-  
-  await isar.writeTxn(() async {
-    final existingSubtitle = await isar.subtitleCollections.get(subtitleId);
-    if (existingSubtitle != null) {
-      final listIndex = updatedLine.index - 1;
-      if (listIndex < 0 || listIndex >= existingSubtitle.lines.length) {
-        throw RangeError.index(
-          listIndex,
-          existingSubtitle.lines,
-          'updatedLine.index',
-        );
-      }
-
-      lineBeforeChanges = beforeLine ?? existingSubtitle.lines[listIndex];
-
-      final timingChanged =
-          lineBeforeChanges!.startTime != updatedLine.startTime ||
-          lineBeforeChanges!.endTime != updatedLine.endTime;
-
-      if (sessionId != null) {
-        shouldCreateCheckpoint =
-            timingChanged ||
-            lineBeforeChanges!.original != updatedLine.original ||
-            lineBeforeChanges!.edited != updatedLine.edited;
-      }
-
-      existingSubtitle.lines[listIndex] = updatedLine;
-
-      // Text-only edits do not affect ordering. Re-sort only when timing moved
-      // the cue relative to neighboring cues.
-      if (timingChanged) {
-        existingSubtitle.lines =
-            sortAndReindexSubtitleLines(existingSubtitle.lines);
-      }
-
-      await isar.subtitleCollections.put(existingSubtitle);
-    }
-  });
-  
-  // Create checkpoint OUTSIDE the transaction to avoid nested transaction error
-  if (shouldCreateCheckpoint && sessionId != null && lineBeforeChanges != null) {
-    await _checkpointRepository.createEditCheckpoint(
-      sessionId: sessionId,
-      subtitleCollectionId: subtitleId,
-      beforeLine: lineBeforeChanges!,
-      afterLine: updatedLine,
-    );
-  }
 }
 
 // Function to read lastEditedSession from Preferences
