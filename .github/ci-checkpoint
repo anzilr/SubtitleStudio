@@ -1,16 +1,13 @@
-Riverpod migration checkpoint 37
+Riverpod migration checkpoint 38
 Date: 2026-10-03
 Checks:
 - flutter analyze
 - flutter test -j 1
 
 Focus:
-- add real Isar SessionRepository cascade deletion and summary coverage
-- cascade removeSession across checkpoints/video preferences and stale lastEditedSession
-- add ProjectRepository path/rename persistence coverage
-- add SubtitleImportRepository persistence and last-edited coverage
-- fix edit checkpoints to carry the true pre-operation collection state
-- add EditLineRepository save/add/delete integration coverage
-- verify forced edit snapshots persist pre-edit state while deltas persist post-edit state
+- centralize remaining editor/import/session singleton preference access through PreferencesStore
+- preserve SessionRepository cascade behavior with store-backed preference reads
+- verify all production Preferences singleton create/update logic now lives in PreferencesStore
+- revalidate repository integration suites before typed project migration
 
 Platform builds intentionally disabled.
