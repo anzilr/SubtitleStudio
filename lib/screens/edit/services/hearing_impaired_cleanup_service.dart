@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:subtitle_studio/database/database_instance.dart';
+import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/services/checkpoint_repository.dart';
 import 'package:subtitle_studio/utils/subtitle_processor.dart';
@@ -99,6 +99,7 @@ class HearingImpairedCleanupService {
   }
 
   static Future<HearingImpairedCleanupResult> execute({
+    required Isar isar,
     required CheckpointRepository checkpointRepository,
     required int sessionId,
     required int subtitleCollectionId,
