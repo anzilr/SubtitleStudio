@@ -354,11 +354,16 @@ class CheckpointManager {
     required int subtitleCollectionId,
     required SubtitleLine beforeLine,
     required SubtitleLine afterLine,
+    List<SubtitleLine>? preOperationState,
   }) async {
-    // Get current state BEFORE edit operation
-    final collection = await _isar.subtitleCollections.get(subtitleCollectionId);
-    if (collection == null) {
-      throw Exception('Subtitle collection not found');
+    var stateBeforeEdit = preOperationState;
+    if (stateBeforeEdit == null) {
+      final collection =
+          await _isar.subtitleCollections.get(subtitleCollectionId);
+      if (collection == null) {
+        throw Exception('Subtitle collection not found');
+      }
+      stateBeforeEdit = CheckpointStateReducer.copyLines(collection.lines);
     }
     
     final delta = SubtitleLineDelta()
@@ -373,7 +378,7 @@ class CheckpointManager {
       operationType: 'edit',
       description: 'Edited line ${beforeLine.index}',
       deltas: [delta],
-      preOperationState: collection.lines, // Capture state BEFORE edit
+      preOperationState: stateBeforeEdit,
     );
   }
   
