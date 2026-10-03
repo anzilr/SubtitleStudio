@@ -115,6 +115,55 @@ void main() {
       expect(identical(lines[1], after), isFalse);
     });
 
+    test('strict reducer rejects an out-of-range delete', () {
+      final lines = <SubtitleLine>[_line(1, 'A')];
+      final delta = SubtitleLineDelta()
+        ..changeType = 'delete'
+        ..lineIndex = 9
+        ..beforeState = _line(1, 'A');
+
+      expect(
+        () => CheckpointStateReducer.applyDeltasStrictInPlace(
+          lines,
+          [delta],
+        ),
+        throwsA(isA<CheckpointIntegrityException>()),
+      );
+    });
+
+    test('strict reducer rejects a mismatched before state', () {
+      final lines = <SubtitleLine>[
+        _line(1, 'Actual'),
+      ];
+      final delta = SubtitleLineDelta()
+        ..changeType = 'modify'
+        ..lineIndex = 0
+        ..beforeState = _line(1, 'Expected')
+        ..afterState = _line(1, 'After');
+
+      expect(
+        () => CheckpointStateReducer.applyDeltasStrictInPlace(
+          lines,
+          [delta],
+        ),
+        throwsA(isA<CheckpointIntegrityException>()),
+      );
+      expect(lines.single.original, 'Actual');
+    });
+
+    test('strict reducer applies a valid modify delta', () {
+      final lines = <SubtitleLine>[_line(1, 'Before')];
+      final delta = SubtitleLineDelta()
+        ..changeType = 'modify'
+        ..lineIndex = 0
+        ..beforeState = _line(1, 'Before')
+        ..afterState = _line(1, 'After');
+
+      CheckpointStateReducer.applyDeltasStrictInPlace(lines, [delta]);
+
+      expect(lines.single.original, 'After');
+    });
+
     test('applies multiple deltas in chronological order', () {
       final lines = <SubtitleLine>[
         _line(1, 'A'),
