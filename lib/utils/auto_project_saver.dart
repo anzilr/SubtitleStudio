@@ -4,6 +4,7 @@ import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/app/repositories/project_repository.dart';
 import 'package:subtitle_studio/utils/project_manager.dart';
 import 'package:subtitle_studio/database/models/models.dart';
+import 'package:subtitle_studio/services/checkpoint_repository.dart';
 
 /// Auto Project Saver Mixin
 /// 
