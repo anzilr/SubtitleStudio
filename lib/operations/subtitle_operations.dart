@@ -210,28 +210,12 @@ class SubtitleOperations {
     required int sessionId,
   }) async {
     try {
-      // Keep copy of original line for checkpoint
-      final originalLine = SubtitleLine()
-        ..index = currentLine.index
-        ..original = currentLine.original
-        ..edited = currentLine.edited
-        ..startTime = currentLine.startTime
-        ..endTime = currentLine.endTime;
-
       final newLine = SubtitleLine()
         ..index = currentLine.index + 1
         ..original = currentLine.original
         ..edited = secondPart.replaceAll('\n', '<br>')
         ..startTime = secondPartTime.split(' → ')[0]
         ..endTime = secondPartTime.split(' → ')[1];
-
-      // Create a copy of the first part for checkpoint (before modifying currentLine)
-      final firstPartForCheckpoint = SubtitleLine()
-        ..index = currentLine.index
-        ..original = currentLine.original
-        ..edited = firstPart.replaceAll('\n', '<br>')
-        ..startTime = currentLine.startTime
-        ..endTime = firstPartTime.split(' → ')[1];
 
       currentLine.edited = firstPart.replaceAll('\n', '<br>');
       currentLine.endTime = firstPartTime.split(' → ')[1];
@@ -325,21 +309,6 @@ class SubtitleOperations {
 
       final mergeTargetLine = collection.lines[mergeIndex];
       
-      // Keep copies of original lines for checkpoint
-      final originalFirst = SubtitleLine()
-        ..index = mergePrevious ? mergeTargetLine.index : currentLine.index
-        ..original = mergePrevious ? mergeTargetLine.original : currentLine.original
-        ..edited = mergePrevious ? mergeTargetLine.edited : currentLine.edited
-        ..startTime = mergePrevious ? mergeTargetLine.startTime : currentLine.startTime
-        ..endTime = mergePrevious ? mergeTargetLine.endTime : currentLine.endTime;
-      
-      final originalSecond = SubtitleLine()
-        ..index = mergePrevious ? currentLine.index : mergeTargetLine.index
-        ..original = mergePrevious ? currentLine.original : mergeTargetLine.original
-        ..edited = mergePrevious ? currentLine.edited : mergeTargetLine.edited
-        ..startTime = mergePrevious ? currentLine.startTime : mergeTargetLine.startTime
-        ..endTime = mergePrevious ? currentLine.endTime : mergeTargetLine.endTime;
-
       // Helper function to merge text fields, handling null values properly
       String? mergeEditedFields(String? first, String? second) {
         if (first == null && second == null) return null;
