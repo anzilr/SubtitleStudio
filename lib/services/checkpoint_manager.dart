@@ -43,13 +43,12 @@ import 'package:subtitle_studio/services/checkpoint_store.dart';
 import 'dart:convert';
 
 class CheckpointManager {
-  final Isar _isar;
   final CheckpointStore _store;
   final CheckpointPreferencesRepository _preferences;
 
-  CheckpointManager(this._isar)
-      : _store = CheckpointStore(_isar),
-        _preferences = CheckpointPreferencesRepository(_isar);
+  CheckpointManager(Isar isar)
+      : _store = CheckpointStore(isar),
+        _preferences = CheckpointPreferencesRepository(isar);
 
   // Get maximum checkpoints from preferences (0 = unlimited)
   Future<int> getMaxCheckpoints() {
@@ -721,165 +720,6 @@ class CheckpointManager {
     return _store.getCurrentHeadCheckpoint(sessionId);
   }
   
-  // OLD METHODS - Kept for reference, not used in snapshot-based approach
-  // =========================================================================
-  
-  /* 
-  /// Gets checkpoints between two points in the checkpoint tree (OLD APPROACH)
-  Future<List<Checkpoint>> _getCheckpointsBetween({
-    required int sessionId,
-    int? fromCheckpointId,
-    required int toCheckpointId,
-  }) async {
-    // Get all checkpoints for the session
-    final allCheckpoints = await getCheckpointsForSession(sessionId);
-    
-    // Build a map of checkpoint ID to checkpoint for quick lookup
-    final checkpointMap = {for (var cp in allCheckpoints) cp.id: cp};
-    
-    // Find the target checkpoint
-    final targetCheckpoint = checkpointMap[toCheckpointId];
-    if (targetCheckpoint == null) return [];
-    
-    // If fromCheckpointId is null, we need to find the current head
-    // and build the path from there to the target
-    if (fromCheckpointId == null) {
-      // Find the most recent checkpoint in the active branch
-      final activeBranch = await _getOrCreateActiveBranch(sessionId);
-      final headCheckpoint = await _getCurrentHeadCheckpoint(sessionId, activeBranch.branchId);
-      if (headCheckpoint == null) return [];
-      fromCheckpointId = headCheckpoint.id;
-    }
-    
-    // Build path from target back to root
-    final targetPath = <int>[];
-    int? currentId = toCheckpointId;
-    while (currentId != null) {
-      targetPath.add(currentId);
-      currentId = checkpointMap[currentId]?.parentCheckpointId;
-    }
-    
-    // Build path from head back to root
-    final headPath = <int>[];
-    currentId = fromCheckpointId;
-    while (currentId != null) {
-      headPath.add(currentId);
-      currentId = checkpointMap[currentId]?.parentCheckpointId;
-    }
-    
-    // Find the common ancestor
-    final targetPathSet = targetPath.toSet();
-    int? commonAncestor;
-    for (final id in headPath) {
-      if (targetPathSet.contains(id)) {
-        commonAncestor = id;
-        break;
-      }
-    }
-    
-    // If target is the same as head or is an ancestor of head, we need to undo
-    if (commonAncestor == toCheckpointId) {
-      // Get checkpoints from head to target (excluding target itself)
-      final checkpointsToUndo = <Checkpoint>[];
-      for (final id in headPath) {
-        if (id == toCheckpointId) break;
-        final checkpoint = checkpointMap[id];
-        if (checkpoint != null) {
-          checkpointsToUndo.add(checkpoint);
-        }
-      }
-      return checkpointsToUndo;
-    }
-    
-    // If we need to redo (target is ahead of head)
-    // This shouldn't happen in our undo logic, but handle it anyway
-    return [];
-  }
-  
-  /// Applies undo operation for a checkpoint (OLD APPROACH)
-  Future<void> _applyCheckpointUndo(
-    SubtitleCollection collection,
-    Checkpoint checkpoint,
-  ) async {
-    // Ensure lines is a growable list
-    final lines = List<SubtitleLine>.from(collection.lines, growable: true);
-    
-    for (final delta in checkpoint.deltas.reversed) {
-      switch (delta.changeType) {
-        case 'add':
-          // Undo add = delete the line
-          if (delta.lineIndex < lines.length) {
-            lines.removeAt(delta.lineIndex);
-          }
-          break;
-        
-        case 'delete':
-          // Undo delete = restore the line
-          if (delta.beforeState != null) {
-            // Clamp lineIndex to valid insertion range [0, lines.length]
-            final insertIndex = delta.lineIndex.clamp(0, lines.length);
-            lines.insert(insertIndex, CheckpointStateReducer.copyLine(delta.beforeState!));
-          }
-          break;
-        
-        case 'modify':
-          // Undo modify = restore previous state
-          if (delta.beforeState != null && delta.lineIndex < lines.length) {
-            lines[delta.lineIndex] = CheckpointStateReducer.copyLine(delta.beforeState!);
-          }
-          break;
-      }
-    }
-    
-    // Update collection with modified list
-    collection.lines = lines;
-    
-    // Reindex lines
-    CheckpointStateReducer.reindexCollection(collection);
-  }
-  
-  /// Applies redo operation for a checkpoint
-  Future<void> _applyCheckpointRedo(
-    SubtitleCollection collection,
-    Checkpoint checkpoint,
-  ) async {
-    // Ensure lines is a growable list
-    final lines = List<SubtitleLine>.from(collection.lines, growable: true);
-    
-    for (final delta in checkpoint.deltas) {
-      switch (delta.changeType) {
-        case 'add':
-          // Redo add = add the line
-          if (delta.afterState != null) {
-            // Clamp lineIndex to valid insertion range [0, lines.length]
-            final insertIndex = delta.lineIndex.clamp(0, lines.length);
-            lines.insert(insertIndex, CheckpointStateReducer.copyLine(delta.afterState!));
-          }
-          break;
-        
-        case 'delete':
-          // Redo delete = remove the line
-          if (delta.lineIndex < lines.length) {
-            lines.removeAt(delta.lineIndex);
-          }
-          break;
-        
-        case 'modify':
-          // Redo modify = apply new state
-          if (delta.afterState != null && delta.lineIndex < lines.length) {
-            lines[delta.lineIndex] = CheckpointStateReducer.copyLine(delta.afterState!);
-          }
-          break;
-      }
-    }
-    
-    // Update collection with modified list
-    collection.lines = lines;
-    
-    // Reindex lines
-    CheckpointStateReducer.reindexCollection(collection);
-  }
-  */ // End of OLD METHODS
   
   /// Auto-cleanup old checkpoints to prevent database bloat
   /// Preserves initial snapshot and manual checkpoints
