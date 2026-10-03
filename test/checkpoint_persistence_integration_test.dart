@@ -84,17 +84,22 @@ Future<void> _writeLines(
 
 void main() {
   late TestIsarHarness harness;
+  bool harnessOpened = false;
   late CheckpointManager manager;
   late _SeededSession seeded;
 
   setUp(() async {
     harness = await TestIsarHarness.open();
+    harnessOpened = true;
     manager = CheckpointManager(harness.isar);
     seeded = await _seedSession(harness);
   });
 
   tearDown(() async {
-    await harness.close();
+    if (harnessOpened) {
+      await harness.close();
+      harnessOpened = false;
+    }
   });
 
   group('CheckpointManager persistence', () {
