@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:isar_community/isar.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:subtitle_studio/database/models/models.dart';
+import 'package:subtitle_studio/database/stores/preferences_store.dart';
 import 'package:subtitle_studio/screens/home/models/session_summary.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 
@@ -24,8 +25,10 @@ import 'package:subtitle_studio/utils/logging_helpers.dart';
 /// - Easy to mock for testing
 class SessionRepository {
   final Isar _isar;
+  final PreferencesStore _preferencesStore;
 
-  SessionRepository(this._isar);
+  SessionRepository(this._isar)
+      : _preferencesStore = PreferencesStore(_isar);
   
   /// Fetches all sessions from the database in reverse chronological order
   /// 
@@ -58,7 +61,7 @@ class SessionRepository {
     try {
       await logInfo('SessionRepository: Fetching last edited session ID');
       
-      final preferences = await _isar.preferences.where().findFirst();
+      final preferences = await _preferencesStore.findFirst();
       final lastEditedId = preferences?.lastEditedSession;
       
       if (lastEditedId != null) {
@@ -163,6 +166,8 @@ class SessionRepository {
         context: 'removeSession',
       );
       
+      final preferences = await _preferencesStore.findFirst();
+
       await _isar.writeTxn(() async {
         final checkpoints = await _isar.checkpoints
             .filter()
@@ -184,7 +189,6 @@ class SessionRepository {
           );
         }
 
-        final preferences = await _isar.preferences.where().findFirst();
         if (preferences?.lastEditedSession == session.id) {
           preferences!.lastEditedSession = null;
           await _isar.preferences.put(preferences);
@@ -224,13 +228,9 @@ class SessionRepository {
         throw ArgumentError.value(sessionId, 'sessionId', 'Must be positive');
       }
 
-      await _isar.writeTxn(() async {
-        final preferences =
-            await _isar.preferences.where().findFirst() ??
-            Preferences(autoSave: true);
-        preferences.lastEditedSession = sessionId;
-        await _isar.preferences.put(preferences);
-      });
+      await _preferencesStore.update(
+        (preferences) => preferences.lastEditedSession = sessionId,
+      );
       
       await logInfo(
         'SessionRepository: Successfully updated last edited session',
@@ -308,19 +308,15 @@ class SessionRepository {
 
   /// Reads the persisted Home session sort preference.
   Future<SessionSortOption> getSessionSortOption() async {
-    final preferences = await _isar.preferences.where().findFirst();
+    final preferences = await _preferencesStore.findFirst();
     return preferences?.sessionSortOption ?? SessionSortOption.lastOpened;
   }
 
   /// Persists the Home session sort preference without global database access.
   Future<void> setSessionSortOption(SessionSortOption value) async {
-    final existing = await _isar.preferences.where().findFirst();
-    final preferences = existing ?? Preferences(autoSave: true);
-    preferences.sessionSortOption = value;
-
-    await _isar.writeTxn(() async {
-      await _isar.preferences.put(preferences);
-    });
+    await _preferencesStore.update(
+      (preferences) => preferences.sessionSortOption = value,
+    );
   }
 
 }
