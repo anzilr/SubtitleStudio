@@ -1,16 +1,23 @@
-Riverpod migration checkpoint 45
+Riverpod migration checkpoint 46
 Date: 2026-10-03
 Checks:
 - flutter analyze
 - flutter test -j 1
 
-Focus:
-- add injected UI-free ProjectSaveCoordinator
-- add presentation-layer ProjectSaveFlow
-- migrate auto-save, import-save, and editor project-save callers
-- move project import session-selection modal ownership into ImportProjectSheet
-- remove ProjectManager helper usage from SessionSelectionSheet
-- delete the now-unused static ProjectManager facade
-- preserve typed .msone save/import behavior
+Checkpoint redesign stage 1:
+- use a single movable HEAD marker instead of an active ancestor path
+- preserve descendants as alternate branches after history checkout
+- atomically compare-and-swap HEAD when appending a checkpoint
+- count snapshot intervals along the selected parent branch
+- make parent traversal cycle-safe and fail on missing ancestry
+- make retention graph-safe by pruning only unprotected leaves
+- strictly validate deltas during restore instead of silently clamping/ignoring
+- preserve exact checkpoint line order during restore
+- refuse unsafe fallback snapshots built from the current working state
+- validate imported checkpoint IDs, parents, and cycles before persistence
+- normalize imported history to a single HEAD
+
+Legacy checkpoints still use PRE-operation state semantics.
+The state-after-operation and atomic mutation+commit migration comes next.
 
 Platform builds intentionally disabled.
