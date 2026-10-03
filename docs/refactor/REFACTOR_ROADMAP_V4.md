@@ -2,11 +2,31 @@
 
 Date: 2026-10-03
 Branch: `refactor/riverpod-architecture`
-Audit head: `cff387f69257e37bb3b6ef26111b2683a57bf510`
-Last green analyze/test checkpoint: `049a8db3d589dd0a4142f6c245630eb64b69bad2`
+Original audit head: `cff387f69257e37bb3b6ef26111b2683a57bf510`
+Current verified checkpoint: `04a1d2b9b03522519fa2dce1f5c9439e87bd5a59` (checkpoint 43)
+Current verification: `flutter analyze` = 0 issues; `flutter test -j 1` = 136 passed
 Five-platform build gate: `53422ce` (Android, Windows, Linux, macOS, iOS all green)
 
-## 1. Why roadmap v4 replaces v3
+## 1. Current progress at checkpoint 43
+
+Completed since the original v4 audit:
+
+- Phase 0 verification is complete.
+- Phase 1 real-Isar test infrastructure is complete and now covers preferences, video preferences, checkpoints, subtitle repositories, Edit Line persistence, sessions, project metadata, subtitle imports, and project import checkpoint remapping.
+- Phase 2 preference-store consolidation is complete. Production singleton Preferences creation/update flows now go through `PreferencesStore`; `PreferencesModel` is removed.
+- Phase 3 global database retirement is complete. `DatabaseHelper`, `database_instance.dart`, and `CheckpointRepository.fromGlobal()` are removed.
+- Feature-level global Isar usage in subtitle effects and hearing-impaired cleanup is removed.
+- Subtitle sync, banners, CRUD, split/merge, import, and last-edited-session persistence are repository-driven.
+- Effect checkpoints and Edit/Edit-Line checkpoints now preserve true pre-operation state and have regression coverage.
+- Session deletion now cascades checkpoint/video-preference cleanup without deleting unrelated sessions.
+- The typed project pipeline is complete from codec/builder through save, preview, session selection, and import persistence.
+- `ProjectDocument.toLegacyMap()` is removed; dynamic maps remain only at JSON serialization boundaries or unrelated file-selection metadata.
+- Exported checkpoint IDs are preserved and remapped to fresh Isar IDs during project import.
+- Checkpoint 43 is green with zero analyzer issues and 136 passing tests.
+
+Remaining work is concentrated in Phases 4-12 below. In particular, Phase 4 still needs `ProjectManager` orchestration/UI decomposition even though project data typing is complete.
+
+## 9. Why roadmap v4 replaces v3
 
 Roadmap v3 correctly shifted SubtitleStudio from a file-by-file BLoC replacement toward dependency boundaries. Since then, the codebase has materially changed:
 
