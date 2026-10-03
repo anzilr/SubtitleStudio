@@ -1,24 +1,19 @@
 import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/database/models/models.dart';
+import 'package:subtitle_studio/database/stores/preferences_store.dart';
 
 /// Persistence required by the AI explanation controller.
 ///
 /// This removes the controller's dependency on the legacy static
 /// PreferencesModel/global Isar instance.
 class AiExplanationPreferencesRepository {
-  final Isar _isar;
+  final PreferencesStore _preferencesStore;
 
-  const AiExplanationPreferencesRepository(this._isar);
+  AiExplanationPreferencesRepository(Isar isar)
+      : _preferencesStore = PreferencesStore(isar);
 
-  Future<Preferences> _getPreferences() async {
-    final existing = await _isar.preferences.where().findFirst();
-    if (existing != null) return existing;
-
-    final created = Preferences(autoSave: true);
-    await _isar.writeTxn(() async {
-      await _isar.preferences.put(created);
-    });
-    return created;
+  Future<Preferences> _getPreferences() {
+    return _preferencesStore.getOrCreate();
   }
 
   Future<String?> getGeminiApiKey() async {
@@ -56,14 +51,8 @@ class AiExplanationPreferencesRepository {
 
   Future<void> _updatePreferences(
     void Function(Preferences preferences) update,
-  ) async {
-    final existing = await _isar.preferences.where().findFirst();
-    final preferences = existing ?? Preferences(autoSave: true);
-    update(preferences);
-
-    await _isar.writeTxn(() async {
-      await _isar.preferences.put(preferences);
-    });
+  ) {
+    return _preferencesStore.update(update);
   }
 
 }
