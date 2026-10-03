@@ -8,7 +8,7 @@ import 'package:subtitle_studio/utils/subtitle_processor.dart';
 import 'package:subtitle_studio/utils/intent_handler.dart';
 import 'package:subtitle_studio/utils/saf_path_converter.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
-import 'package:subtitle_studio/utils/project_manager.dart';
+import 'package:subtitle_studio/utils/project_save_flow.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 
 class SubtitleImportOptionsSheet extends ConsumerStatefulWidget {
@@ -242,9 +242,9 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
           final session = subtitleData.session;
           final subtitleCollection = subtitleData.subtitleCollection;
 
-          final projectPath = await ProjectManager.saveProject(
+          final projectPath = await ProjectSaveFlow.save(
             context: context,
-            checkpointRepository: ref.read(checkpointRepositoryProvider),
+            coordinator: ref.read(projectSaveCoordinatorProvider),
             session: session,
             subtitleCollection: subtitleCollection,
             forceNewLocation: true,
