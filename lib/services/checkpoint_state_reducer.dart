@@ -103,7 +103,7 @@ class CheckpointStateReducer {
               '0..${lines.length - 1}.',
             );
           }
-          if (!_samePersistedLine(lines[delta.lineIndex], beforeState)) {
+          if (!samePersistedLine(lines[delta.lineIndex], beforeState)) {
             throw CheckpointIntegrityException(
               'Delete delta does not match the reconstructed line at '
               'index ${delta.lineIndex}.',
@@ -126,7 +126,7 @@ class CheckpointStateReducer {
               '0..${lines.length - 1}.',
             );
           }
-          if (!_samePersistedLine(lines[delta.lineIndex], beforeState)) {
+          if (!samePersistedLine(lines[delta.lineIndex], beforeState)) {
             throw CheckpointIntegrityException(
               'Modify delta does not match the reconstructed line at '
               'index ${delta.lineIndex}.',
@@ -143,7 +143,7 @@ class CheckpointStateReducer {
     }
   }
 
-  static bool _samePersistedLine(
+  static bool samePersistedLine(
     SubtitleLine left,
     SubtitleLine right,
   ) {
@@ -155,6 +155,19 @@ class CheckpointStateReducer {
         left.marked == right.marked &&
         left.comment == right.comment &&
         left.resolved == right.resolved;
+  }
+
+  static bool samePersistedLines(
+    List<SubtitleLine> left,
+    List<SubtitleLine> right,
+  ) {
+    if (left.length != right.length) return false;
+    for (var i = 0; i < left.length; i++) {
+      if (!samePersistedLine(left[i], right[i])) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /// Reindexes lines without changing their stored order.
