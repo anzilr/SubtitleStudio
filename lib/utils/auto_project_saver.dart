@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/app/repositories/project_repository.dart';
-import 'package:subtitle_studio/utils/project_manager.dart';
 import 'package:subtitle_studio/database/models/models.dart';
-import 'package:subtitle_studio/services/checkpoint_repository.dart';
+import 'package:subtitle_studio/utils/project_save_flow.dart';
 
 /// Auto Project Saver Mixin
 /// 
@@ -16,9 +15,9 @@ mixin AutoProjectSaver<T extends StatefulWidget> on State<T> {
       ProviderScope.containerOf(context, listen: false)
           .read(projectRepositoryProvider);
 
-  CheckpointRepository get _checkpointRepository =>
+  ProjectSaveCoordinator get _projectSaveCoordinator =>
       ProviderScope.containerOf(context, listen: false)
-          .read(checkpointRepositoryProvider);
+          .read(projectSaveCoordinatorProvider);
 
   
   /// Auto-save project after subtitle data is created
@@ -30,12 +29,14 @@ mixin AutoProjectSaver<T extends StatefulWidget> on State<T> {
     bool showSnackbar = true,
   }) async {
     try {
-      final projectPath = await ProjectManager.autoSaveProject(
+      final projectPath = await ProjectSaveFlow.save(
         context: context,
-        checkpointRepository: _checkpointRepository,
+        coordinator: _projectSaveCoordinator,
         session: session,
         subtitleCollection: subtitleCollection,
         suggestedFileName: suggestedFileName,
+        forceNewLocation: true,
+        showSuccessMessage: false,
       );
 
       if (projectPath != null) {
@@ -93,9 +94,9 @@ mixin AutoProjectSaver<T extends StatefulWidget> on State<T> {
     );
     
     if (shouldSave == true && mounted) {
-      final projectPath = await ProjectManager.saveProject(
+      final projectPath = await ProjectSaveFlow.save(
         context: context,
-        checkpointRepository: _checkpointRepository,
+        coordinator: _projectSaveCoordinator,
         session: session,
         subtitleCollection: subtitleCollection,
         forceNewLocation: true,
@@ -134,15 +135,16 @@ class ProjectCreationHelper {
       }
       
       if (autoSave) {
-        final projectPath = await ProjectManager.autoSaveProject(
+        final projectPath = await ProjectSaveFlow.save(
           context: context,
-          checkpointRepository: ProviderScope.containerOf(
+          coordinator: ProviderScope.containerOf(
             context,
             listen: false,
-          ).read(checkpointRepositoryProvider),
+          ).read(projectSaveCoordinatorProvider),
           session: session,
           subtitleCollection: subtitleCollection,
           suggestedFileName: suggestedFileName,
+          forceNewLocation: true,
         );
         
         if (projectPath != null) {
