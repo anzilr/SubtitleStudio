@@ -5,6 +5,7 @@ import 'package:subtitle_studio/widgets/video/subtitle.dart';
 import 'package:subtitle_studio/utils/subtitle_parser.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 import 'package:subtitle_studio/services/checkpoint_repository.dart';
+import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
 import 'package:subtitle_studio/utils/time_parser.dart';
 import 'package:subtitle_studio/screens/edit/models/subtitle_entry.dart';
 import 'package:subtitle_studio/screens/edit/services/source_view_reconciler.dart';
@@ -69,6 +70,7 @@ class SubtitleRepository {
     SubtitleLine? beforeLine,
   }) async {
     SubtitleLine? lineBeforeChanges;
+    List<SubtitleLine>? preOperationState;
     var shouldCreateCheckpoint = false;
 
     final saved = await _isar.writeTxn(() async {
@@ -80,6 +82,8 @@ class SubtitleRepository {
         return false;
       }
 
+      preOperationState =
+          CheckpointStateReducer.copyLines(collection.lines);
       lineBeforeChanges = beforeLine ?? collection.lines[listIndex];
 
       final timingChanged =
@@ -109,6 +113,7 @@ class SubtitleRepository {
         subtitleCollectionId: collectionId,
         beforeLine: lineBeforeChanges!,
         afterLine: updatedLine,
+        preOperationState: preOperationState,
       );
     }
 
