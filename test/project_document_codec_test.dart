@@ -35,9 +35,10 @@ void main() {
       );
 
       expect(document.version, '2.0');
-      expect(document.session['fileName'], 'movie.srt');
+      expect(document.session.fileName, 'movie.srt');
       expect(document.totalLines, 1);
       expect(document.originalFileUri, 'content://subtitle');
+      expect(document.subtitleCollection.lines.single.original, 'Hello');
       expect(document.checkpoints, isEmpty);
       expect(document.toLegacyMap()['version'], '2.0');
     });
