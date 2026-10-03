@@ -255,7 +255,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Making new changes after going back will replace $futureCheckpointsCount newer change${futureCheckpointsCount > 1 ? 's' : ''}.',
+                          '$futureCheckpointsCount newer change${futureCheckpointsCount > 1 ? 's are' : ' is'} preserved as alternate history. Making a new edit from here creates a new branch.',
                           style: TextStyle(
                             fontSize: 13,
                             color: Colors.orange.shade900,
