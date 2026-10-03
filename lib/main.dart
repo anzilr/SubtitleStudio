@@ -38,7 +38,6 @@ import 'package:subtitle_studio/widgets/splash_screen.dart'; // Initial splash s
 import 'screens/screen_home.dart';                        // Main home screen
 import 'screens/screen_source_view.dart';                 // Source view screen
 import 'database/models/models.dart';                     // Database models
-import 'database/database_instance.dart';                   // Shared Isar handle
 import 'themes/theme_controller.dart';                    // Riverpod theme management
 import 'package:media_kit/media_kit.dart';               // Video playback support
 
@@ -93,7 +92,7 @@ Future<void> main(List<String> args) async {
   // Initialize Isar database with retry mechanism for better reliability
   // The database stores user preferences, sessions, and subtitle collections
   Isar.initializeIsarCore(download: false);
-  await initializeIsarWithRetry();
+  final isar = await initializeIsarWithRetry();
 
   FilePickerSAF.configurePreferences(
     FilePickerPreferencesRepository(isar),
@@ -162,7 +161,7 @@ Future<void> main(List<String> args) async {
 /// - [maxRetries]: Maximum number of retry attempts (default: 3)
 /// 
 /// Throws: Database initialization error after max retries exceeded
-Future<void> initializeIsarWithRetry({int maxRetries = 3}) async {
+Future<Isar> initializeIsarWithRetry({int maxRetries = 3}) async {
   final dir = await getApplicationDocumentsDirectory();
   int retryCount = 0;
   Duration delay = const Duration(milliseconds: 500); // Initial delay
@@ -170,14 +169,14 @@ Future<void> initializeIsarWithRetry({int maxRetries = 3}) async {
   while (true) {
     try {
       // Attempt to open Isar database with all required schemas
-      isar = await Isar.open(
+      final isar = await Isar.open(
         [PreferencesSchema, SessionSchema, SubtitleCollectionSchema, DictionaryEntrySchema, CheckpointSchema, VideoPreferencesSchema, TutorialStatusSchema],
         directory: dir.path, 
         name: "subtitlesInstance", // Unique database instance name
       );
       debugPrint('Isar database initialized successfully');
       await AppLogger.instance.info('Isar database initialized successfully');
-      return; // Success - exit the retry loop
+      return isar; // Success - exit the retry loop
     } catch (e) {
       retryCount++;
       
