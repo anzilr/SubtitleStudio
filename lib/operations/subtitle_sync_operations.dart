@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:subtitle_studio/database/models/models.dart';
+import 'package:subtitle_studio/screens/edit/repositories/subtitle_repository.dart';
 import 'package:subtitle_studio/utils/time_parser.dart';
 
 class SyncResult {
@@ -16,6 +17,7 @@ class SubtitleSyncOperations {
   /// Shifts all subtitle timecodes while preserving their durations.
   /// New start and end times are provided for the first and last subtitles.
   static Future<SyncResult> shiftTimecodes({
+    required SubtitleRepository subtitleRepository,
     required int subtitleId,
     required List<SubtitleLine> subtitleLines,
     required String newStartTime,
@@ -92,7 +94,10 @@ class SubtitleSyncOperations {
       }
       
       // Update in database
-      final success = await updateMultipleSubtitleLines(subtitleId, updatedLines);
+      final success = await subtitleRepository.updateMultipleLines(
+        subtitleId,
+        updatedLines,
+      );
       
       if (!success) {
         return SyncResult(
@@ -119,6 +124,7 @@ class SubtitleSyncOperations {
   /// Shifts timecodes for selected subtitle lines only.
   /// New start and end times are provided for the first and last selected subtitles.
   static Future<SyncResult> shiftSelectedTimecodes({
+    required SubtitleRepository subtitleRepository,
     required int subtitleId,
     required List<SubtitleLine> allSubtitleLines,
     required List<int> selectedIndices,
@@ -206,7 +212,10 @@ class SubtitleSyncOperations {
       }
       
       // Update in database (only the selected lines)
-      final success = await updateMultipleSubtitleLines(subtitleId, updatedLines);
+      final success = await subtitleRepository.updateMultipleLines(
+        subtitleId,
+        updatedLines,
+      );
       
       if (!success) {
         return SyncResult(
@@ -232,6 +241,7 @@ class SubtitleSyncOperations {
 
   /// Adjusts subtitle timecodes based on framerate conversion.
   static Future<SyncResult> adjustFramerate({
+    required SubtitleRepository subtitleRepository,
     required int subtitleId,
     required List<SubtitleLine> subtitleLines,
     required double sourceFramerate,
@@ -284,7 +294,10 @@ class SubtitleSyncOperations {
       }
       
       // Update in database
-      final success = await updateMultipleSubtitleLines(subtitleId, updatedLines);
+      final success = await subtitleRepository.updateMultipleLines(
+        subtitleId,
+        updatedLines,
+      );
       
       if (!success) {
         return SyncResult(
