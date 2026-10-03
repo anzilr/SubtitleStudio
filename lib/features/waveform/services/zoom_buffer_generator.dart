@@ -1,10 +1,14 @@
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:subtitle_studio/features/waveform/models/waveform_sample.dart';
-import 'package:subtitle_studio/database/models/preferences_model.dart';
+import 'package:subtitle_studio/features/waveform/repositories/waveform_preferences_repository.dart';
 
 /// Service for generating zoom levels from waveform data
 class ZoomBufferGenerator {
+  final WaveformPreferencesRepository _preferences;
+
+  const ZoomBufferGenerator(this._preferences);
+
   /// Generate multiple zoom levels for smooth zooming
   /// Based on Subtitle Composer's zoom buffer implementation
   Future<List<ZoomLevel>> generateZoomLevels(
@@ -51,10 +55,11 @@ class ZoomBufferGenerator {
   Future<List<int>> _calculateZoomLevels(int totalSamples) async {
     final levels = <int>[];
 
-    // Get configurable settings from preferences
-    final maxPixelsForDetailedView = await PreferencesModel.getWaveformMaxPixels();
-    final sampleRateFactor = await PreferencesModel.getWaveformSampleRateFactor();
-    final zoomMultiplier = await PreferencesModel.getWaveformZoomMultiplier();
+    // Get configurable settings through the injected persistence boundary.
+    final config = await _preferences.getGenerationConfig();
+    final maxPixelsForDetailedView = config.maxPixelsForDetailedView;
+    final sampleRateFactor = config.sampleRateFactor;
+    final zoomMultiplier = config.zoomMultiplier;
     
     // Minimum samples per pixel (most zoomed in) - adjusted for long audio
     final minSamplesPerPixel = math.max(1, totalSamples ~/ maxPixelsForDetailedView);
