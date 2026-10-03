@@ -100,7 +100,10 @@ class ProjectSubtitleLineData {
     });
   }
 
-  int get index => _json['index'] is int ? _json['index'] as int : 0;
+  int? get validIndex =>
+      _json['index'] is int ? _json['index'] as int : null;
+
+  int get index => validIndex ?? 0;
 
   String get startTime =>
       _json['startTime'] is String ? _json['startTime'] as String : '';
