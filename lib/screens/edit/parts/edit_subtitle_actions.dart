@@ -45,6 +45,7 @@ extension _EditSubtitleActions on _EditScreenState {
       if (effectLines.isNotEmpty) {
         // Apply the effect to the database
         final success = await SubtitleEffectOperations.applyEffectToSubtitleCollection(
+          isar: ref.read(isarProvider),
           subtitleCollectionId: widget.subtitleCollectionId,
           originalLineIndex: index, // Convert to 0-based
           effectLines: effectLines,
@@ -431,6 +432,7 @@ extension _EditSubtitleActions on _EditScreenState {
       loadingVisible = true;
 
       final result = await HearingImpairedCleanupService.execute(
+        isar: ref.read(isarProvider),
         checkpointRepository: ref.read(checkpointRepositoryProvider),
         sessionId: widget.sessionId,
         subtitleCollectionId: widget.subtitleCollectionId,
