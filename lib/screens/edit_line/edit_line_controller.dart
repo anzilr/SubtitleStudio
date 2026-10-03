@@ -51,7 +51,6 @@ final editLineRepositoryProvider = Provider<EditLineRepository>((ref) {
   return EditLineRepository(
     ref.watch(isarProvider),
     ref.watch(editLinePreferencesRepositoryProvider),
-    ref.watch(checkpointRepositoryProvider),
   );
 });
 
