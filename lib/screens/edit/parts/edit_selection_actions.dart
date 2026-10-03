@@ -13,46 +13,6 @@ extension _EditSelectionActions on _EditScreenState {
     return;
   }
 
-  final sortedIndices = _selectedIndices.toList()..sort((a, b) => b.compareTo(a));
-
-  // Create checkpoint before deletion
-  final List<SubtitleLineDelta> batchDeltas = [];
-  for (final index in sortedIndices) {
-    if (index >= 0 && index < subtitleLines.length) {
-      final line = subtitleLines[index];
-      
-      final lineCopy = SubtitleLine()
-        ..index = line.index
-        ..startTime = line.startTime
-        ..endTime = line.endTime
-        ..original = line.original
-        ..edited = line.edited
-        ..marked = line.marked
-        ..comment = line.comment;
-      
-      final delta = SubtitleLineDelta()
-        ..changeType = 'delete'
-        ..lineIndex = index
-        ..beforeState = lineCopy
-        ..afterState = null;
-      batchDeltas.add(delta);
-    }
-  }
-
-  if (batchDeltas.isNotEmpty) {
-    try {
-      await ref.read(checkpointRepositoryProvider).createCheckpoint(
-        sessionId: widget.sessionId,
-        subtitleCollectionId: widget.subtitleCollectionId,
-        operationType: 'delete',
-        description: 'Batch deleted ${batchDeltas.length} lines',
-        deltas: batchDeltas,
-      );
-    } catch (e) {
-      if (kDebugMode) print('Error creating batch checkpoint: $e');
-    }
-  }
-
   // Delete all selected cues with one Isar transaction and one refresh.
   final result = await _controller.deleteSelectedLines();
   final successCount = result['success'] ?? 0;
