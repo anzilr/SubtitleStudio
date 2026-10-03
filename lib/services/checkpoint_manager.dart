@@ -105,24 +105,8 @@ class CheckpointManager {
         metadata: jsonEncode({'reason': 'initial', 'lineCount': collection.lines.length}),
       );
       
-      // Rebuild the active path so normal forward creation has a complete
-      // ancestor chain, while undo remains distinguishable as a single active
-      // restored boundary until the next mutation occurs.
-      final remainingCheckpoints = await getCheckpointsForSession(sessionId);
-      final activePathIds = CheckpointTimeline.ancestorPathIds(
-        checkpoints: remainingCheckpoints,
-        fromCheckpointId: parentCheckpointId,
-      );
-
       int checkpointId = 0;
       await _isar.writeTxn(() async {
-        for (final existing in remainingCheckpoints) {
-          existing.isActive = activePathIds.contains(existing.id);
-        }
-        if (remainingCheckpoints.isNotEmpty) {
-          await _isar.checkpoints.putAll(remainingCheckpoints);
-        }
-
         checkpointId = await _isar.checkpoints.put(checkpoint);
       });
       
@@ -268,8 +252,21 @@ class CheckpointManager {
         metadata: metadata != null ? jsonEncode(metadata) : null,
       );
       
+      // Rebuild the active ancestor path before appending the new head.
+      final remainingCheckpoints = await getCheckpointsForSession(sessionId);
+      final activePathIds = CheckpointTimeline.ancestorPathIds(
+        checkpoints: remainingCheckpoints,
+        fromCheckpointId: parentCheckpointId,
+      );
+
       int checkpointId = 0;
       await _isar.writeTxn(() async {
+        for (final existing in remainingCheckpoints) {
+          existing.isActive = activePathIds.contains(existing.id);
+        }
+        if (remainingCheckpoints.isNotEmpty) {
+          await _isar.checkpoints.putAll(remainingCheckpoints);
+        }
         checkpointId = await _isar.checkpoints.put(checkpoint);
       });
       
