@@ -431,6 +431,7 @@ extension _EditSubtitleActions on _EditScreenState {
       loadingVisible = true;
 
       final result = await HearingImpairedCleanupService.execute(
+        checkpointRepository: ref.read(checkpointRepositoryProvider),
         sessionId: widget.sessionId,
         subtitleCollectionId: widget.subtitleCollectionId,
         currentLines: subtitleLines,
