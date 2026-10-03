@@ -25,14 +25,15 @@ class ProjectCommentImportPlan {
     final entries = <ProjectCommentImportEntry>[];
 
     for (final line in document.subtitleCollection.lines) {
+      final index = line.validIndex;
       final comment = line.comment;
-      if (comment == null || comment.trim().isEmpty) {
+      if (index == null || comment == null || comment.trim().isEmpty) {
         continue;
       }
 
       entries.add(
         ProjectCommentImportEntry(
-          index: line.index,
+          index: index,
           comment: comment,
           marked: line.marked,
           resolved: line.resolved,
