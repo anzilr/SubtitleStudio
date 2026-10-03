@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
 import 'package:subtitle_studio/app/providers/core_providers.dart';
+import 'package:subtitle_studio/utils/project_save_flow.dart';
 import 'package:subtitle_studio/screens/edit/providers/subtitle_repository_provider.dart';
 import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
 import 'package:subtitle_studio/utils/srt_compiler.dart';
@@ -21,7 +22,6 @@ import 'package:subtitle_studio/screens/screen_help.dart';
 import 'package:subtitle_studio/utils/responsive_layout.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/themes/theme_switcher_button.dart';
-import 'package:subtitle_studio/utils/project_manager.dart';
 import 'package:subtitle_studio/widgets/export_file_widget.dart';
 import 'package:subtitle_studio/widgets/project_settings_sheet.dart';
 import 'package:subtitle_studio/screens/edit_line/edit_line_host.dart'; // EditSubtitleScreenHost wrapper
