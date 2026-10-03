@@ -6,7 +6,7 @@ import 'package:subtitle_studio/utils/platform_file_handler.dart';
 import 'package:subtitle_studio/utils/saf_file_handler.dart';
 import 'package:subtitle_studio/utils/saf_path_converter.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
-import 'package:subtitle_studio/database/models/preferences_model.dart';
+import 'package:subtitle_studio/services/file_picker_preferences_repository.dart';
 
 /// Platform-specific file picker utilities using SAF on Android
 /// 
@@ -16,12 +16,34 @@ import 'package:subtitle_studio/database/models/preferences_model.dart';
 /// - iOS: Uses file_picker for native iOS file access
 class FilePickerSAF {
   static String? _lastUsedDirectory;
+  static FilePickerPreferencesRepository? _preferencesRepository;
 
-  // Add this initialization method
+  /// Inject persistence after Isar initialization.
+  ///
+  /// The picker API stays static during the file-access refactor, while its
+  /// database dependency is explicit and replaceable.
+  static void configurePreferences(
+    FilePickerPreferencesRepository repository,
+  ) {
+    _preferencesRepository = repository;
+    _lastUsedDirectory = null;
+  }
+
+  @visibleForTesting
+  static void resetPreferencesForTesting() {
+    _preferencesRepository = null;
+    _lastUsedDirectory = null;
+  }
+
   static Future<void> _initLastUsedDirectory() async {
     if (_lastUsedDirectory == null) {
-      _lastUsedDirectory = await PreferencesModel.getLastUsedDirectory();
+      _lastUsedDirectory =
+          await _preferencesRepository?.getLastUsedDirectory();
     }
+  }
+
+  static Future<void> _persistLastUsedDirectory() async {
+    await _preferencesRepository?.setLastUsedDirectory(_lastUsedDirectory);
   }
   
   /// Pick a single file with platform-specific implementation
@@ -267,8 +289,7 @@ class FilePickerSAF {
       if (result != null && result.files.single.path != null) {
         final filePath = result.files.single.path!;
         _lastUsedDirectory = File(filePath).parent.path;
-        // Save to shared preferences
-        await PreferencesModel.setLastUsedDirectory(_lastUsedDirectory);
+        await _persistLastUsedDirectory();
         return filePath;
       }
       return null;
@@ -291,9 +312,8 @@ class FilePickerSAF {
       );
 
       _lastUsedDirectory = selectedDirectory;
-      // Save to shared preferences
-      await PreferencesModel.setLastUsedDirectory(_lastUsedDirectory);
-          return selectedDirectory;
+      await _persistLastUsedDirectory();
+      return selectedDirectory;
     } catch (e) {
       debugPrint('Error picking folder on desktop: $e');
       return null;
