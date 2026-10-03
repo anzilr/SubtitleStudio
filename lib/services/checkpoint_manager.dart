@@ -105,8 +105,24 @@ class CheckpointManager {
         metadata: jsonEncode({'reason': 'initial', 'lineCount': collection.lines.length}),
       );
       
+      // Rebuild the active path so normal forward creation has a complete
+      // ancestor chain, while undo remains distinguishable as a single active
+      // restored boundary until the next mutation occurs.
+      final remainingCheckpoints = await getCheckpointsForSession(sessionId);
+      final activePathIds = CheckpointTimeline.ancestorPathIds(
+        checkpoints: remainingCheckpoints,
+        fromCheckpointId: parentCheckpointId,
+      );
+
       int checkpointId = 0;
       await _isar.writeTxn(() async {
+        for (final existing in remainingCheckpoints) {
+          existing.isActive = activePathIds.contains(existing.id);
+        }
+        if (remainingCheckpoints.isNotEmpty) {
+          await _isar.checkpoints.putAll(remainingCheckpoints);
+        }
+
         checkpointId = await _isar.checkpoints.put(checkpoint);
       });
       
@@ -143,22 +159,55 @@ class CheckpointManager {
     List<SubtitleLine>? preOperationState,
   }) async {
     try {
-      // Get the current active checkpoint (most recent active)
+      // Get the current active checkpoint (most recent active).
+      //
+      // Normal forward history keeps the active ancestor path. Restoring to a
+      // checkpoint intentionally collapses activity to the selected boundary.
+      // That distinction lets us tell whether a new edit continues forward or
+      // replaces an undone operation.
+      final sessionCheckpoints = await getCheckpointsForSession(sessionId);
       final currentHead = await _getCurrentHeadCheckpoint(sessionId);
-      
-      // CHECK FOR FUTURE CHECKPOINTS: If current head has children, delete them
-      // This happens when user restores to a checkpoint and then makes new changes
-      if (currentHead != null) {
-        final futureCheckpoints = await _isar.checkpoints
-            .filter()
-            .parentCheckpointIdEqualTo(currentHead.id)
-            .findAll();
-        
-        if (futureCheckpoints.isNotEmpty) {
-          // Delete all future checkpoints (they will be replaced by new timeline)
+      final activeCount =
+          sessionCheckpoints.where((checkpoint) => checkpoint.isActive).length;
+      final hasInactiveCheckpoints =
+          sessionCheckpoints.any((checkpoint) => !checkpoint.isActive);
+      final restoredBoundary = currentHead != null &&
+          activeCount == 1 &&
+          (hasInactiveCheckpoints || currentHead.parentCheckpointId != null);
+
+      int? parentCheckpointId = currentHead?.id;
+
+      if (currentHead != null && restoredBoundary) {
+        if (_isStateMarker(currentHead)) {
+          // Initial/manual checkpoints represent an exact state and therefore
+          // remain the parent of a new branch.
           await _deleteFutureCheckpoints(sessionId, currentHead.id);
-          logInfo('Deleted ${futureCheckpoints.length} future checkpoints from ${currentHead.id}');
+          parentCheckpointId = currentHead.id;
+        } else {
+          // Operation checkpoints represent the state BEFORE their operation.
+          // After restoring to one, a new edit replaces that undone operation,
+          // so both the target operation and all of its descendants are future
+          // history and must be removed.
+          final idsToDelete = CheckpointTimeline.descendantIds(
+            checkpoints: sessionCheckpoints,
+            parentCheckpointId: currentHead.id,
+          )..add(currentHead.id);
+
+          if (idsToDelete.isNotEmpty) {
+            await _isar.writeTxn(() async {
+              await _isar.checkpoints.deleteAll(idsToDelete.toList());
+            });
+          }
+
+          parentCheckpointId = currentHead.parentCheckpointId;
+          logInfo(
+            'Replaced restored checkpoint ${currentHead.id} and '
+            '${idsToDelete.length - 1} descendant checkpoint(s)',
+          );
         }
+      } else if (currentHead != null) {
+        // Defensive cleanup for stale descendants on a normal forward path.
+        await _deleteFutureCheckpoints(sessionId, currentHead.id);
       }
       
       // Get checkpoint strategy and snapshot interval from preferences
@@ -208,10 +257,13 @@ class CheckpointManager {
         timestamp: DateTime.now().toUtc(), // Store in UTC
         operationType: operationType,
         description: description,
-        parentCheckpointId: currentHead?.id,
+        parentCheckpointId: parentCheckpointId,
         isActive: true,
         checkpointType: shouldCreateSnapshot ? 'snapshot' : 'delta',
-        deltas: shouldCreateSnapshot ? [] : deltas, // Snapshots don't need deltas
+        // Snapshot checkpoints still keep their operation delta. The snapshot
+        // is the BEFORE state of that operation, so descendants need the delta
+        // to advance past the snapshot boundary during reconstruction.
+        deltas: deltas,
         snapshot: stateToCapture,
         metadata: metadata != null ? jsonEncode(metadata) : null,
       );
@@ -511,6 +563,17 @@ class CheckpointManager {
       // Step 2: Load the snapshot as base state
       // Snapshots store the BEFORE state, so this is already the pre-operation state
       final restoredLines = nearestSnapshot.snapshot.map((line) => CheckpointStateReducer.copyLine(line)).toList();
+
+      // Automatic snapshot checkpoints store the BEFORE state together with
+      // the operation delta. If the target is a descendant of that snapshot,
+      // replay the snapshot's own operation before walking later deltas.
+      if (nearestSnapshot.id != checkpointId &&
+          nearestSnapshot.deltas.isNotEmpty) {
+        CheckpointStateReducer.applyDeltasInPlace(
+          restoredLines,
+          nearestSnapshot.deltas,
+        );
+      }
       
       // Step 3: If target is the snapshot itself, we're done - snapshot already has BEFORE state
       if (nearestSnapshot.id == checkpointId) {
@@ -696,6 +759,12 @@ class CheckpointManager {
         'after checkpoint $afterCheckpointId',
       );
     }
+  }
+
+  bool _isStateMarker(Checkpoint checkpoint) {
+    return checkpoint.operationType == 'manual' ||
+        (checkpoint.operationType == 'snapshot' &&
+            checkpoint.description == 'Initial state');
   }
 
   /// Gets the current head checkpoint (most recent active)
