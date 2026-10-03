@@ -16,6 +16,13 @@ void main() {
   });
 
   group('PreferencesStore', () {
+    test('findFirst does not create a preferences row', () async {
+      final store = PreferencesStore(harness.isar);
+
+      expect(await store.findFirst(), isNull);
+      expect(await harness.isar.preferences.where().findAll(), isEmpty);
+    });
+
     test('concurrent getOrCreate calls keep a single row', () async {
       final store = PreferencesStore(harness.isar);
 
