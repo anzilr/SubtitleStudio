@@ -90,6 +90,15 @@ class CheckpointManager {
         logInfo('Initial snapshot already exists: ${existingInitial.id}');
         return existingInitial.id;
       }
+
+      final currentHead = await _getCurrentHeadCheckpoint(sessionId);
+      if (currentHead != null) {
+        logWarning(
+          'Refusing to create an initial snapshot in non-empty history '
+          'for session $sessionId.',
+        );
+        return 0;
+      }
       
       // Create initial snapshot
       final checkpoint = Checkpoint(
@@ -106,7 +115,11 @@ class CheckpointManager {
         metadata: jsonEncode({'reason': 'initial', 'lineCount': collection.lines.length}),
       );
       
-      final checkpointId = await _store.putCheckpoint(checkpoint);
+      final checkpointId = await _store.insertAsHead(
+        sessionId: sessionId,
+        expectedHeadId: null,
+        checkpoint: checkpoint,
+      );
       
       logInfo('Initial snapshot created: ID $checkpointId with ${collection.lines.length} lines');
       return checkpointId;
