@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:subtitle_studio/screens/edit/providers/subtitle_repository_provider.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/operations/subtitle_sync_operations.dart';
 import 'package:subtitle_studio/widgets/video_player_widget.dart';
@@ -500,6 +502,11 @@ class _SubtitleSyncSheetState extends State<SubtitleSyncSheet> {
                                       setState(() => _isProcessing = true);
                                       
                                       final result = await SubtitleSyncOperations.shiftTimecodes(
+                                        subtitleRepository:
+                                            ProviderScope.containerOf(
+                                          context,
+                                          listen: false,
+                                        ).read(subtitleRepositoryProvider),
                                         subtitleId: widget.subtitleId,
                                         subtitleLines: widget.subtitleLines,
                                         newStartTime: _startTimeController.text,
@@ -778,6 +785,11 @@ class _SubtitleSyncSheetState extends State<SubtitleSyncSheet> {
                                       setState(() => _isProcessing = true);
                                       
                                       final result = await SubtitleSyncOperations.adjustFramerate(
+                                        subtitleRepository:
+                                            ProviderScope.containerOf(
+                                          context,
+                                          listen: false,
+                                        ).read(subtitleRepositoryProvider),
                                         subtitleId: widget.subtitleId,
                                         subtitleLines: widget.subtitleLines,
                                         sourceFramerate: double.tryParse(_sourceFramerateController.text) ?? 23.976,
