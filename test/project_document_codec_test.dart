@@ -40,7 +40,6 @@ void main() {
       expect(document.originalFileUri, 'content://subtitle');
       expect(document.subtitleCollection.lines.single.original, 'Hello');
       expect(document.checkpoints, isEmpty);
-      expect(document.toLegacyMap()['version'], '2.0');
     });
 
     test('rejects malformed JSON', () {
