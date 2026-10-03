@@ -5,15 +5,20 @@ import 'support/test_isar_harness.dart';
 
 void main() {
   late TestIsarHarness harness;
+  bool harnessOpened = false;
   late FilePickerPreferencesRepository repository;
 
   setUp(() async {
     harness = await TestIsarHarness.open();
+    harnessOpened = true;
     repository = FilePickerPreferencesRepository(harness.isar);
   });
 
   tearDown(() async {
-    await harness.close();
+    if (harnessOpened) {
+      await harness.close();
+      harnessOpened = false;
+    }
   });
 
   group('FilePickerPreferencesRepository', () {
