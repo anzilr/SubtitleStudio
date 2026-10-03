@@ -1,5 +1,7 @@
 import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/database/models/models.dart';
+import 'package:subtitle_studio/database/stores/preferences_store.dart';
+import 'package:subtitle_studio/database/stores/video_preferences_store.dart';
 
 /// Typed preference snapshot used to initialize the Edit-Line screen.
 class EditLineStoredPreferences {
@@ -38,68 +40,34 @@ class EditLineStoredPreferences {
 /// testable dependency and loads initial preferences using one global
 /// preferences read plus one per-video preferences read.
 class EditLinePreferencesRepository {
-  final Isar _isar;
+  final PreferencesStore _preferencesStore;
+  final VideoPreferencesStore _videoPreferencesStore;
 
-  const EditLinePreferencesRepository(this._isar);
+  EditLinePreferencesRepository(Isar isar)
+      : _preferencesStore = PreferencesStore(isar),
+        _videoPreferencesStore = VideoPreferencesStore(isar);
 
-  Future<Preferences> _getPreferences() async {
-    final existing = await _isar.preferences.where().findFirst();
-    if (existing != null) return existing;
-
-    final created = Preferences(autoSave: true);
-    await _isar.writeTxn(() async {
-      await _isar.preferences.put(created);
-    });
-    return created;
+  Future<Preferences> _getPreferences() {
+    return _preferencesStore.getOrCreate();
   }
 
   Future<void> _updatePreferences(
     void Function(Preferences preferences) update,
-  ) async {
-    final existing = await _isar.preferences.where().findFirst();
-    final preferences = existing ?? Preferences(autoSave: true);
-    update(preferences);
-
-    await _isar.writeTxn(() async {
-      await _isar.preferences.put(preferences);
-    });
+  ) {
+    return _preferencesStore.update(update);
   }
 
   Future<VideoPreferences> _getVideoPreferences(
     int subtitleCollectionId,
-  ) async {
-    final existing = await _isar.videoPreferences
-        .filter()
-        .subtitleCollectionIdEqualTo(subtitleCollectionId)
-        .findFirst();
-
-    if (existing != null) return existing;
-
-    final created = VideoPreferences(
-      subtitleCollectionId: subtitleCollectionId,
-    );
-    await _isar.writeTxn(() async {
-      await _isar.videoPreferences.put(created);
-    });
-    return created;
+  ) {
+    return _videoPreferencesStore.getOrCreate(subtitleCollectionId);
   }
 
   Future<void> _updateVideoPreferences(
     int subtitleCollectionId,
     void Function(VideoPreferences preferences) update,
-  ) async {
-    final existing = await _isar.videoPreferences
-        .filter()
-        .subtitleCollectionIdEqualTo(subtitleCollectionId)
-        .findFirst();
-    final preferences = existing ??
-        VideoPreferences(subtitleCollectionId: subtitleCollectionId);
-
-    update(preferences);
-
-    await _isar.writeTxn(() async {
-      await _isar.videoPreferences.put(preferences);
-    });
+  ) {
+    return _videoPreferencesStore.update(subtitleCollectionId, update);
   }
 
   Future<EditLineStoredPreferences> load(int subtitleCollectionId) async {
