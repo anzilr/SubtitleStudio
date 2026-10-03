@@ -9,7 +9,6 @@ import 'package:subtitle_studio/utils/logging_helpers.dart';
 import 'package:subtitle_studio/widgets/video/subtitle.dart'; // For Subtitle
 import 'package:subtitle_studio/utils/subtitle_parser.dart'; // For SimpleSubtitleLine
 import 'package:subtitle_studio/utils/platform_file_handler.dart';
-import 'package:subtitle_studio/services/checkpoint_repository.dart';
 import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
 import 'package:subtitle_studio/services/checkpoint_history_transaction.dart';
 
@@ -34,13 +33,11 @@ import 'package:subtitle_studio/services/checkpoint_history_transaction.dart';
 class EditLineRepository {
   final Isar _isar;
   final EditLinePreferencesRepository _preferences;
-  final CheckpointRepository _checkpoints;
   final CheckpointHistoryTransaction _historyTransaction;
 
   EditLineRepository(
     this._isar,
     this._preferences,
-    this._checkpoints,
   ) : _historyTransaction = CheckpointHistoryTransaction(_isar);
 
   /// Fetch a single subtitle line by collection ID and index
