@@ -22,30 +22,20 @@ class ProjectCommentImportPlan {
   int get count => entries.length;
 
   factory ProjectCommentImportPlan.fromDocument(ProjectDocument document) {
-    final rawLines = document.subtitleCollection['lines'];
-    if (rawLines is! List) return const ProjectCommentImportPlan([]);
-
     final entries = <ProjectCommentImportEntry>[];
-    for (final rawLine in rawLines) {
-      if (rawLine is! Map) continue;
 
-      final line = Map<String, dynamic>.from(rawLine);
-      final index = line['index'];
-      final comment = line['comment'];
-
-      if (index is! int ||
-          comment is! String ||
-          comment.trim().isEmpty) {
+    for (final line in document.subtitleCollection.lines) {
+      final comment = line.comment;
+      if (comment == null || comment.trim().isEmpty) {
         continue;
       }
 
       entries.add(
         ProjectCommentImportEntry(
-          index: index,
+          index: line.index,
           comment: comment,
-          marked: line['marked'] is bool ? line['marked'] as bool : false,
-          resolved:
-              line['resolved'] is bool ? line['resolved'] as bool : false,
+          marked: line.marked,
+          resolved: line.resolved,
         ),
       );
     }
