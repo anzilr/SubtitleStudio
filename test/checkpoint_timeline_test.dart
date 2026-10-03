@@ -110,6 +110,63 @@ void main() {
       );
     });
 
+    test('counts snapshots along the selected branch only', () {
+      final checkpoints = [
+        _checkpoint(id: 6, parentId: 5, type: 'delta', second: 6),
+        _checkpoint(id: 5, parentId: 2, type: 'delta', second: 5),
+        _checkpoint(id: 4, parentId: 3, type: 'snapshot', second: 4),
+        _checkpoint(id: 3, parentId: 2, type: 'delta', second: 3),
+        _checkpoint(id: 2, parentId: 1, type: 'snapshot', second: 2),
+        _checkpoint(id: 1, type: 'snapshot', second: 1),
+      ];
+
+      expect(
+        CheckpointTimeline.countSinceNearestSnapshot(
+          checkpoints: checkpoints,
+          fromCheckpointId: 6,
+        ),
+        2,
+      );
+      expect(
+        CheckpointTimeline.countSinceNearestSnapshot(
+          checkpoints: checkpoints,
+          fromCheckpointId: 4,
+        ),
+        0,
+      );
+    });
+
+    test('cycle-safe nearest snapshot returns null for corrupt ancestry', () {
+      final first =
+          _checkpoint(id: 1, parentId: 2, type: 'delta', second: 1);
+      final second =
+          _checkpoint(id: 2, parentId: 1, type: 'delta', second: 2);
+
+      expect(
+        CheckpointTimeline.findNearestSnapshot(
+          checkpoints: [first, second],
+          targetCheckpointId: 2,
+        ),
+        isNull,
+      );
+    });
+
+    test('delta path fails when ancestry is broken', () {
+      final checkpoints = [
+        _checkpoint(id: 3, parentId: 99, type: 'delta', second: 3),
+        _checkpoint(id: 1, type: 'snapshot', second: 1),
+      ];
+
+      expect(
+        () => CheckpointTimeline.deltaPath(
+          checkpoints: checkpoints,
+          fromSnapshotId: 1,
+          toCheckpointId: 3,
+        ),
+        throwsStateError,
+      );
+    });
+
     test('collects ancestor path from a checkpoint to the root', () {
       final checkpoints = [
         _checkpoint(id: 1, type: 'snapshot', second: 1),
