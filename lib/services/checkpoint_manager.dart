@@ -39,14 +39,17 @@ import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
 import 'package:subtitle_studio/services/checkpoint_policy.dart';
 import 'package:subtitle_studio/services/checkpoint_timeline.dart';
 import 'package:subtitle_studio/services/checkpoint_preferences_repository.dart';
+import 'package:subtitle_studio/services/checkpoint_store.dart';
 import 'dart:convert';
 
 class CheckpointManager {
   final Isar _isar;
+  final CheckpointStore _store;
   final CheckpointPreferencesRepository _preferences;
 
   CheckpointManager(this._isar)
-      : _preferences = CheckpointPreferencesRepository(_isar);
+      : _store = CheckpointStore(_isar),
+        _preferences = CheckpointPreferencesRepository(_isar);
 
   // Get maximum checkpoints from preferences (0 = unlimited)
   Future<int> getMaxCheckpoints() {
@@ -70,20 +73,17 @@ class CheckpointManager {
     required int subtitleCollectionId,
   }) async {
     try {
-      final collection = await _isar.subtitleCollections.get(subtitleCollectionId);
+      final collection = await _store.getSubtitleCollection(subtitleCollectionId);
       if (collection == null) {
         logWarning('Subtitle collection not found for initial snapshot: $subtitleCollectionId');
         return 0; // Return 0 to indicate no snapshot was created
       }
       
       // Check if initial snapshot already exists
-      final existingInitial = await _isar.checkpoints
-          .filter()
-          .sessionIdEqualTo(sessionId)
-          .subtitleCollectionIdEqualTo(subtitleCollectionId)
-          .operationTypeEqualTo('snapshot')
-          .descriptionEqualTo('Initial state')
-          .findFirst();
+      final existingInitial = await _store.findInitialSnapshot(
+        sessionId: sessionId,
+        subtitleCollectionId: subtitleCollectionId,
+      );
       
       if (existingInitial != null) {
         logInfo('Initial snapshot already exists: ${existingInitial.id}');
@@ -105,10 +105,7 @@ class CheckpointManager {
         metadata: jsonEncode({'reason': 'initial', 'lineCount': collection.lines.length}),
       );
       
-      int checkpointId = 0;
-      await _isar.writeTxn(() async {
-        checkpointId = await _isar.checkpoints.put(checkpoint);
-      });
+      final checkpointId = await _store.putCheckpoint(checkpoint);
       
       logInfo('Initial snapshot created: ID $checkpointId with ${collection.lines.length} lines');
       return checkpointId;
@@ -178,9 +175,7 @@ class CheckpointManager {
           )..add(currentHead.id);
 
           if (idsToDelete.isNotEmpty) {
-            await _isar.writeTxn(() async {
-              await _isar.checkpoints.deleteAll(idsToDelete.toList());
-            });
+            await _store.deleteCheckpointIds(idsToDelete);
           }
 
           parentCheckpointId = currentHead.parentCheckpointId;
@@ -215,7 +210,7 @@ class CheckpointManager {
       );
       
       // Get current subtitle collection state (for fallback if preOperationState not provided)
-      final collection = await _isar.subtitleCollections.get(subtitleCollectionId);
+      final collection = await _store.getSubtitleCollection(subtitleCollectionId);
       if (collection == null) {
         throw Exception('Subtitle collection not found');
       }
@@ -259,16 +254,11 @@ class CheckpointManager {
         fromCheckpointId: parentCheckpointId,
       );
 
-      int checkpointId = 0;
-      await _isar.writeTxn(() async {
-        for (final existing in remainingCheckpoints) {
-          existing.isActive = activePathIds.contains(existing.id);
-        }
-        if (remainingCheckpoints.isNotEmpty) {
-          await _isar.checkpoints.putAll(remainingCheckpoints);
-        }
-        checkpointId = await _isar.checkpoints.put(checkpoint);
-      });
+      final checkpointId = await _store.replaceActivePathAndInsert(
+        existingCheckpoints: remainingCheckpoints,
+        activePathIds: activePathIds,
+        checkpoint: checkpoint,
+      );
       
       logInfo('Checkpoint created: $operationType - $description (ID: $checkpointId, Type: ${checkpoint.checkpointType})');
       
@@ -291,7 +281,7 @@ class CheckpointManager {
     required int deletedIndex,
   }) async {
     // Get current state BEFORE delete operation
-    final collection = await _isar.subtitleCollections.get(subtitleCollectionId);
+    final collection = await _store.getSubtitleCollection(subtitleCollectionId);
     if (collection == null) {
       throw Exception('Subtitle collection not found');
     }
@@ -324,7 +314,7 @@ class CheckpointManager {
     // Get current state BEFORE add operation (if not provided)
     List<SubtitleLine>? stateBeforeAdd = preOperationState;
     if (stateBeforeAdd == null) {
-      final collection = await _isar.subtitleCollections.get(subtitleCollectionId);
+      final collection = await _store.getSubtitleCollection(subtitleCollectionId);
       if (collection == null) {
         throw Exception('Subtitle collection not found');
       }
@@ -359,7 +349,7 @@ class CheckpointManager {
     var stateBeforeEdit = preOperationState;
     if (stateBeforeEdit == null) {
       final collection =
-          await _isar.subtitleCollections.get(subtitleCollectionId);
+          await _store.getSubtitleCollection(subtitleCollectionId);
       if (collection == null) {
         throw Exception('Subtitle collection not found');
       }
@@ -395,7 +385,7 @@ class CheckpointManager {
     // Get current state BEFORE split operation (if not provided)
     List<SubtitleLine>? stateBeforeSplit = preOperationState;
     if (stateBeforeSplit == null) {
-      final collection = await _isar.subtitleCollections.get(subtitleCollectionId);
+      final collection = await _store.getSubtitleCollection(subtitleCollectionId);
       if (collection == null) {
         throw Exception('Subtitle collection not found');
       }
@@ -438,7 +428,7 @@ class CheckpointManager {
     // Get current state BEFORE merge operation (if not provided)
     List<SubtitleLine>? stateBeforeMerge = preOperationState;
     if (stateBeforeMerge == null) {
-      final collection = await _isar.subtitleCollections.get(subtitleCollectionId);
+      final collection = await _store.getSubtitleCollection(subtitleCollectionId);
       if (collection == null) {
         throw Exception('Subtitle collection not found');
       }
@@ -494,13 +484,13 @@ class CheckpointManager {
     required int sessionId,
   }) async {
     try {
-      final targetCheckpoint = await _isar.checkpoints.get(checkpointId);
+      final targetCheckpoint = await _store.getCheckpoint(checkpointId);
       if (targetCheckpoint == null) {
         logError('Checkpoint not found: $checkpointId');
         return false;
       }
       
-      final collection = await _isar.subtitleCollections.get(targetCheckpoint.subtitleCollectionId);
+      final collection = await _store.getSubtitleCollection(targetCheckpoint.subtitleCollectionId);
       if (collection == null) {
         logError('Subtitle collection not found');
         return false;
@@ -526,7 +516,7 @@ class CheckpointManager {
             subtitleCollectionId: targetCheckpoint.subtitleCollectionId,
           );
           
-          nearestSnapshot = await _isar.checkpoints.get(snapshotId);
+          nearestSnapshot = await _store.getCheckpoint(snapshotId);
           
           if (nearestSnapshot == null) {
             logError('Failed to create fallback snapshot');
