@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:subtitle_studio/database/database_helper.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/utils/time_parser.dart';
 
