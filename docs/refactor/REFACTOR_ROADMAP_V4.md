@@ -3,8 +3,8 @@
 Date: 2026-10-03
 Branch: `refactor/riverpod-architecture`
 Original audit head: `cff387f69257e37bb3b6ef26111b2683a57bf510`
-Current verified checkpoint: `04a1d2b9b03522519fa2dce1f5c9439e87bd5a59` (checkpoint 43)
-Current verification: `flutter analyze` = 0 issues; `flutter test -j 1` = 136 passed
+Current verified checkpoint: `c0c95ead5f513cbb47f0f625f441110b5cd95304` (checkpoint 45)
+Current verification: `flutter analyze` = 0 issues; `flutter test -j 1` = 138 passed
 Five-platform build gate: `53422ce` (Android, Windows, Linux, macOS, iOS all green)
 
 ## 1. Current progress at checkpoint 43
@@ -21,8 +21,10 @@ Completed since the original v4 audit:
 - Session deletion now cascades checkpoint/video-preference cleanup without deleting unrelated sessions.
 - The typed project pipeline is complete from codec/builder through save, preview, session selection, and import persistence.
 - `ProjectDocument.toLegacyMap()` is removed; dynamic maps remain only at JSON serialization boundaries or unrelated file-selection metadata.
+- `ProjectManager` is removed. Project save construction/persistence now lives in injected `ProjectSaveCoordinator`; presentation interaction lives in `ProjectSaveFlow`/widgets.
+- `CheckpointStore` now owns raw checkpoint/collection Isar persistence. `CheckpointManager` contains no direct Isar query/write calls and its obsolete commented legacy methods are removed.
 - Exported checkpoint IDs are preserved and remapped to fresh Isar IDs during project import.
-- Checkpoint 43 is green with zero analyzer issues and 136 passing tests.
+- Checkpoint 45 is green with zero analyzer issues and 138 passing tests.
 
 Remaining work is concentrated in Phases 4-12 below. In particular, Phase 4 still needs `ProjectManager` orchestration/UI decomposition even though project data typing is complete.
 
