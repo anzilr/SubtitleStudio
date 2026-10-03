@@ -275,6 +275,8 @@ class SubtitleActionsMenu extends StatelessWidget {
       if (effectLines.isNotEmpty) {
         // Apply the effect to the database
         final success = await SubtitleEffectOperations.applyEffectToSubtitleCollection(
+          isar: ProviderScope.containerOf(context, listen: false)
+              .read(isarProvider),
           subtitleCollectionId: subtitleId,
           originalLineIndex: currentLine.index - 1, // Convert to 0-based
           effectLines: effectLines,
