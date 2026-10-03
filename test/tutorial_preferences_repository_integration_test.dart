@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/services/tutorial_preferences_repository.dart';
 
 import 'support/test_isar_harness.dart';
