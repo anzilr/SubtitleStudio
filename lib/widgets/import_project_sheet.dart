@@ -368,8 +368,7 @@ class _ImportProjectSheetState extends State<ImportProjectSheet> {
           ),
           if (exportedAt != null)
             _buildInfoRow('Exported', _formatDateTime(exportedAt)),
-          if (version != null)
-            _buildInfoRow('Version', version),
+          _buildInfoRow('Version', version),
         ],
       ),
     );
