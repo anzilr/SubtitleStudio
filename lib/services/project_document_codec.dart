@@ -476,7 +476,6 @@ class ProjectDocument {
     return json;
   }
 
-  Map<String, dynamic> toLegacyMap() => toJson();
 }
 
 class ProjectDocumentCodec {
