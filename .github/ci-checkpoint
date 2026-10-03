@@ -1,14 +1,12 @@
-Riverpod migration checkpoint 30
+Riverpod migration checkpoint 31
 Date: 2026-10-03
 Checks:
 - flutter analyze
 - flutter test
 
 Focus:
-- repair checkpoint active-path persistence after static audit
-- inject missing CheckpointRepository dependencies in editor cleanup and project save
-- restore CheckpointRepository type import in auto project saver
-- import generated Isar collection extensions in persistence integration tests
-- verify checkpoint 29 analyzer failures are fully resolved
+- import Isar query extensions in persistence integration tests
+- verify checkpoint 30 production-code fixes remain clean
+- advance from analyzer into full Flutter test execution
 
 Platform builds intentionally disabled.
