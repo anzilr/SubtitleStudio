@@ -244,6 +244,7 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
 
           final projectPath = await ProjectManager.saveProject(
             context: context,
+            checkpointRepository: ref.read(checkpointRepositoryProvider),
             session: session,
             subtitleCollection: subtitleCollection,
             forceNewLocation: true,
