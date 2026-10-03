@@ -1,50 +1,28 @@
 import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/database/models/models.dart';
+import 'package:subtitle_studio/database/stores/video_preferences_store.dart';
 
 /// Isar-backed Waveform preferences.
 ///
 /// Keeps waveform state management independent from the legacy static
 /// PreferencesModel/global Isar access.
 class WaveformPreferencesRepository {
-  final Isar _isar;
+  final VideoPreferencesStore _videoPreferencesStore;
 
-  const WaveformPreferencesRepository(this._isar);
+  WaveformPreferencesRepository(Isar isar)
+      : _videoPreferencesStore = VideoPreferencesStore(isar);
 
   Future<VideoPreferences> _getVideoPreferences(
     int subtitleCollectionId,
-  ) async {
-    final existing = await _isar.videoPreferences
-        .filter()
-        .subtitleCollectionIdEqualTo(subtitleCollectionId)
-        .findFirst();
-
-    if (existing != null) return existing;
-
-    final created = VideoPreferences(
-      subtitleCollectionId: subtitleCollectionId,
-    );
-    await _isar.writeTxn(() async {
-      await _isar.videoPreferences.put(created);
-    });
-    return created;
+  ) {
+    return _videoPreferencesStore.getOrCreate(subtitleCollectionId);
   }
 
   Future<void> _updateVideoPreferences(
     int subtitleCollectionId,
     void Function(VideoPreferences preferences) update,
-  ) async {
-    final existing = await _isar.videoPreferences
-        .filter()
-        .subtitleCollectionIdEqualTo(subtitleCollectionId)
-        .findFirst();
-    final preferences = existing ??
-        VideoPreferences(subtitleCollectionId: subtitleCollectionId);
-
-    update(preferences);
-
-    await _isar.writeTxn(() async {
-      await _isar.videoPreferences.put(preferences);
-    });
+  ) {
+    return _videoPreferencesStore.update(subtitleCollectionId, update);
   }
 
   Future<String?> getSelectedAudioTrackId(
