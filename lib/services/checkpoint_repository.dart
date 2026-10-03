@@ -72,6 +72,16 @@ class CheckpointRepository {
     );
   }
 
+  Future<bool> redoToCheckpoint({
+    required int checkpointId,
+    required int sessionId,
+  }) {
+    return _manager.redoToCheckpoint(
+      checkpointId: checkpointId,
+      sessionId: sessionId,
+    );
+  }
+
   Future<int> createManualCheckpoint({
     required int sessionId,
     required int subtitleCollectionId,
