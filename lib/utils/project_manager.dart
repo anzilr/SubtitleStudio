@@ -41,7 +41,7 @@ class ProjectManager {
       if (Platform.isAndroid) {
         return await _saveProjectWithSAF(
           context: context,
-          projectData: projectData,
+          projectDocument: projectDocument,
           fileName: fileName,
         );
       } else if (Platform.isIOS) {
@@ -288,7 +288,7 @@ class ProjectManager {
   /// Show session selection sheet for replacing import data or importing as new
   static Future<Session?> showSessionSelectionSheet({
     required BuildContext context,
-    required Map<String, dynamic> projectData,
+    required ProjectDocument projectDocument,
     String? originalFileUri,
     Function(Session)? onProjectImported,
   }) async {
