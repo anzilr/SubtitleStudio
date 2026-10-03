@@ -1,13 +1,14 @@
-Riverpod migration checkpoint 32
+Riverpod migration checkpoint 33
 Date: 2026-10-03
 Checks:
 - flutter analyze
 - flutter test -j 1
 
 Focus:
-- initialize Isar Core for unit tests with downloadable native binary
-- serialize Flutter tests for Isar native initialization safety
-- make Isar integration-test teardown resilient to setup failure
-- verify persistence/checkpoint integration tests execute behaviorally
+- remove retired PreferencesModel
+- remove final CheckpointRepository.fromGlobal bridge and dead database helper
+- inject Isar into subtitle effect and hearing-impaired cleanup persistence
+- make effect checkpoints capture pre-operation state and replayable deltas
+- add effect delta reconstruction tests
 
 Platform builds intentionally disabled.
