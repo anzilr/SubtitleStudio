@@ -1,19 +1,14 @@
-Riverpod migration checkpoint 47
+Riverpod migration checkpoint 48
 Date: 2026-10-03
 Checks:
 - flutter analyze
 - flutter test -j 1
 
-Checkpoint redesign stage 2a:
-- add versioned checkpoint metadata for legacy PRE-operation vs v2 AFTER-operation semantics
-- mark new initial snapshots as v2 post-state snapshots
-- add atomic working-tree + checkpoint + HEAD transaction service
-- migrate Editor line saves to atomic v2 commits
-- migrate Edit Line saves to atomic v2 commits
-- force snapshots for timing edits that can reorder cues
-- force a snapshot when crossing between legacy and v2 state semantics
-- restore v2 commits as state-after-operation while retaining legacy restore support
-- verify failed atomic edits leave both collection and history unchanged
-- reject corrupt imported history while preserving imported subtitle content
+Checkpoint redesign stage 2a verification:
+- expose redo/checkout through CheckpointRepository
+- remove obsolete EditLineRepository checkpoint dependency after atomic migration
+- verify v2 post-operation edit commits and legacy compatibility
+- verify failed atomic edits roll back collection/history together
+- verify corrupt imported history is discarded safely
 
 Platform builds intentionally disabled.
