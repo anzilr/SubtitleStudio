@@ -1,5 +1,5 @@
 import 'package:subtitle_studio/database/models/models.dart';
-import 'package:subtitle_studio/database/database_instance.dart';
+import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/utils/time_parser.dart';
 import 'package:subtitle_studio/operations/subtitle_sync_operations.dart'; // For formatDuration
 import 'package:subtitle_studio/utils/subtitle_sorting.dart'; // Enhanced subtitle sorting
@@ -221,6 +221,7 @@ class SubtitleEffectOperations {
   
   /// Apply effects to subtitle collection in database
   static Future<bool> applyEffectToSubtitleCollection({
+    required Isar isar,
     required int subtitleCollectionId,
     required int originalLineIndex,
     required List<SubtitleLine> effectLines,
