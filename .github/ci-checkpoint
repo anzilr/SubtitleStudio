@@ -1,13 +1,14 @@
-Riverpod migration checkpoint 43
+Riverpod migration checkpoint 44
 Date: 2026-10-03
 Checks:
 - flutter analyze
 - flutter test -j 1
 
 Focus:
-- clear final non-fatal analyzer warnings after typed project migration
-- await banner repository persistence inside guarded operation
-- remove redundant typed project version null check
-- final verification target: zero analyzer issues and full test suite green
+- add CheckpointStore as the low-level Isar persistence boundary
+- move checkpoint creation, restore, active-head, cleanup, and session-history persistence out of CheckpointManager
+- remove raw Isar access and dead commented legacy methods from CheckpointManager
+- add direct CheckpointStore Isar integration coverage
+- verify existing checkpoint branching/restore regression suites remain green
 
 Platform builds intentionally disabled.
