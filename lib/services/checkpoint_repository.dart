@@ -1,24 +1,15 @@
 import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/database/models/models.dart';
-import 'package:subtitle_studio/database/database_instance.dart' as legacy_database;
 import 'package:subtitle_studio/services/checkpoint_manager.dart';
 
 /// Injectable checkpoint boundary used by migrated repositories.
 ///
 /// Checkpoint algorithms and persistence are owned by an Isar-injected
-/// CheckpointManager instance. The [fromGlobal] factory is a temporary bridge
-/// for legacy static orchestration code that has not yet been Riverpod-injected.
+/// CheckpointManager instance.
 class CheckpointRepository {
   final CheckpointManager _manager;
 
   CheckpointRepository(Isar isar) : _manager = CheckpointManager(isar);
-
-  /// Temporary bridge for legacy static orchestration code.
-  ///
-  /// New Riverpod-managed code must use the injected constructor.
-  factory CheckpointRepository.fromGlobal() {
-    return CheckpointRepository(legacy_database.isar);
-  }
 
   Future<int> createInitialSnapshot({
     required int sessionId,
