@@ -6,6 +6,22 @@ import 'package:subtitle_studio/database/models/models.dart';
 /// This store owns checkpoint/collection queries and atomic writes only.
 /// Checkpoint policy, branching decisions, reconstruction, and user-facing
 /// orchestration remain in CheckpointManager and the pure checkpoint helpers.
+class CheckpointConcurrentModificationException implements Exception {
+  final int? expectedHeadId;
+  final int? actualHeadId;
+
+  const CheckpointConcurrentModificationException({
+    required this.expectedHeadId,
+    required this.actualHeadId,
+  });
+
+  @override
+  String toString() {
+    return 'CheckpointConcurrentModificationException: '
+        'expected HEAD $expectedHeadId, actual HEAD $actualHeadId';
+  }
+}
+
 class CheckpointStore {
   final Isar _isar;
 
@@ -64,6 +80,44 @@ class CheckpointStore {
     await _isar.writeTxn(() async {
       await _isar.checkpoints.deleteAll(ids);
     });
+  }
+
+  Future<int> insertAsHead({
+    required int sessionId,
+    required int? expectedHeadId,
+    required Checkpoint checkpoint,
+  }) async {
+    late int checkpointId;
+
+    await _isar.writeTxn(() async {
+      final activeCheckpoints = await _isar.checkpoints
+          .filter()
+          .sessionIdEqualTo(sessionId)
+          .isActiveEqualTo(true)
+          .sortByTimestampDesc()
+          .findAll();
+
+      final actualHeadId =
+          activeCheckpoints.isEmpty ? null : activeCheckpoints.first.id;
+      if (actualHeadId != expectedHeadId) {
+        throw CheckpointConcurrentModificationException(
+          expectedHeadId: expectedHeadId,
+          actualHeadId: actualHeadId,
+        );
+      }
+
+      for (final existing in activeCheckpoints) {
+        existing.isActive = false;
+      }
+      if (activeCheckpoints.isNotEmpty) {
+        await _isar.checkpoints.putAll(activeCheckpoints);
+      }
+
+      checkpoint.isActive = true;
+      checkpointId = await _isar.checkpoints.put(checkpoint);
+    });
+
+    return checkpointId;
   }
 
   Future<int> replaceActivePathAndInsert({
