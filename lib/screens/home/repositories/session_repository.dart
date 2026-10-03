@@ -164,6 +164,32 @@ class SessionRepository {
       );
       
       await _isar.writeTxn(() async {
+        final checkpoints = await _isar.checkpoints
+            .filter()
+            .sessionIdEqualTo(session.id)
+            .findAll();
+        if (checkpoints.isNotEmpty) {
+          await _isar.checkpoints.deleteAll(
+            checkpoints.map((checkpoint) => checkpoint.id).toList(),
+          );
+        }
+
+        final videoPreferences = await _isar.videoPreferences
+            .filter()
+            .subtitleCollectionIdEqualTo(session.subtitleCollectionId)
+            .findAll();
+        if (videoPreferences.isNotEmpty) {
+          await _isar.videoPreferences.deleteAll(
+            videoPreferences.map((preferences) => preferences.id).toList(),
+          );
+        }
+
+        final preferences = await _isar.preferences.where().findFirst();
+        if (preferences?.lastEditedSession == session.id) {
+          preferences!.lastEditedSession = null;
+          await _isar.preferences.put(preferences);
+        }
+
         await _isar.subtitleCollections.delete(session.subtitleCollectionId);
         await _isar.sessions.delete(session.id);
       });
