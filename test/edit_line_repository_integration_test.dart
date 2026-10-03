@@ -4,6 +4,7 @@ import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/screens/edit_line/repositories/edit_line_preferences_repository.dart';
 import 'package:subtitle_studio/screens/edit_line/repositories/edit_line_repository.dart';
 import 'package:subtitle_studio/services/checkpoint_repository.dart';
+import 'package:subtitle_studio/services/checkpoint_history_metadata.dart';
 
 import 'support/test_isar_harness.dart';
 
@@ -88,7 +89,7 @@ void main() {
   });
 
   group('EditLineRepository persistence', () {
-    test('save stores edit and snapshots the true pre-edit state', () async {
+    test('save stores an atomic v2 post-operation checkpoint', () async {
       final ids = await _seed(harness);
       await harness.isar.writeTxn(() async {
         await harness.isar.preferences.put(
@@ -98,6 +99,13 @@ void main() {
           ),
         );
       });
+
+      final checkpoints = CheckpointRepository(harness.isar);
+      final initialId = await checkpoints.createInitialSnapshot(
+        sessionId: ids.sessionId,
+        subtitleCollectionId: ids.collectionId,
+      );
+      expect(initialId, isNot(0));
 
       final before =
           await repository.fetchSubtitleLine(ids.collectionId, 1);
@@ -125,22 +133,83 @@ void main() {
           await repository.fetchSubtitleLine(ids.collectionId, 1);
       expect(stored?.edited, 'Translated one');
 
-      final checkpoints = await harness.isar.checkpoints
+      final history = await harness.isar.checkpoints
           .filter()
           .sessionIdEqualTo(ids.sessionId)
+          .sortByTimestamp()
           .findAll();
-      expect(checkpoints, hasLength(1));
+      expect(history, hasLength(2));
 
-      final checkpoint = checkpoints.single;
+      final checkpoint = history.last;
+      expect(CheckpointHistoryMetadata.isPostOperation(checkpoint), isTrue);
+      expect(checkpoint.parentCheckpointId, initialId);
       expect(checkpoint.checkpointType, 'snapshot');
       expect(checkpoint.snapshot, hasLength(2));
       expect(checkpoint.snapshot.first.original, 'One');
-      expect(checkpoint.snapshot.first.edited, isNull);
+      expect(checkpoint.snapshot.first.edited, 'Translated one');
       expect(checkpoint.deltas, hasLength(1));
       expect(checkpoint.deltas.single.beforeState?.edited, isNull);
       expect(
         checkpoint.deltas.single.afterState?.edited,
         'Translated one',
+      );
+
+      expect(
+        await checkpoints.undoToCheckpoint(
+          checkpointId: initialId,
+          sessionId: ids.sessionId,
+        ),
+        isTrue,
+      );
+      expect(
+        (await repository.fetchSubtitleLine(ids.collectionId, 1))?.edited,
+        isNull,
+      );
+
+      expect(
+        await checkpoints.redoToCheckpoint(
+          checkpointId: checkpoint.id,
+          sessionId: ids.sessionId,
+        ),
+        isTrue,
+      );
+      expect(
+        (await repository.fetchSubtitleLine(ids.collectionId, 1))?.edited,
+        'Translated one',
+      );
+    });
+
+    test('failed atomic edit leaves collection and history unchanged',
+        () async {
+      final ids = await _seed(harness);
+      final invalid = _line(
+        index: 99,
+        original: 'Invalid',
+        start: '00:00:09,000',
+        end: '00:00:09,900',
+      );
+
+      expect(
+        await repository.saveSubtitleLineChanges(
+          collectionId: ids.collectionId,
+          updatedLine: invalid,
+          sessionId: ids.sessionId,
+        ),
+        isFalse,
+      );
+
+      final collection =
+          await repository.fetchSubtitleCollection(ids.collectionId);
+      expect(
+        collection!.lines.map((line) => line.original).toList(),
+        ['One', 'Two'],
+      );
+      expect(
+        await harness.isar.checkpoints
+            .filter()
+            .sessionIdEqualTo(ids.sessionId)
+            .findAll(),
+        isEmpty,
       );
     });
 
