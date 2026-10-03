@@ -1,13 +1,16 @@
-Riverpod migration checkpoint 38
+Riverpod migration checkpoint 39
 Date: 2026-10-03
 Checks:
 - flutter analyze
 - flutter test -j 1
 
 Focus:
-- centralize remaining editor/import/session singleton preference access through PreferencesStore
-- preserve SessionRepository cascade behavior with store-backed preference reads
-- verify all production Preferences singleton create/update logic now lives in PreferencesStore
-- revalidate repository integration suites before typed project migration
+- add typed project session/collection/line/checkpoint/delta/metadata DTOs
+- make ProjectDocumentBuilder return ProjectDocument instead of dynamic maps
+- carry typed ProjectDocument through ProjectManager save/update paths
+- migrate SessionProjectImportRepository to typed project input
+- migrate SessionSelectionSheet and ImportProjectSheet off legacy project maps
+- export checkpoint IDs and verify parent ID remapping during typed project import
+- preserve .msone JSON compatibility through ProjectDocumentCodec
 
 Platform builds intentionally disabled.
