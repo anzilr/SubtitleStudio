@@ -1,5 +1,6 @@
 import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/database/models/models.dart';
+import 'package:subtitle_studio/database/stores/preferences_store.dart';
 import 'package:subtitle_studio/utils/subtitle_sorting.dart';
 import 'package:subtitle_studio/widgets/video/subtitle.dart';
 import 'package:subtitle_studio/utils/subtitle_parser.dart';
@@ -25,8 +26,10 @@ import 'package:subtitle_studio/screens/edit/services/source_view_reconciler.dar
 class SubtitleRepository {
   final Isar _isar;
   final CheckpointRepository _checkpoints;
+  final PreferencesStore _preferencesStore;
 
-  SubtitleRepository(this._isar, this._checkpoints);
+  SubtitleRepository(this._isar, this._checkpoints)
+      : _preferencesStore = PreferencesStore(_isar);
 
   /// Fetch all subtitle lines for a collection
   Future<List<SubtitleLine>> fetchLines(int collectionId) async {
@@ -682,12 +685,9 @@ class SubtitleRepository {
         );
       }
 
-      await _isar.writeTxn(() async {
-        final preferences = await _isar.preferences.where().findFirst() ??
-            Preferences(autoSave: true);
-        preferences.lastEditedSession = sessionId;
-        await _isar.preferences.put(preferences);
-      });
+      await _preferencesStore.update(
+        (preferences) => preferences.lastEditedSession = sessionId,
+      );
       logInfo('SubtitleRepository: Successfully updated last edited session');
     } catch (e) {
       logError('SubtitleRepository: Error updating last edited session: $e');
