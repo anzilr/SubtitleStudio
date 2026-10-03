@@ -1,16 +1,13 @@
-Riverpod migration checkpoint 39
+Riverpod migration checkpoint 40
 Date: 2026-10-03
 Checks:
 - flutter analyze
 - flutter test -j 1
 
 Focus:
-- add typed project session/collection/line/checkpoint/delta/metadata DTOs
-- make ProjectDocumentBuilder return ProjectDocument instead of dynamic maps
-- carry typed ProjectDocument through ProjectManager save/update paths
-- migrate SessionProjectImportRepository to typed project input
-- migrate SessionSelectionSheet and ImportProjectSheet off legacy project maps
-- export checkpoint IDs and verify parent ID remapping during typed project import
-- preserve .msone JSON compatibility through ProjectDocumentCodec
+- fix typed project pipeline analyzer fallout from checkpoint 39
+- use typed project lines in comment import
+- correct ProjectManager typed save/session-selection parameter wiring
+- verify typed project import parent remapping integration test
 
 Platform builds intentionally disabled.
