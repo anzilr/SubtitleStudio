@@ -26,12 +26,14 @@ class CheckpointRepository {
     required int subtitleCollectionId,
     required SubtitleLine beforeLine,
     required SubtitleLine afterLine,
+    List<SubtitleLine>? preOperationState,
   }) {
     return _manager.createEditCheckpoint(
       sessionId: sessionId,
       subtitleCollectionId: subtitleCollectionId,
       beforeLine: beforeLine,
       afterLine: afterLine,
+      preOperationState: preOperationState,
     );
   }
 
