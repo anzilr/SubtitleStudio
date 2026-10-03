@@ -139,4 +139,64 @@ void main() {
     expect(collection!.fileName, 'typed.srt');
     expect(collection.lines.single.original, 'One');
   });
+  test('invalid imported checkpoint graph is discarded without losing subtitles',
+      () async {
+    final broken = ProjectCheckpointData.create(
+      id: 300,
+      sessionId: 7,
+      subtitleCollectionId: 11,
+      timestamp: DateTime.utc(2026, 10, 3, 14).toIso8601String(),
+      operationType: 'edit',
+      description: 'Broken history',
+      parentCheckpointId: 999,
+      isActive: true,
+      checkpointType: 'delta',
+      metadata: null,
+      deltas: const [],
+      snapshot: const [],
+    );
+
+    final document = ProjectDocument.create(
+      version: '2.0',
+      appVersion: '3.0.0',
+      session: ProjectSessionData.create(
+        fileName: 'broken-history.srt',
+        lastEditedIndex: null,
+        editMode: true,
+        projectFilePath: null,
+      ),
+      subtitleCollection: ProjectSubtitleCollectionData.create(
+        fileName: 'broken-history.srt',
+        filePath: null,
+        originalFileUri: null,
+        encoding: 'UTF-8',
+        lines: [_line(1, 'Recovered subtitle')],
+      ),
+      checkpoints: [broken],
+      metadata: ProjectMetadataData.create(
+        totalLines: 1,
+        editedLines: 0,
+        markedLines: 0,
+        lastSaved: DateTime.utc(2026, 10, 3).toIso8601String(),
+      ),
+    );
+
+    final session = await repository.importAsNewSession(
+      projectDocument: document,
+      srtFileInfo: const {'useImportingFile': 'true'},
+      originalProjectUri: '/projects/broken-history.msone',
+    );
+
+    final collection =
+        await harness.isar.subtitleCollections.get(session.subtitleCollectionId);
+    expect(collection, isNotNull);
+    expect(collection!.lines.single.original, 'Recovered subtitle');
+
+    final history = await harness.isar.checkpoints
+        .filter()
+        .sessionIdEqualTo(session.id)
+        .findAll();
+    expect(history, isEmpty);
+  });
+
 }
