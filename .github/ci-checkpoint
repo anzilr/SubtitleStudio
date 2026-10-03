@@ -1,16 +1,16 @@
-Riverpod migration checkpoint 27
+Riverpod migration checkpoint 28
 Date: 2026-10-03
 Checks:
 - flutter analyze
 - flutter test
 
 Focus:
-- reusable temporary Isar integration-test harness using production schemas
-- PreferencesStore singleton persistence boundary
-- VideoPreferencesStore per-subtitle persistence boundary
-- AppPreferencesRepository migrated to PreferencesStore
-- CheckpointPreferencesRepository migrated to PreferencesStore
-- WaveformPreferencesRepository migrated to VideoPreferencesStore
-- concurrent singleton/create/update integration coverage against real Isar
+- shared PreferencesStore adopted by app, checkpoint, AI, theme repositories
+- shared PreferencesStore + VideoPreferencesStore adopted by editor, edit-line, waveform, and video-player repositories
+- nullable theme reads preserved without creating a preferences row
+- checkpoint snapshot operations retain their deltas for descendant reconstruction
+- undo followed by a new edit now replaces the undone operation and descendants
+- active checkpoint branch path is rebuilt after branch creation
+- real Isar checkpoint tests cover initial snapshot, periodic snapshot restore, and branching
 
 Platform builds intentionally disabled.
