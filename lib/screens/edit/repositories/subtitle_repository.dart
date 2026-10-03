@@ -7,6 +7,7 @@ import 'package:subtitle_studio/utils/subtitle_parser.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 import 'package:subtitle_studio/services/checkpoint_repository.dart';
 import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
+import 'package:subtitle_studio/services/checkpoint_history_transaction.dart';
 import 'package:subtitle_studio/utils/time_parser.dart';
 import 'package:subtitle_studio/screens/edit/models/subtitle_entry.dart';
 import 'package:subtitle_studio/screens/edit/services/source_view_reconciler.dart';
@@ -26,10 +27,12 @@ import 'package:subtitle_studio/screens/edit/services/source_view_reconciler.dar
 class SubtitleRepository {
   final Isar _isar;
   final CheckpointRepository _checkpoints;
+  final CheckpointHistoryTransaction _historyTransaction;
   final PreferencesStore _preferencesStore;
 
   SubtitleRepository(this._isar, this._checkpoints)
-      : _preferencesStore = PreferencesStore(_isar);
+      : _historyTransaction = CheckpointHistoryTransaction(_isar),
+        _preferencesStore = PreferencesStore(_isar);
 
   /// Fetch all subtitle lines for a collection
   Future<List<SubtitleLine>> fetchLines(int collectionId) async {
@@ -64,63 +67,79 @@ class SubtitleRepository {
     }
   }
 
-  /// Persist one edited subtitle line and create an edit checkpoint when
-  /// text or timing changed.
+  /// Persist one edited subtitle line atomically with v2 history.
   Future<bool> saveLineChanges(
     int collectionId,
     SubtitleLine updatedLine, {
     required int sessionId,
     SubtitleLine? beforeLine,
   }) async {
-    SubtitleLine? lineBeforeChanges;
-    List<SubtitleLine>? preOperationState;
-    var shouldCreateCheckpoint = false;
-
-    final saved = await _isar.writeTxn(() async {
-      final collection = await _isar.subtitleCollections.get(collectionId);
-      if (collection == null) return false;
-
-      final listIndex = updatedLine.index - 1;
-      if (listIndex < 0 || listIndex >= collection.lines.length) {
-        return false;
-      }
-
-      preOperationState =
-          CheckpointStateReducer.copyLines(collection.lines);
-      lineBeforeChanges = beforeLine ?? collection.lines[listIndex];
-
-      final timingChanged =
-          lineBeforeChanges!.startTime != updatedLine.startTime ||
-          lineBeforeChanges!.endTime != updatedLine.endTime;
-
-      shouldCreateCheckpoint =
-          timingChanged ||
-          lineBeforeChanges!.original != updatedLine.original ||
-          lineBeforeChanges!.edited != updatedLine.edited;
-
-      collection.lines[listIndex] = updatedLine;
-
-      if (timingChanged) {
-        collection.lines = sortAndReindexSubtitleLines(collection.lines);
-      }
-
-      await _isar.subtitleCollections.put(collection);
-      return true;
-    });
-
-    if (saved &&
-        shouldCreateCheckpoint &&
-        lineBeforeChanges != null) {
-      await _checkpoints.createEditCheckpoint(
+    try {
+      await _historyTransaction.commit(
         sessionId: sessionId,
         subtitleCollectionId: collectionId,
-        beforeLine: lineBeforeChanges!,
-        afterLine: updatedLine,
-        preOperationState: preOperationState,
-      );
-    }
+        operationType: 'edit',
+        description: 'Edited line ${updatedLine.index}',
+        buildMutation: (currentLines) {
+          final listIndex = updatedLine.index - 1;
+          if (listIndex < 0 || listIndex >= currentLines.length) {
+            throw RangeError.index(
+              listIndex,
+              currentLines,
+              'updatedLine.index',
+            );
+          }
 
-    return saved;
+          final persistedBefore = currentLines[listIndex];
+          final timingChanged =
+              persistedBefore.startTime != updatedLine.startTime ||
+              persistedBefore.endTime != updatedLine.endTime;
+          final historyChanged =
+              timingChanged ||
+              persistedBefore.original != updatedLine.original ||
+              persistedBefore.edited != updatedLine.edited;
+
+          final nextLines =
+              CheckpointStateReducer.copyLines(currentLines);
+          nextLines[listIndex] =
+              CheckpointStateReducer.copyLine(updatedLine);
+
+          if (timingChanged) {
+            final sorted = sortAndReindexSubtitleLines(nextLines);
+            nextLines
+              ..clear()
+              ..addAll(sorted);
+          }
+
+          final deltas = <SubtitleLineDelta>[];
+          if (historyChanged) {
+            deltas.add(
+              SubtitleLineDelta()
+                ..changeType = 'modify'
+                ..lineIndex = listIndex
+                ..beforeState =
+                    CheckpointStateReducer.copyLine(persistedBefore)
+                ..afterState =
+                    CheckpointStateReducer.copyLine(updatedLine),
+            );
+          }
+
+          return CheckpointMutationPlan(
+            nextLines: nextLines,
+            deltas: deltas,
+            // Timing edits can reorder cues, which the current line delta
+            // format does not encode. Store the exact post-operation state.
+            forceSnapshot: timingChanged,
+          );
+        },
+      );
+      return true;
+    } catch (error) {
+      logError(
+        'SubtitleRepository: Failed atomic line save: $error',
+      );
+      return false;
+    }
   }
 
   /// Update several subtitle lines in one collection transaction.
