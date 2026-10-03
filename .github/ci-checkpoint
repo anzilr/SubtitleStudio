@@ -1,14 +1,14 @@
-Riverpod migration checkpoint 48
+Riverpod migration checkpoint 49
 Date: 2026-10-03
 Checks:
 - flutter analyze
 - flutter test -j 1
 
-Checkpoint redesign stage 2a verification:
-- expose redo/checkout through CheckpointRepository
-- remove obsolete EditLineRepository checkpoint dependency after atomic migration
-- verify v2 post-operation edit commits and legacy compatibility
-- verify failed atomic edits roll back collection/history together
-- verify corrupt imported history is discarded safely
+Checkpoint redesign stage 2a revalidation:
+- verify atomic v2 post-operation edits in Editor and Edit Line
+- verify v2 restore/redo semantics
+- verify legacy PRE-operation history is isolated from v2 history by a forced snapshot boundary
+- verify failed edits roll back without history mutation
+- verify corrupt imported checkpoint graphs are discarded safely
 
 Platform builds intentionally disabled.
