@@ -1,5 +1,5 @@
 import 'package:subtitle_studio/database/models/models.dart';
-import 'package:subtitle_studio/database/database_helper.dart';
+import 'package:subtitle_studio/screens/edit/repositories/subtitle_repository.dart';
 import 'package:subtitle_studio/utils/time_parser.dart';
 import 'package:subtitle_studio/services/checkpoint_repository.dart';
 import 'package:subtitle_studio/utils/subtitle_sorting.dart'; // Enhanced subtitle sorting
@@ -89,6 +89,7 @@ class SubtitleBannerOperations {
     /// Insert banners into the subtitle collection
   static Future<bool> insertBanners({
     required CheckpointRepository checkpointRepository,
+    required SubtitleRepository subtitleRepository,
     required int subtitleCollectionId,
     required int sessionId,
     required List<SubtitleLine> currentSubtitleLines,
@@ -195,10 +196,12 @@ class SubtitleBannerOperations {
       final sortedLines = sortAndReindexSubtitleLines(allLines);
       
       // Update the database
-      final subtitle = await fetchSubtitle(subtitleCollectionId);
+      final subtitle = await subtitleRepository.fetchSubtitleCollection(
+        subtitleCollectionId,
+      );
       if (subtitle != null) {
         subtitle.lines = sortedLines;
-        return await updateSubtitleCollection(subtitle);
+        return subtitleRepository.updateCollection(subtitle);
       }
       
       return false;
