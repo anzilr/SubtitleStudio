@@ -120,28 +120,6 @@ class CheckpointStore {
     return checkpointId;
   }
 
-  Future<int> replaceActivePathAndInsert({
-    required List<Checkpoint> existingCheckpoints,
-    required Set<int> activePathIds,
-    required Checkpoint checkpoint,
-  }) async {
-    late int checkpointId;
-
-    await _isar.writeTxn(() async {
-      for (final existing in existingCheckpoints) {
-        existing.isActive = activePathIds.contains(existing.id);
-      }
-
-      if (existingCheckpoints.isNotEmpty) {
-        await _isar.checkpoints.putAll(existingCheckpoints);
-      }
-
-      checkpointId = await _isar.checkpoints.put(checkpoint);
-    });
-
-    return checkpointId;
-  }
-
   Future<void> saveSubtitleCollection(SubtitleCollection collection) async {
     await _isar.writeTxn(() async {
       await _isar.subtitleCollections.put(collection);
