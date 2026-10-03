@@ -31,6 +31,8 @@ import 'dart:async';                          // Async programming utilities
 import 'package:subtitle_studio/utils/app_info.dart';        // App version and info utilities
 import 'package:subtitle_studio/utils/app_logger.dart';      // Logging system
 import 'package:subtitle_studio/utils/intent_handler.dart';  // File association handling
+import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
+import 'package:subtitle_studio/services/file_picker_preferences_repository.dart';
 import 'package:subtitle_studio/utils/msone_hotkey_manager.dart'; // Keyboard shortcuts
 import 'package:subtitle_studio/widgets/splash_screen.dart'; // Initial splash screen
 import 'screens/screen_home.dart';                        // Main home screen
@@ -92,6 +94,10 @@ Future<void> main(List<String> args) async {
   // The database stores user preferences, sessions, and subtitle collections
   Isar.initializeIsarCore(download: false);
   await initializeIsarWithRetry();
+
+  FilePickerSAF.configurePreferences(
+    FilePickerPreferencesRepository(isar),
+  );
   
   // Set supported device orientations
   // Supports both portrait and landscape modes for better usability
