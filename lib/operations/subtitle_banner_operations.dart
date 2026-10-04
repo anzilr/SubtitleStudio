@@ -179,7 +179,7 @@ class SubtitleBannerOperations {
       // Sort and reindex intelligently (preserves overlaps, handles positioning tags)
       final sortedLines = sortAndReindexSubtitleLines(allLines);
       
-      return subtitleRepository.replaceCollectionLinesWithHistory(
+      return await subtitleRepository.replaceCollectionLinesWithHistory(
         collectionId: subtitleCollectionId,
         sessionId: sessionId,
         nextLines: sortedLines,
