@@ -28,9 +28,10 @@ class CheckpointPolicy {
   /// Returns checkpoints that can be safely pruned without breaking any
   /// retained parent chain.
   ///
-  /// The current HEAD ancestry, every manual checkpoint ancestry, and the
-  /// initial snapshot are protected. Cleanup removes only unprotected leaves,
-  /// oldest first, so it can never retain a child whose parent was deleted.
+  /// The current HEAD ancestry, every manual checkpoint ancestry, the initial
+  /// snapshot, and a small number of recent alternate branch tips are
+  /// protected. Cleanup removes only unprotected leaves, oldest first, so it
+  /// can never retain a child whose parent was deleted.
   ///
   /// If the protected graph itself exceeds [maxCheckpoints], no protected
   /// checkpoint is deleted and the configured limit is intentionally exceeded.
@@ -38,6 +39,7 @@ class CheckpointPolicy {
     required List<Checkpoint> checkpoints,
     required int maxCheckpoints,
     int? headCheckpointId,
+    int protectedAlternateBranchTips = 2,
   }) {
     if (maxCheckpoints <= 0 || checkpoints.length <= maxCheckpoints) {
       return const <Checkpoint>[];
@@ -57,6 +59,32 @@ class CheckpointPolicy {
       checkpoints: checkpoints,
       headCheckpointId: resolvedHeadId,
     );
+
+    if (protectedAlternateBranchTips > 0) {
+      final parentIds = <int>{
+        for (final checkpoint in checkpoints)
+          if (checkpoint.parentCheckpointId != null)
+            checkpoint.parentCheckpointId!,
+      };
+
+      final alternateTips = checkpoints
+          .where(
+            (checkpoint) =>
+                !parentIds.contains(checkpoint.id) &&
+                !protectedIds.contains(checkpoint.id),
+          )
+          .toList()
+        ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+
+      for (final tip in alternateTips.take(protectedAlternateBranchTips)) {
+        protectedIds.addAll(
+          CheckpointTimeline.ancestorPathIds(
+            checkpoints: checkpoints,
+            fromCheckpointId: tip.id,
+          ),
+        );
+      }
+    }
 
     final remainingById = {
       for (final checkpoint in checkpoints) checkpoint.id: checkpoint,
