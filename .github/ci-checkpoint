@@ -1,14 +1,13 @@
-Riverpod migration checkpoint 55
+Riverpod migration checkpoint 56
 Date: 2026-10-04
 Checks:
 - flutter analyze
 - flutter test -j 1
 
 Focus:
-- clear residual analyzer warnings from waveform/banner history migration
-- preserve the two most recent alternate branch tips during retention cleanup
-- allow retention limit to be exceeded rather than destroy protected redo history
-- prune older abandoned branch leaves outside the protected-tip window
-- add real-Isar tight-limit branch-retention coverage
+- reverify Git-style branch retention policy
+- keep recent alternate redo branches protected by default
+- retain explicit legacy leaf-pruning coverage with branch-tip protection disabled
+- verify zero analyzer issues and full history test suite
 
 Platform builds intentionally disabled.
