@@ -204,17 +204,6 @@ extension _WaveformEditing on WaveformWidgetState {
       return;
     }
     
-    // Create a copy of the subtitle with BEFORE state for checkpoint
-    final beforeSubtitle = SubtitleLine()
-      ..index = subtitle.index
-      ..startTime = subtitle.startTime
-      ..endTime = subtitle.endTime
-      ..original = subtitle.original
-      ..edited = subtitle.edited
-      ..marked = subtitle.marked
-      ..comment = subtitle.comment
-      ..resolved = subtitle.resolved;
-    
     // Update subtitle with new times (AFTER state)
     final afterSubtitle = SubtitleLine()
       ..index = subtitle.index
@@ -226,28 +215,22 @@ extension _WaveformEditing on WaveformWidgetState {
       ..comment = subtitle.comment
       ..resolved = subtitle.resolved;
     
-    // Update subtitle in database
+    // Update subtitle and history atomically.
     try {
-      // Create checkpoint BEFORE updating (if sessionId is provided)
-      if (widget.sessionId != null) {
-        await ref.read(checkpointRepositoryProvider).createEditCheckpoint(
-          sessionId: widget.sessionId!,
-          subtitleCollectionId: widget.subtitleCollectionId!,
-          beforeLine: beforeSubtitle,
-          afterLine: afterSubtitle,
-        );
-      }
-      
-      // Apply changes to the actual subtitle
       subtitle.startTime = afterSubtitle.startTime;
       subtitle.endTime = afterSubtitle.endTime;
       
-      final success = await ref
-          .read(waveformSubtitleRepositoryProvider)
-          .updateLines(
-            widget.subtitleCollectionId!,
-            [subtitle],
-          );
+      final repository = ref.read(waveformSubtitleRepositoryProvider);
+      final success = widget.sessionId != null
+          ? await repository.updateLinesWithHistory(
+              subtitleCollectionId: widget.subtitleCollectionId!,
+              sessionId: widget.sessionId!,
+              updatedLines: [subtitle],
+            )
+          : await repository.updateLines(
+              widget.subtitleCollectionId!,
+              [subtitle],
+            );
       
       if (!success) {
         throw Exception('Failed to update subtitle in database');
