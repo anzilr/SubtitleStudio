@@ -1,15 +1,14 @@
-Riverpod migration checkpoint 54
+Riverpod migration checkpoint 55
 Date: 2026-10-04
 Checks:
 - flutter analyze
 - flutter test -j 1
 
 Focus:
-- verify SHA-256 state/parent hash metadata and reconstruction checks
-- verify explicit checkpoint history health diagnostics
-- migrate waveform timing edits to atomic v2 history transactions
-- migrate subtitle banner insertion to atomic v2 history transactions
-- keep removed legacy checkpoint repository mutation APIs retired
-- add undo/redo integration coverage for waveform and banner history
+- clear residual analyzer warnings from waveform/banner history migration
+- preserve the two most recent alternate branch tips during retention cleanup
+- allow retention limit to be exceeded rather than destroy protected redo history
+- prune older abandoned branch leaves outside the protected-tip window
+- add real-Isar tight-limit branch-retention coverage
 
 Platform builds intentionally disabled.
