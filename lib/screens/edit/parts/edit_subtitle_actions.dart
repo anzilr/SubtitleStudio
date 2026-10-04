@@ -43,32 +43,19 @@ extension _EditSubtitleActions on _EditScreenState {
       }
       
       if (effectLines.isNotEmpty) {
-        final preOperationState = List<SubtitleLine>.from(subtitleLines);
-        final effectDeltas = SubtitleEffectOperations.buildEffectDeltas(
-          originalLine: currentLine,
-          originalLineIndex: index,
-          effectLines: effectLines,
-        );
-
-        // Apply the effect to the database
-        final success = await SubtitleEffectOperations.applyEffectToSubtitleCollection(
-          isar: ref.read(isarProvider),
-          subtitleCollectionId: widget.subtitleCollectionId,
-          originalLineIndex: index, // Convert to 0-based
-          effectLines: effectLines,
+        final success = await ref
+            .read(subtitleRepositoryProvider)
+            .replaceLineWithGeneratedLinesWithHistory(
+          collectionId: widget.subtitleCollectionId,
+          originalIndex: index,
+          replacementLines: effectLines,
+          sessionId: widget.sessionId,
+          description:
+              'Applied $effectType effect to line ${index + 1} '
+              '(${effectLines.length} lines)',
         );
         
         if (success) {
-          // Create a checkpoint for the effect
-          await ref.read(checkpointRepositoryProvider).createCheckpoint(
-            sessionId: widget.sessionId,
-            subtitleCollectionId: widget.subtitleCollectionId,
-            operationType: 'effect',
-            description: 'Applied $effectType effect to line ${index + 1} (${effectLines.length} lines)',
-            deltas: effectDeltas,
-            forceSnapshot: true,
-            preOperationState: preOperationState,
-          );
           
           // Update the last edited index to the first effect line
           if (effectLines.isNotEmpty) {
