@@ -631,14 +631,75 @@ class CheckpointManager {
     }
   }
 
-  /// Redoes to a specific checkpoint (same as undo, just different terminology)
-  /// Returns true if successful, false otherwise
+  /// Checks out any historical commit and moves HEAD to it.
+  Future<bool> checkoutCheckpoint({
+    required int checkpointId,
+    required int sessionId,
+  }) {
+    return undoToCheckpoint(
+      checkpointId: checkpointId,
+      sessionId: sessionId,
+    );
+  }
+
+  /// Returns the current single HEAD commit for [sessionId].
+  Future<Checkpoint?> getHeadCheckpoint(int sessionId) {
+    return _getCurrentHeadCheckpoint(sessionId);
+  }
+
+  /// Moves HEAD to its direct parent.
+  ///
+  /// Returns false when history is empty or HEAD is already the root commit.
+  Future<bool> undo({
+    required int sessionId,
+  }) async {
+    final head = await _getCurrentHeadCheckpoint(sessionId);
+    final parentId = head?.parentCheckpointId;
+    if (parentId == null) return false;
+
+    return checkoutCheckpoint(
+      checkpointId: parentId,
+      sessionId: sessionId,
+    );
+  }
+
+  /// Returns the direct children of the current HEAD.
+  ///
+  /// Multiple results represent alternate redo branches.
+  Future<List<Checkpoint>> getRedoOptions(int sessionId) async {
+    final head = await _getCurrentHeadCheckpoint(sessionId);
+    if (head == null) return const <Checkpoint>[];
+
+    final checkpoints = await getCheckpointsForSession(sessionId);
+    return CheckpointTimeline.childrenOf(
+      checkpoints: checkpoints,
+      parentCheckpointId: head.id,
+    );
+  }
+
+  /// Redoes to one direct child of the current HEAD.
+  ///
+  /// Arbitrary commit checkout must use [checkoutCheckpoint] instead.
   Future<bool> redoToCheckpoint({
     required int checkpointId,
     required int sessionId,
   }) async {
-    // Redo is the same as undo in our tree-based system
-    return await undoToCheckpoint(
+    final head = await _getCurrentHeadCheckpoint(sessionId);
+    if (head == null) return false;
+
+    final redoOptions = await getRedoOptions(sessionId);
+    final isDirectChild = redoOptions.any(
+      (checkpoint) => checkpoint.id == checkpointId,
+    );
+    if (!isDirectChild) {
+      logWarning(
+        'Rejected redo to checkpoint $checkpointId because it is not a '
+        'direct child of HEAD ${head.id}.',
+      );
+      return false;
+    }
+
+    return checkoutCheckpoint(
       checkpointId: checkpointId,
       sessionId: sessionId,
     );
