@@ -15,6 +15,8 @@ class CheckpointHistoryMetadata {
   static const String _versionKey = '_historyVersion';
   static const String _semanticsKey = '_stateSemantics';
   static const String postOperationSemantics = 'after-operation';
+  static const String _stateHashKey = '_stateHash';
+  static const String _parentStateHashKey = '_parentStateHash';
 
   const CheckpointHistoryMetadata._();
 
@@ -22,6 +24,16 @@ class CheckpointHistoryMetadata {
     final decoded = decode(checkpoint.metadata);
     return decoded[_versionKey] == currentVersion &&
         decoded[_semanticsKey] == postOperationSemantics;
+  }
+
+  static String? stateHash(Checkpoint checkpoint) {
+    final value = decode(checkpoint.metadata)[_stateHashKey];
+    return value is String && value.isNotEmpty ? value : null;
+  }
+
+  static String? parentStateHash(Checkpoint checkpoint) {
+    final value = decode(checkpoint.metadata)[_parentStateHashKey];
+    return value is String && value.isNotEmpty ? value : null;
   }
 
   static Map<String, dynamic> decode(String? metadata) {
@@ -42,11 +54,15 @@ class CheckpointHistoryMetadata {
 
   static String encodePostOperation({
     Map<String, dynamic>? operationMetadata,
+    String? stateHash,
+    String? parentStateHash,
   }) {
     return jsonEncode({
       ...?operationMetadata,
       _versionKey: currentVersion,
       _semanticsKey: postOperationSemantics,
+      if (stateHash != null) _stateHashKey: stateHash,
+      if (parentStateHash != null) _parentStateHashKey: parentStateHash,
     });
   }
 }
