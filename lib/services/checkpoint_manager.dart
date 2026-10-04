@@ -42,6 +42,7 @@ import 'package:subtitle_studio/services/checkpoint_history_metadata.dart';
 import 'package:subtitle_studio/services/checkpoint_policy.dart';
 import 'package:subtitle_studio/services/checkpoint_timeline.dart';
 import 'package:subtitle_studio/services/checkpoint_preferences_repository.dart';
+import 'package:subtitle_studio/services/checkpoint_reconstructor.dart';
 import 'package:subtitle_studio/services/checkpoint_store.dart';
 import 'dart:convert';
 
@@ -563,45 +564,10 @@ class CheckpointManager {
   }) async {
     try {
       final checkpoints = await getCheckpointsForSession(sessionId);
-      final nearestSnapshot = CheckpointTimeline.findNearestSnapshot(
+      final restoredLines = CheckpointReconstructor.reconstructPostOperation(
         checkpoints: checkpoints,
         targetCheckpointId: targetCheckpoint.id,
       );
-
-      if (nearestSnapshot == null ||
-          nearestSnapshot.snapshot.isEmpty ||
-          !CheckpointHistoryMetadata.isPostOperation(nearestSnapshot)) {
-        logError(
-          'Cannot restore v2 checkpoint ${targetCheckpoint.id}: '
-          'no compatible post-operation snapshot exists.',
-        );
-        return false;
-      }
-
-      final restoredLines =
-          CheckpointStateReducer.copyLines(nearestSnapshot.snapshot);
-
-      if (nearestSnapshot.id != targetCheckpoint.id) {
-        final path = CheckpointTimeline.deltaPath(
-          checkpoints: checkpoints,
-          fromSnapshotId: nearestSnapshot.id,
-          toCheckpointId: targetCheckpoint.id,
-          excludeTarget: false,
-        );
-
-        for (final checkpoint in path) {
-          if (!CheckpointHistoryMetadata.isPostOperation(checkpoint)) {
-            throw StateError(
-              'Checkpoint ${checkpoint.id} crosses into legacy '
-              'pre-operation history without a snapshot boundary.',
-            );
-          }
-          CheckpointStateReducer.applyDeltasStrictInPlace(
-            restoredLines,
-            checkpoint.deltas,
-          );
-        }
-      }
 
       collection.lines = restoredLines;
       CheckpointStateReducer.reindexExactOrder(collection);
