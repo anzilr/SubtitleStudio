@@ -132,6 +132,53 @@ void main() {
       expect(snapshot.deltas, isEmpty);
     });
 
+    test('manual checkpoint is a v2 state snapshot commit', () async {
+      final initialId = await manager.createInitialSnapshot(
+        sessionId: seeded.sessionId,
+        subtitleCollectionId: seeded.subtitleCollectionId,
+      );
+
+      final manualId = await manager.createManualCheckpoint(
+        sessionId: seeded.sessionId,
+        subtitleCollectionId: seeded.subtitleCollectionId,
+        customDescription: 'Before review',
+      );
+
+      final manual = await harness.isar.checkpoints.get(manualId);
+      expect(manual, isNotNull);
+      expect(manual!.operationType, 'manual');
+      expect(manual.description, 'Before review');
+      expect(manual.parentCheckpointId, initialId);
+      expect(manual.checkpointType, 'snapshot');
+      expect(
+        manual.snapshot.map((line) => line.original).toList(),
+        ['A', 'B'],
+      );
+
+      final active = await harness.isar.checkpoints
+          .filter()
+          .sessionIdEqualTo(seeded.sessionId)
+          .isActiveEqualTo(true)
+          .findAll();
+      expect(active, hasLength(1));
+      expect(active.single.id, manualId);
+
+      expect(
+        await manager.undoToCheckpoint(
+          checkpointId: initialId,
+          sessionId: seeded.sessionId,
+        ),
+        isTrue,
+      );
+      expect(
+        await manager.redoToCheckpoint(
+          checkpointId: manualId,
+          sessionId: seeded.sessionId,
+        ),
+        isTrue,
+      );
+    });
+
     test('legacy history gets a snapshot boundary after a v2 root',
         () async {
       final preferences = PreferencesStore(harness.isar);
