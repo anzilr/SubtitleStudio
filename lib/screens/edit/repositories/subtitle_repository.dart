@@ -95,9 +95,10 @@ class SubtitleRepository {
               persistedBefore.startTime != updatedLine.startTime ||
               persistedBefore.endTime != updatedLine.endTime;
           final historyChanged =
-              timingChanged ||
-              persistedBefore.original != updatedLine.original ||
-              persistedBefore.edited != updatedLine.edited;
+              !CheckpointStateReducer.samePersistedLine(
+            persistedBefore,
+            updatedLine,
+          );
 
           final nextLines =
               CheckpointStateReducer.copyLines(currentLines);
