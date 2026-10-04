@@ -131,16 +131,10 @@ extension _EditSubtitleActions on _EditScreenState {
         ..startTime = startTimeStr
         ..endTime = endTimeStr;
       
-      // Create checkpoint before adding
-      await ref.read(checkpointRepositoryProvider).createAddCheckpoint(
-        sessionId: widget.sessionId,
-        subtitleCollectionId: widget.subtitleCollectionId,
-        addedLine: newLine,
-        insertIndex: insertIndex, // 0-based insertion index
+      final success = await _controller.addSubtitleLineWithHistory(
+        newLine,
+        insertIndex,
       );
-      
-      // Add the line to database
-      final success = await _controller.addSubtitleLine(newLine, insertIndex);
       
       if (success) {
         // Refresh the subtitle lines
@@ -298,8 +292,10 @@ extension _EditSubtitleActions on _EditScreenState {
         ..startTime = "00:00:00,000"
         ..endTime = "00:00:02,000";
 
-      // Add to database
-      final success = await _controller.addSubtitleLine(newLine, 0);
+      final success = await _controller.addSubtitleLineWithHistory(
+        newLine,
+        0,
+      );
       
       if (success) {
         // Navigate to the editor to edit this new line
