@@ -64,6 +64,36 @@ void main() {
       expect(health.issues, isEmpty);
     });
 
+    test('mixed v2 graph remains healthy with legacy checkpoint as HEAD', () {
+      final legacyHead = Checkpoint(
+        sessionId: 1,
+        subtitleCollectionId: 7,
+        timestamp: DateTime.utc(2026, 10, 4, 10),
+        operationType: 'legacy',
+        description: 'Legacy root',
+        parentCheckpointId: null,
+        isActive: true,
+        checkpointType: 'snapshot',
+        deltas: const [],
+        snapshot: [_line(1, 'A')],
+        metadata: null,
+      )..id = 1;
+
+      final v2Snapshot = _snapshot(
+        id: 2,
+        parentId: 1,
+        lines: [_line(1, 'B')],
+      );
+
+      final health = CheckpointHistoryValidator.validate(
+        sessionId: 1,
+        checkpoints: [legacyHead, v2Snapshot],
+      );
+
+      expect(health.isHealthy, isTrue);
+      expect(health.issues, isEmpty);
+    });
+
     test('reports multiple HEADs in v2 history', () {
       final first = _snapshot(
         id: 1,
