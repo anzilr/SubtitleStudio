@@ -1,13 +1,14 @@
-Riverpod migration checkpoint 56
+Riverpod migration checkpoint 57
 Date: 2026-10-04
 Checks:
 - flutter analyze
 - flutter test -j 1
 
 Focus:
-- reverify Git-style branch retention policy
-- keep recent alternate redo branches protected by default
-- retain explicit legacy leaf-pruning coverage with branch-tip protection disabled
-- verify zero analyzer issues and full history test suite
+- centralize HEAD semantics behind CheckpointHeadReference
+- keep Checkpoint.isActive as a storage compatibility detail only
+- allow mixed v1/v2 history to checkout a legacy commit as HEAD
+- route transaction, validator, retention policy, store, and project import through HEAD abstraction
+- add pure HEAD-reference and mixed-history validation regression coverage
 
 Platform builds intentionally disabled.
