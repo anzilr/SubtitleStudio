@@ -62,14 +62,36 @@ class CheckpointRepository {
     return _manager.getCheckpointsForSession(sessionId);
   }
 
+  Future<bool> checkoutCheckpoint({
+    required int checkpointId,
+    required int sessionId,
+  }) {
+    return _manager.checkoutCheckpoint(
+      checkpointId: checkpointId,
+      sessionId: sessionId,
+    );
+  }
+
   Future<bool> undoToCheckpoint({
     required int checkpointId,
     required int sessionId,
   }) {
-    return _manager.undoToCheckpoint(
+    return checkoutCheckpoint(
       checkpointId: checkpointId,
       sessionId: sessionId,
     );
+  }
+
+  Future<Checkpoint?> getHeadCheckpoint(int sessionId) {
+    return _manager.getHeadCheckpoint(sessionId);
+  }
+
+  Future<bool> undo({required int sessionId}) {
+    return _manager.undo(sessionId: sessionId);
+  }
+
+  Future<List<Checkpoint>> getRedoOptions(int sessionId) {
+    return _manager.getRedoOptions(sessionId);
   }
 
   Future<bool> redoToCheckpoint({
