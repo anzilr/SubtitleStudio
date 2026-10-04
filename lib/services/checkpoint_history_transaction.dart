@@ -3,6 +3,7 @@ import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/services/checkpoint_history_metadata.dart';
 import 'package:subtitle_studio/services/checkpoint_policy.dart';
 import 'package:subtitle_studio/services/checkpoint_preferences_repository.dart';
+import 'package:subtitle_studio/services/checkpoint_reconstructor.dart';
 import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
 import 'package:subtitle_studio/services/checkpoint_store.dart';
 import 'package:subtitle_studio/services/checkpoint_timeline.dart';
@@ -79,21 +80,127 @@ class CheckpointHistoryTransaction {
           .where((checkpoint) => checkpoint.isActive)
           .toList()
         ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
-      final head = active.isEmpty ? null : active.first;
 
       final currentLines =
           CheckpointStateReducer.copyLines(collection.lines);
+
+      Checkpoint? head;
+      if (active.isEmpty) {
+        if (checkpoints.isEmpty) {
+          final root = Checkpoint(
+            sessionId: sessionId,
+            subtitleCollectionId: subtitleCollectionId,
+            timestamp: DateTime.now().toUtc(),
+            operationType: 'snapshot',
+            description: 'Initial state',
+            parentCheckpointId: null,
+            isActive: true,
+            checkpointType: 'snapshot',
+            deltas: const <SubtitleLineDelta>[],
+            snapshot: CheckpointStateReducer.copyLines(currentLines),
+            metadata: CheckpointHistoryMetadata.encodePostOperation(
+              operationMetadata: {
+                'reason': 'auto-initial',
+                'system': true,
+                'lineCount': currentLines.length,
+              },
+            ),
+          );
+          root.id = await _isar.checkpoints.put(root);
+          checkpoints.add(root);
+          active.add(root);
+          head = root;
+        } else {
+          final containsV2 = checkpoints.any(
+            CheckpointHistoryMetadata.isPostOperation,
+          );
+          if (containsV2) {
+            throw const CheckpointIntegrityException(
+              'V2 checkpoint history contains commits but has no HEAD.',
+            );
+          }
+
+          // Compatibility repair for legacy history that lost its active flag.
+          // The next v2 commit is forced to a snapshot boundary.
+          head = checkpoints.first;
+        }
+      } else {
+        final activeV2 = active.where(
+          CheckpointHistoryMetadata.isPostOperation,
+        );
+        if (active.length > 1 && activeV2.isNotEmpty) {
+          throw const CheckpointIntegrityException(
+            'V2 checkpoint history contains more than one HEAD.',
+          );
+        }
+        head = active.first;
+      }
+
+      if (head != null && CheckpointHistoryMetadata.isPostOperation(head)) {
+        final representedHeadState =
+            CheckpointReconstructor.reconstructPostOperation(
+          checkpoints: checkpoints,
+          targetCheckpointId: head.id,
+        );
+
+        if (!CheckpointStateReducer.samePersistedLines(
+          representedHeadState,
+          currentLines,
+        )) {
+          final syncCheckpoint = Checkpoint(
+            sessionId: sessionId,
+            subtitleCollectionId: subtitleCollectionId,
+            timestamp: DateTime.now().toUtc(),
+            operationType: 'sync',
+            description: 'Captured external subtitle changes',
+            parentCheckpointId: head.id,
+            isActive: true,
+            checkpointType: 'snapshot',
+            deltas: const <SubtitleLineDelta>[],
+            snapshot: CheckpointStateReducer.copyLines(currentLines),
+            metadata: CheckpointHistoryMetadata.encodePostOperation(
+              operationMetadata: const {
+                'reason': 'working-tree-sync',
+                'system': true,
+              },
+            ),
+          );
+
+          for (final checkpoint in active) {
+            checkpoint.isActive = false;
+          }
+          if (active.isNotEmpty) {
+            await _isar.checkpoints.putAll(active);
+          }
+
+          syncCheckpoint.id =
+              await _isar.checkpoints.put(syncCheckpoint);
+          checkpoints.add(syncCheckpoint);
+          active
+            ..clear()
+            ..add(syncCheckpoint);
+          head = syncCheckpoint;
+        }
+      }
+
       final plan = buildMutation(
         CheckpointStateReducer.copyLines(currentLines),
       );
 
       if (plan.deltas.isEmpty) {
-        collection.lines =
-            CheckpointStateReducer.copyLines(plan.nextLines);
-        await _isar.subtitleCollections.put(collection);
+        if (!CheckpointStateReducer.samePersistedLines(
+          currentLines,
+          plan.nextLines,
+        )) {
+          throw const CheckpointIntegrityException(
+            'A history mutation changed subtitle state without recording '
+            'deltas.',
+          );
+        }
+
         checkpointId = 0;
         persistedLines =
-            CheckpointStateReducer.copyLines(collection.lines);
+            CheckpointStateReducer.copyLines(currentLines);
         return;
       }
 
@@ -113,7 +220,6 @@ class CheckpointHistoryTransaction {
 
       final shouldCreateSnapshot =
           crossingLegacyBoundary ||
-          head == null ||
           CheckpointPolicy.shouldCreateSnapshot(
             forceSnapshot: plan.forceSnapshot,
             strategy: strategy,
@@ -150,8 +256,8 @@ class CheckpointHistoryTransaction {
         ),
       );
 
-      for (final checkpoint in active) {
-        checkpoint.isActive = false;
+      for (final existing in active) {
+        existing.isActive = false;
       }
       if (active.isNotEmpty) {
         await _isar.checkpoints.putAll(active);
