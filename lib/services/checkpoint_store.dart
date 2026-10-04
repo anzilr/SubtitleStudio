@@ -1,5 +1,6 @@
 import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/database/models/models.dart';
+import 'package:subtitle_studio/services/checkpoint_head_reference.dart';
 
 /// Low-level Isar persistence boundary for checkpoint history.
 ///
@@ -98,7 +99,7 @@ class CheckpointStore {
           .findAll();
 
       final actualHeadId =
-          activeCheckpoints.isEmpty ? null : activeCheckpoints.first.id;
+          CheckpointHeadReference.newestActive(activeCheckpoints)?.id;
       if (actualHeadId != expectedHeadId) {
         throw CheckpointConcurrentModificationException(
           expectedHeadId: expectedHeadId,
@@ -106,9 +107,7 @@ class CheckpointStore {
         );
       }
 
-      for (final existing in activeCheckpoints) {
-        existing.isActive = false;
-      }
+      CheckpointHeadReference.clearInMemory(activeCheckpoints);
       if (activeCheckpoints.isNotEmpty) {
         await _isar.checkpoints.putAll(activeCheckpoints);
       }
@@ -137,10 +136,10 @@ class CheckpointStore {
           .sessionIdEqualTo(sessionId)
           .findAll();
 
-      for (final checkpoint in allCheckpoints) {
-        checkpoint.isActive = false;
-      }
-      targetCheckpoint.isActive = true;
+      CheckpointHeadReference.moveInMemory(
+        checkpoints: allCheckpoints,
+        checkpointId: targetCheckpoint.id,
+      );
 
       if (allCheckpoints.isNotEmpty) {
         await _isar.checkpoints.putAll(allCheckpoints);
