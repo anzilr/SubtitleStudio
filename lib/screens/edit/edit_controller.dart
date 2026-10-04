@@ -308,6 +308,22 @@ class EditController extends Notifier<EditState> {
     return success;
   }
 
+  Future<bool> addSubtitleLineWithHistory(
+    SubtitleLine line,
+    int insertIndex,
+  ) async {
+    final success = await _subtitleRepo.addLineWithHistory(
+      collectionId: subtitleCollectionId,
+      line: line,
+      insertIndex: insertIndex,
+      sessionId: sessionId,
+    );
+    if (success) {
+      await refreshSubtitleLines();
+    }
+    return success;
+  }
+
   Future<bool> saveLineChanges(
     SubtitleLine updatedLine, {
     SubtitleLine? beforeLine,
