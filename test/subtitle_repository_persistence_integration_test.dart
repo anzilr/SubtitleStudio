@@ -389,6 +389,153 @@ void main() {
       );
     });
 
+    test('HEAD undo and branch-aware redo preserve alternate children',
+        () async {
+      final collectionId = await _seedCollection(harness);
+      late int sessionId;
+      await harness.isar.writeTxn(() async {
+        sessionId = await harness.isar.sessions.put(
+          Session(
+            subtitleCollectionId: collectionId,
+            fileName: 'branch-history.srt',
+          ),
+        );
+      });
+
+      final history = CheckpointRepository(harness.isar);
+      final rootId = await history.createInitialSnapshot(
+        sessionId: sessionId,
+        subtitleCollectionId: collectionId,
+      );
+
+      expect(
+        await repository.saveLineChanges(
+          collectionId,
+          _line(
+            index: 1,
+            text: 'A1',
+            start: '00:00:01,000',
+            end: '00:00:01,900',
+          ),
+          sessionId: sessionId,
+        ),
+        isTrue,
+      );
+      final firstHead = await history.getHeadCheckpoint(sessionId);
+      expect(firstHead, isNotNull);
+
+      expect(
+        await repository.saveLineChanges(
+          collectionId,
+          _line(
+            index: 2,
+            text: 'B1',
+            start: '00:00:02,000',
+            end: '00:00:02,900',
+          ),
+          sessionId: sessionId,
+        ),
+        isTrue,
+      );
+      final oldBranchTip = await history.getHeadCheckpoint(sessionId);
+      expect(oldBranchTip, isNotNull);
+      expect(oldBranchTip!.parentCheckpointId, firstHead!.id);
+
+      expect(await history.undo(sessionId: sessionId), isTrue);
+      expect((await history.getHeadCheckpoint(sessionId))?.id, firstHead.id);
+
+      var redoOptions = await history.getRedoOptions(sessionId);
+      expect(redoOptions.map((checkpoint) => checkpoint.id).toSet(), {
+        oldBranchTip.id,
+      });
+
+      expect(
+        await history.redoToCheckpoint(
+          checkpointId: oldBranchTip.id,
+          sessionId: sessionId,
+        ),
+        isTrue,
+      );
+      expect(
+        (await repository.fetchSubtitleCollection(collectionId))
+            ?.lines[1]
+            .original,
+        'B1',
+      );
+
+      expect(
+        await history.checkoutCheckpoint(
+          checkpointId: firstHead.id,
+          sessionId: sessionId,
+        ),
+        isTrue,
+      );
+
+      expect(
+        await repository.saveLineChanges(
+          collectionId,
+          _line(
+            index: 2,
+            text: 'B2',
+            start: '00:00:02,000',
+            end: '00:00:02,900',
+          ),
+          sessionId: sessionId,
+        ),
+        isTrue,
+      );
+      final newBranchTip = await history.getHeadCheckpoint(sessionId);
+      expect(newBranchTip, isNotNull);
+      expect(newBranchTip!.parentCheckpointId, firstHead.id);
+      expect(newBranchTip.id, isNot(oldBranchTip.id));
+
+      expect(
+        await history.checkoutCheckpoint(
+          checkpointId: firstHead.id,
+          sessionId: sessionId,
+        ),
+        isTrue,
+      );
+
+      redoOptions = await history.getRedoOptions(sessionId);
+      expect(redoOptions.map((checkpoint) => checkpoint.id).toSet(), {
+        oldBranchTip.id,
+        newBranchTip.id,
+      });
+
+      expect(
+        await history.redoToCheckpoint(
+          checkpointId: rootId,
+          sessionId: sessionId,
+        ),
+        isFalse,
+      );
+      expect((await history.getHeadCheckpoint(sessionId))?.id, firstHead.id);
+
+      expect(
+        await history.redoToCheckpoint(
+          checkpointId: newBranchTip.id,
+          sessionId: sessionId,
+        ),
+        isTrue,
+      );
+      expect(
+        (await repository.fetchSubtitleCollection(collectionId))
+            ?.lines[1]
+            .original,
+        'B2',
+      );
+
+      expect(
+        await history.checkoutCheckpoint(
+          checkpointId: rootId,
+          sessionId: sessionId,
+        ),
+        isTrue,
+      );
+      expect(await history.undo(sessionId: sessionId), isFalse);
+    });
+
     test('atomic delete stores a v2 post-operation snapshot', () async {
       final collectionId = await _seedCollection(harness);
       late int sessionId;
