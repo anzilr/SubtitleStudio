@@ -5,6 +5,7 @@ import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/services/project_document_codec.dart';
+import 'package:subtitle_studio/services/checkpoint_head_reference.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 
 final sessionProjectImportRepositoryProvider =
@@ -349,9 +350,19 @@ class SessionProjectImportRepository {
             }
             imported[i].parentCheckpointId = mappedParent;
           }
+        }
 
-          imported[i].isActive = i == importedHeadIndex;
-          await _isar.checkpoints.put(imported[i]);
+        if (importedHeadIndex != null) {
+          CheckpointHeadReference.moveInMemory(
+            checkpoints: imported,
+            checkpointId: imported[importedHeadIndex].id,
+          );
+        } else {
+          CheckpointHeadReference.clearInMemory(imported);
+        }
+
+        if (imported.isNotEmpty) {
+          await _isar.checkpoints.putAll(imported);
         }
       });
     } catch (error, stackTrace) {
