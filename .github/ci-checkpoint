@@ -1,16 +1,15 @@
-Riverpod migration checkpoint 53
+Riverpod migration checkpoint 54
 Date: 2026-10-04
 Checks:
 - flutter analyze
 - flutter test -j 1
 
 Focus:
-- make crypto a direct dependency for checkpoint SHA-256 state fingerprints
-- hash v2 initial, sync, mutation, and manual state commits
-- record optional parent-state hashes without breaking legacy history
-- verify snapshot, parent, and reconstructed commit hashes during checkout
-- expose reusable session history health diagnostics
-- validate missing parents, cycles, session/collection contamination, single HEAD, and v2 reconstruction
-- add pure regression coverage for hash corruption and graph health
+- verify SHA-256 state/parent hash metadata and reconstruction checks
+- verify explicit checkpoint history health diagnostics
+- migrate waveform timing edits to atomic v2 history transactions
+- migrate subtitle banner insertion to atomic v2 history transactions
+- keep removed legacy checkpoint repository mutation APIs retired
+- add undo/redo integration coverage for waveform and banner history
 
 Platform builds intentionally disabled.
