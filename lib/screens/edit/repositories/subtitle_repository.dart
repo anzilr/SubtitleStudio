@@ -292,6 +292,70 @@ class SubtitleRepository {
     });
   }
 
+  Future<bool> replaceLineWithGeneratedLinesWithHistory({
+    required int collectionId,
+    required int originalIndex,
+    required List<SubtitleLine> replacementLines,
+    required int sessionId,
+    required String description,
+  }) async {
+    if (replacementLines.isEmpty) return false;
+
+    try {
+      await _historyTransaction.commit(
+        sessionId: sessionId,
+        subtitleCollectionId: collectionId,
+        operationType: 'effect',
+        description: description,
+        buildMutation: (currentLines) {
+          if (originalIndex < 0 || originalIndex >= currentLines.length) {
+            throw RangeError.index(
+              originalIndex,
+              currentLines,
+              'originalIndex',
+            );
+          }
+
+          final original = currentLines[originalIndex];
+          final nextLines = CheckpointStateReducer.copyLines(currentLines)
+            ..removeAt(originalIndex)
+            ..insertAll(
+              originalIndex,
+              replacementLines.map(CheckpointStateReducer.copyLine),
+            );
+
+          final deltas = <SubtitleLineDelta>[
+            SubtitleLineDelta()
+              ..changeType = 'delete'
+              ..lineIndex = originalIndex
+              ..beforeState = CheckpointStateReducer.copyLine(original)
+              ..afterState = null,
+            for (var i = 0; i < replacementLines.length; i++)
+              SubtitleLineDelta()
+                ..changeType = 'add'
+                ..lineIndex = originalIndex + i
+                ..beforeState = null
+                ..afterState = CheckpointStateReducer.copyLine(
+                  replacementLines[i],
+                ),
+          ];
+
+          return CheckpointMutationPlan(
+            nextLines: sortAndReindexSubtitleLines(nextLines),
+            deltas: deltas,
+            forceSnapshot: true,
+          );
+        },
+      );
+      return true;
+    } catch (error) {
+      logError(
+        'SubtitleRepository: Atomic effect replacement failed: $error',
+      );
+      return false;
+    }
+  }
+
   Future<bool> deleteLineWithHistory({
     required int collectionId,
     required int index,
