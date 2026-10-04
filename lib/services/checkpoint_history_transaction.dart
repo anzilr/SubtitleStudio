@@ -5,6 +5,7 @@ import 'package:subtitle_studio/services/checkpoint_policy.dart';
 import 'package:subtitle_studio/services/checkpoint_preferences_repository.dart';
 import 'package:subtitle_studio/services/checkpoint_reconstructor.dart';
 import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
+import 'package:subtitle_studio/services/checkpoint_state_hasher.dart';
 import 'package:subtitle_studio/services/checkpoint_store.dart';
 import 'package:subtitle_studio/services/checkpoint_timeline.dart';
 
@@ -104,6 +105,7 @@ class CheckpointHistoryTransaction {
                 'system': true,
                 'lineCount': currentLines.length,
               },
+              stateHash: CheckpointStateHasher.hashLines(currentLines),
             ),
           );
           root.id = await _isar.checkpoints.put(root);
@@ -163,6 +165,9 @@ class CheckpointHistoryTransaction {
                 'reason': 'working-tree-sync',
                 'system': true,
               },
+              stateHash: CheckpointStateHasher.hashLines(currentLines),
+              parentStateHash:
+                  CheckpointStateHasher.hashLines(representedHeadState),
             ),
           );
 
@@ -238,6 +243,12 @@ class CheckpointHistoryTransaction {
         );
       }
 
+      final parentStateHash =
+          CheckpointHistoryMetadata.isPostOperation(head)
+              ? CheckpointStateHasher.hashLines(currentLines)
+              : null;
+      final stateHash = CheckpointStateHasher.hashLines(plan.nextLines);
+
       final checkpoint = Checkpoint(
         sessionId: sessionId,
         subtitleCollectionId: subtitleCollectionId,
@@ -253,6 +264,8 @@ class CheckpointHistoryTransaction {
             : const <SubtitleLine>[],
         metadata: CheckpointHistoryMetadata.encodePostOperation(
           operationMetadata: metadata,
+          stateHash: stateHash,
+          parentStateHash: parentStateHash,
         ),
       );
 
