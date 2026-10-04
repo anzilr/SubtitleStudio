@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/app/providers/core_providers.dart';
+import 'package:subtitle_studio/screens/edit/providers/subtitle_repository_provider.dart';
 import 'package:subtitle_studio/operations/subtitle_operations.dart';
 import 'package:subtitle_studio/widgets/positioning_buttons_widget.dart';
 import 'package:subtitle_studio/widgets/subtitle_effects_sheet.dart';
@@ -273,35 +274,21 @@ class SubtitleActionsMenu extends StatelessWidget {
       }
       
       if (effectLines.isNotEmpty) {
-        final preOperationState = List<SubtitleLine>.from(collection.lines);
-        final effectDeltas = SubtitleEffectOperations.buildEffectDeltas(
-          originalLine: currentLine,
-          originalLineIndex: currentLine.index - 1,
-          effectLines: effectLines,
-        );
-
-        // Apply the effect to the database
-        final success = await SubtitleEffectOperations.applyEffectToSubtitleCollection(
-          isar: ProviderScope.containerOf(context, listen: false)
-              .read(isarProvider),
-          subtitleCollectionId: subtitleId,
-          originalLineIndex: currentLine.index - 1, // Convert to 0-based
-          effectLines: effectLines,
+        final success = await ProviderScope.containerOf(
+          context,
+          listen: false,
+        ).read(subtitleRepositoryProvider)
+            .replaceLineWithGeneratedLinesWithHistory(
+          collectionId: subtitleId,
+          originalIndex: currentLine.index - 1,
+          replacementLines: effectLines,
+          sessionId: sessionId,
+          description:
+              'Applied $effectType effect to line ${currentLine.index} '
+              '(${effectLines.length} lines)',
         );
         
         if (success) {
-          // Create a checkpoint for the effect
-          await ProviderScope.containerOf(context, listen: false)
-              .read(checkpointRepositoryProvider)
-              .createCheckpoint(
-            sessionId: sessionId,
-            subtitleCollectionId: subtitleId,
-            operationType: 'effect',
-            description: 'Applied $effectType effect to line ${currentLine.index} (${effectLines.length} lines)',
-            deltas: effectDeltas,
-            forceSnapshot: true,
-            preOperationState: preOperationState,
-          );
           
           // Close the sheet and refresh
           Navigator.of(context).pop();
