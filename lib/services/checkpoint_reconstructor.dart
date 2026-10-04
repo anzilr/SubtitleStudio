@@ -1,6 +1,7 @@
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/services/checkpoint_history_metadata.dart';
 import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
+import 'package:subtitle_studio/services/checkpoint_state_hasher.dart';
 import 'package:subtitle_studio/services/checkpoint_timeline.dart';
 
 /// Pure reconstruction for v2 Git-style checkpoint commits.
@@ -44,6 +45,11 @@ class CheckpointReconstructor {
 
     final restored =
         CheckpointStateReducer.copyLines(nearestSnapshot.snapshot);
+    _verifyStateHash(
+      checkpoint: nearestSnapshot,
+      lines: restored,
+      label: 'snapshot',
+    );
 
     if (nearestSnapshot.id != targetCheckpointId) {
       final path = CheckpointTimeline.deltaPath(
@@ -60,13 +66,46 @@ class CheckpointReconstructor {
             'pre-operation history without a v2 snapshot boundary.',
           );
         }
+        final expectedParentHash =
+            CheckpointHistoryMetadata.parentStateHash(checkpoint);
+        if (expectedParentHash != null) {
+          final actualParentHash =
+              CheckpointStateHasher.hashLines(restored);
+          if (actualParentHash != expectedParentHash) {
+            throw CheckpointIntegrityException(
+              'Checkpoint \${checkpoint.id} parent-state hash mismatch.',
+            );
+          }
+        }
+
         CheckpointStateReducer.applyDeltasStrictInPlace(
           restored,
           checkpoint.deltas,
+        );
+        _verifyStateHash(
+          checkpoint: checkpoint,
+          lines: restored,
+          label: 'commit',
         );
       }
     }
 
     return restored;
+  }
+
+  static void _verifyStateHash({
+    required Checkpoint checkpoint,
+    required List<SubtitleLine> lines,
+    required String label,
+  }) {
+    final expected = CheckpointHistoryMetadata.stateHash(checkpoint);
+    if (expected == null) return;
+
+    final actual = CheckpointStateHasher.hashLines(lines);
+    if (actual != expected) {
+      throw CheckpointIntegrityException(
+        'Checkpoint \${checkpoint.id} $label state hash mismatch.',
+      );
+    }
   }
 }
