@@ -1,6 +1,7 @@
 import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/services/checkpoint_history_metadata.dart';
+import 'package:subtitle_studio/services/checkpoint_head_reference.dart';
 import 'package:subtitle_studio/services/checkpoint_policy.dart';
 import 'package:subtitle_studio/services/checkpoint_preferences_repository.dart';
 import 'package:subtitle_studio/services/checkpoint_reconstructor.dart';
@@ -77,10 +78,8 @@ class CheckpointHistoryTransaction {
           .sortByTimestampDesc()
           .findAll();
 
-      final active = checkpoints
-          .where((checkpoint) => checkpoint.isActive)
-          .toList()
-        ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      final active =
+          CheckpointHeadReference.activeCheckpoints(checkpoints).toList();
 
       final currentLines =
           CheckpointStateReducer.copyLines(collection.lines);
@@ -127,15 +126,7 @@ class CheckpointHistoryTransaction {
           head = checkpoints.first;
         }
       } else {
-        final activeV2 = active.where(
-          CheckpointHistoryMetadata.isPostOperation,
-        );
-        if (active.length > 1 && activeV2.isNotEmpty) {
-          throw const CheckpointIntegrityException(
-            'V2 checkpoint history contains more than one HEAD.',
-          );
-        }
-        head = active.first;
+        head = CheckpointHeadReference.resolveForMutation(checkpoints);
       }
 
       if (CheckpointHistoryMetadata.isPostOperation(head)) {
@@ -171,9 +162,7 @@ class CheckpointHistoryTransaction {
             ),
           );
 
-          for (final checkpoint in active) {
-            checkpoint.isActive = false;
-          }
+          CheckpointHeadReference.clearInMemory(active);
           if (active.isNotEmpty) {
             await _isar.checkpoints.putAll(active);
           }
@@ -269,9 +258,7 @@ class CheckpointHistoryTransaction {
         ),
       );
 
-      for (final existing in active) {
-        existing.isActive = false;
-      }
+      CheckpointHeadReference.clearInMemory(active);
       if (active.isNotEmpty) {
         await _isar.checkpoints.putAll(active);
       }
