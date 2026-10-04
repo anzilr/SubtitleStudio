@@ -1,10 +1,40 @@
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/utils/time_parser.dart';
-import 'package:subtitle_studio/main.dart'; // For isar instance
 import 'package:subtitle_studio/operations/subtitle_sync_operations.dart'; // For formatDuration
-import 'package:subtitle_studio/utils/subtitle_sorting.dart'; // Enhanced subtitle sorting
+import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
 
 class SubtitleEffectOperations {
+  /// Builds the forward delta sequence for replacing one subtitle line with
+  /// the generated effect lines.
+  ///
+  /// These deltas describe the forward replacement operation. Persistence
+  /// and history commits are owned by SubtitleRepository.
+  static List<SubtitleLineDelta> buildEffectDeltas({
+    required SubtitleLine originalLine,
+    required int originalLineIndex,
+    required List<SubtitleLine> effectLines,
+  }) {
+    final deltas = <SubtitleLineDelta>[
+      SubtitleLineDelta()
+        ..changeType = 'delete'
+        ..lineIndex = originalLineIndex
+        ..beforeState = CheckpointStateReducer.copyLine(originalLine)
+        ..afterState = null,
+    ];
+
+    for (var i = 0; i < effectLines.length; i++) {
+      deltas.add(
+        SubtitleLineDelta()
+          ..changeType = 'add'
+          ..lineIndex = originalLineIndex + i
+          ..beforeState = null
+          ..afterState = CheckpointStateReducer.copyLine(effectLines[i]),
+      );
+    }
+
+    return deltas;
+  }
+
   /// Generate typewriter effect by creating multiple subtitle lines
   /// Each line shows progressively more characters with precise timing
   static Future<List<SubtitleLine>> generateTypewriterEffect({
@@ -219,44 +249,5 @@ class SubtitleEffectOperations {
     return effectLines;
   }
   
-  /// Apply effects to subtitle collection in database
-  static Future<bool> applyEffectToSubtitleCollection({
-    required int subtitleCollectionId,
-    required int originalLineIndex,
-    required List<SubtitleLine> effectLines,
-  }) async {
-    try {
-      // Get the subtitle collection
-      final collection = await isar.subtitleCollections.get(subtitleCollectionId);
-      if (collection == null) return false;
-      
-      await isar.writeTxn(() async {
-        // Create a new list without the original line
-        final newLines = <SubtitleLine>[];
-        
-        // Add all lines except the original line
-        for (final line in collection.lines) {
-          if (line.index != originalLineIndex + 1) {
-            newLines.add(line);
-          }
-        }
-        
-        // Add the effect lines
-        newLines.addAll(effectLines);
-        
-        // Sort and re-index all lines intelligently (preserves overlaps, handles positioning tags)
-        final sortedLines = sortAndReindexSubtitleLines(newLines);
-        
-        // Replace the entire lines list with the sorted list
-        collection.lines = sortedLines;
-        
-        // Save the updated collection
-        await isar.subtitleCollections.put(collection);
-      });
-      
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
+
 }

@@ -1,12 +1,16 @@
-import 'package:subtitle_studio/database/database_helper.dart';
+import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/database/models/models.dart';
-import 'package:subtitle_studio/widgets/video_player_widget.dart';
+import 'package:subtitle_studio/database/stores/preferences_store.dart';
+import 'package:subtitle_studio/utils/subtitle_sorting.dart';
+import 'package:subtitle_studio/widgets/video/subtitle.dart';
 import 'package:subtitle_studio/utils/subtitle_parser.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
-import 'package:subtitle_studio/services/checkpoint_manager.dart';
+import 'package:subtitle_studio/services/checkpoint_repository.dart';
+import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
+import 'package:subtitle_studio/services/checkpoint_history_transaction.dart';
 import 'package:subtitle_studio/utils/time_parser.dart';
-import 'package:subtitle_studio/main.dart'; // For isar instance
-import '../../screen_edit.dart'; // For SubtitleEntry
+import 'package:subtitle_studio/screens/edit/models/subtitle_entry.dart';
+import 'package:subtitle_studio/screens/edit/services/source_view_reconciler.dart';
 
 /// Repository layer for subtitle operations
 /// 
@@ -21,16 +25,24 @@ import '../../screen_edit.dart'; // For SubtitleEntry
 /// - Source view synchronization
 /// - Generate subtitles for video player
 class SubtitleRepository {
-  static final SubtitleRepository _instance = SubtitleRepository._internal();
-  factory SubtitleRepository() => _instance;
-  SubtitleRepository._internal();
+  final Isar _isar;
+  final CheckpointRepository _checkpoints;
+  final CheckpointHistoryTransaction _historyTransaction;
+  final PreferencesStore _preferencesStore;
+
+  SubtitleRepository(this._isar, this._checkpoints)
+      : _historyTransaction = CheckpointHistoryTransaction(_isar),
+        _preferencesStore = PreferencesStore(_isar);
 
   /// Fetch all subtitle lines for a collection
   Future<List<SubtitleLine>> fetchLines(int collectionId) async {
     logInfo('SubtitleRepository: Fetching subtitle lines for collection $collectionId');
     try {
-      final subtitles = await fetchSubtitleLines(collectionId); // Use database_helper function
-      logInfo('SubtitleRepository: Successfully fetched ${subtitles.length} subtitle lines');
+      final collection = await _isar.subtitleCollections.get(collectionId);
+      final subtitles = collection?.lines ?? const <SubtitleLine>[];
+      logInfo(
+        'SubtitleRepository: Successfully fetched ${subtitles.length} subtitle lines',
+      );
       return subtitles;
     } catch (e) {
       logError('SubtitleRepository: Failed to fetch subtitle lines: $e');
@@ -42,7 +54,7 @@ class SubtitleRepository {
   Future<SubtitleCollection?> fetchSubtitleCollection(int id) async {
     logInfo('SubtitleRepository: Fetching subtitle collection $id');
     try {
-      final collection = await fetchSubtitle(id);
+      final collection = await _isar.subtitleCollections.get(id);
       if (collection != null) {
         logInfo('SubtitleRepository: Successfully fetched collection "${collection.fileName}"');
       } else {
@@ -55,11 +67,147 @@ class SubtitleRepository {
     }
   }
 
+  /// Persist one edited subtitle line atomically with v2 history.
+  Future<bool> saveLineChanges(
+    int collectionId,
+    SubtitleLine updatedLine, {
+    required int sessionId,
+    SubtitleLine? beforeLine,
+  }) async {
+    try {
+      await _historyTransaction.commit(
+        sessionId: sessionId,
+        subtitleCollectionId: collectionId,
+        operationType: 'edit',
+        description: 'Edited line ${updatedLine.index}',
+        buildMutation: (currentLines) {
+          final listIndex = updatedLine.index - 1;
+          if (listIndex < 0 || listIndex >= currentLines.length) {
+            throw RangeError.index(
+              listIndex,
+              currentLines,
+              'updatedLine.index',
+            );
+          }
+
+          final persistedBefore = currentLines[listIndex];
+          final timingChanged =
+              persistedBefore.startTime != updatedLine.startTime ||
+              persistedBefore.endTime != updatedLine.endTime;
+          final historyChanged =
+              !CheckpointStateReducer.samePersistedLine(
+            persistedBefore,
+            updatedLine,
+          );
+
+          final nextLines =
+              CheckpointStateReducer.copyLines(currentLines);
+          nextLines[listIndex] =
+              CheckpointStateReducer.copyLine(updatedLine);
+
+          if (timingChanged) {
+            final sorted = sortAndReindexSubtitleLines(nextLines);
+            nextLines
+              ..clear()
+              ..addAll(sorted);
+          }
+
+          final deltas = <SubtitleLineDelta>[];
+          if (historyChanged) {
+            deltas.add(
+              SubtitleLineDelta()
+                ..changeType = 'modify'
+                ..lineIndex = listIndex
+                ..beforeState =
+                    CheckpointStateReducer.copyLine(persistedBefore)
+                ..afterState =
+                    CheckpointStateReducer.copyLine(updatedLine),
+            );
+          }
+
+          return CheckpointMutationPlan(
+            nextLines: nextLines,
+            deltas: deltas,
+            // Timing edits can reorder cues, which the current line delta
+            // format does not encode. Store the exact post-operation state.
+            forceSnapshot: timingChanged,
+          );
+        },
+      );
+      return true;
+    } catch (error) {
+      logError(
+        'SubtitleRepository: Failed atomic line save: $error',
+      );
+      return false;
+    }
+  }
+
+  /// Update several subtitle lines in one collection transaction.
+  ///
+  /// Cue numbers are matched by [SubtitleLine.index], so callers can submit a
+  /// sparse set of modified lines without rewriting unrelated entries.
+  Future<bool> updateMultipleLines(
+    int collectionId,
+    List<SubtitleLine> updatedLines,
+  ) async {
+    if (updatedLines.isEmpty) return true;
+
+    try {
+      return await _isar.writeTxn(() async {
+        final collection = await _isar.subtitleCollections.get(collectionId);
+        if (collection == null) return false;
+
+        final updatesByCueNumber = <int, SubtitleLine>{
+          for (final line in updatedLines) line.index: line,
+        };
+
+        var updatedCount = 0;
+        for (int i = 0; i < collection.lines.length; i++) {
+          final replacement =
+              updatesByCueNumber[collection.lines[i].index];
+          if (replacement != null) {
+            collection.lines[i] = replacement;
+            updatedCount++;
+          }
+        }
+
+        if (updatedCount != updatesByCueNumber.length) {
+          logWarning(
+            'SubtitleRepository: Batch update matched $updatedCount of '
+            '${updatesByCueNumber.length} requested lines',
+          );
+        }
+
+        await _isar.subtitleCollections.put(collection);
+        return updatedCount == updatesByCueNumber.length;
+      });
+    } catch (e, stackTrace) {
+      await logError(
+        'SubtitleRepository: Batch update failed',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
+  }
+
   /// Mark a subtitle line
   Future<bool> markLine(int collectionId, int index, bool marked) async {
     logInfo('SubtitleRepository: Marking line $index in collection $collectionId as $marked');
     try {
-      final success = await markSubtitleLine(collectionId, index, marked); // Use database_helper function
+      final success = await _isar.writeTxn(() async {
+        final collection = await _isar.subtitleCollections.get(collectionId);
+        if (collection == null ||
+            index < 0 ||
+            index >= collection.lines.length) {
+          return false;
+        }
+
+        collection.lines[index].marked = marked;
+        await _isar.subtitleCollections.put(collection);
+        return true;
+      });
       if (success) {
         logInfo('SubtitleRepository: Successfully marked line $index');
       } else {
@@ -76,12 +224,353 @@ class SubtitleRepository {
   Future<bool> updateComment(int collectionId, int index, String? comment) async {
     logInfo('SubtitleRepository: Updating comment for line $index in collection $collectionId');
     try {
-      await updateSubtitleLineComment(collectionId, index, comment);
-      logInfo('SubtitleRepository: Successfully updated comment for line $index');
-      return true;
+      final success = await _isar.writeTxn(() async {
+        final collection = await _isar.subtitleCollections.get(collectionId);
+        if (collection == null ||
+            index < 0 ||
+            index >= collection.lines.length) {
+          return false;
+        }
+
+        collection.lines[index].comment = comment;
+        await _isar.subtitleCollections.put(collection);
+        return true;
+      });
+
+      if (success) {
+        logInfo(
+          'SubtitleRepository: Successfully updated comment for line $index',
+        );
+      } else {
+        logWarning(
+          'SubtitleRepository: Could not update comment for invalid line $index',
+        );
+      }
+      return success;
     } catch (e) {
       logError('SubtitleRepository: Error updating comment for line $index: $e');
       rethrow;
+    }
+  }
+
+  /// Clear mark/comment state for a subtitle line in one transaction.
+  Future<bool> unmarkLine(int collectionId, int index) async {
+    return _isar.writeTxn(() async {
+      final collection = await _isar.subtitleCollections.get(collectionId);
+      if (collection == null ||
+          index < 0 ||
+          index >= collection.lines.length) {
+        return false;
+      }
+
+      final line = collection.lines[index];
+      line.marked = false;
+      line.comment = null;
+      line.resolved = false;
+      await _isar.subtitleCollections.put(collection);
+      return true;
+    });
+  }
+
+  /// Update the resolved state attached to a subtitle comment.
+  Future<bool> updateResolved(
+    int collectionId,
+    int index,
+    bool resolved,
+  ) async {
+    return _isar.writeTxn(() async {
+      final collection = await _isar.subtitleCollections.get(collectionId);
+      if (collection == null ||
+          index < 0 ||
+          index >= collection.lines.length) {
+        return false;
+      }
+
+      collection.lines[index].resolved = resolved;
+      await _isar.subtitleCollections.put(collection);
+      return true;
+    });
+  }
+
+  Future<bool> replaceLineWithGeneratedLinesWithHistory({
+    required int collectionId,
+    required int originalIndex,
+    required List<SubtitleLine> replacementLines,
+    required int sessionId,
+    required String description,
+  }) async {
+    if (replacementLines.isEmpty) return false;
+
+    try {
+      await _historyTransaction.commit(
+        sessionId: sessionId,
+        subtitleCollectionId: collectionId,
+        operationType: 'effect',
+        description: description,
+        buildMutation: (currentLines) {
+          if (originalIndex < 0 || originalIndex >= currentLines.length) {
+            throw RangeError.index(
+              originalIndex,
+              currentLines,
+              'originalIndex',
+            );
+          }
+
+          final original = currentLines[originalIndex];
+          final nextLines = CheckpointStateReducer.copyLines(currentLines)
+            ..removeAt(originalIndex)
+            ..insertAll(
+              originalIndex,
+              replacementLines.map(CheckpointStateReducer.copyLine),
+            );
+
+          final deltas = <SubtitleLineDelta>[
+            SubtitleLineDelta()
+              ..changeType = 'delete'
+              ..lineIndex = originalIndex
+              ..beforeState = CheckpointStateReducer.copyLine(original)
+              ..afterState = null,
+            for (var i = 0; i < replacementLines.length; i++)
+              SubtitleLineDelta()
+                ..changeType = 'add'
+                ..lineIndex = originalIndex + i
+                ..beforeState = null
+                ..afterState = CheckpointStateReducer.copyLine(
+                  replacementLines[i],
+                ),
+          ];
+
+          return CheckpointMutationPlan(
+            nextLines: sortAndReindexSubtitleLines(nextLines),
+            deltas: deltas,
+            forceSnapshot: true,
+          );
+        },
+      );
+      return true;
+    } catch (error) {
+      logError(
+        'SubtitleRepository: Atomic effect replacement failed: $error',
+      );
+      return false;
+    }
+  }
+
+  Future<bool> deleteLineWithHistory({
+    required int collectionId,
+    required int index,
+    required int sessionId,
+  }) async {
+    try {
+      await _historyTransaction.commit(
+        sessionId: sessionId,
+        subtitleCollectionId: collectionId,
+        operationType: 'delete',
+        description: 'Deleted line ${index + 1}',
+        buildMutation: (currentLines) {
+          if (index < 0 || index >= currentLines.length) {
+            throw RangeError.index(index, currentLines, 'index');
+          }
+
+          final deleted = currentLines[index];
+          final nextLines =
+              CheckpointStateReducer.copyLines(currentLines)
+                ..removeAt(index);
+          final sorted = sortAndReindexSubtitleLines(nextLines);
+
+          return CheckpointMutationPlan(
+            nextLines: sorted,
+            deltas: [
+              SubtitleLineDelta()
+                ..changeType = 'delete'
+                ..lineIndex = index
+                ..beforeState =
+                    CheckpointStateReducer.copyLine(deleted)
+                ..afterState = null,
+            ],
+            forceSnapshot: true,
+          );
+        },
+      );
+      return true;
+    } catch (error) {
+      logError(
+        'SubtitleRepository: Atomic delete failed for line $index: $error',
+      );
+      return false;
+    }
+  }
+
+  Future<bool> addLineWithHistory({
+    required int collectionId,
+    required SubtitleLine line,
+    required int insertIndex,
+    required int sessionId,
+  }) async {
+    try {
+      await _historyTransaction.commit(
+        sessionId: sessionId,
+        subtitleCollectionId: collectionId,
+        operationType: 'add',
+        description: 'Added line at position ${insertIndex + 1}',
+        buildMutation: (currentLines) {
+          final targetIndex = insertIndex.clamp(0, currentLines.length);
+          final nextLines =
+              CheckpointStateReducer.copyLines(currentLines);
+          nextLines.insert(
+            targetIndex,
+            CheckpointStateReducer.copyLine(line),
+          );
+
+          return CheckpointMutationPlan(
+            nextLines: sortAndReindexSubtitleLines(nextLines),
+            deltas: [
+              SubtitleLineDelta()
+                ..changeType = 'add'
+                ..lineIndex = targetIndex
+                ..beforeState = null
+                ..afterState =
+                    CheckpointStateReducer.copyLine(line),
+            ],
+            forceSnapshot: true,
+          );
+        },
+      );
+      return true;
+    } catch (error) {
+      logError('SubtitleRepository: Atomic add failed: $error');
+      return false;
+    }
+  }
+
+  Future<bool> splitLineWithHistory({
+    required int collectionId,
+    required SubtitleLine firstPart,
+    required SubtitleLine secondPart,
+    required int originalIndex,
+    required int sessionId,
+  }) async {
+    try {
+      await _historyTransaction.commit(
+        sessionId: sessionId,
+        subtitleCollectionId: collectionId,
+        operationType: 'split',
+        description: 'Split line ${originalIndex + 1}',
+        buildMutation: (currentLines) {
+          if (originalIndex < 0 || originalIndex >= currentLines.length) {
+            throw RangeError.index(
+              originalIndex,
+              currentLines,
+              'originalIndex',
+            );
+          }
+
+          final original = currentLines[originalIndex];
+          final nextLines =
+              CheckpointStateReducer.copyLines(currentLines);
+          nextLines[originalIndex] =
+              CheckpointStateReducer.copyLine(firstPart);
+          nextLines.insert(
+            originalIndex + 1,
+            CheckpointStateReducer.copyLine(secondPart),
+          );
+
+          return CheckpointMutationPlan(
+            nextLines: sortAndReindexSubtitleLines(nextLines),
+            deltas: [
+              SubtitleLineDelta()
+                ..changeType = 'modify'
+                ..lineIndex = originalIndex
+                ..beforeState =
+                    CheckpointStateReducer.copyLine(original)
+                ..afterState =
+                    CheckpointStateReducer.copyLine(firstPart),
+              SubtitleLineDelta()
+                ..changeType = 'add'
+                ..lineIndex = originalIndex + 1
+                ..beforeState = null
+                ..afterState =
+                    CheckpointStateReducer.copyLine(secondPart),
+            ],
+            forceSnapshot: true,
+          );
+        },
+      );
+      return true;
+    } catch (error) {
+      logError('SubtitleRepository: Atomic split failed: $error');
+      return false;
+    }
+  }
+
+  Future<bool> mergeLinesWithHistory({
+    required int collectionId,
+    required SubtitleLine mergedLine,
+    required int firstLineIndex,
+    required int secondLineIndex,
+    required int sessionId,
+  }) async {
+    try {
+      await _historyTransaction.commit(
+        sessionId: sessionId,
+        subtitleCollectionId: collectionId,
+        operationType: 'merge',
+        description:
+            'Merged lines ${firstLineIndex + 1} and ${secondLineIndex + 1}',
+        buildMutation: (currentLines) {
+          if (firstLineIndex < 0 ||
+              secondLineIndex < 0 ||
+              firstLineIndex >= currentLines.length ||
+              secondLineIndex >= currentLines.length ||
+              firstLineIndex == secondLineIndex) {
+            throw StateError('Invalid merge indexes.');
+          }
+
+          final firstBefore = currentLines[firstLineIndex];
+          final secondBefore = currentLines[secondLineIndex];
+
+          final replayDeltas = <SubtitleLineDelta>[
+            SubtitleLineDelta()
+              ..changeType = 'modify'
+              ..lineIndex = firstLineIndex
+              ..beforeState =
+                  CheckpointStateReducer.copyLine(firstBefore)
+              ..afterState =
+                  CheckpointStateReducer.copyLine(mergedLine),
+            SubtitleLineDelta()
+              ..changeType = 'delete'
+              ..lineIndex = secondLineIndex
+              ..beforeState =
+                  CheckpointStateReducer.copyLine(secondBefore)
+              ..afterState = null,
+          ];
+
+          final nextLines =
+              CheckpointStateReducer.copyLines(currentLines);
+          final maxIndex = firstLineIndex > secondLineIndex
+              ? firstLineIndex
+              : secondLineIndex;
+          final minIndex = firstLineIndex < secondLineIndex
+              ? firstLineIndex
+              : secondLineIndex;
+          nextLines.removeAt(maxIndex);
+          nextLines.removeAt(minIndex);
+          nextLines.insert(
+            minIndex,
+            CheckpointStateReducer.copyLine(mergedLine),
+          );
+
+          return CheckpointMutationPlan(
+            nextLines: sortAndReindexSubtitleLines(nextLines),
+            deltas: replayDeltas,
+            forceSnapshot: true,
+          );
+        },
+      );
+      return true;
+    } catch (error) {
+      logError('SubtitleRepository: Atomic merge failed: $error');
+      return false;
     }
   }
 
@@ -89,7 +578,20 @@ class SubtitleRepository {
   Future<bool> deleteLine(int collectionId, int index) async {
     logInfo('SubtitleRepository: Deleting line $index from collection $collectionId');
     try {
-      final success = await deleteSubtitleLineDB(collectionId, index); // Use database_helper function
+      final success = await _isar.writeTxn(() async {
+        final collection = await _isar.subtitleCollections.get(collectionId);
+        if (collection == null ||
+            index < 0 ||
+            index >= collection.lines.length) {
+          return false;
+        }
+
+        final remaining = List<SubtitleLine>.from(collection.lines)
+          ..removeAt(index);
+        collection.lines = sortAndReindexSubtitleLines(remaining);
+        await _isar.subtitleCollections.put(collection);
+        return true;
+      });
       if (success) {
         logInfo('SubtitleRepository: Successfully deleted line $index');
       } else {
@@ -102,41 +604,83 @@ class SubtitleRepository {
     }
   }
 
-  /// Batch delete multiple subtitle lines
-  /// Returns a map with 'success' and 'failed' counts
+  /// Batch delete selected lines atomically with v2 history.
   Future<Map<String, int>> batchDeleteLines(
     int collectionId,
-    List<int> indices,
-    {bool createCheckpoint = true}
-  ) async {
-    logInfo('SubtitleRepository: Batch deleting ${indices.length} lines from collection $collectionId');
-    
-    int successCount = 0;
-    int failCount = 0;
-    
-    // Sort indices in descending order to maintain validity during deletion
-    final sortedIndices = indices.toList()..sort((a, b) => b.compareTo(a));
-    
+    List<int> indices, {
+    required int sessionId,
+  }) async {
+    logInfo(
+      'SubtitleRepository: Batch deleting ${indices.length} lines '
+      'from collection $collectionId',
+    );
+
+    final requested = indices.toSet();
+    if (requested.isEmpty) {
+      return const {'success': 0, 'failed': 0};
+    }
+
+    var successCount = 0;
+    var failedCount = requested.length;
+
     try {
-      for (final index in sortedIndices) {
-        try {
-          final success = await deleteSubtitleLineDB(collectionId, index);
-          if (success) {
-            successCount++;
-          } else {
-            failCount++;
+      await _historyTransaction.commit(
+        sessionId: sessionId,
+        subtitleCollectionId: collectionId,
+        operationType: 'delete',
+        description: 'Batch deleted ${requested.length} lines',
+        buildMutation: (currentLines) {
+          final valid = requested
+              .where(
+                (index) => index >= 0 && index < currentLines.length,
+              )
+              .toList()
+            ..sort((a, b) => b.compareTo(a));
+
+          successCount = valid.length;
+          failedCount = requested.length - valid.length;
+
+          if (valid.isEmpty) {
+            return CheckpointMutationPlan(
+              nextLines: CheckpointStateReducer.copyLines(currentLines),
+              deltas: const <SubtitleLineDelta>[],
+            );
           }
-        } catch (e) {
-          logError('SubtitleRepository: Error deleting index $index: $e');
-          failCount++;
-        }
-      }
-      
-      logInfo('SubtitleRepository: Batch delete completed - Success: $successCount, Failed: $failCount');
-      return {'success': successCount, 'failed': failCount};
-    } catch (e) {
-      logError('SubtitleRepository: Batch delete error: $e');
-      rethrow;
+
+          final deltas = <SubtitleLineDelta>[
+            for (final index in valid)
+              SubtitleLineDelta()
+                ..changeType = 'delete'
+                ..lineIndex = index
+                ..beforeState =
+                    CheckpointStateReducer.copyLine(currentLines[index])
+                ..afterState = null,
+          ];
+
+          final nextLines =
+              CheckpointStateReducer.copyLines(currentLines);
+          for (final index in valid) {
+            nextLines.removeAt(index);
+          }
+
+          return CheckpointMutationPlan(
+            nextLines: sortAndReindexSubtitleLines(nextLines),
+            deltas: deltas,
+            forceSnapshot: true,
+          );
+        },
+      );
+
+      return {
+        'success': successCount,
+        'failed': failedCount,
+      };
+    } catch (error) {
+      logError('SubtitleRepository: Atomic batch delete error: $error');
+      return {
+        'success': 0,
+        'failed': requested.length,
+      };
     }
   }
 
@@ -144,7 +688,10 @@ class SubtitleRepository {
   Future<List<SubtitleLine>> getMarkedLines(int collectionId) async {
     logInfo('SubtitleRepository: Fetching marked lines for collection $collectionId');
     try {
-      final markedLines = await getMarkedSubtitleLines(collectionId);
+      final collection = await _isar.subtitleCollections.get(collectionId);
+      final markedLines =
+          collection?.lines.where((line) => line.marked).toList() ??
+              const <SubtitleLine>[];
       logInfo('SubtitleRepository: Found ${markedLines.length} marked lines');
       return markedLines;
     } catch (e) {
@@ -157,12 +704,187 @@ class SubtitleRepository {
   Future<List<SubtitleLine>> getLinesWithComments(int collectionId) async {
     logInfo('SubtitleRepository: Fetching lines with comments for collection $collectionId');
     try {
-      final linesWithComments = await getAllSubtitleLinesWithComments(collectionId);
-      logInfo('SubtitleRepository: Found ${linesWithComments.length} lines with comments');
+      final collection = await _isar.subtitleCollections.get(collectionId);
+      final linesWithComments = collection?.lines
+              .where((line) => line.comment?.trim().isNotEmpty == true)
+              .toList() ??
+          const <SubtitleLine>[];
+      logInfo(
+        'SubtitleRepository: Found ${linesWithComments.length} lines with comments',
+      );
       return linesWithComments;
     } catch (e) {
       logError('SubtitleRepository: Error fetching lines with comments: $e');
       rethrow;
+    }
+  }
+
+  /// Fetch a session by ID.
+  Future<Session?> fetchSession(int sessionId) {
+    return _isar.sessions.get(sessionId);
+  }
+
+  /// Read the last edited cue index for a session.
+  Future<int?> getLastEditedIndex(int sessionId) async {
+    return (await _isar.sessions.get(sessionId))?.lastEditedIndex;
+  }
+
+  /// Persist the last edited cue index for a session.
+  Future<bool> updateLastEditedIndex(int sessionId, int index) async {
+    return _isar.writeTxn(() async {
+      final session = await _isar.sessions.get(sessionId);
+      if (session == null) return false;
+
+      session.lastEditedIndex = index;
+      await _isar.sessions.put(session);
+      return true;
+    });
+  }
+
+  /// Atomically replaces the collection state and records one v2 history commit.
+  ///
+  /// This is intended for compound operations whose final state has already
+  /// been computed by a domain service (for example banner insertion).
+  Future<bool> replaceCollectionLinesWithHistory({
+    required int collectionId,
+    required int sessionId,
+    required List<SubtitleLine> nextLines,
+    required List<SubtitleLineDelta> deltas,
+    required String operationType,
+    required String description,
+    Map<String, dynamic>? metadata,
+    bool forceSnapshot = true,
+  }) async {
+    try {
+      await _historyTransaction.commit(
+        sessionId: sessionId,
+        subtitleCollectionId: collectionId,
+        operationType: operationType,
+        description: description,
+        metadata: metadata,
+        buildMutation: (_) {
+          return CheckpointMutationPlan(
+            nextLines: CheckpointStateReducer.copyLines(nextLines),
+            deltas: deltas,
+            forceSnapshot: forceSnapshot,
+          );
+        },
+      );
+      return true;
+    } catch (error) {
+      logError(
+        'SubtitleRepository: Atomic collection replacement failed: $error',
+      );
+      return false;
+    }
+  }
+  /// Persist a changed subtitle collection.
+  Future<bool> updateCollection(SubtitleCollection collection) async {
+    try {
+      await _isar.writeTxn(() async {
+        await _isar.subtitleCollections.put(collection);
+      });
+      return true;
+    } catch (e) {
+      logError('SubtitleRepository: Error updating collection: $e');
+      return false;
+    }
+  }
+
+  /// Replace one subtitle line with two split parts.
+  ///
+  /// Checkpoint creation is coordinated by the calling operation so this
+  /// method owns persistence only.
+  Future<bool> splitLine(
+    int collectionId,
+    SubtitleLine firstPart,
+    SubtitleLine secondPart,
+    int originalIndex,
+  ) async {
+    try {
+      return await _isar.writeTxn(() async {
+        final collection = await _isar.subtitleCollections.get(collectionId);
+        if (collection == null ||
+            originalIndex < 0 ||
+            originalIndex >= collection.lines.length) {
+          return false;
+        }
+
+        final lines = List<SubtitleLine>.from(collection.lines);
+        lines[originalIndex] = firstPart;
+        lines.insert(originalIndex + 1, secondPart);
+        collection.lines = sortAndReindexSubtitleLines(lines);
+        await _isar.subtitleCollections.put(collection);
+        return true;
+      });
+    } catch (e) {
+      logError('SubtitleRepository: Error splitting line: $e');
+      return false;
+    }
+  }
+
+  /// Replace two subtitle lines with one merged line.
+  ///
+  /// Checkpoint creation is coordinated by the calling operation so this
+  /// method owns persistence only.
+  Future<bool> mergeLines(
+    int collectionId,
+    SubtitleLine mergedLine,
+    int firstLineIndex,
+    int secondLineIndex,
+  ) async {
+    try {
+      return await _isar.writeTxn(() async {
+        final collection = await _isar.subtitleCollections.get(collectionId);
+        if (collection == null ||
+            firstLineIndex < 0 ||
+            secondLineIndex < 0 ||
+            firstLineIndex >= collection.lines.length ||
+            secondLineIndex >= collection.lines.length ||
+            firstLineIndex == secondLineIndex) {
+          return false;
+        }
+
+        final lines = List<SubtitleLine>.from(collection.lines);
+        final maxIndex =
+            firstLineIndex > secondLineIndex ? firstLineIndex : secondLineIndex;
+        final minIndex =
+            firstLineIndex < secondLineIndex ? firstLineIndex : secondLineIndex;
+        lines.removeAt(maxIndex);
+        lines.removeAt(minIndex);
+        lines.insert(minIndex, mergedLine);
+
+        collection.lines = sortAndReindexSubtitleLines(lines);
+        await _isar.subtitleCollections.put(collection);
+        return true;
+      });
+    } catch (e) {
+      logError('SubtitleRepository: Error merging lines: $e');
+      return false;
+    }
+  }
+
+  /// Insert a subtitle line and normalize ordering/indexes once.
+  Future<bool> addLine(
+    int collectionId,
+    SubtitleLine line,
+    int insertIndex,
+  ) async {
+    try {
+      return await _isar.writeTxn(() async {
+        final collection = await _isar.subtitleCollections.get(collectionId);
+        if (collection == null) return false;
+
+        final lines = List<SubtitleLine>.from(collection.lines);
+        final targetIndex = insertIndex.clamp(0, lines.length);
+        lines.insert(targetIndex, line);
+        collection.lines = sortAndReindexSubtitleLines(lines);
+        await _isar.subtitleCollections.put(collection);
+        return true;
+      });
+    } catch (e) {
+      logError('SubtitleRepository: Error adding line: $e');
+      return false;
     }
   }
 
@@ -223,65 +945,41 @@ class SubtitleRepository {
     }
   }
 
-  /// Sync source view entries back to database
+  /// Sync source view entries back to database.
+  ///
+  /// The source list is authoritative: removed entries are deleted, added
+  /// entries become new subtitle lines, and matching existing cues keep their
+  /// original/mark/comment metadata.
   Future<void> syncSourceViewToDatabase(
     int collectionId,
     List<SubtitleEntry> entries,
   ) async {
-    logInfo('SubtitleRepository: Syncing ${entries.length} source view entries to database');
+    logInfo(
+      'SubtitleRepository: Syncing ${entries.length} source view entries to database',
+    );
+
     try {
-      // Get the subtitle collection
-      final collection = await isar.subtitleCollections.get(collectionId);
+      final collection = await _isar.subtitleCollections.get(collectionId);
       if (collection == null) {
         throw Exception('Subtitle collection $collectionId not found');
       }
 
-      // Update the lines from source view entries
-      await isar.writeTxn(() async {
-        for (int i = 0; i < entries.length; i++) {
-          final entry = entries[i];
-          if (i < collection.lines.length) {
-            final line = collection.lines[i];
-            // Update times and text from source view
-            line.startTime = entry.startTime;
-            line.endTime = entry.endTime;
-            // Update edited text (preserve original)
-            if (entry.text != line.original) {
-              line.edited = entry.text;
-            } else {
-              line.edited = null; // Clear edit if it matches original
-            }
-          }
-        }
-        await isar.subtitleCollections.put(collection);
+      final reconciled = SourceViewReconciler.reconcile(
+        existingLines: collection.lines,
+        entries: entries,
+      );
+
+      await _isar.writeTxn(() async {
+        collection.lines = reconciled;
+        await _isar.subtitleCollections.put(collection);
       });
-      
-      logInfo('SubtitleRepository: Successfully synced source view to database');
+
+      logInfo(
+        'SubtitleRepository: Successfully synced source view '
+        '(${collection.lines.length} lines)',
+      );
     } catch (e) {
       logError('SubtitleRepository: Error syncing source view: $e');
-      rethrow;
-    }
-  }
-
-  /// Create a checkpoint for the current state
-  Future<void> createCheckpoint(
-    int collectionId,
-    int sessionId,
-    String operationType,
-    String description,
-  ) async {
-    logInfo('SubtitleRepository: Creating checkpoint "$description" for collection $collectionId');
-    try {
-      await CheckpointManager.createCheckpoint(
-        subtitleCollectionId: collectionId,
-        sessionId: sessionId,
-        operationType: operationType,
-        description: description,
-        deltas: [], // Empty for manual checkpoints
-      );
-      logInfo('SubtitleRepository: Successfully created checkpoint');
-    } catch (e) {
-      logError('SubtitleRepository: Error creating checkpoint: $e');
       rethrow;
     }
   }
@@ -293,7 +991,7 @@ class SubtitleRepository {
   ) async {
     logInfo('SubtitleRepository: Creating initial checkpoint snapshot for collection $collectionId');
     try {
-      await CheckpointManager.createInitialSnapshot(
+      await _checkpoints.createInitialSnapshot(
         subtitleCollectionId: collectionId,
         sessionId: sessionId,
       );
@@ -308,7 +1006,17 @@ class SubtitleRepository {
   Future<void> updateLastEditedSession(int sessionId) async {
     logInfo('SubtitleRepository: Updating last edited session to $sessionId');
     try {
-      await updateLastEditedSession(sessionId);
+      if (sessionId <= 0) {
+        throw ArgumentError.value(
+          sessionId,
+          'sessionId',
+          'Session ID must be positive.',
+        );
+      }
+
+      await _preferencesStore.update(
+        (preferences) => preferences.lastEditedSession = sessionId,
+      );
       logInfo('SubtitleRepository: Successfully updated last edited session');
     } catch (e) {
       logError('SubtitleRepository: Error updating last edited session: $e');
@@ -320,7 +1028,8 @@ class SubtitleRepository {
   Future<bool> getSessionEditMode(int sessionId) async {
     logInfo('SubtitleRepository: Fetching edit mode for session $sessionId');
     try {
-      final editMode = await getSessionEditMode(sessionId);
+      final session = await _isar.sessions.get(sessionId);
+      final editMode = session?.editMode ?? false;
       logInfo('SubtitleRepository: Session $sessionId edit mode: $editMode');
       return editMode;
     } catch (e) {

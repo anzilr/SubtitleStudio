@@ -1,7 +1,6 @@
 import 'package:subtitle_studio/database/models/models.dart';
-import 'package:subtitle_studio/database/database_helper.dart';
+import 'package:subtitle_studio/screens/edit/repositories/subtitle_repository.dart';
 import 'package:subtitle_studio/utils/time_parser.dart';
-import 'package:subtitle_studio/services/checkpoint_manager.dart';
 import 'package:subtitle_studio/utils/subtitle_sorting.dart'; // Enhanced subtitle sorting
 
 class SubtitleBannerOperations {
@@ -88,6 +87,7 @@ class SubtitleBannerOperations {
   }
     /// Insert banners into the subtitle collection
   static Future<bool> insertBanners({
+    required SubtitleRepository subtitleRepository,
     required int subtitleCollectionId,
     required int sessionId,
     required List<SubtitleLine> currentSubtitleLines,
@@ -148,39 +148,25 @@ class SubtitleBannerOperations {
         return true;
       }
       
-      // Create checkpoint FIRST - before any modifications
-      // Count how many banners will be inserted for the description
       int bannerCount = 0;
       if (includeBeginning) bannerCount++;
       if (includeMiddle) bannerCount++;
       if (includeEnd) bannerCount++;
-      
+
       final deltas = <SubtitleLineDelta>[];
       for (final banner in banners) {
-        final insertIndex = _findInsertionIndex(preOperationState, banner.startTime);
-        deltas.add(SubtitleLineDelta()
-          ..changeType = 'add'
-          ..lineIndex = insertIndex
-          ..beforeState = null
-          ..afterState = banner);
+        final insertIndex =
+            _findInsertionIndex(preOperationState, banner.startTime);
+        deltas.add(
+          SubtitleLineDelta()
+            ..changeType = 'add'
+            ..lineIndex = insertIndex
+            ..beforeState = null
+            ..afterState = banner,
+        );
       }
-      
-      await CheckpointManager.createCheckpoint(
-        sessionId: sessionId,
-        subtitleCollectionId: subtitleCollectionId,
-        operationType: 'add',
-        description: 'Inserted $bannerCount banner${bannerCount == 1 ? '' : 's'}',
-        deltas: deltas,
-        preOperationState: preOperationState,
-        metadata: {
-          'bannerCount': bannerCount,
-          'includeBeginning': includeBeginning,
-          'includeMiddle': includeMiddle,
-          'includeEnd': includeEnd,
-        },
-      );
-      
-      // NOW perform the actual modifications
+
+      // Build the complete post-operation state first.
       // Sort all lines by start time to determine proper insertion order
       final allLines = List<SubtitleLine>.from(currentSubtitleLines);
       
@@ -193,14 +179,23 @@ class SubtitleBannerOperations {
       // Sort and reindex intelligently (preserves overlaps, handles positioning tags)
       final sortedLines = sortAndReindexSubtitleLines(allLines);
       
-      // Update the database
-      final subtitle = await fetchSubtitle(subtitleCollectionId);
-      if (subtitle != null) {
-        subtitle.lines = sortedLines;
-        return await updateSubtitleCollection(subtitle);
-      }
-      
-      return false;
+      return await subtitleRepository.replaceCollectionLinesWithHistory(
+        collectionId: subtitleCollectionId,
+        sessionId: sessionId,
+        nextLines: sortedLines,
+        deltas: deltas,
+        operationType: 'add',
+        description:
+            'Inserted $bannerCount banner${bannerCount == 1 ? '' : 's'}',
+        metadata: {
+          'bannerCount': bannerCount,
+          'includeBeginning': includeBeginning,
+          'includeMiddle': includeMiddle,
+          'includeEnd': includeEnd,
+          'source': 'banner',
+        },
+        forceSnapshot: true,
+      );
     } catch (e) {
       return false;
     }

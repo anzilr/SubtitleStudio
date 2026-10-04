@@ -1,41 +1,43 @@
 import 'package:flutter_gemini/flutter_gemini.dart';
-import 'package:subtitle_studio/database/models/preferences_model.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 
 /// Service to fetch and manage available Gemini AI models
 class GeminiModelsService {
   static List<GeminiModel>? _cachedModels;
   static DateTime? _lastFetch;
+  static int? _cachedApiKeyHash;
   static const _cacheDuration = Duration(hours: 24);
 
   /// Fetch available models from Gemini API
   /// Returns cached models if available and not expired
   static Future<List<GeminiModel>> fetchAvailableModels({
+    required String? apiKey,
     bool forceRefresh = false,
   }) async {
-    // Return cached models if available and not expired
+    final normalizedApiKey = apiKey?.trim();
+    final apiKeyHash = normalizedApiKey?.isNotEmpty == true
+        ? normalizedApiKey.hashCode
+        : null;
+
+    // Return cached models only for the same credential.
     if (!forceRefresh &&
         _cachedModels != null &&
         _lastFetch != null &&
+        _cachedApiKeyHash == apiKeyHash &&
         DateTime.now().difference(_lastFetch!) < _cacheDuration) {
       logInfo('Returning cached Gemini models (${_cachedModels!.length} models)');
       return _cachedModels!;
     }
 
     try {
-      final apiKey = await PreferencesModel.getGeminiApiKey();
-      
-      if (apiKey == null || apiKey.isEmpty) {
+      if (normalizedApiKey == null || normalizedApiKey.isEmpty) {
         logWarning('No Gemini API key configured, returning empty model list');
         return [];
       }
 
-      // Initialize Gemini if not already initialized
-      try {
-        Gemini.init(apiKey: apiKey);
-      } catch (e) {
-        // Already initialized, ignore
-      }
+      // The SDK's init() keeps the first credential forever. Reinitialize
+      // explicitly so changing the key in Settings takes effect immediately.
+      Gemini.reInitialize(apiKey: normalizedApiKey);
 
       logInfo('Fetching available Gemini models from API...');
       final models = await Gemini.instance.listModels();
@@ -56,6 +58,7 @@ class GeminiModelsService {
 
       _cachedModels = supportedModels;
       _lastFetch = DateTime.now();
+      _cachedApiKeyHash = apiKeyHash;
 
       logInfo('Fetched ${supportedModels.length} supported Gemini models');
       return supportedModels;
@@ -81,14 +84,16 @@ class GeminiModelsService {
 
   /// Format model name for display
   static String _formatModelName(String modelName) {
-    // Remove 'models/' prefix
-    final name = modelName.replaceFirst('models/', '');
-    
-    // Convert to title case and add spaces
-    return name
+    final name = modelName.replaceFirst('models/', '').trim();
+    if (name.isEmpty) return 'Unknown model';
+
+    final words = name
         .split('-')
+        .where((word) => word.isNotEmpty)
         .map((word) => word[0].toUpperCase() + word.substring(1))
-        .join(' ');
+        .toList(growable: false);
+
+    return words.isEmpty ? 'Unknown model' : words.join(' ');
   }
 
   /// Get default models as fallback
@@ -116,6 +121,7 @@ class GeminiModelsService {
   static void clearCache() {
     _cachedModels = null;
     _lastFetch = null;
+    _cachedApiKeyHash = null;
     logInfo('Cleared Gemini models cache');
   }
 }

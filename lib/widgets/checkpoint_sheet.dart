@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/database/models/models.dart';
-import 'package:subtitle_studio/services/checkpoint_manager.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/screens/screen_help.dart';
 
@@ -11,7 +12,7 @@ import 'package:subtitle_studio/screens/screen_help.dart';
 /// - Easy undo to any point
 /// - Save points for important states
 /// - Automatic history tracking
-class CheckpointSheet extends StatefulWidget {
+class CheckpointSheet extends ConsumerStatefulWidget {
   final int sessionId;
   final int subtitleCollectionId;
   final Function() onCheckpointRestored;
@@ -24,7 +25,7 @@ class CheckpointSheet extends StatefulWidget {
   });
 
   @override
-  State<CheckpointSheet> createState() => _CheckpointSheetState();
+  ConsumerState<CheckpointSheet> createState() => _CheckpointSheetState();
 }
 
 /// Tree node representing a checkpoint in the tree structure
@@ -42,7 +43,7 @@ class CheckpointNode {
   });
 }
 
-class _CheckpointSheetState extends State<CheckpointSheet> {
+class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
   List<Checkpoint> _checkpoints = [];
   bool _isLoading = true;
   List<CheckpointNode> _treeNodes = [];
@@ -111,7 +112,7 @@ class _CheckpointSheetState extends State<CheckpointSheet> {
     setState(() => _isLoading = true);
     
     try {
-      final checkpoints = await CheckpointManager.getCheckpointsForSession(widget.sessionId);
+      final checkpoints = await ref.read(checkpointRepositoryProvider).getCheckpointsForSession(widget.sessionId);
 
       // Find the currently active point
       Checkpoint? currentCheckpoint;
@@ -126,24 +127,29 @@ class _CheckpointSheetState extends State<CheckpointSheet> {
         }
       }
 
+      if (!mounted) return;
+
       setState(() {
         _checkpoints = checkpoints;
         _currentCheckpointId = currentCheckpoint?.id;
         _buildTree();
         _isLoading = false;
       });
-      
-      // Scroll to current point after the UI is built
+
       if (currentCheckpoint != null) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          _scrollToCurrentCheckpoint();
+          if (mounted) {
+            _scrollToCurrentCheckpoint();
+          }
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isLoading = false);
-      if (mounted) {
-        SnackbarHelper.showError(context, 'Failed to load history: $e');
-      }
+      SnackbarHelper.showError(
+        context,
+        'Could not load checkpoint history. Please try again.',
+      );
     }
   }
   
@@ -249,7 +255,7 @@ class _CheckpointSheetState extends State<CheckpointSheet> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Making new changes after going back will replace $futureCheckpointsCount newer change${futureCheckpointsCount > 1 ? 's' : ''}.',
+                          '$futureCheckpointsCount newer change${futureCheckpointsCount > 1 ? 's are' : ' is'} preserved as alternate history. Making a new edit from here creates a new branch.',
                           style: TextStyle(
                             fontSize: 13,
                             color: Colors.orange.shade900,
@@ -297,7 +303,7 @@ class _CheckpointSheetState extends State<CheckpointSheet> {
     );
 
     if (confirmed == true && mounted) {
-      final success = await CheckpointManager.undoToCheckpoint(
+      final success = await ref.read(checkpointRepositoryProvider).undoToCheckpoint(
         checkpointId: checkpoint.id,
         sessionId: widget.sessionId,
       );
@@ -423,7 +429,7 @@ class _CheckpointSheetState extends State<CheckpointSheet> {
     );
 
     if (name != null && name.isNotEmpty && mounted) {
-      await CheckpointManager.createManualCheckpoint(
+      await ref.read(checkpointRepositoryProvider).createManualCheckpoint(
         sessionId: widget.sessionId,
         subtitleCollectionId: widget.subtitleCollectionId,
         customDescription: name,
@@ -543,13 +549,10 @@ class _CheckpointSheetState extends State<CheckpointSheet> {
     );
 
     if (name != null && name.isNotEmpty && mounted) {
-      await CheckpointManager.createCheckpoint(
+      await ref.read(checkpointRepositoryProvider).createManualCheckpoint(
         sessionId: widget.sessionId,
         subtitleCollectionId: widget.subtitleCollectionId,
-        operationType: 'manual',
-        description: name,
-        deltas: [],
-        forceSnapshot: true, // Force this to be a snapshot
+        customDescription: name,
       );
 
       await _loadHistory();

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:subtitle_studio/database/models/models.dart';
-import 'package:subtitle_studio/database/database_helper.dart';
+import 'package:subtitle_studio/screens/edit/providers/subtitle_repository_provider.dart';
 import 'package:subtitle_studio/utils/malayalam_normalizer.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 
-class MalayalamNormalizationSheet extends StatefulWidget {
+class MalayalamNormalizationSheet extends ConsumerStatefulWidget {
   final int subtitleCollectionId;
   final List<SubtitleLine> subtitleLines;
   final VoidCallback onNormalizationComplete;
@@ -17,10 +19,10 @@ class MalayalamNormalizationSheet extends StatefulWidget {
   });
 
   @override
-  State<MalayalamNormalizationSheet> createState() => _MalayalamNormalizationSheetState();
+  ConsumerState<MalayalamNormalizationSheet> createState() => _MalayalamNormalizationSheetState();
 }
 
-class _MalayalamNormalizationSheetState extends State<MalayalamNormalizationSheet> {
+class _MalayalamNormalizationSheetState extends ConsumerState<MalayalamNormalizationSheet> {
   bool _isAnalyzing = false;
   bool _isApplying = false;
   bool _isAnalyzed = false;
@@ -52,19 +54,6 @@ class _MalayalamNormalizationSheetState extends State<MalayalamNormalizationShee
         break;
       }
     }
-  }
-
-  // Helper function to parse subtitle time to DateTime
-  DateTime _parseSubtitleTime(String time) {
-    // Assuming the time format is "HH:mm:ss,SSS" (e.g., "00:01:23,456")
-    List<String> parts = time.split(',');
-    List<String> hms = parts[0].split(':');
-    int hours = int.parse(hms[0]);
-    int minutes = int.parse(hms[1]);
-    int seconds = int.parse(hms[2]);
-    int milliseconds = int.parse(parts[1]);
-
-    return DateTime(0, 1, 1, hours, minutes, seconds, milliseconds);
   }
 
   Future<void> _analyzeChanges() async {
@@ -146,61 +135,66 @@ class _MalayalamNormalizationSheetState extends State<MalayalamNormalizationShee
     });
 
     try {
-      int successfulUpdates = 0;
+      final updatedLines = <SubtitleLine>[];
 
-      // Apply changes only for selected previews
       for (int i = 0; i < _previewResults.length; i++) {
-        if (_selectedChanges[i] == true) {
-          final preview = _previewResults[i];
+        if (_selectedChanges[i] != true) continue;
 
-          // Create updated line
-          final updatedLine = SubtitleLine()
-            ..index = preview.subtitleLine.index
-            ..original = preview.subtitleLine.original
+        final preview = _previewResults[i];
+        final source = preview.subtitleLine;
+
+        updatedLines.add(
+          SubtitleLine()
+            ..index = source.index
+            ..original = source.original
             ..edited = preview.result.normalizedText
-            ..startTime = preview.subtitleLine.startTime
-            ..endTime = preview.subtitleLine.endTime
-            ..marked = preview.subtitleLine.marked;
-
-          try {
-            await saveSubtitleChangesToDatabase(
-              widget.subtitleCollectionId,
-              updatedLine,
-              _parseSubtitleTime,
-            );
-
-            successfulUpdates++;
-          } catch (e) {
-            debugPrint('Failed to update line ${preview.lineIndex + 1}: $e');
-          }
-        }
-      }
-
-      setState(() {
-        _isApplying = false;
-        _isCompleted = true;
-      });
-
-      if (successfulUpdates > 0) {
-        widget.onNormalizationComplete();
-        if (mounted) {
-          SnackbarHelper.showSuccess(
-            context,
-            'Applied normalization to $successfulUpdates subtitle line${successfulUpdates != 1 ? 's' : ''}',
-          );
-        }
-      }
-
-    } catch (e) {
-      setState(() {
-        _isApplying = false;
-      });
-      if (mounted) {
-        SnackbarHelper.showError(
-          context,
-          'Failed to apply changes: $e',
+            ..startTime = source.startTime
+            ..endTime = source.endTime
+            ..marked = source.marked
+            ..comment = source.comment
+            ..resolved = source.resolved,
         );
       }
+
+      final success = await ref
+          .read(subtitleRepositoryProvider)
+          .updateMultipleLines(
+            widget.subtitleCollectionId,
+            updatedLines,
+          );
+
+      if (!mounted) return;
+
+      setState(() {
+        _isApplying = false;
+        _isCompleted = success;
+      });
+
+      if (!success) {
+        SnackbarHelper.showError(
+          context,
+          'Could not apply the selected normalization changes. Please try again.',
+        );
+        return;
+      }
+
+      if (updatedLines.isNotEmpty) {
+        widget.onNormalizationComplete();
+        SnackbarHelper.showSuccess(
+          context,
+          'Applied normalization to ${updatedLines.length} subtitle line'
+          '${updatedLines.length != 1 ? 's' : ''}',
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isApplying = false;
+      });
+      SnackbarHelper.showError(
+        context,
+        'Could not apply the selected normalization changes. Please try again.',
+      );
     }
   }
 
@@ -763,7 +757,7 @@ class _MalayalamNormalizationSheetState extends State<MalayalamNormalizationShee
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
                             itemCount: _previewResults.length,
-                            cacheExtent: 1000, // Cache more items for smoother scrolling
+                            scrollCacheExtent: const ScrollCacheExtent.pixels(1000), // Cache more items for smoother scrolling
                             addAutomaticKeepAlives: false, // Don't keep all items alive
                             addRepaintBoundaries: true, // Optimize repainting
                             itemBuilder: (context, index) {

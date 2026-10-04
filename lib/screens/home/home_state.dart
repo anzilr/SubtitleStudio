@@ -1,10 +1,11 @@
 import 'package:equatable/equatable.dart';
 import '../../database/models/models.dart';
+import 'package:subtitle_studio/screens/home/models/session_summary.dart';
 
 /// Represents the state of the Home Screen
 /// 
 /// This is an immutable state class that uses Equatable for value equality.
-/// The state is managed by HomeCubit and drives the UI rendering.
+/// The state is managed by HomeController through Riverpod and drives the UI rendering.
 /// 
 /// State Properties:
 /// - [isLoading]: Whether the screen is in loading state
@@ -23,6 +24,8 @@ class HomeState extends Equatable {
   final bool isLoading;
   final List<Session> recentSessions;
   final Session? lastEditedSession;
+  final Map<int, SessionSummary> sessionSummaries;
+  final Map<int, int> sessionLastOpenedEpochMs;
   final String searchQuery;
   final bool isFabExpanded;
   final SessionSortOption sortOption;
@@ -32,6 +35,8 @@ class HomeState extends Equatable {
     this.isLoading = true,
     this.recentSessions = const [],
     this.lastEditedSession,
+    this.sessionSummaries = const {},
+    this.sessionLastOpenedEpochMs = const {},
     this.searchQuery = '',
     this.isFabExpanded = false,
     this.sortOption = SessionSortOption.lastOpened,
@@ -43,6 +48,8 @@ class HomeState extends Equatable {
         isLoading: true,
         recentSessions: [],
         lastEditedSession: null,
+        sessionSummaries: {},
+        sessionLastOpenedEpochMs: {},
         searchQuery: '',
         isFabExpanded: false,
         sortOption: SessionSortOption.lastOpened,
@@ -54,6 +61,8 @@ class HomeState extends Equatable {
     bool? isLoading,
     List<Session>? recentSessions,
     Session? lastEditedSession,
+    Map<int, SessionSummary>? sessionSummaries,
+    Map<int, int>? sessionLastOpenedEpochMs,
     String? searchQuery,
     bool? isFabExpanded,
     SessionSortOption? sortOption,
@@ -67,6 +76,9 @@ class HomeState extends Equatable {
       lastEditedSession: clearLastEditedSession
           ? null
           : (lastEditedSession ?? this.lastEditedSession),
+      sessionSummaries: sessionSummaries ?? this.sessionSummaries,
+      sessionLastOpenedEpochMs:
+          sessionLastOpenedEpochMs ?? this.sessionLastOpenedEpochMs,
       searchQuery: searchQuery ?? this.searchQuery,
       isFabExpanded: isFabExpanded ?? this.isFabExpanded,
       sortOption: sortOption ?? this.sortOption,
@@ -93,19 +105,26 @@ class HomeState extends Equatable {
     // Apply sorting based on selected option
     switch (sortOption) {
       case SessionSortOption.lastOpened:
-        // Sort by last edited session, with most recent at the top
-        if (lastEditedSession != null) {
-          sessions.sort((a, b) {
-            if (lastEditedSession!.id == a.id) return -1;
-            if (lastEditedSession!.id == b.id) return 1;
-            return 0;
-          });
-        }
+        sessions.sort((a, b) {
+          final aOpened = sessionLastOpenedEpochMs[a.id];
+          final bOpened = sessionLastOpenedEpochMs[b.id];
+
+          if (aOpened != null && bOpened != null && aOpened != bOpened) {
+            return bOpened.compareTo(aOpened);
+          }
+          if (aOpened != null && bOpened == null) return -1;
+          if (aOpened == null && bOpened != null) return 1;
+
+          // Existing sessions created before activity tracking fall back to
+          // deterministic newest-ID order until they are opened once.
+          return b.id.compareTo(a.id);
+        });
         break;
-        
+
       case SessionSortOption.lastCreated:
-        // Already in reverse chronological order (newest first) from database
-        // No additional sorting needed as database returns in this order
+        // Isar auto-increment IDs are monotonic for newly inserted sessions.
+        // Sort explicitly instead of relying on query iteration order.
+        sessions.sort((a, b) => b.id.compareTo(a.id));
         break;
         
       case SessionSortOption.name:
@@ -127,15 +146,25 @@ class HomeState extends Equatable {
   /// Whether the screen has sessions to display
   bool get hasSessions => recentSessions.isNotEmpty;
 
-  /// Whether there's an active search with no results
-  bool get hasNoSearchResults =>
-      searchQuery.isNotEmpty && filteredSessions.isEmpty;
+  /// Whether there's an active search with no results.
+  ///
+  /// Avoid calling [filteredSessions] here because that getter also sorts and
+  /// allocates a list; the UI may already have requested it for the same build.
+  bool get hasNoSearchResults {
+    if (searchQuery.isEmpty) return false;
+    final normalizedQuery = searchQuery.toLowerCase();
+    return !recentSessions.any(
+      (session) => session.fileName.toLowerCase().contains(normalizedQuery),
+    );
+  }
 
   @override
   List<Object?> get props => [
         isLoading,
         recentSessions,
         lastEditedSession,
+        sessionSummaries,
+        sessionLastOpenedEpochMs,
         searchQuery,
         isFabExpanded,
         sortOption,

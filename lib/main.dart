@@ -13,7 +13,7 @@
 //
 // Architecture Overview:
 // - Uses Isar database for local data persistence
-// - Provider pattern for state management (theme, preferences)
+// - Riverpod for application state management
 // - Media Kit for video playback functionality
 // - Custom logging system for debugging and error tracking
 // - Modular widget structure for reusable components
@@ -21,28 +21,25 @@
 import 'package:flutter/material.dart';         // Core Flutter framework
 import 'package:flutter/services.dart';        // System services (orientation, clipboard)
 import 'package:flutter/foundation.dart';      // Platform detection
-import 'package:provider/provider.dart';       // State management
+import 'package:flutter_riverpod/flutter_riverpod.dart'; // Riverpod root
+import 'package:subtitle_studio/app/providers/core_providers.dart'; // Riverpod core dependencies
 import 'package:isar_community/isar.dart';              // Local database
 import 'package:path_provider/path_provider.dart'; // File system access
-import 'package:flutter_dotenv/flutter_dotenv.dart'; // Environment variables
 import 'dart:async';                          // Async programming utilities
 
 // Application-specific imports
 import 'package:subtitle_studio/utils/app_info.dart';        // App version and info utilities
 import 'package:subtitle_studio/utils/app_logger.dart';      // Logging system
 import 'package:subtitle_studio/utils/intent_handler.dart';  // File association handling
+import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
+import 'package:subtitle_studio/services/file_picker_preferences_repository.dart';
 import 'package:subtitle_studio/utils/msone_hotkey_manager.dart'; // Keyboard shortcuts
 import 'package:subtitle_studio/widgets/splash_screen.dart'; // Initial splash screen
 import 'screens/screen_home.dart';                        // Main home screen
 import 'screens/screen_source_view.dart';                 // Source view screen
 import 'database/models/models.dart';                     // Database models
-import 'themes/theme_provider.dart';                      // Theme management
+import 'themes/theme_controller.dart';                    // Riverpod theme management
 import 'package:media_kit/media_kit.dart';               // Video playback support
-
-/// Global Isar database instance
-/// This is accessible throughout the app for data operations
-/// Initialized in main() before app startup
-late Isar isar;
 
 /// Application entry point
 /// 
@@ -60,8 +57,6 @@ Future<void> main(List<String> args) async {
   // Ensure Flutter widget system is initialized before other operations
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Load environment variables from .env file (optional, used for Telegram integration)
-  await dotenv.load();
   
   // Initialize logging system first - essential for debugging startup issues
   await AppLogger.instance.initialize();
@@ -97,7 +92,11 @@ Future<void> main(List<String> args) async {
   // Initialize Isar database with retry mechanism for better reliability
   // The database stores user preferences, sessions, and subtitle collections
   Isar.initializeIsarCore(download: false);
-  await initializeIsarWithRetry();
+  final isar = await initializeIsarWithRetry();
+
+  FilePickerSAF.configurePreferences(
+    FilePickerPreferencesRepository(isar),
+  );
   
   // Set supported device orientations
   // Supports both portrait and landscape modes for better usability
@@ -135,7 +134,14 @@ Future<void> main(List<String> args) async {
   }
   
   await AppLogger.instance.info('Application initialization completed');
-  runApp(MainApp(initialFile: initialFile));
+  runApp(
+    ProviderScope(
+      overrides: [
+        isarProvider.overrideWithValue(isar),
+      ],
+      child: MainApp(initialFile: initialFile),
+    ),
+  );
 }
 
 /// Initialize Isar database with retry mechanism and exponential backoff
@@ -155,7 +161,7 @@ Future<void> main(List<String> args) async {
 /// - [maxRetries]: Maximum number of retry attempts (default: 3)
 /// 
 /// Throws: Database initialization error after max retries exceeded
-Future<void> initializeIsarWithRetry({int maxRetries = 3}) async {
+Future<Isar> initializeIsarWithRetry({int maxRetries = 3}) async {
   final dir = await getApplicationDocumentsDirectory();
   int retryCount = 0;
   Duration delay = const Duration(milliseconds: 500); // Initial delay
@@ -163,14 +169,14 @@ Future<void> initializeIsarWithRetry({int maxRetries = 3}) async {
   while (true) {
     try {
       // Attempt to open Isar database with all required schemas
-      isar = await Isar.open(
+      final isar = await Isar.open(
         [PreferencesSchema, SessionSchema, SubtitleCollectionSchema, DictionaryEntrySchema, CheckpointSchema, VideoPreferencesSchema, TutorialStatusSchema],
         directory: dir.path, 
         name: "subtitlesInstance", // Unique database instance name
       );
       debugPrint('Isar database initialized successfully');
       await AppLogger.instance.info('Isar database initialized successfully');
-      return; // Success - exit the retry loop
+      return isar; // Success - exit the retry loop
     } catch (e) {
       retryCount++;
       
@@ -204,58 +210,36 @@ Future<void> initializeIsarWithRetry({int maxRetries = 3}) async {
   }
 }
 
-/// Root application widget using Provider for state management
-/// 
-/// Sets up the MaterialApp with:
-/// - ThemeProvider for dynamic theme switching (dark/light mode)
-/// - Custom theme data based on user preferences
-/// - Initial navigation to splash screen
-/// 
-/// The Provider pattern is used for:
-/// - Theme management across the entire app
-/// - Reactive UI updates when theme changes
-/// - Centralized state management for app-wide settings
-class MainApp extends StatelessWidget {
+/// Root application widget using Riverpod-managed theme state.
+class MainApp extends ConsumerWidget {
   const MainApp({super.key, this.initialFile});
-  
+
   final String? initialFile;
 
   @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => ThemeProvider(),
-      child: Consumer<ThemeProvider>(
-        builder: (context, themeProvider, _) {
-          // Update system UI overlay style based on theme
-          final isDark = themeProvider.themeMode == ThemeMode.dark;
-          SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-            systemNavigationBarColor: Colors.transparent,
-            systemNavigationBarDividerColor: Colors.transparent,
-            systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
-            statusBarColor: Colors.transparent,
-            statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
-            statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
-          ));
-          
-          return MaterialApp(
-            title: 'Subtitle Studio ${AppInfo.version}',
-            theme: themeProvider.getThemeData(),
-            home: _getInitialScreen(),
-            // Performance optimizations for keyboard responsiveness
-            debugShowCheckedModeBanner: false,
-            // Enable hardware acceleration for smoother animations
-            builder: (context, child) {
-              return MediaQuery(
-                // Optimize text scaling for consistent performance
-                data: MediaQuery.of(context).copyWith(
-                  textScaleFactor: MediaQuery.of(context).textScaleFactor.clamp(0.8, 1.2),
-                ),
-                child: child!,
-              );
-            },
-          );
-        },
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeState = ref.watch(themeControllerProvider);
+
+    final isDark = themeState.themeMode == ThemeMode.dark;
+    SystemChrome.setSystemUIOverlayStyle(
+      SystemUiOverlayStyle(
+        systemNavigationBarColor: Colors.transparent,
+        systemNavigationBarDividerColor: Colors.transparent,
+        systemNavigationBarIconBrightness:
+            isDark ? Brightness.light : Brightness.dark,
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness:
+            isDark ? Brightness.light : Brightness.dark,
+        statusBarBrightness:
+            isDark ? Brightness.dark : Brightness.light,
       ),
+    );
+
+    return MaterialApp(
+      title: 'Subtitle Studio ${AppInfo.version}',
+      theme: themeState.themeData,
+      home: _getInitialScreen(),
+      debugShowCheckedModeBanner: false,
     );
   }
 
@@ -292,13 +276,10 @@ class MainApp extends StatelessWidget {
   }
 }
 
-/// Splash screen wrapper that handles app initialization and file intent processing
-/// 
-/// This widget serves as a transition between the splash screen and main app:
-/// 1. Displays splash screen for 5 seconds
-/// 2. Checks for file association intents (when app opened via .srt file)
-/// 3. Processes initial file data if available
-/// 4. Navigates to HomeScreen with optional initial file
+/// Splash screen wrapper that resolves startup file intents before navigation.
+///
+/// A short minimum display time keeps the transition smooth without delaying
+/// startup for several seconds after initialization is already complete.
 /// 
 /// File Association Support:
 /// - Handles .srt files opened with the app
@@ -327,8 +308,34 @@ class _SplashTransitionWrapperState extends State<SplashTransitionWrapper> {
   @override
   void initState() {
     super.initState();
-    _checkForIntentData();  // Check for file association data
-    _navigateToHome();      // Start navigation timer
+    unawaited(_initializeAndNavigate());
+  }
+
+  Future<void> _initializeAndNavigate() async {
+    final minimumSplash = Future<void>.delayed(
+      const Duration(milliseconds: 1200),
+    );
+
+    await Future.wait<void>([
+      _checkForIntentData(),
+      minimumSplash,
+    ]);
+
+    if (!mounted || _navigatedToSourceView) return;
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => HomeScreen(
+          initialFilePath: _intentFilePath,
+          initialFileName: _intentFilePath != null
+              ? IntentHandler.getFileName(_intentFilePath!)
+              : null,
+          isProjectFile: _isMsoneFile,
+          originalSafUri: _originalIntentUri,
+        ),
+      ),
+    );
   }
 
   /// Check for initial intent data when app is opened via file association
@@ -345,10 +352,8 @@ class _SplashTransitionWrapperState extends State<SplashTransitionWrapper> {
       if (widget.initialFile != null) {
         final processedPath = await IntentHandler.processFilePath(widget.initialFile!);
         if (processedPath != null) {
-          setState(() {
-            _intentFilePath = processedPath;
-            _isMsoneFile = IntentHandler.isMsoneFile(widget.initialFile!); // Check file type using original path
-          });
+          _intentFilePath = processedPath;
+          _isMsoneFile = IntentHandler.isMsoneFile(widget.initialFile!);
           await AppLogger.instance.info('File from command line: $_intentFilePath, isMsoneFile: $_isMsoneFile');
         }
         return;
@@ -360,9 +365,7 @@ class _SplashTransitionWrapperState extends State<SplashTransitionWrapper> {
         if (IntentHandler.isSrtFile(intentActionInfo.path)) {
           if (intentActionInfo.action == 'source_view') {
             // Navigate directly to Source View and mark that we've navigated
-            setState(() {
-              _navigatedToSourceView = true;
-            });
+            _navigatedToSourceView = true;
             if (mounted) {
               Navigator.pushReplacement(
                 context,
@@ -376,58 +379,19 @@ class _SplashTransitionWrapperState extends State<SplashTransitionWrapper> {
             }
           } else {
             // Default import behavior
-            setState(() {
-              _intentFilePath = intentActionInfo.path;
-              _originalIntentUri = intentActionInfo.safUri;
-              _isMsoneFile = false;
-            });
+            _intentFilePath = intentActionInfo.path;
+            _originalIntentUri = intentActionInfo.safUri;
+            _isMsoneFile = false;
           }
         } else if (IntentHandler.isMsoneFile(intentActionInfo.path)) {
           // MSONE files always go to import (no source view for MSONE)
-          setState(() {
-            _intentFilePath = intentActionInfo.path;
-            _originalIntentUri = intentActionInfo.safUri;
-            _isMsoneFile = true;
-          });
+          _intentFilePath = intentActionInfo.path;
+          _originalIntentUri = intentActionInfo.safUri;
+          _isMsoneFile = true;
         }
       }
     } catch (e) {
       await AppLogger.instance.warning('Error checking intent data: $e');
-    }
-  }
-
-  /// Navigate to HomeScreen after splash screen duration
-  /// 
-  /// Timing considerations:
-  /// - 5-second delay allows splash screen animation to complete
-  /// - Provides time for background initialization
-  /// - Ensures smooth user experience transition
-  /// 
-  /// Passes file data if available from intent processing
-  /// Skips navigation if already navigated to source view
-  void _navigateToHome() async {
-    // Keep 5 seconds delay since we're now handling the splash screen entirely in Flutter
-    await Future.delayed(const Duration(seconds: 5));
-    
-    // Skip navigation to home if we've already navigated to source view
-    if (_navigatedToSourceView) {
-      return;
-    }
-    
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => HomeScreen(
-            initialFilePath: _intentFilePath,
-            initialFileName: _intentFilePath != null 
-                ? IntentHandler.getFileName(_intentFilePath!) 
-                : null,
-            isProjectFile: _isMsoneFile,
-            originalSafUri: _originalIntentUri,  // Pass original SAF URI
-          ),
-        ),
-      );
     }
   }
 

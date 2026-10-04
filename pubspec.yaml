@@ -8,6 +8,7 @@ environment:
 
 dependencies:
   charset_converter: ^2.3.0
+  crypto: ^3.0.7
   # chewie: ^1.11.0 # Replaced with media_kit
   device_info_plus: ^11.5.0
   filesystem_picker: ^4.1.0
@@ -23,12 +24,11 @@ dependencies:
   media_kit_libs_video: ^1.0.7           # Native libraries for video rendering
   path_provider: ^2.1.5
   permission_handler: ^12.0.1
-  provider: ^6.1.5+1
+  flutter_riverpod: 3.3.2             # Incremental state management migration
   flex_color_picker: ^3.7.1
   flutter_svg: ^2.2.0
   ffmpeg_kit_flutter_new_min_gpl: ^2.1.1
   google_fonts: ^6.3.0
-  get: ^4.7.2
   html: ^0.15.6
   shared_preferences: ^2.5.3
   package_info_plus: ^8.3.0
@@ -40,20 +40,19 @@ dependencies:
   dio: ^5.8.0  # For downloading files
   archive: ^4.0.7  # For extracting tar.gz files
   uuid: ^4.5.1  # For generating unique command IDs
-  flutter_bloc: ^9.1.1  # State management with Bloc pattern
   equatable: ^2.0.7  # Value equality for immutable states
   flutter_markdown_plus: ^1.0.5  # Markdown rendering for AI explanations
   scrollable_positioned_list: ^0.3.8  # Precise index-based scrolling
-  flutter_dotenv: ^5.1.0  # Environment variables from .env file
   flutter_gemini:  # Gemini AI integration
     git:
       url: https://github.com/AkhmadRamadani/flutter_gemini.git
+      ref: 8c7c8047b903d7b01d9bf1d3516c11142cab8523
 
 dependency_overrides:
   hotkey_manager_linux:
     git:
       url: https://github.com/gepbird/hotkey_manager.git
-      ref: fix-build-failure
+      ref: 1b31e3ca4ab017ee72f54a7065b2073a88403d61
       path: packages/hotkey_manager_linux
 
 dev_dependencies:
@@ -71,4 +70,3 @@ flutter:
     - assets/msone_bg.jpg
     - lib/utils/normalization.sed
     - assets/magnet-solid.svg
-    - .env

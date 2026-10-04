@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:subtitle_studio/database/database_helper.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/database/models/models.dart';
+import 'package:subtitle_studio/screens/edit/providers/subtitle_repository_provider.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class SearchReplaceSheet extends StatefulWidget {
+class SearchReplaceSheet extends ConsumerStatefulWidget {
   final List<SubtitleLine> subtitleLines;
   final int subtitleId;
   final bool isReplaceMode;
@@ -21,10 +22,10 @@ class SearchReplaceSheet extends StatefulWidget {
   });
 
   @override
-  State<SearchReplaceSheet> createState() => _SearchReplaceSheetState();
+  ConsumerState<SearchReplaceSheet> createState() => _SearchReplaceSheetState();
 }
 
-class _SearchReplaceSheetState extends State<SearchReplaceSheet> {
+class _SearchReplaceSheetState extends ConsumerState<SearchReplaceSheet> {
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _replaceController = TextEditingController();
   List<SearchResult> _searchResults = [];
@@ -167,7 +168,10 @@ class _SearchReplaceSheetState extends State<SearchReplaceSheet> {
           ..startTime = result.line.startTime
           ..endTime = result.line.endTime
           ..original = result.line.original
-          ..edited = newText;
+          ..edited = newText
+          ..marked = result.line.marked
+          ..comment = result.line.comment
+          ..resolved = result.line.resolved;
 
         updatedLinesMap[result.line.index] = updatedLine;
       }
@@ -175,10 +179,9 @@ class _SearchReplaceSheetState extends State<SearchReplaceSheet> {
 
     final updatedLines = updatedLinesMap.values.toList();
 
-    final success = await updateMultipleSubtitleLines(
-      widget.subtitleId,
-      updatedLines,
-    );
+    final success = await ref
+        .read(subtitleRepositoryProvider)
+        .updateMultipleLines(widget.subtitleId, updatedLines);
 
     if (success) {
       widget.onRefresh();
@@ -273,23 +276,28 @@ class _SearchReplaceSheetState extends State<SearchReplaceSheet> {
           ..startTime = result.line.startTime
           ..endTime = result.line.endTime
           ..original = result.line.original
-          ..edited = newText;
+          ..edited = newText
+          ..marked = result.line.marked
+          ..comment = result.line.comment
+          ..resolved = result.line.resolved;
       } else {
         updatedLinesMap[result.line.index] = SubtitleLine()
           ..index = result.line.index
           ..startTime = result.line.startTime
           ..endTime = result.line.endTime
           ..original = result.line.original
-          ..edited = newText;
+          ..edited = newText
+          ..marked = result.line.marked
+          ..comment = result.line.comment
+          ..resolved = result.line.resolved;
       }
     }
 
     final updatedLines = updatedLinesMap.values.toList();
 
-    final success = await updateMultipleSubtitleLines(
-      widget.subtitleId,
-      updatedLines,
-    );
+    final success = await ref
+        .read(subtitleRepositoryProvider)
+        .updateMultipleLines(widget.subtitleId, updatedLines);
 
     if (success) {
       widget.onRefresh();

@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:subtitle_studio/app/providers/core_providers.dart';
+import 'package:subtitle_studio/models/subtitle_import_result.dart';
 import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
 import 'package:flutter/foundation.dart';
 import 'package:subtitle_studio/utils/platform_check.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/utils/app_logger.dart';
-import 'package:subtitle_studio/database/database_helper.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/utils/platform_file_handler.dart';
 import 'dart:io';
 
-class CreateSubtitleSheet extends StatefulWidget {
-  final Function(Map<String, dynamic>?) onSubtitleCreated;
+class CreateSubtitleSheet extends ConsumerStatefulWidget {
+  final Function(SubtitleImportResult?) onSubtitleCreated;
 
   const CreateSubtitleSheet({
     super.key,
@@ -19,10 +20,10 @@ class CreateSubtitleSheet extends StatefulWidget {
   });
 
   @override
-  State<CreateSubtitleSheet> createState() => _CreateSubtitleSheetState();
+  ConsumerState<CreateSubtitleSheet> createState() => _CreateSubtitleSheetState();
 }
 
-class _CreateSubtitleSheetState extends State<CreateSubtitleSheet> {
+class _CreateSubtitleSheetState extends ConsumerState<CreateSubtitleSheet> {
   final TextEditingController _fileNameController = TextEditingController();
   String? _selectedSrtPath;
   String? _selectedProjectPath;
@@ -237,15 +238,16 @@ class _CreateSubtitleSheetState extends State<CreateSubtitleSheet> {
       final emptySubtitleLines = <SubtitleLine>[];
       
       // Store the subtitle data with editMode set to true for new subtitles
-      final subtitleData = await storeSubtitleData(
-        emptySubtitleLines,
-        fileName,
-        _encoding,
-        srtFilePath, // Use SRT file path for filePath parameter
-        editMode: true, // Set to true for new subtitles
-        originalFileUri: srtFileUri, // Store SRT file URI for originalFileUri parameter
-        projectFilePath: projectFileUri, // Store project file URI in session
-      );
+      final subtitleData =
+          await ref.read(subtitleImportRepositoryProvider).storeSubtitleData(
+                lines: emptySubtitleLines,
+                fileName: fileName,
+                encoding: _encoding,
+                filePath: srtFilePath,
+                editMode: true,
+                originalFileUri: srtFileUri,
+                projectFilePath: projectFileUri,
+              );
 
       await AppLogger.instance.info('Subtitle file created successfully. SRT URI: $srtFileUri, SRT Path: $srtFilePath, Project: $projectFileUri', context: 'CreateSubtitleSheet._createSubtitle');
       
@@ -520,7 +522,7 @@ class _CreateSubtitleSheetState extends State<CreateSubtitleSheet> {
                   ),
                 ),
                 child: DropdownButtonFormField<String>(
-                  value: _encoding,
+                  initialValue: _encoding,
                   decoration: InputDecoration(
                     labelText: 'File Encoding',
                     prefixIcon: Icon(

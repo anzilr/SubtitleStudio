@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:subtitle_studio/database/database_helper.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:subtitle_studio/screens/edit/providers/subtitle_repository_provider.dart';
+import 'package:subtitle_studio/screens/edit/repositories/subtitle_repository.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:isar_community/isar.dart';
 import '../utils/logging_helpers.dart';
 import '../utils/snackbar_helper.dart';
-import '../services/checkpoint_manager.dart';
 
 import '../widgets/add_line_confirmation_sheet.dart';
 import '../widgets/delete_confirmation_sheet.dart';
@@ -12,6 +13,9 @@ import '../widgets/merge_confirmation_sheet.dart';
 import '../widgets/split_confirmation_sheet.dart';
 
 class SubtitleOperations {
+  static SubtitleRepository _subtitleRepository(BuildContext context) =>
+      ProviderScope.containerOf(context, listen: false)
+          .read(subtitleRepositoryProvider);
   static final RegExp positionRegex = RegExp(r'^\{\\an[1-9]\}');
 
   static void showDeleteConfirmation({
@@ -52,15 +56,12 @@ class SubtitleOperations {
   }) async {
     logInfo('Deleting subtitle line: ${currentLine.index} from collection ${collection.id}');
     
-    // Create checkpoint BEFORE deleting
-    await CheckpointManager.createDeleteCheckpoint(
+    final success =
+        await _subtitleRepository(context).deleteLineWithHistory(
+      collectionId: subtitleId,
+      index: currentLine.index - 1,
       sessionId: sessionId,
-      subtitleCollectionId: subtitleId,
-      deletedLine: currentLine,
-      deletedIndex: currentLine.index - 1,
     );
-    
-    final success = await deleteSubtitleLineDB(subtitleId, currentLine.index - 1);
 
     if (!context.mounted) return;
 
@@ -208,14 +209,6 @@ class SubtitleOperations {
     required int sessionId,
   }) async {
     try {
-      // Keep copy of original line for checkpoint
-      final originalLine = SubtitleLine()
-        ..index = currentLine.index
-        ..original = currentLine.original
-        ..edited = currentLine.edited
-        ..startTime = currentLine.startTime
-        ..endTime = currentLine.endTime;
-
       final newLine = SubtitleLine()
         ..index = currentLine.index + 1
         ..original = currentLine.original
@@ -223,34 +216,25 @@ class SubtitleOperations {
         ..startTime = secondPartTime.split(' → ')[0]
         ..endTime = secondPartTime.split(' → ')[1];
 
-      // Create a copy of the first part for checkpoint (before modifying currentLine)
-      final firstPartForCheckpoint = SubtitleLine()
-        ..index = currentLine.index
-        ..original = currentLine.original
-        ..edited = firstPart.replaceAll('\n', '<br>')
-        ..startTime = currentLine.startTime
-        ..endTime = firstPartTime.split(' → ')[1];
-
-      // Create checkpoint BEFORE splitting
-      await CheckpointManager.createSplitCheckpoint(
-        sessionId: sessionId,
-        subtitleCollectionId: subtitleId,
-        originalLine: originalLine,
-        firstPart: firstPartForCheckpoint,
-        secondPart: newLine,
-      );
-
-      // Now modify the current line
       currentLine.edited = firstPart.replaceAll('\n', '<br>');
       currentLine.endTime = firstPartTime.split(' → ')[1];
 
-      final success = await splitSubtitleLine(
-          subtitleId, currentLine, newLine, currentLine.index - 1);
+      final success =
+          await _subtitleRepository(context).splitLineWithHistory(
+        collectionId: subtitleId,
+        firstPart: currentLine,
+        secondPart: newLine,
+        originalIndex: currentLine.index - 1,
+        sessionId: sessionId,
+      );
 
       if (success) {
         
         // Update the lastEditedIndex to the first part of the split
-        await updateLastEditedIndex(sessionId, currentLine.index);
+        await _subtitleRepository(context).updateLastEditedIndex(
+          sessionId,
+          currentLine.index,
+        );
         
         refreshCallback();
         if (!context.mounted) return;
@@ -324,21 +308,6 @@ class SubtitleOperations {
 
       final mergeTargetLine = collection.lines[mergeIndex];
       
-      // Keep copies of original lines for checkpoint
-      final originalFirst = SubtitleLine()
-        ..index = mergePrevious ? mergeTargetLine.index : currentLine.index
-        ..original = mergePrevious ? mergeTargetLine.original : currentLine.original
-        ..edited = mergePrevious ? mergeTargetLine.edited : currentLine.edited
-        ..startTime = mergePrevious ? mergeTargetLine.startTime : currentLine.startTime
-        ..endTime = mergePrevious ? mergeTargetLine.endTime : currentLine.endTime;
-      
-      final originalSecond = SubtitleLine()
-        ..index = mergePrevious ? currentLine.index : mergeTargetLine.index
-        ..original = mergePrevious ? currentLine.original : mergeTargetLine.original
-        ..edited = mergePrevious ? currentLine.edited : mergeTargetLine.edited
-        ..startTime = mergePrevious ? currentLine.startTime : mergeTargetLine.startTime
-        ..endTime = mergePrevious ? currentLine.endTime : mergeTargetLine.endTime;
-
       // Helper function to merge text fields, handling null values properly
       String? mergeEditedFields(String? first, String? second) {
         if (first == null && second == null) return null;
@@ -360,20 +329,14 @@ class SubtitleOperations {
         ..endTime =
             mergePrevious ? currentLine.endTime : mergeTargetLine.endTime;
 
-      // Create checkpoint BEFORE merging
-      await CheckpointManager.createMergeCheckpoint(
-        sessionId: sessionId,
-        subtitleCollectionId: subtitleId,
-        firstLine: originalFirst,
-        secondLine: originalSecond,
+      final success =
+          await _subtitleRepository(context).mergeLinesWithHistory(
+        collectionId: subtitleId,
         mergedLine: mergedLine,
+        firstLineIndex: mergePrevious ? mergeIndex : currentIndex,
+        secondLineIndex: mergePrevious ? currentIndex : mergeIndex,
+        sessionId: sessionId,
       );
-
-      final success = await mergeSubtitleLines(
-          subtitleId,
-          mergedLine,
-          mergePrevious ? mergeIndex : currentIndex,
-          mergePrevious ? currentIndex : mergeIndex);
 
       if (success) {
         
@@ -419,8 +382,9 @@ class SubtitleOperations {
     bool isVideoLoaded = false,
     Duration? Function()? getCurrentVideoPosition,
   }) {
-    // Use fetchSubtitle from database_helper instead of direct DB access
-    fetchSubtitle(subtitleId).then((freshCollection) {
+    _subtitleRepository(context)
+        .fetchSubtitleCollection(subtitleId)
+        .then((freshCollection) {
       if (freshCollection == null) {
         _showErrorSnackbar(context, 'Collection not found');
         return;
@@ -571,15 +535,13 @@ class SubtitleOperations {
       // Use properly calculated index for database insertion
       final insertAtIndex = addBefore ? currentIndex : currentIndex + 1;
       
-      // Create checkpoint BEFORE adding
-      await CheckpointManager.createAddCheckpoint(
-        sessionId: sessionId,
-        subtitleCollectionId: subtitleId,
-        addedLine: newLine,
+      final success =
+          await _subtitleRepository(context).addLineWithHistory(
+        collectionId: subtitleId,
+        line: newLine,
         insertIndex: insertAtIndex,
+        sessionId: sessionId,
       );
-      
-      final success = await addSubtitleLine(subtitleId, newLine, insertAtIndex);
 
       if (success) {
         // Navigate to the newly added line using the callback with the correct index

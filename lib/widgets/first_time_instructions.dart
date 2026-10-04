@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:subtitle_studio/database/models/preferences_model.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:subtitle_studio/app/providers/core_providers.dart';
 
-class FirstTimeInstructions extends StatefulWidget {
+class FirstTimeInstructions extends ConsumerStatefulWidget {
   final String screenName;
   final Widget child;
   final List<String> instructions;
@@ -14,10 +15,12 @@ class FirstTimeInstructions extends StatefulWidget {
   });
 
   @override
-  State<FirstTimeInstructions> createState() => _FirstTimeInstructionsState();
+  ConsumerState<FirstTimeInstructions> createState() =>
+      _FirstTimeInstructionsState();
 }
 
-class _FirstTimeInstructionsState extends State<FirstTimeInstructions> {
+class _FirstTimeInstructionsState
+    extends ConsumerState<FirstTimeInstructions> {
   bool _showInstructions = false;
 
   @override
@@ -27,7 +30,9 @@ class _FirstTimeInstructionsState extends State<FirstTimeInstructions> {
   }
 
   Future<void> _checkFirstTime() async {
-    final hasSeenInstructions = await PreferencesModel.getHasSeenTutorial(widget.screenName);
+    final hasSeenInstructions = await ref
+        .read(tutorialPreferencesRepositoryProvider)
+        .hasSeen(widget.screenName);
     if (!hasSeenInstructions && mounted) {
       await Future.delayed(const Duration(milliseconds: 800));
       if (mounted) {
@@ -39,7 +44,10 @@ class _FirstTimeInstructionsState extends State<FirstTimeInstructions> {
   }
 
   Future<void> _dismissInstructions() async {
-    await PreferencesModel.setHasSeenTutorial(widget.screenName, true);
+    await ref
+        .read(tutorialPreferencesRepositoryProvider)
+        .setHasSeen(widget.screenName, true);
+    if (!mounted) return;
     setState(() {
       _showInstructions = false;
     });
