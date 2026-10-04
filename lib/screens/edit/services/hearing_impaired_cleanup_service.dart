@@ -1,7 +1,6 @@
-import 'package:flutter/foundation.dart';
 import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/database/models/models.dart';
-import 'package:subtitle_studio/services/checkpoint_repository.dart';
+import 'package:subtitle_studio/services/checkpoint_history_transaction.dart';
 import 'package:subtitle_studio/utils/subtitle_processor.dart';
 
 class HearingImpairedCleanupResult {
@@ -50,19 +49,21 @@ class HearingImpairedCleanupService {
   ) {
     final source = List<SubtitleLine>.from(currentLines);
     final cleanedLines = removeHearingImpairedText(source);
-    final deltas = <SubtitleLineDelta>[];
 
     final cleanedByOriginalIndex = <int, SubtitleLine>{
       for (final line in cleanedLines) line.index: line,
     };
 
-    int modifiedCount = 0;
-    for (int i = 0; i < source.length; i++) {
+    final modifications = <SubtitleLineDelta>[];
+    final deletions = <SubtitleLineDelta>[];
+    var modifiedCount = 0;
+
+    for (var i = 0; i < source.length; i++) {
       final before = source[i];
       final after = cleanedByOriginalIndex[before.index];
 
       if (after == null) {
-        deltas.add(
+        deletions.add(
           SubtitleLineDelta()
             ..changeType = 'delete'
             ..lineIndex = i
@@ -74,7 +75,7 @@ class HearingImpairedCleanupService {
 
       if (!_samePersistedContent(before, after)) {
         modifiedCount++;
-        deltas.add(
+        modifications.add(
           SubtitleLineDelta()
             ..changeType = 'modify'
             ..lineIndex = i
@@ -83,6 +84,15 @@ class HearingImpairedCleanupService {
         );
       }
     }
+
+    // Apply content modifications against the original indexes first. Delete
+    // from the end so earlier removals cannot shift the indexes of later
+    // delete deltas during strict history replay.
+    deletions.sort((a, b) => b.lineIndex.compareTo(a.lineIndex));
+    final deltas = <SubtitleLineDelta>[
+      ...modifications,
+      ...deletions,
+    ];
 
     final result = HearingImpairedCleanupResult(
       originalCount: source.length,
@@ -100,47 +110,42 @@ class HearingImpairedCleanupService {
 
   static Future<HearingImpairedCleanupResult> execute({
     required Isar isar,
-    required CheckpointRepository checkpointRepository,
     required int sessionId,
     required int subtitleCollectionId,
-    required List<SubtitleLine> currentLines,
   }) async {
-    final plan = buildPlan(currentLines);
+    final history = CheckpointHistoryTransaction(isar);
+    late HearingImpairedCleanupResult cleanupResult;
 
-    if (plan.deltas.isNotEmpty) {
-      try {
-        await checkpointRepository.createCheckpoint(
-          sessionId: sessionId,
-          subtitleCollectionId: subtitleCollectionId,
-          operationType: 'batch',
-          description: 'Remove hearing impaired text',
+    await history.commit(
+      sessionId: sessionId,
+      subtitleCollectionId: subtitleCollectionId,
+      operationType: 'batch',
+      description: 'Remove hearing impaired text',
+      buildMutation: (currentLines) {
+        final plan = buildPlan(currentLines);
+        cleanupResult = plan.result;
+
+        if (plan.deltas.isEmpty) {
+          return CheckpointMutationPlan(
+            nextLines: currentLines.map(_copyLine).toList(growable: true),
+            deltas: const <SubtitleLineDelta>[],
+          );
+        }
+
+        final normalized = <SubtitleLine>[
+          for (var i = 0; i < plan.cleanedLines.length; i++)
+            _copyLine(plan.cleanedLines[i])..index = i + 1,
+        ];
+
+        return CheckpointMutationPlan(
+          nextLines: normalized,
           deltas: plan.deltas,
+          forceSnapshot: true,
         );
-      } catch (error) {
-        debugPrint(
-          'Could not create hearing-impaired cleanup checkpoint: $error',
-        );
-      }
-    }
+      },
+    );
 
-    await isar.writeTxn(() async {
-      final collection =
-          await isar.subtitleCollections.get(subtitleCollectionId);
-      if (collection == null) {
-        throw StateError(
-          'Subtitle collection $subtitleCollectionId was not found.',
-        );
-      }
-
-      collection.lines = [
-        for (int i = 0; i < plan.cleanedLines.length; i++)
-          _copyLine(plan.cleanedLines[i])..index = i + 1,
-      ];
-
-      await isar.subtitleCollections.put(collection);
-    });
-
-    return plan.result;
+    return cleanupResult;
   }
 
   static bool _samePersistedContent(
