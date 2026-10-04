@@ -741,6 +741,43 @@ class SubtitleRepository {
     });
   }
 
+  /// Atomically replaces the collection state and records one v2 history commit.
+  ///
+  /// This is intended for compound operations whose final state has already
+  /// been computed by a domain service (for example banner insertion).
+  Future<bool> replaceCollectionLinesWithHistory({
+    required int collectionId,
+    required int sessionId,
+    required List<SubtitleLine> nextLines,
+    required List<SubtitleLineDelta> deltas,
+    required String operationType,
+    required String description,
+    Map<String, dynamic>? metadata,
+    bool forceSnapshot = true,
+  }) async {
+    try {
+      await _historyTransaction.commit(
+        sessionId: sessionId,
+        subtitleCollectionId: collectionId,
+        operationType: operationType,
+        description: description,
+        metadata: metadata,
+        buildMutation: (_) {
+          return CheckpointMutationPlan(
+            nextLines: CheckpointStateReducer.copyLines(nextLines),
+            deltas: deltas,
+            forceSnapshot: forceSnapshot,
+          );
+        },
+      );
+      return true;
+    } catch (error) {
+      logError(
+        'SubtitleRepository: Atomic collection replacement failed: $error',
+      );
+      return false;
+    }
+  }
   /// Persist a changed subtitle collection.
   Future<bool> updateCollection(SubtitleCollection collection) async {
     try {
