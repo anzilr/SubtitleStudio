@@ -1,20 +1,16 @@
-Riverpod migration checkpoint 50
+Riverpod migration checkpoint 51
 Date: 2026-10-04
 Checks:
 - flutter analyze
 - flutter test -j 1
 
 Focus:
-- share one pure v2 post-operation reconstructor between checkout and transactions
-- auto-create an untouched v2 root before the first atomic mutation
-- reject malformed v2 HEAD state and capture working-tree divergence as a system snapshot
-- require changed history mutations to record deltas
-- track all persisted SubtitleLine fields in atomic edit history
-- migrate both subtitle-effect entry points to atomic v2 history
-- remove direct Isar persistence from SubtitleEffectOperations
-- migrate hearing-impaired cleanup to replay-safe atomic v2 history
-- migrate Editor add-line paths to atomic v2 history
-- make manual checkpoints v2 state snapshot commits
-- verify auto-root, working-tree sync, effect, cleanup, and manual-marker behavior
+- reverify Git-style history redesign after checkpoint 50 analyzer fixes
+- auto-root first atomic mutation
+- strict v2 HEAD invariant and working-tree synchronization snapshot
+- atomic effect and hearing-impaired cleanup history
+- atomic Editor add-line history
+- v2 manual state markers
+- regression coverage for undo/redo across new v2 commits
 
 Platform builds intentionally disabled.
