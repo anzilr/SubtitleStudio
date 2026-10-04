@@ -428,10 +428,8 @@ extension _EditSubtitleActions on _EditScreenState {
 
       final result = await HearingImpairedCleanupService.execute(
         isar: ref.read(isarProvider),
-        checkpointRepository: ref.read(checkpointRepositoryProvider),
         sessionId: widget.sessionId,
         subtitleCollectionId: widget.subtitleCollectionId,
-        currentLines: subtitleLines,
       );
 
       await _refreshSubtitleLines();
