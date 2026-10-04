@@ -947,29 +947,6 @@ class SubtitleRepository {
     }
   }
 
-  /// Create a checkpoint for the current state
-  Future<void> createCheckpoint(
-    int collectionId,
-    int sessionId,
-    String operationType,
-    String description,
-  ) async {
-    logInfo('SubtitleRepository: Creating checkpoint "$description" for collection $collectionId');
-    try {
-      await _checkpoints.createCheckpoint(
-        subtitleCollectionId: collectionId,
-        sessionId: sessionId,
-        operationType: operationType,
-        description: description,
-        deltas: [], // Empty for manual checkpoints
-      );
-      logInfo('SubtitleRepository: Successfully created checkpoint');
-    } catch (e) {
-      logError('SubtitleRepository: Error creating checkpoint: $e');
-      rethrow;
-    }
-  }
-
   /// Create initial checkpoint snapshot
   Future<void> createInitialSnapshot(
     int collectionId,
