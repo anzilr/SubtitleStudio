@@ -38,6 +38,7 @@ import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
+import 'package:subtitle_studio/services/checkpoint_state_hasher.dart';
 import 'package:subtitle_studio/services/checkpoint_history_metadata.dart';
 import 'package:subtitle_studio/services/checkpoint_policy.dart';
 import 'package:subtitle_studio/services/checkpoint_timeline.dart';
@@ -119,6 +120,7 @@ class CheckpointManager {
             'reason': 'initial',
             'lineCount': collection.lines.length,
           },
+          stateHash: CheckpointStateHasher.hashLines(collection.lines),
         ),
       );
       
@@ -466,6 +468,17 @@ class CheckpointManager {
       parent = checkpoints.first;
     }
 
+    String? parentStateHash;
+    if (parent != null && CheckpointHistoryMetadata.isPostOperation(parent)) {
+      final representedParent = CheckpointReconstructor.reconstructPostOperation(
+        checkpoints: checkpoints,
+        targetCheckpointId: parent.id,
+      );
+      parentStateHash = CheckpointStateHasher.hashLines(representedParent);
+    }
+    final manualStateHash =
+        CheckpointStateHasher.hashLines(collection.lines);
+
     final checkpoint = Checkpoint(
       sessionId: sessionId,
       subtitleCollectionId: subtitleCollectionId,
@@ -481,6 +494,8 @@ class CheckpointManager {
         operationMetadata: const {
           'reason': 'manual-marker',
         },
+        stateHash: manualStateHash,
+        parentStateHash: parentStateHash,
       ),
     );
 
