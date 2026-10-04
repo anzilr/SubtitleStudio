@@ -1,5 +1,6 @@
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/services/checkpoint_timeline.dart';
+import 'package:subtitle_studio/services/checkpoint_head_reference.dart';
 
 /// Pure policy decisions for checkpoint creation and retention.
 ///
@@ -45,15 +46,8 @@ class CheckpointPolicy {
       return const <Checkpoint>[];
     }
 
-    int? resolvedHeadId = headCheckpointId;
-    if (resolvedHeadId == null) {
-      for (final checkpoint in checkpoints) {
-        if (checkpoint.isActive) {
-          resolvedHeadId = checkpoint.id;
-          break;
-        }
-      }
-    }
+    final resolvedHeadId = headCheckpointId ??
+        CheckpointHeadReference.newestActive(checkpoints)?.id;
 
     final protectedIds = CheckpointTimeline.protectedAncestryIds(
       checkpoints: checkpoints,
