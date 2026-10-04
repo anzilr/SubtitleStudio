@@ -136,7 +136,7 @@ class CheckpointHistoryTransaction {
         head = active.first;
       }
 
-      if (head != null && CheckpointHistoryMetadata.isPostOperation(head)) {
+      if (CheckpointHistoryMetadata.isPostOperation(head)) {
         final representedHeadState =
             CheckpointReconstructor.reconstructPostOperation(
           checkpoints: checkpoints,
@@ -211,11 +211,11 @@ class CheckpointHistoryTransaction {
       );
 
       final crossingLegacyBoundary =
-          head != null && !CheckpointHistoryMetadata.isPostOperation(head);
+          !CheckpointHistoryMetadata.isPostOperation(head);
       final checkpointsSinceSnapshot =
           CheckpointTimeline.countSinceNearestSnapshot(
         checkpoints: checkpoints,
-        fromCheckpointId: head?.id,
+        fromCheckpointId: head.id,
       );
 
       final shouldCreateSnapshot =
@@ -244,7 +244,7 @@ class CheckpointHistoryTransaction {
         timestamp: DateTime.now().toUtc(),
         operationType: operationType,
         description: description,
-        parentCheckpointId: head?.id,
+        parentCheckpointId: head.id,
         isActive: true,
         checkpointType: shouldCreateSnapshot ? 'snapshot' : 'delta',
         deltas: plan.deltas,
