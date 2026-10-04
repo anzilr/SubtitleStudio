@@ -436,20 +436,57 @@ class CheckpointManager {
     );
   }
   
-  /// Creates a manual checkpoint (user-initiated)
+  /// Creates a user-visible state marker using v2 semantics.
+  ///
+  /// This remains a snapshot commit for schema compatibility. A future history
+  /// schema can migrate manual markers to lightweight bookmark/tag records.
   Future<int> createManualCheckpoint({
     required int sessionId,
     required int subtitleCollectionId,
     String? customDescription,
   }) async {
-    // Manual checkpoints don't store deltas - they're just markers
-    return await createCheckpoint(
+    final collection =
+        await _store.getSubtitleCollection(subtitleCollectionId);
+    if (collection == null) {
+      throw StateError(
+        'Subtitle collection $subtitleCollectionId was not found.',
+      );
+    }
+
+    final checkpoints = await getCheckpointsForSession(sessionId);
+    final currentHead = await _getCurrentHeadCheckpoint(sessionId);
+    if (currentHead == null &&
+        checkpoints.any(CheckpointHistoryMetadata.isPostOperation)) {
+      throw const CheckpointIntegrityException(
+        'V2 checkpoint history contains commits but has no HEAD.',
+      );
+    }
+
+    final checkpoint = Checkpoint(
       sessionId: sessionId,
       subtitleCollectionId: subtitleCollectionId,
+      timestamp: DateTime.now().toUtc(),
       operationType: 'manual',
       description: customDescription ?? 'Manual checkpoint',
-      deltas: [],
+      parentCheckpointId: currentHead?.id,
+      isActive: true,
+      checkpointType: 'snapshot',
+      deltas: const <SubtitleLineDelta>[],
+      snapshot: CheckpointStateReducer.copyLines(collection.lines),
+      metadata: CheckpointHistoryMetadata.encodePostOperation(
+        operationMetadata: const {
+          'reason': 'manual-marker',
+        },
+      ),
     );
+
+    final checkpointId = await _store.insertAsHead(
+      sessionId: sessionId,
+      expectedHeadId: currentHead?.id,
+      checkpoint: checkpoint,
+    );
+    await _autoCleanupCheckpoints(sessionId);
+    return checkpointId;
   }
   
   /// Moves HEAD to [checkpointId] and restores its exact historical state.
