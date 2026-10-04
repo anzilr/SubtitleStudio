@@ -240,5 +240,93 @@ void main() {
         isEmpty,
       );
     });
+
+    test('preserves a fresh alternate redo branch even above the limit', () {
+      final checkpoints = [
+        _checkpoint(
+          id: 4,
+          parentId: 2,
+          operationType: 'edit',
+          description: 'New branch',
+          isActive: true,
+        ),
+        _checkpoint(
+          id: 3,
+          parentId: 2,
+          operationType: 'edit',
+          description: 'Previous branch',
+        ),
+        _checkpoint(
+          id: 2,
+          parentId: 1,
+          operationType: 'edit',
+          description: 'Fork point',
+        ),
+        _checkpoint(
+          id: 1,
+          operationType: 'snapshot',
+          description: 'Initial state',
+        ),
+      ];
+
+      expect(
+        CheckpointPolicy.cleanupCandidates(
+          checkpoints: checkpoints,
+          maxCheckpoints: 3,
+          headCheckpointId: 4,
+        ),
+        isEmpty,
+      );
+    });
+
+    test('prunes oldest alternate branch outside protected tip window', () {
+      final checkpoints = [
+        _checkpoint(
+          id: 6,
+          parentId: 5,
+          operationType: 'edit',
+          description: 'Current 6',
+          isActive: true,
+        ),
+        _checkpoint(
+          id: 5,
+          parentId: 2,
+          operationType: 'edit',
+          description: 'Current 5',
+        ),
+        _checkpoint(
+          id: 4,
+          parentId: 2,
+          operationType: 'edit',
+          description: 'Recent alternate',
+        ),
+        _checkpoint(
+          id: 3,
+          parentId: 2,
+          operationType: 'edit',
+          description: 'Older alternate',
+        ),
+        _checkpoint(
+          id: 2,
+          parentId: 1,
+          operationType: 'edit',
+          description: 'Fork point',
+        ),
+        _checkpoint(
+          id: 1,
+          operationType: 'snapshot',
+          description: 'Initial state',
+        ),
+      ];
+
+      final candidates = CheckpointPolicy.cleanupCandidates(
+        checkpoints: checkpoints,
+        maxCheckpoints: 5,
+        headCheckpointId: 6,
+        protectedAlternateBranchTips: 1,
+      );
+
+      expect(candidates.map((checkpoint) => checkpoint.id), [3]);
+    });
   });
 }
