@@ -186,6 +186,7 @@ void main() {
         checkpoints: checkpoints,
         maxCheckpoints: 4,
         headCheckpointId: 5,
+        protectedAlternateBranchTips: 0,
       );
 
       expect(candidates.map((checkpoint) => checkpoint.id), [3]);
