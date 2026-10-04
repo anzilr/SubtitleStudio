@@ -1,16 +1,14 @@
-Riverpod migration checkpoint 51
+Riverpod migration checkpoint 52
 Date: 2026-10-04
 Checks:
 - flutter analyze
 - flutter test -j 1
 
 Focus:
-- reverify Git-style history redesign after checkpoint 50 analyzer fixes
-- auto-root first atomic mutation
-- strict v2 HEAD invariant and working-tree synchronization snapshot
-- atomic effect and hearing-impaired cleanup history
-- atomic Editor add-line history
-- v2 manual state markers
-- regression coverage for undo/redo across new v2 commits
+- expose explicit checkout, HEAD, undo, and redo-options APIs
+- restrict redo to a direct child of the current HEAD
+- preserve alternate redo branches after forking history
+- keep full-backup UI on the v2 manual state-marker path
+- add real-Isar branch-aware undo/redo coverage
 
 Platform builds intentionally disabled.
