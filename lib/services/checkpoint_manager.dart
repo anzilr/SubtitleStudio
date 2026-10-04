@@ -40,6 +40,7 @@ import 'package:subtitle_studio/utils/logging_helpers.dart';
 import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
 import 'package:subtitle_studio/services/checkpoint_state_hasher.dart';
 import 'package:subtitle_studio/services/checkpoint_history_metadata.dart';
+import 'package:subtitle_studio/services/checkpoint_history_validator.dart';
 import 'package:subtitle_studio/services/checkpoint_policy.dart';
 import 'package:subtitle_studio/services/checkpoint_timeline.dart';
 import 'package:subtitle_studio/services/checkpoint_preferences_repository.dart';
@@ -660,6 +661,15 @@ class CheckpointManager {
   /// Returns the current single HEAD commit for [sessionId].
   Future<Checkpoint?> getHeadCheckpoint(int sessionId) {
     return _getCurrentHeadCheckpoint(sessionId);
+  }
+
+  /// Validates the complete history graph and reconstructs every v2 commit.
+  Future<CheckpointHistoryHealth> validateHistory(int sessionId) async {
+    final checkpoints = await getCheckpointsForSession(sessionId);
+    return CheckpointHistoryValidator.validate(
+      sessionId: sessionId,
+      checkpoints: checkpoints,
+    );
   }
 
   /// Moves HEAD to its direct parent.
