@@ -549,13 +549,10 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
     );
 
     if (name != null && name.isNotEmpty && mounted) {
-      await ref.read(checkpointRepositoryProvider).createCheckpoint(
+      await ref.read(checkpointRepositoryProvider).createManualCheckpoint(
         sessionId: widget.sessionId,
         subtitleCollectionId: widget.subtitleCollectionId,
-        operationType: 'manual',
-        description: name,
-        deltas: [],
-        forceSnapshot: true, // Force this to be a snapshot
+        customDescription: name,
       );
 
       await _loadHistory();
