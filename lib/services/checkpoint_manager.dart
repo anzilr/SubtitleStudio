@@ -455,11 +455,15 @@ class CheckpointManager {
 
     final checkpoints = await getCheckpointsForSession(sessionId);
     final currentHead = await _getCurrentHeadCheckpoint(sessionId);
-    if (currentHead == null &&
-        checkpoints.any(CheckpointHistoryMetadata.isPostOperation)) {
-      throw const CheckpointIntegrityException(
-        'V2 checkpoint history contains commits but has no HEAD.',
-      );
+    Checkpoint? parent = currentHead;
+    if (currentHead == null && checkpoints.isNotEmpty) {
+      if (checkpoints.any(CheckpointHistoryMetadata.isPostOperation)) {
+        throw const CheckpointIntegrityException(
+          'V2 checkpoint history contains commits but has no HEAD.',
+        );
+      }
+      // Compatibility repair for legacy history that lost active flags.
+      parent = checkpoints.first;
     }
 
     final checkpoint = Checkpoint(
@@ -468,7 +472,7 @@ class CheckpointManager {
       timestamp: DateTime.now().toUtc(),
       operationType: 'manual',
       description: customDescription ?? 'Manual checkpoint',
-      parentCheckpointId: currentHead?.id,
+      parentCheckpointId: parent?.id,
       isActive: true,
       checkpointType: 'snapshot',
       deltas: const <SubtitleLineDelta>[],
