@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/screens/edit/providers/subtitle_repository_provider.dart';
 import 'package:subtitle_studio/operations/subtitle_operations.dart';
 import 'package:subtitle_studio/widgets/positioning_buttons_widget.dart';
