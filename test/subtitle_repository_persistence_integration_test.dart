@@ -163,6 +163,232 @@ void main() {
       );
     });
 
+    test('first atomic edit auto-creates an untouched v2 root', () async {
+      final collectionId = await _seedCollection(harness);
+      late int sessionId;
+      await harness.isar.writeTxn(() async {
+        sessionId = await harness.isar.sessions.put(
+          Session(
+            subtitleCollectionId: collectionId,
+            fileName: 'auto-root.srt',
+          ),
+        );
+      });
+
+      final updated = _line(
+        index: 1,
+        text: 'A edited',
+        start: '00:00:01,000',
+        end: '00:00:01,900',
+      );
+
+      expect(
+        await repository.saveLineChanges(
+          collectionId,
+          updated,
+          sessionId: sessionId,
+        ),
+        isTrue,
+      );
+
+      final history = await harness.isar.checkpoints
+          .filter()
+          .sessionIdEqualTo(sessionId)
+          .findAll();
+      expect(history, hasLength(2));
+
+      final root = history.firstWhere(
+        (checkpoint) => checkpoint.description == 'Initial state',
+      );
+      final edit = history.firstWhere(
+        (checkpoint) => checkpoint.operationType == 'edit',
+      );
+
+      expect(root.parentCheckpointId, isNull);
+      expect(root.checkpointType, 'snapshot');
+      expect(CheckpointHistoryMetadata.isPostOperation(root), isTrue);
+      expect(
+        root.snapshot.map((line) => line.original).toList(),
+        ['A', 'B', 'C'],
+      );
+      expect(edit.parentCheckpointId, root.id);
+      expect(edit.isActive, isTrue);
+
+      final checkpoints = CheckpointRepository(harness.isar);
+      expect(
+        await checkpoints.undoToCheckpoint(
+          checkpointId: root.id,
+          sessionId: sessionId,
+        ),
+        isTrue,
+      );
+      expect(
+        (await repository.fetchSubtitleCollection(collectionId))
+            ?.lines
+            .first
+            .original,
+        'A',
+      );
+    });
+
+    test('external working-tree changes are captured before the next commit',
+        () async {
+      final collectionId = await _seedCollection(harness);
+      late int sessionId;
+      await harness.isar.writeTxn(() async {
+        sessionId = await harness.isar.sessions.put(
+          Session(
+            subtitleCollectionId: collectionId,
+            fileName: 'working-tree-sync.srt',
+          ),
+        );
+      });
+
+      final checkpoints = CheckpointRepository(harness.isar);
+      final initialId = await checkpoints.createInitialSnapshot(
+        sessionId: sessionId,
+        subtitleCollectionId: collectionId,
+      );
+
+      expect(await repository.markLine(collectionId, 0, true), isTrue);
+
+      final updated = _line(
+        index: 1,
+        text: 'A edited',
+        start: '00:00:01,000',
+        end: '00:00:01,900',
+      )..marked = true;
+
+      expect(
+        await repository.saveLineChanges(
+          collectionId,
+          updated,
+          sessionId: sessionId,
+        ),
+        isTrue,
+      );
+
+      final history = await harness.isar.checkpoints
+          .filter()
+          .sessionIdEqualTo(sessionId)
+          .findAll();
+      expect(history, hasLength(3));
+
+      final sync = history.firstWhere(
+        (checkpoint) => checkpoint.operationType == 'sync',
+      );
+      final edit = history.firstWhere(
+        (checkpoint) => checkpoint.operationType == 'edit',
+      );
+
+      expect(sync.parentCheckpointId, initialId);
+      expect(sync.checkpointType, 'snapshot');
+      expect(sync.snapshot.first.original, 'A');
+      expect(sync.snapshot.first.marked, isTrue);
+      expect(edit.parentCheckpointId, sync.id);
+
+      expect(
+        await checkpoints.undoToCheckpoint(
+          checkpointId: sync.id,
+          sessionId: sessionId,
+        ),
+        isTrue,
+      );
+      final syncedCollection =
+          await repository.fetchSubtitleCollection(collectionId);
+      expect(syncedCollection!.lines.first.original, 'A');
+      expect(syncedCollection.lines.first.marked, isTrue);
+
+      expect(
+        await checkpoints.redoToCheckpoint(
+          checkpointId: edit.id,
+          sessionId: sessionId,
+        ),
+        isTrue,
+      );
+      final editedCollection =
+          await repository.fetchSubtitleCollection(collectionId);
+      expect(editedCollection!.lines.first.original, 'A edited');
+      expect(editedCollection.lines.first.marked, isTrue);
+    });
+
+    test('effect replacement is one atomic v2 snapshot commit', () async {
+      final collectionId = await _seedCollection(harness);
+      late int sessionId;
+      await harness.isar.writeTxn(() async {
+        sessionId = await harness.isar.sessions.put(
+          Session(
+            subtitleCollectionId: collectionId,
+            fileName: 'effect-history.srt',
+          ),
+        );
+      });
+
+      final checkpoints = CheckpointRepository(harness.isar);
+      final initialId = await checkpoints.createInitialSnapshot(
+        sessionId: sessionId,
+        subtitleCollectionId: collectionId,
+      );
+
+      final effectLines = [
+        _line(
+          index: 2,
+          text: 'B-1',
+          start: '00:00:02,000',
+          end: '00:00:02,400',
+        ),
+        _line(
+          index: 3,
+          text: 'B-2',
+          start: '00:00:02,401',
+          end: '00:00:02,900',
+        ),
+      ];
+
+      expect(
+        await repository.replaceLineWithGeneratedLinesWithHistory(
+          collectionId: collectionId,
+          originalIndex: 1,
+          replacementLines: effectLines,
+          sessionId: sessionId,
+          description: 'Applied test effect',
+        ),
+        isTrue,
+      );
+
+      final history = await harness.isar.checkpoints
+          .filter()
+          .sessionIdEqualTo(sessionId)
+          .findAll();
+      expect(history, hasLength(2));
+
+      final effect = history.firstWhere(
+        (checkpoint) => checkpoint.operationType == 'effect',
+      );
+      expect(CheckpointHistoryMetadata.isPostOperation(effect), isTrue);
+      expect(effect.parentCheckpointId, initialId);
+      expect(effect.checkpointType, 'snapshot');
+      expect(
+        effect.snapshot.map((line) => line.original).toList(),
+        ['A', 'B-1', 'B-2', 'C'],
+      );
+
+      expect(
+        await checkpoints.undoToCheckpoint(
+          checkpointId: initialId,
+          sessionId: sessionId,
+        ),
+        isTrue,
+      );
+      expect(
+        (await repository.fetchSubtitleCollection(collectionId))
+            ?.lines
+            .map((line) => line.original)
+            .toList(),
+        ['A', 'B', 'C'],
+      );
+    });
+
     test('atomic delete stores a v2 post-operation snapshot', () async {
       final collectionId = await _seedCollection(harness);
       late int sessionId;
