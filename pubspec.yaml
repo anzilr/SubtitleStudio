@@ -8,6 +8,7 @@ environment:
 
 dependencies:
   charset_converter: ^2.3.0
+  crypto: ^3.0.7
   # chewie: ^1.11.0 # Replaced with media_kit
   device_info_plus: ^11.5.0
   filesystem_picker: ^4.1.0
