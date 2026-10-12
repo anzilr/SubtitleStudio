@@ -1,7 +1,7 @@
-Riverpod migration checkpoint 65
+Riverpod migration checkpoint 65 R2
 Date: 2026-10-12
 Checks:
-- flutter analyze
+- flutter analyze (zero issues required)
 - flutter test -j 1
 
 Focus:
@@ -14,3 +14,5 @@ Focus:
 - defer desktop workspace, persisted HEAD/branch/bookmark implementation
 
 No native platform builds, mobile UI changes, main/upstream merge, release-tag changes.
+
+Regression note: preserve external working-tree reconciliation test via direct Isar mutation, not legacy sessionless edit.
