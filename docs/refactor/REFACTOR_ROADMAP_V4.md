@@ -3,9 +3,10 @@
 > **October 12, 2026 progress addendum** — This document's checkpoint-45
 > inventory and older step list are retained as an historical baseline.
 > The current verified quality gate is **Checkpoint 65 R3** (`3dbd0fa`):
-> zero analyzer issues and **239 tests passed**. Sessionless legacy mutation
-> boundaries are protected against V2 history bypasses. Next: dedicated
-> Git-style HEAD/branch/bookmark references and continued compatibility tests;
+> zero analyzer issues and **239 tests passed**. Checkpoint 66 adds a
+> read-only typed Git-like reference catalog, stricter HEAD resolution and
+> transactional branch-safe pruning. Persisted named refs remain a later
+> schema-migration milestone;
 > desktop layout remains deferred.
 >
 > **New roadmap requirement — Expanded SRT text encodings (requested 2026-10-12):**
@@ -41,7 +42,8 @@
 > [Checkpoint 62 batch edit migration](CHECKPOINT62_BATCH_MUTATION_AND_DESKTOP_REUSE.md),
 > [Checkpoint 63 Save As/waveform safety](CHECKPOINT63_SAVE_LOCATION_AND_WAVEFORM_SAFETY.md),
 > [Checkpoint 64 legacy writer audit](CHECKPOINT64_LEGACY_WRITE_AUDIT.md),
-> [Checkpoint 65 mutation boundaries](CHECKPOINT65_LEGACY_MUTATION_BOUNDARIES.md), and
+> [Checkpoint 65 mutation boundaries](CHECKPOINT65_LEGACY_MUTATION_BOUNDARIES.md),
+> [Checkpoint 66 reference foundation](CHECKPOINT66_REFERENCE_FOUNDATION.md), and
 > [desktop reuse audit](DESKTOP_WORKSPACE_REUSE_AUDIT_2026-10-12.md).
 > Next phases: finish raw/sessionless persistence migration, then persisted
 > HEAD/branch/bookmark references, history graph UI and archived-format fixtures.
