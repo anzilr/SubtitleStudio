@@ -3,13 +3,15 @@
 > **October 12, 2026 progress addendum** — This document's checkpoint-45
 > inventory and older step list are retained as an historical baseline.
 > The current verified quality gate is **Checkpoint 63** (`8a67248`):
-> zero analyzer issues and **223 tests passed**. Desktop layout is deferred
+> zero analyzer issues and **223 tests passed**. Checkpoint 64 focuses on
+> remaining legacy writer callers; desktop layout is deferred
 > on `refactor/riverpod-architecture`. See
 > [Checkpoint 59 history integrity](CHECKPOINT59_HISTORY_SAFETY.md),
 > [Checkpoint 60 mutation migration](CHECKPOINT60_LIVE_MUTATION_MIGRATION.md),
 > [Checkpoint 61 import/metadata safety](CHECKPOINT61_COMMENT_IMPORT_AND_METADATA_SAFETY.md),
 > [Checkpoint 62 batch edit migration](CHECKPOINT62_BATCH_MUTATION_AND_DESKTOP_REUSE.md),
-> [Checkpoint 63 Save As/waveform safety](CHECKPOINT63_SAVE_LOCATION_AND_WAVEFORM_SAFETY.md), and
+> [Checkpoint 63 Save As/waveform safety](CHECKPOINT63_SAVE_LOCATION_AND_WAVEFORM_SAFETY.md),
+> [Checkpoint 64 legacy writer audit](CHECKPOINT64_LEGACY_WRITE_AUDIT.md), and
 > [desktop reuse audit](DESKTOP_WORKSPACE_REUSE_AUDIT_2026-10-12.md).
 > Next phases: finish raw/sessionless persistence migration, then persisted
 > HEAD/branch/bookmark references, history graph UI and archived-format fixtures.
