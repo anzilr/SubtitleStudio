@@ -5,7 +5,27 @@
 > The current verified quality gate is **Checkpoint 64 R2** (`1e39a1e`):
 > zero analyzer issues and **235 tests passed**. Next, continue classifying
 > compatibility-only writers and then Git-style HEAD/branch/bookmark refs;
-> desktop layout remains deferred
+> desktop layout remains deferred.
+>
+> **New roadmap requirement — Expanded SRT text encodings (requested 2026-10-12):**
+> Add reliable encoding selection/detection for **both reading/parsing and
+> writing/compiling SRT**. Initial candidate coverage: UTF-8 (with/without
+> BOM), UTF-16 LE/BE (with/without BOM where safely identifiable), ASCII,
+> ISO-8859-1, Windows-1252, and regional legacy encodings such as
+> Windows-1256 (Arabic), Windows-1251 (Cyrillic), Shift_JIS, GB18030,
+> Big5, and EUC-KR where supported by the platform codec. Validate actual
+> requirements and codec availability before committing the final list.
+> Encoding support must be **symmetric on import/export**; never silently
+> relabel or export as UTF-8 when the user selected another charset. Preserve
+> original encoding where possible, expose an explicit override/preview for
+> ambiguous bytes (Latin-1 can decode arbitrary bytes), detect BOM correctly,
+> handle unrepresentable characters explicitly (warn, refuse, or offer UTF-8),
+> cover Android/iOS/Windows/macOS/Linux and SAF paths, and test multilingual
+> parse→compile→parse round trips. Avoid breaking existing .msone metadata or
+> on-disk projects. This is a **future implementation milestone**, not part of
+> Checkpoint 65's persistence changes. Current limitations: the decoder tries
+> Latin-1 before Windows-1252, and the SRT compiler only maps UTF-8,
+> ISO-8859-1 and ASCII explicitly (otherwise falls back to UTF-8).
 > on `refactor/riverpod-architecture`. See
 > [Checkpoint 59 history integrity](CHECKPOINT59_HISTORY_SAFETY.md),
 > [Checkpoint 60 mutation migration](CHECKPOINT60_LIVE_MUTATION_MIGRATION.md),
