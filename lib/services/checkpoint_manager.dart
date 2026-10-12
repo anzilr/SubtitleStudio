@@ -551,7 +551,7 @@ class CheckpointManager {
         sessionId: sessionId,
         targetCheckpointId: checkpointId,
       );
-      if (nearestSnapshot == null || nearestSnapshot.snapshot.isEmpty) {
+      if (nearestSnapshot == null) {
         logError(
           'Cannot restore checkpoint $checkpointId: '
           'its ancestry has no valid snapshot.',
@@ -626,8 +626,9 @@ class CheckpointManager {
         targetCheckpointId: targetCheckpoint.id,
       );
 
+      // V2 hashes include the original ordering and persisted line indexes.
+      // Reindexing here would change the exact committed state on checkout.
       collection.lines = restoredLines;
-      CheckpointStateReducer.reindexExactOrder(collection);
       await _store.restoreCollectionAndActivateOnly(
         sessionId: sessionId,
         targetCheckpoint: targetCheckpoint,
