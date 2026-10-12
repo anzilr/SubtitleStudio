@@ -4,6 +4,8 @@ Date: 2026-10-12
 Branch: `refactor/riverpod-architecture`
 Starting verified baseline: Checkpoint 64 R2 (`1e39a1e`), zero analyzer issues, 235 tests passed.
 
+**Verified Checkpoint 65 R3:** commit `3dbd0fa`, analyzer **0 issues**, **239 tests passed**. [Successful CI](https://github.com/anzilr/SubtitleStudio/actions/runs/38290385661). Existing external working-tree recovery test now models a true outside Isar write rather than invoking a blocked compatibility API.
+
 ## Changes
 
 Checkpoint 64 blocked *full-collection* compatibility writers from bypassing
