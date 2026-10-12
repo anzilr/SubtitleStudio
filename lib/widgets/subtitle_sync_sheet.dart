@@ -10,6 +10,7 @@ import 'package:subtitle_studio/utils/app_logger.dart';
 class SubtitleSyncSheet extends StatefulWidget {
   final List<SubtitleLine> subtitleLines;
   final int subtitleId;
+  final int sessionId;
   final bool isVideoLoaded;
   final GlobalKey<VideoPlayerWidgetState> videoPlayerKey;
   final Function() onRefresh;
@@ -18,6 +19,7 @@ class SubtitleSyncSheet extends StatefulWidget {
     super.key,
     required this.subtitleLines,
     required this.subtitleId,
+    required this.sessionId,
     required this.isVideoLoaded,
     required this.videoPlayerKey,
     required this.onRefresh,
@@ -508,6 +510,7 @@ class _SubtitleSyncSheetState extends State<SubtitleSyncSheet> {
                                           listen: false,
                                         ).read(subtitleRepositoryProvider),
                                         subtitleId: widget.subtitleId,
+                                        sessionId: widget.sessionId,
                                         subtitleLines: widget.subtitleLines,
                                         newStartTime: _startTimeController.text,
                                         newEndTime: _endTimeController.text,
@@ -791,6 +794,7 @@ class _SubtitleSyncSheetState extends State<SubtitleSyncSheet> {
                                           listen: false,
                                         ).read(subtitleRepositoryProvider),
                                         subtitleId: widget.subtitleId,
+                                        sessionId: widget.sessionId,
                                         subtitleLines: widget.subtitleLines,
                                         sourceFramerate: double.tryParse(_sourceFramerateController.text) ?? 23.976,
                                         targetFramerate: double.tryParse(_targetFramerateController.text) ?? 25.000,
