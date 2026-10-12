@@ -34,8 +34,32 @@ class PreparedProjectHistory {
 
     final checkpoints = <Checkpoint>[];
     final sourceIds = <int>{};
+    int? originalSessionId;
+    int? originalCollectionId;
     try {
       for (final entry in source) {
+        // Projects may have legacy null identifiers, but non-null source
+        // ownership must not jump between sessions or collections.
+        final sourceSession = entry.sessionId;
+        final sourceCollection = entry.subtitleCollectionId;
+        if (sourceSession != null) {
+          if (originalSessionId != null &&
+              sourceSession != originalSessionId) {
+            throw const ProjectHistoryImportException(
+              'History contains checkpoints from multiple source sessions.',
+            );
+          }
+          originalSessionId = sourceSession;
+        }
+        if (sourceCollection != null) {
+          if (originalCollectionId != null &&
+              sourceCollection != originalCollectionId) {
+            throw const ProjectHistoryImportException(
+              'History contains checkpoints from multiple subtitle collections.',
+            );
+          }
+          originalCollectionId = sourceCollection;
+        }
         final id = entry.id;
         if (id == null || id <= 0 || !sourceIds.add(id)) {
           throw ProjectHistoryImportException(
@@ -71,6 +95,16 @@ class PreparedProjectHistory {
           }).toList(growable: false),
           snapshot: entry.snapshot.map(toSubtitleLine).toList(growable: false),
         )..id = id;
+        final decoded = CheckpointHistoryMetadata.decode(entry.metadata);
+        final declaredVersion = decoded['_historyVersion'];
+        if (declaredVersion != null &&
+            declaredVersion != 1 &&
+            !CheckpointHistoryMetadata.isPostOperation(checkpoint)) {
+          throw ProjectHistoryImportException(
+            'Unsupported checkpoint history version or state semantics '
+            'at checkpoint $id.',
+          );
+        }
         checkpoints.add(checkpoint);
       }
 
