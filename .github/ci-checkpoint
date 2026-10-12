@@ -1,16 +1,16 @@
-Riverpod migration checkpoint 64 R2
+Riverpod migration checkpoint 65
 Date: 2026-10-12
 Checks:
-- flutter analyze (zero issues required)
+- flutter analyze
 - flutter test -j 1
 
 Focus:
-- live Find & Replace uses one guarded atomic V2 history mutation
-- group multiple matches within one subtitle without losing earlier replacements
-- preserve cue annotations and reject stale, invalid or overlapping search results
-- Project Settings encoding is metadata-only and session-ownership checked
-- legacy full-collection writers refuse to overwrite any V2 history document
-- preserve unversioned legacy compatibility and add pure plus Isar regressions
-- document remaining legacy APIs and keep desktop workspace postponed
+- sessionless Editor and Edit Line mutations refuse documents with V2 history
+- legacy raw line updates read and write inside the same Isar transaction
+- sessionless Source View and waveform writes cannot bypass V2 history
+- legacy unversioned/v1 editing paths remain supported
+- add Isar regressions for active HEAD and legacy compatibility
+- add expanded SRT encoding support for parsing and compiling to roadmap ONLY
+- defer desktop workspace, persisted HEAD/branch/bookmark implementation
 
-No native builds, upstream/main merge, mobile redesign or release changes.
+No native platform builds, mobile UI changes, main/upstream merge, release-tag changes.
