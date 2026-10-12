@@ -84,7 +84,9 @@ class CheckpointHistoryTransaction {
       final currentLines =
           CheckpointStateReducer.copyLines(collection.lines);
 
-      Checkpoint? head;
+      // Every branch below either selects an existing HEAD or creates the root.
+      // Keep the resolved reference non-null after validating legacy/v2 rules.
+      late Checkpoint head;
       if (active.isEmpty) {
         if (checkpoints.isEmpty) {
           final root = Checkpoint(
@@ -126,7 +128,13 @@ class CheckpointHistoryTransaction {
           head = checkpoints.first;
         }
       } else {
-        head = CheckpointHeadReference.resolveForMutation(checkpoints);
+        final resolved = CheckpointHeadReference.resolveForMutation(checkpoints);
+        if (resolved == null) {
+          throw const CheckpointIntegrityException(
+            'Active checkpoint markers exist but HEAD cannot be resolved.',
+          );
+        }
+        head = resolved;
       }
 
       if (CheckpointHistoryMetadata.isPostOperation(head)) {
