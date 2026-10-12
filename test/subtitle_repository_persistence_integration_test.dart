@@ -116,6 +116,73 @@ void main() {
           .lines.first.original, 'A');
     });
 
+    test('encoding update preserves concurrent subtitle edits and history',
+        () async {
+      final collectionId = await _seedCollection(harness);
+      late int sessionId;
+      await harness.isar.writeTxn(() async {
+        sessionId = await harness.isar.sessions.put(
+          Session(
+            subtitleCollectionId: collectionId,
+            fileName: 'repository-test.srt',
+          ),
+        );
+      });
+      final oldSnapshot =
+          (await repository.fetchSubtitleCollection(collectionId))!;
+      expect(oldSnapshot.encoding, 'UTF-8');
+
+      // Another edit is committed while project settings remains open.
+      await harness.isar.writeTxn(() async {
+        final current = (await harness.isar.subtitleCollections
+            .get(collectionId))!;
+        current.lines.first.edited = 'Newer translation';
+        current.lines.last.comment = 'Concurrent reviewer note';
+        await harness.isar.subtitleCollections.put(current);
+      });
+      expect(await repository.updateEncoding(
+        collectionId: collectionId,
+        sessionId: sessionId,
+        encoding: 'UTF-16',
+      ), isTrue);
+
+      final actual = (await repository.fetchSubtitleCollection(collectionId))!;
+      expect(actual.encoding, 'UTF-16');
+      expect(actual.lines.first.edited, 'Newer translation');
+      expect(actual.lines.last.comment, 'Concurrent reviewer note');
+      expect(await harness.isar.checkpoints.count(), 0);
+    });
+
+    test('encoding rejects wrong owner and empty encodings without changes',
+        () async {
+      final collectionId = await _seedCollection(harness);
+      late int sessionId;
+      await harness.isar.writeTxn(() async {
+        sessionId = await harness.isar.sessions.put(
+          Session(fileName: 'original.srt', subtitleCollectionId: collectionId),
+        );
+      });
+
+      expect(await repository.updateEncoding(
+        collectionId: collectionId,
+        sessionId: sessionId + 12345,
+        encoding: 'UTF-16',
+      ), isFalse);
+      expect(await repository.updateEncoding(
+        collectionId: collectionId,
+        sessionId: sessionId,
+        encoding: '',
+      ), isFalse);
+      expect(await repository.updateEncoding(
+        collectionId: collectionId + 12345,
+        sessionId: sessionId,
+        encoding: 'UTF-16',
+      ), isFalse);
+
+      expect((await repository.fetchSubtitleCollection(collectionId))!
+          .encoding, 'UTF-8');
+    });
+
     test('text edit is an atomic v2 delta commit', () async {
       final collectionId = await _seedCollection(harness);
       late int sessionId;
