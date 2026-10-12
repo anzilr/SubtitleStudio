@@ -241,7 +241,10 @@ class SubtitleRepository {
     try {
       return await _isar.writeTxn(() async {
         final collection = await _isar.subtitleCollections.get(collectionId);
-        if (collection == null) return false;
+
+        if (!await LegacyCollectionWriteGuard.canReplaceEntireCollection(
+          _isar, collectionId,
+        )) return false;        if (collection == null) return false;
 
         // Legacy compatibility path: verify every cue before touching any
         // stored line. Previously a missing cue produced a false result but
@@ -397,6 +400,9 @@ class SubtitleRepository {
           index >= collection.lines.length) {
         return false;
       }
+      if (!await LegacyCollectionWriteGuard.canReplaceEntireCollection(
+        _isar, collectionId,
+      )) return false;
       modify(collection.lines[index]);
       await _isar.subtitleCollections.put(collection);
       return true;
@@ -697,6 +703,10 @@ class SubtitleRepository {
           return false;
         }
 
+        if (!await LegacyCollectionWriteGuard.canReplaceEntireCollection(
+          _isar, collectionId,
+        )) return false;
+
         final remaining = List<SubtitleLine>.from(collection.lines)
           ..removeAt(index);
         collection.lines = sortAndReindexSubtitleLines(remaining);
@@ -977,6 +987,9 @@ class SubtitleRepository {
           return false;
         }
 
+        if (!await LegacyCollectionWriteGuard.canReplaceEntireCollection(
+          _isar, collectionId,
+        )) return false;
         final lines = List<SubtitleLine>.from(collection.lines);
         lines[originalIndex] = firstPart;
         lines.insert(originalIndex + 1, secondPart);
@@ -1012,6 +1025,9 @@ class SubtitleRepository {
           return false;
         }
 
+        if (!await LegacyCollectionWriteGuard.canReplaceEntireCollection(
+          _isar, collectionId,
+        )) return false;
         final lines = List<SubtitleLine>.from(collection.lines);
         final maxIndex =
             firstLineIndex > secondLineIndex ? firstLineIndex : secondLineIndex;
@@ -1042,6 +1058,9 @@ class SubtitleRepository {
         final collection = await _isar.subtitleCollections.get(collectionId);
         if (collection == null) return false;
 
+        if (!await LegacyCollectionWriteGuard.canReplaceEntireCollection(
+          _isar, collectionId,
+        )) return false;
         final lines = List<SubtitleLine>.from(collection.lines);
         final targetIndex = insertIndex.clamp(0, lines.length);
         lines.insert(targetIndex, line);
