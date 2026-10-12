@@ -147,6 +147,36 @@ void main() {
       expect(current.lines.first.original, 'One');
     });
 
+    test('Edit Line raw full-collection writes cannot replace V2 state',
+        () async {
+      final ids = await _seed(harness);
+      final old = (await repository.fetchSubtitleCollection(ids.collectionId))!;
+      final history = CheckpointRepository(harness.isar);
+      await history.createInitialSnapshot(
+        sessionId: ids.sessionId,
+        subtitleCollectionId: ids.collectionId,
+      );
+      final before = await repository.fetchSubtitleLine(ids.collectionId, 1);
+      final updated = _line(
+        index: 1,
+        original: 'Current committed state',
+        start: '00:00:01,000',
+        end: '00:00:01,900',
+      );
+      expect(await repository.saveSubtitleLineChanges(
+        collectionId: ids.collectionId,
+        updatedLine: updated,
+        sessionId: ids.sessionId,
+        beforeLine: before,
+      ), isTrue);
+
+      old.lines.first.original = 'Stale data';
+      expect(await repository.updateSubtitleCollection(old), isFalse);
+      expect((await repository.fetchSubtitleCollection(ids.collectionId))!
+          .lines.first.original, 'Current committed state');
+      expect((await history.validateHistory(ids.sessionId)).isHealthy, isTrue);
+    });
+
     test('save stores an atomic v2 post-operation checkpoint', () async {
       final ids = await _seed(harness);
       await harness.isar.writeTxn(() async {
