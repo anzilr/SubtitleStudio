@@ -2,8 +2,8 @@
 
 > **October 12, 2026 progress addendum** — This document's checkpoint-45
 > inventory and older step list are retained as an historical baseline.
-> The current verified quality gate is **Checkpoint 62** (`45f3ec0`):
-> zero analyzer issues and **217 tests passed**. Checkpoint 63 is in progress
+> The current verified quality gate is **Checkpoint 63** (`8a67248`):
+> zero analyzer issues and **223 tests passed**. Desktop layout is deferred
 > on `refactor/riverpod-architecture`. See
 > [Checkpoint 59 history integrity](CHECKPOINT59_HISTORY_SAFETY.md),
 > [Checkpoint 60 mutation migration](CHECKPOINT60_LIVE_MUTATION_MIGRATION.md),
