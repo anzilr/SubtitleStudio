@@ -145,7 +145,7 @@ void main() {
         sessionId: seeded.sessionId,
         subtitleCollectionId: seeded.subtitleCollectionId,
       );
-      expect(root, isNonZero);
+      expect(root, greaterThan(0));
 
       await _writeLines(harness, seeded.subtitleCollectionId,
           [_line(1, 'Modified')]);
@@ -170,7 +170,7 @@ void main() {
         sessionId: seeded.sessionId,
         subtitleCollectionId: seeded.subtitleCollectionId,
       );
-      expect(root, isNonZero);
+      expect(root, greaterThan(0));
       await _writeLines(
         harness,
         seeded.subtitleCollectionId,
