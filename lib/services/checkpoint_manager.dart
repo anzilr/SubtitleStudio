@@ -812,24 +812,15 @@ class CheckpointManager {
   /// Uses limit-based cleanup only (no age-based cleanup)
   Future<void> _autoCleanupCheckpoints(int sessionId) async {
     try {
-      final allCheckpoints = await getCheckpointsForSession(sessionId);
       final maxCheckpoints = await getMaxCheckpoints();
-      
-      final head = await _getCurrentHeadCheckpoint(sessionId);
-      final toDelete = CheckpointPolicy.cleanupCandidates(
-        checkpoints: allCheckpoints,
+      final deleted = await _store.pruneSession(
+        sessionId: sessionId,
         maxCheckpoints: maxCheckpoints,
-        headCheckpointId: head?.id,
       );
-
-      if (toDelete.isNotEmpty) {
-        await _store.deleteCheckpointIds(
-          toDelete.map((checkpoint) => checkpoint.id),
-        );
-
+      if (deleted > 0) {
         logInfo(
-          'Cleaned up ${toDelete.length} old checkpoints '
-          '(limit: $maxCheckpoints, preserved initial snapshot and manual checkpoints)',
+          'Cleaned up $deleted old checkpoints '
+          '(limit: $maxCheckpoints, preserved protected history refs)',
         );
       }
     } catch (e) {
