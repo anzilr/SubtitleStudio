@@ -910,6 +910,33 @@ class SubtitleRepository {
     }
   }
 
+  /// Persist only the encoding metadata on the latest collection object.
+  ///
+  /// A project settings sheet can stay open while subtitles are edited
+  /// elsewhere. Never write its cached collection back to Isar.
+  Future<bool> updateEncoding({
+    required int collectionId,
+    required int sessionId,
+    required String encoding,
+  }) async {
+    if (encoding.trim().isEmpty) return false;
+    try {
+      return await _isar.writeTxn(() async {
+        final session = await _isar.sessions.get(sessionId);
+        if (session == null ||
+            session.subtitleCollectionId != collectionId) return false;
+        final current = await _isar.subtitleCollections.get(collectionId);
+        if (current == null) return false;
+        current.encoding = encoding;
+        await _isar.subtitleCollections.put(current);
+        return true;
+      });
+    } catch (error) {
+      logError('SubtitleRepository: Encoding update failed: $error');
+      return false;
+    }
+  }
+
   /// Persist a changed subtitle collection.
   Future<bool> updateCollection(SubtitleCollection collection) async {
     try {
