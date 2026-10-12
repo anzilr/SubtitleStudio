@@ -545,6 +545,18 @@ class EditLineController extends Notifier<EditLineState> {
     return _repository.updateSubtitleCollection(collection);
   }
 
+  Future<bool> updateSubtitleSaveLocation({
+    required String filePath,
+    required String originalFileUri,
+  }) {
+    return _repository.updateSubtitleSaveLocation(
+      collectionId: _subtitleCollectionId,
+      sessionId: state.sessionId,
+      filePath: filePath,
+      originalFileUri: originalFileUri,
+    );
+  }
+
   Future<void> updateLastEditedIndex(int index) {
     return _repository.updateLastEditedIndex(state.sessionId, index);
   }
