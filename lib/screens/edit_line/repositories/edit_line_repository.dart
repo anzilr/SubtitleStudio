@@ -12,6 +12,7 @@ import 'package:subtitle_studio/utils/platform_file_handler.dart';
 import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
 import 'package:subtitle_studio/services/checkpoint_history_transaction.dart';
 import 'package:subtitle_studio/services/checkpoint_line_metadata_service.dart';
+import 'package:subtitle_studio/services/legacy_collection_write_guard.dart';
 
 /// Repository layer for EditLineScreen operations
 /// 
@@ -387,14 +388,22 @@ class EditLineRepository {
     }
   }
 
+  /// Legacy-only full-collection save. V2 callers must use session-scoped
+  /// mutations or targeted metadata updates, not cached collection objects.
   Future<bool> updateSubtitleCollection(
     SubtitleCollection collection,
   ) async {
     try {
-      await _isar.writeTxn(() async {
+      return await _isar.writeTxn(() async {
+        final current = await _isar.subtitleCollections.get(collection.id);
+        if (current == null) return false;
+        if (!await LegacyCollectionWriteGuard.canReplaceEntireCollection(
+          _isar,
+          collection.id,
+        )) return false;
         await _isar.subtitleCollections.put(collection);
+        return true;
       });
-      return true;
     } catch (e, stackTrace) {
       await logError(
         'Failed to update subtitle collection',
