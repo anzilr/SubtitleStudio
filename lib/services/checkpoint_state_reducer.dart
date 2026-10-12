@@ -170,6 +170,43 @@ class CheckpointStateReducer {
     return true;
   }
 
+  /// Produces an exact replayable positional diff for a full-list editor.
+  ///
+  /// Source View can replace, add, remove, or reorder any number of cues.
+  /// Apply modifications first, trailing deletions in descending order,
+  /// then trailing additions. Every intermediate strict delta is valid.
+  static List<SubtitleLineDelta> diffAsIndexDeltas(
+    List<SubtitleLine> before,
+    List<SubtitleLine> after,
+  ) {
+    final deltas = <SubtitleLineDelta>[];
+    final overlap = before.length < after.length ? before.length : after.length;
+    for (var i = 0; i < overlap; i++) {
+      if (samePersistedLine(before[i], after[i])) continue;
+      deltas.add(SubtitleLineDelta()
+        ..changeType = 'modify'
+        ..lineIndex = i
+        ..beforeState = copyLine(before[i])
+        ..afterState = copyLine(after[i]));
+    }
+
+    for (var i = before.length - 1; i >= after.length; i--) {
+      deltas.add(SubtitleLineDelta()
+        ..changeType = 'delete'
+        ..lineIndex = i
+        ..beforeState = copyLine(before[i]));
+    }
+
+    for (var i = before.length; i < after.length; i++) {
+      deltas.add(SubtitleLineDelta()
+        ..changeType = 'add'
+        ..lineIndex = i
+        ..afterState = copyLine(after[i]));
+    }
+
+    return deltas;
+  }
+
   /// Reindexes lines without changing their stored order.
   ///
   /// History restoration must reproduce the exact checkpoint ordering rather
