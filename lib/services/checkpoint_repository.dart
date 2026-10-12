@@ -2,6 +2,7 @@ import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/services/checkpoint_manager.dart';
 import 'package:subtitle_studio/services/checkpoint_history_validator.dart';
+import 'package:subtitle_studio/services/checkpoint_reference_catalog.dart';
 
 /// Injectable checkpoint boundary used by migrated repositories.
 ///
@@ -48,6 +49,10 @@ class CheckpointRepository {
 
   Future<Checkpoint?> getHeadCheckpoint(int sessionId) {
     return _manager.getHeadCheckpoint(sessionId);
+  }
+
+  Future<List<CheckpointReference>> getReferencesForSession(int sessionId) {
+    return _manager.getReferencesForSession(sessionId);
   }
 
   Future<CheckpointHistoryHealth> validateHistory(int sessionId) {
