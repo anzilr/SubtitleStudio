@@ -516,8 +516,13 @@ class CheckpointManager {
   Future<bool> undoToCheckpoint({
     required int checkpointId,
     required int sessionId,
+    int? ifCurrentHeadId,
   }) async {
     try {
+      // An undo or redo may use an earlier HEAD observation. Reject a stale
+      // navigation request instead of applying it to a newer working tree.
+      final expectedHeadId =
+          ifCurrentHeadId ?? (await _getCurrentHeadCheckpoint(sessionId))?.id;
       final targetCheckpoint = await _store.getCheckpoint(checkpointId);
       if (targetCheckpoint == null) {
         logError('Checkpoint not found: $checkpointId');
@@ -539,11 +544,15 @@ class CheckpointManager {
         return false;
       }
 
+      final expectedWorkingStateHash =
+          CheckpointStateHasher.hashLines(collection.lines);
       if (CheckpointHistoryMetadata.isPostOperation(targetCheckpoint)) {
         return await _restorePostOperationCheckpoint(
           targetCheckpoint: targetCheckpoint,
           sessionId: sessionId,
           collection: collection,
+          expectedHeadId: expectedHeadId,
+          expectedWorkingStateHash: expectedWorkingStateHash,
         );
       }
 
@@ -596,6 +605,8 @@ class CheckpointManager {
         sessionId: sessionId,
         targetCheckpoint: targetCheckpoint,
         collection: collection,
+        expectedHeadId: expectedHeadId,
+        expectedWorkingStateHash: expectedWorkingStateHash,
       );
 
       logInfo(
@@ -618,6 +629,8 @@ class CheckpointManager {
     required Checkpoint targetCheckpoint,
     required int sessionId,
     required SubtitleCollection collection,
+    required int? expectedHeadId,
+    required String expectedWorkingStateHash,
   }) async {
     try {
       final checkpoints = await getCheckpointsForSession(sessionId);
@@ -633,6 +646,8 @@ class CheckpointManager {
         sessionId: sessionId,
         targetCheckpoint: targetCheckpoint,
         collection: collection,
+        expectedHeadId: expectedHeadId,
+        expectedWorkingStateHash: expectedWorkingStateHash,
       );
 
       logInfo(
@@ -652,10 +667,12 @@ class CheckpointManager {
   Future<bool> checkoutCheckpoint({
     required int checkpointId,
     required int sessionId,
+    int? ifCurrentHeadId,
   }) {
     return undoToCheckpoint(
       checkpointId: checkpointId,
       sessionId: sessionId,
+      ifCurrentHeadId: ifCurrentHeadId,
     );
   }
 
@@ -686,6 +703,7 @@ class CheckpointManager {
     return checkoutCheckpoint(
       checkpointId: parentId,
       sessionId: sessionId,
+      ifCurrentHeadId: head!.id,
     );
   }
 
@@ -728,6 +746,7 @@ class CheckpointManager {
     return checkoutCheckpoint(
       checkpointId: checkpointId,
       sessionId: sessionId,
+      ifCurrentHeadId: head.id,
     );
   }
   
