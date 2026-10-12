@@ -355,11 +355,19 @@ extension _ProjectSettingsMediaActions on _ProjectSettingsSheetState {
 
   Future<void> _updateEncoding(String encoding) async {
     try {
-      widget.subtitleCollection.encoding = encoding;
-      await ref
+      final updated = await ref
           .read(subtitleRepositoryProvider)
-          .updateCollection(widget.subtitleCollection);
-      
+          .updateEncoding(
+            collectionId: widget.subtitleCollection.id,
+            sessionId: widget.session.id,
+            encoding: encoding,
+          );
+      if (!updated) {
+        throw StateError('Encoding metadata could not be saved.');
+      }
+      widget.subtitleCollection.encoding = encoding;
+      if (!mounted) return;
+
       SnackbarHelper.showSnackBar(
         context,
         'Encoding updated to $encoding',
