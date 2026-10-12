@@ -8,6 +8,7 @@ import 'package:subtitle_studio/utils/logging_helpers.dart';
 import 'package:subtitle_studio/services/checkpoint_repository.dart';
 import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
 import 'package:subtitle_studio/services/checkpoint_history_transaction.dart';
+import 'package:subtitle_studio/services/checkpoint_line_metadata_service.dart';
 import 'package:subtitle_studio/utils/time_parser.dart';
 import 'package:subtitle_studio/screens/edit/models/subtitle_entry.dart';
 import 'package:subtitle_studio/screens/edit/services/source_view_reconciler.dart';
@@ -192,91 +193,112 @@ class SubtitleRepository {
     }
   }
 
-  /// Mark a subtitle line
-  Future<bool> markLine(int collectionId, int index, bool marked) async {
-    logInfo('SubtitleRepository: Marking line $index in collection $collectionId as $marked');
-    try {
-      final success = await _isar.writeTxn(() async {
-        final collection = await _isar.subtitleCollections.get(collectionId);
-        if (collection == null ||
-            index < 0 ||
-            index >= collection.lines.length) {
-          return false;
-        }
-
-        collection.lines[index].marked = marked;
-        await _isar.subtitleCollections.put(collection);
-        return true;
-      });
-      if (success) {
-        logInfo('SubtitleRepository: Successfully marked line $index');
-      } else {
-        logWarning('SubtitleRepository: Failed to mark line $index');
-      }
-      return success;
-    } catch (e) {
-      logError('SubtitleRepository: Error marking line $index: $e');
-      rethrow;
-    }
-  }
-
-  /// Update comment for a subtitle line
-  Future<bool> updateComment(int collectionId, int index, String? comment) async {
-    logInfo('SubtitleRepository: Updating comment for line $index in collection $collectionId');
-    try {
-      final success = await _isar.writeTxn(() async {
-        final collection = await _isar.subtitleCollections.get(collectionId);
-        if (collection == null ||
-            index < 0 ||
-            index >= collection.lines.length) {
-          return false;
-        }
-
-        collection.lines[index].comment = comment;
-        await _isar.subtitleCollections.put(collection);
-        return true;
-      });
-
-      if (success) {
-        logInfo(
-          'SubtitleRepository: Successfully updated comment for line $index',
+  /// Persist an annotation as a v2 commit when editing within a session.
+  /// The no-session fallback is retained for legacy integrations while their
+  /// callers migrate to the history-aware API.
+  Future<bool> markLine(
+    int collectionId,
+    int index,
+    bool marked, {
+    int? sessionId,
+  }) async {
+    if (sessionId != null) {
+      try {
+        return await CheckpointLineMetadataService(_isar).change(
+          sessionId: sessionId,
+          collectionId: collectionId,
+          lineIndex: index,
+          description: marked ? 'Marked line ${index + 1}' : 'Unmarked line ${index + 1}',
+          modify: (line) => line.marked = marked,
         );
-      } else {
-        logWarning(
-          'SubtitleRepository: Could not update comment for invalid line $index',
-        );
-      }
-      return success;
-    } catch (e) {
-      logError('SubtitleRepository: Error updating comment for line $index: $e');
-      rethrow;
-    }
-  }
-
-  /// Clear mark/comment state for a subtitle line in one transaction.
-  Future<bool> unmarkLine(int collectionId, int index) async {
-    return _isar.writeTxn(() async {
-      final collection = await _isar.subtitleCollections.get(collectionId);
-      if (collection == null ||
-          index < 0 ||
-          index >= collection.lines.length) {
+      } catch (error) {
+        logError('SubtitleRepository: Atomic mark failed: $error');
         return false;
       }
-
-      final line = collection.lines[index];
-      line.marked = false;
-      line.comment = null;
-      line.resolved = false;
-      await _isar.subtitleCollections.put(collection);
-      return true;
+    }
+    return _legacyModifyLine(collectionId, index, (line) {
+      line.marked = marked;
     });
   }
 
-  /// Update the resolved state attached to a subtitle comment.
+  Future<bool> updateComment(
+    int collectionId,
+    int index,
+    String? comment, {
+    int? sessionId,
+  }) async {
+    if (sessionId != null) {
+      try {
+        return await CheckpointLineMetadataService(_isar).change(
+          sessionId: sessionId,
+          collectionId: collectionId,
+          lineIndex: index,
+          description: 'Updated comment on line ${index + 1}',
+          modify: (line) => line.comment = comment,
+        );
+      } catch (error) {
+        logError('SubtitleRepository: Atomic comment update failed: $error');
+        return false;
+      }
+    }
+    return _legacyModifyLine(collectionId, index, (line) {
+      line.comment = comment;
+    });
+  }
+
+  Future<bool> unmarkLine(int collectionId, int index, {int? sessionId}) async {
+    void clear(SubtitleLine line) {
+      line.marked = false;
+      line.comment = null;
+      line.resolved = false;
+    }
+
+    if (sessionId != null) {
+      try {
+        return await CheckpointLineMetadataService(_isar).change(
+          sessionId: sessionId,
+          collectionId: collectionId,
+          lineIndex: index,
+          description: 'Cleared mark and comment on line ${index + 1}',
+          modify: clear,
+        );
+      } catch (error) {
+        logError('SubtitleRepository: Atomic unmark failed: $error');
+        return false;
+      }
+    }
+    return _legacyModifyLine(collectionId, index, clear);
+  }
+
   Future<bool> updateResolved(
     int collectionId,
     int index,
-    bool resolved,
+    bool resolved, {
+    int? sessionId,
+  }) async {
+    if (sessionId != null) {
+      try {
+        return await CheckpointLineMetadataService(_isar).change(
+          sessionId: sessionId,
+          collectionId: collectionId,
+          lineIndex: index,
+          description: 'Updated resolution of line ${index + 1}',
+          modify: (line) => line.resolved = resolved,
+        );
+      } catch (error) {
+        logError('SubtitleRepository: Atomic resolve failed: $error');
+        return false;
+      }
+    }
+    return _legacyModifyLine(collectionId, index, (line) {
+      line.resolved = resolved;
+    });
+  }
+
+  Future<bool> _legacyModifyLine(
+    int collectionId,
+    int index,
+    void Function(SubtitleLine line) modify,
   ) async {
     return _isar.writeTxn(() async {
       final collection = await _isar.subtitleCollections.get(collectionId);
@@ -285,8 +307,7 @@ class SubtitleRepository {
           index >= collection.lines.length) {
         return false;
       }
-
-      collection.lines[index].resolved = resolved;
+      modify(collection.lines[index]);
       await _isar.subtitleCollections.put(collection);
       return true;
     });
