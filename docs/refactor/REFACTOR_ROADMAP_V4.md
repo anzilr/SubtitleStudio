@@ -2,10 +2,10 @@
 
 > **October 12, 2026 progress addendum** — This document's checkpoint-45
 > inventory and older step list are retained as an historical baseline.
-> The current verified quality gate is **Checkpoint 64 R2** (`1e39a1e`):
-> zero analyzer issues and **235 tests passed**. Checkpoint 65 extends
-> V2 protection to sessionless line-writing APIs, followed by Git-style
-> HEAD/branch/bookmark references;
+> The current verified quality gate is **Checkpoint 65 R3** (`3dbd0fa`):
+> zero analyzer issues and **239 tests passed**. Sessionless legacy mutation
+> boundaries are protected against V2 history bypasses. Next: dedicated
+> Git-style HEAD/branch/bookmark references and continued compatibility tests;
 > desktop layout remains deferred.
 >
 > **New roadmap requirement — Expanded SRT text encodings (requested 2026-10-12):**
