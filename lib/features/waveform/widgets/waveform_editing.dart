@@ -217,26 +217,27 @@ extension _WaveformEditing on WaveformWidgetState {
     
     // Update subtitle and history atomically.
     try {
-      subtitle.startTime = afterSubtitle.startTime;
-      subtitle.endTime = afterSubtitle.endTime;
-      
       final repository = ref.read(waveformSubtitleRepositoryProvider);
       final success = widget.sessionId != null
           ? await repository.updateLinesWithHistory(
               subtitleCollectionId: widget.subtitleCollectionId!,
               sessionId: widget.sessionId!,
-              updatedLines: [subtitle],
+              updatedLines: [afterSubtitle],
+              expectedLines: [subtitle],
             )
           : await repository.updateLines(
               widget.subtitleCollectionId!,
-              [subtitle],
+              [afterSubtitle],
             );
       
       if (!success) {
         throw Exception('Failed to update subtitle in database');
       }
       
-      // Update internal cache
+      // Only update cached timing after the database has accepted the edit.
+      // A failed or stale save must leave the displayed cue untouched.
+      subtitle.startTime = afterSubtitle.startTime;
+      subtitle.endTime = afterSubtitle.endTime;
       _mutateLocalState(() {
         _currentSubtitles[subtitleIndex] = subtitle;
       });
