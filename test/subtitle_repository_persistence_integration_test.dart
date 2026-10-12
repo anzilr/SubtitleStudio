@@ -455,7 +455,17 @@ void main() {
         subtitleCollectionId: collectionId,
       );
 
-      expect(await repository.markLine(collectionId, 0, true), isTrue);
+      // Legacy sessionless methods must not bypass V2 history.
+      expect(await repository.markLine(collectionId, 0, true), isFalse);
+
+      // Simulate an external writer that bypasses repository guards,
+      // preserving this test's original working-tree sync scenario.
+      await harness.isar.writeTxn(() async {
+        final collection =
+            (await harness.isar.subtitleCollections.get(collectionId))!;
+        collection.lines.first.marked = true;
+        await harness.isar.subtitleCollections.put(collection);
+      });
 
       final updated = _line(
         index: 1,
