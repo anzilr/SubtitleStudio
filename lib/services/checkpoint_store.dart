@@ -2,6 +2,7 @@ import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/services/checkpoint_head_reference.dart';
 import 'package:subtitle_studio/services/checkpoint_policy.dart';
+import 'package:subtitle_studio/services/checkpoint_reference_catalog.dart';
 import 'package:subtitle_studio/services/checkpoint_state_hasher.dart';
 import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
 
@@ -68,6 +69,13 @@ class CheckpointStore {
         .sessionIdEqualTo(sessionId)
         .findAll();
     return CheckpointHeadReference.resolveForMutation(all);
+  }
+
+  Future<List<CheckpointReference>> getReferencesForSession(
+    int sessionId,
+  ) async {
+    final history = await getCheckpointsForSession(sessionId);
+    return CheckpointReferenceCatalog.fromHistory(history);
   }
 
   Future<int> putCheckpoint(Checkpoint checkpoint) async {
