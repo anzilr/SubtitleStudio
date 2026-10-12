@@ -59,7 +59,7 @@ extension _EditProjectActions on _EditScreenState {
                 if (updated) {
                   print('Updated originalFileUri to: $targetPath');
                 } else {
-                  logWarning('File saved, but originalFileUri metadata update failed.');
+                  debugPrint('File saved, but originalFileUri metadata update failed.');
                 }
               }
             } else {
