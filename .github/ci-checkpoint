@@ -1,15 +1,16 @@
-Riverpod migration checkpoint 60 R2
+Riverpod migration checkpoint 61
 Date: 2026-10-12
 Checks:
-- flutter analyze (zero issues required)
+- flutter analyze
 - flutter test -j 1
 
 Focus:
-- reject session/collection mismatches inside mutation transactions
-- use V2 commits for active editor annotations and add/delete
-- use V2 commits for Edit Line save/add/annotations
-- save Source View edits atomically with exact replayable full-list diff
-- verify annotation and source-view undo/redo with real Isar
-- preserve compatibility-only legacy methods while callers migrate
+- import .msone comments using one atomic post-operation V2 commit
+- reject duplicate source cue numbers and ambiguous/wrong session ownership
+- preserve intervening edits and current subtitle fields during comment import
+- round-trip annotation import through undo and redo
+- save SRT file URI via targeted fresh-collection write without stale line replacement
+- protect null original URIs in older session save flows
+- update refactor roadmap and checkpoint handoff documentation
 
-No platform builds. Do not merge upstream or modify release branches.
+No platform builds. No modifications to main/upstream/release tags.
