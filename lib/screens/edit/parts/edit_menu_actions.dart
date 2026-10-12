@@ -242,6 +242,7 @@ extension _EditMenuActions on _EditScreenState {
       context: context,
       subtitleLines: subtitleLines,
       subtitleCollectionId: widget.subtitleCollectionId,
+      sessionId: widget.sessionId,
       isVideoLoaded: _isVideoLoaded,
       videoPlayerKey: _videoPlayerKey,
       onRefresh: _refreshSubtitleLines,
@@ -264,6 +265,7 @@ extension _EditMenuActions on _EditScreenState {
     await showEditorNormalizationSheet(
       context: context,
       subtitleCollectionId: widget.subtitleCollectionId,
+      sessionId: widget.sessionId,
       subtitleLines: subtitleLines,
       onNormalizationComplete: _refreshSubtitleLines,
     );
