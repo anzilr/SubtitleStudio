@@ -9,6 +9,13 @@
 > desktop layout remains deferred.
 >
 > **New roadmap requirement — Expanded SRT text encodings (requested 2026-10-12):**
+> Reference implementation research: [KDE Subtitle Composer and Subtitle Edit
+> study](SRT_ENCODING_REFERENCE_RESEARCH_2026-10-12.md). The study links exact
+> detection, source-encoding preservation, manually selected encoding/preview,
+> BOM and regression-test implementations. Use their proven UX/behavior patterns
+> to guide an independently implemented shared Flutter encoding service.
+> **Source references:** https://invent.kde.org/multimedia/subtitlecomposer.git
+> and https://github.com/SubtitleEdit/subtitleedit.git.
 > Add reliable encoding selection/detection for **both reading/parsing and
 > writing/compiling SRT**. Initial candidate coverage: UTF-8 (with/without
 > BOM), UTF-16 LE/BE (with/without BOM where safely identifiable), ASCII,
