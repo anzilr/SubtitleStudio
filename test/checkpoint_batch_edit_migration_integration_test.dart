@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:subtitle_studio/database/models/models.dart';
+import 'package:subtitle_studio/features/search_replace/search_replace_planner.dart';
 import 'package:subtitle_studio/operations/subtitle_sync_operations.dart';
 import 'package:subtitle_studio/screens/edit/repositories/subtitle_repository.dart';
 import 'package:subtitle_studio/services/checkpoint_repository.dart';
@@ -191,6 +192,55 @@ void main() {
       description: 'Foreign',
     ), isFalse);
     expect(await history.getCheckpointsForSession(ids.sessionId), isEmpty);
+  });
+
+  test('Find & Replace groups selected matches into one reversible V2 commit',
+      () async {
+    final ids = await _seed(harness);
+    final root = await history.createInitialSnapshot(
+      sessionId: ids.sessionId,
+      subtitleCollectionId: ids.collectionId,
+    );
+    final original = (await repository.fetchSubtitleCollection(ids.collectionId))!;
+    final text = original.lines[1];
+    final plan = SubtitleSearchReplacePlanner.build(
+      matches: [
+        SubtitleSearchMatch(line: text, start: 0, end: 3),
+        SubtitleSearchMatch(line: text, start: 3, end: 6),
+      ],
+      searchTerm: '',
+      replacement: 'x',
+      caseSensitive: true,
+    );
+    expect(plan.replacements, 2);
+    expect(await repository.updateMultipleLinesWithHistory(
+      collectionId: ids.collectionId,
+      sessionId: ids.sessionId,
+      expectedLines: plan.expectedLines,
+      updatedLines: plan.updatedLines,
+      operationType: 'replace',
+      description: 'Replace selected matches',
+    ), isTrue);
+
+    final checkpoint = (await history.getHeadCheckpoint(ids.sessionId))!;
+    expect(checkpoint.operationType, 'replace');
+    expect(checkpoint.deltas, hasLength(1));
+    expect((await history.validateHistory(ids.sessionId)).isHealthy, isTrue);
+    expect((await repository.fetchSubtitleCollection(ids.collectionId))!
+        .lines[1].edited, 'xx');
+
+    expect(await history.undoToCheckpoint(
+      checkpointId: root,
+      sessionId: ids.sessionId,
+    ), isTrue);
+    expect((await repository.fetchSubtitleCollection(ids.collectionId))!
+        .lines[1].edited, isNull);
+    expect(await history.redoToCheckpoint(
+      checkpointId: checkpoint.id,
+      sessionId: ids.sessionId,
+    ), isTrue);
+    expect((await repository.fetchSubtitleCollection(ids.collectionId))!
+        .lines[1].edited, 'xx');
   });
 
   test('timecode resync commits V2 history and preserves annotations',
