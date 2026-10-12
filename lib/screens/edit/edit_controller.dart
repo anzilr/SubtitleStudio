@@ -1011,6 +1011,7 @@ class EditController extends Notifier<EditState> {
       await _subtitleRepo.syncSourceViewToDatabase(
         subtitleCollectionId,
         entries,
+        sessionId: sessionId,
       );
 
       // Refresh the canonical subtitle state but keep the current view.
