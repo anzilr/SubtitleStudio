@@ -1176,6 +1176,13 @@ class SubtitleRepository {
           if (collection == null) {
             throw StateError('Subtitle collection $collectionId not found');
           }
+          if (!await LegacyCollectionWriteGuard.canReplaceEntireCollection(
+            _isar, collectionId,
+          )) {
+            throw StateError(
+              'A session-scoped V2 history commit is required for Source View.',
+            );
+          }
           collection.lines = SourceViewReconciler.reconcile(
             existingLines: collection.lines,
             entries: entries,
