@@ -53,7 +53,7 @@ void main() {
       timestamp: DateTime.utc(2026, 10, 3, 10),
       operationType: 'snapshot',
       description: 'Initial state',
-      isActive: true,
+      isActive: false,
       checkpointType: 'snapshot',
       deltas: const [],
       snapshot: [_line(1, 'Initial')],
