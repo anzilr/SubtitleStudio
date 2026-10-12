@@ -187,6 +187,7 @@ extension _EditMenuActions on _EditScreenState {
           return SearchReplaceSheet(
             subtitleLines: subtitleLines,
             subtitleId: widget.subtitleCollectionId,
+            sessionId: widget.sessionId,
             isReplaceMode: true,
             onRefresh: _refreshSubtitleLines,
             onLineSelected: (index) async {
