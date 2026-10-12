@@ -81,6 +81,41 @@ void main() {
   });
 
   group('SubtitleRepository persistence', () {
+    test('legacy sparse batch rejects unknown cue without partial write',
+        () async {
+      final collectionId = await _seedCollection(harness);
+      expect(await repository.updateMultipleLines(collectionId, [
+        _line(
+          index: 1,
+          text: 'Should not apply',
+          start: '00:00:01,000',
+          end: '00:00:01,900',
+        ),
+        _line(
+          index: 400,
+          text: 'Unknown cue',
+          start: '00:00:04,000',
+          end: '00:00:04,900',
+        ),
+      ]), isFalse);
+      final current = (await repository.fetchSubtitleCollection(collectionId))!;
+      expect(current.lines.map((line) => line.original).toList(), ['A', 'B', 'C']);
+    });
+
+    test('legacy sparse batch rejects duplicate cue numbers', () async {
+      final collectionId = await _seedCollection(harness);
+      final replacement = _line(
+        index: 1,
+        text: 'Duplicate request',
+        start: '00:00:01,000',
+        end: '00:00:01,900',
+      );
+      expect(await repository.updateMultipleLines(
+          collectionId, [replacement, replacement]), isFalse);
+      expect((await repository.fetchSubtitleCollection(collectionId))!
+          .lines.first.original, 'A');
+    });
+
     test('text edit is an atomic v2 delta commit', () async {
       final collectionId = await _seedCollection(harness);
       late int sessionId;
