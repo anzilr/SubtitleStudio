@@ -87,16 +87,12 @@ class CheckpointHistoryValidator {
         .where(CheckpointHistoryMetadata.isPostOperation)
         .toList(growable: false);
     if (v2.isNotEmpty) {
-      final heads = checkpoints
-          .where((checkpoint) => checkpoint.isActive)
-          .toList(growable: false);
+      // A user may check out a legacy ancestor even after v2 descendants
+      // exist. Only HEAD cardinality is constrained in mixed history.
+      final heads = CheckpointHeadReference.activeCheckpoints(checkpoints);
       if (heads.length != 1) {
         issues.add(
           'V2 history must have exactly one HEAD, found \${heads.length}.',
-        );
-      } else if (!CheckpointHistoryMetadata.isPostOperation(heads.single)) {
-        issues.add(
-          'V2 history HEAD \${heads.single.id} does not use v2 semantics.',
         );
       }
 
