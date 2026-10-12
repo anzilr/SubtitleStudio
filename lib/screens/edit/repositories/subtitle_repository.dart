@@ -242,29 +242,35 @@ class SubtitleRepository {
         final collection = await _isar.subtitleCollections.get(collectionId);
         if (collection == null) return false;
 
-        final updatesByCueNumber = <int, SubtitleLine>{
-          for (final line in updatedLines) line.index: line,
-        };
-
-        var updatedCount = 0;
-        for (int i = 0; i < collection.lines.length; i++) {
-          final replacement =
-              updatesByCueNumber[collection.lines[i].index];
-          if (replacement != null) {
-            collection.lines[i] = replacement;
-            updatedCount++;
+        // Legacy compatibility path: verify every cue before touching any
+        // stored line. Previously a missing cue produced a false result but
+        // still committed partial updates.
+        final updatesByCueNumber = <int, SubtitleLine>{};
+        for (final line in updatedLines) {
+          if (line.index <= 0 ||
+              updatesByCueNumber.containsKey(line.index)) {
+            return false;
           }
+          updatesByCueNumber[line.index] =
+              CheckpointStateReducer.copyLine(line);
         }
 
-        if (updatedCount != updatesByCueNumber.length) {
-          logWarning(
-            'SubtitleRepository: Batch update matched $updatedCount of '
-            '${updatesByCueNumber.length} requested lines',
-          );
+        final matched = <int>{};
+        for (final line in collection.lines) {
+          if (updatesByCueNumber.containsKey(line.index)) {
+            if (!matched.add(line.index)) return false;
+          }
+        }
+        if (matched.length != updatesByCueNumber.length) return false;
+
+        for (var i = 0; i < collection.lines.length; i++) {
+          final replacement =
+              updatesByCueNumber[collection.lines[i].index];
+          if (replacement != null) collection.lines[i] = replacement;
         }
 
         await _isar.subtitleCollections.put(collection);
-        return updatedCount == updatesByCueNumber.length;
+        return true;
       });
     } catch (e, stackTrace) {
       await logError(
