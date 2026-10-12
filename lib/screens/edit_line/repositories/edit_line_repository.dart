@@ -353,6 +353,40 @@ class EditLineRepository {
     }
   }
 
+  /// Change only the selected output file location, preserving the live
+  /// collection's subtitle lines and other metadata. The caller's cached
+  /// collection may predate an asynchronous platform Save As dialog.
+  Future<bool> updateSubtitleSaveLocation({
+    required int collectionId,
+    required int sessionId,
+    required String filePath,
+    required String originalFileUri,
+  }) async {
+    if (filePath.isEmpty || originalFileUri.isEmpty) return false;
+    try {
+      return await _isar.writeTxn(() async {
+        final session = await _isar.sessions.get(sessionId);
+        if (session == null || session.subtitleCollectionId != collectionId) {
+          return false;
+        }
+        final current = await _isar.subtitleCollections.get(collectionId);
+        if (current == null) return false;
+        current.filePath = filePath;
+        current.originalFileUri = originalFileUri;
+        await _isar.subtitleCollections.put(current);
+        return true;
+      });
+    } catch (error, stackTrace) {
+      await logError(
+        'Failed to update subtitle output file location',
+        error: error,
+        stackTrace: stackTrace,
+        context: 'EditLineRepository.updateSubtitleSaveLocation',
+      );
+      return false;
+    }
+  }
+
   Future<bool> updateSubtitleCollection(
     SubtitleCollection collection,
   ) async {
