@@ -10,6 +10,7 @@ Future<void> showEditorSyncSheet({
   required BuildContext context,
   required List<SubtitleLine> subtitleLines,
   required int subtitleCollectionId,
+  required int sessionId,
   required bool isVideoLoaded,
   required GlobalKey<VideoPlayerWidgetState> videoPlayerKey,
   required Future<void> Function() onRefresh,
@@ -26,6 +27,7 @@ Future<void> showEditorSyncSheet({
         child: SubtitleSyncSheet(
           subtitleLines: subtitleLines,
           subtitleId: subtitleCollectionId,
+          sessionId: sessionId,
           isVideoLoaded: isVideoLoaded,
           videoPlayerKey: videoPlayerKey,
           onRefresh: () async {
@@ -65,6 +67,7 @@ Future<void> showEditorBannerSheet({
 Future<void> showEditorNormalizationSheet({
   required BuildContext context,
   required int subtitleCollectionId,
+  required int sessionId,
   required List<SubtitleLine> subtitleLines,
   required Future<void> Function() onNormalizationComplete,
 }) {
@@ -76,6 +79,7 @@ Future<void> showEditorNormalizationSheet({
     ),
     builder: (context) => MalayalamNormalizationSheet(
       subtitleCollectionId: subtitleCollectionId,
+      sessionId: sessionId,
       subtitleLines: subtitleLines,
       onNormalizationComplete: onNormalizationComplete,
     ),
