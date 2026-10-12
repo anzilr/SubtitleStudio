@@ -1,18 +1,16 @@
-Riverpod migration checkpoint 63
+Riverpod migration checkpoint 64
 Date: 2026-10-12
 Checks:
 - flutter analyze
 - flutter test -j 1
 
 Focus:
-- Edit Line Save As writes only location metadata from fresh Isar state
-- reject Save As ownership mismatch and empty file paths
-- handle nullable legacy originalFileUri safely
-- waveform V2 timing edit preserves original/edited text and annotations
-- reject stale expected waveform snapshots and invalid duplicate cue batches
-- do not mutate waveform UI time cache before successful persistence
-- return success without new commit for unchanged waveform timing
-- legacy waveform batch updates are atomic and timing-only
-- keep mobile widgets/layout and desktop concepts unchanged
+- live Find & Replace uses one guarded atomic V2 history mutation
+- group multiple matches within one subtitle without losing earlier replacements
+- preserve cue annotations and reject stale, invalid or overlapping search results
+- Project Settings encoding is metadata-only and session-ownership checked
+- legacy full-collection writers refuse to overwrite any V2 history document
+- preserve unversioned legacy compatibility and add pure plus Isar regressions
+- document remaining legacy APIs and keep desktop workspace postponed
 
-No native platform builds, main/upstream changes or release-tag changes.
+No native builds, upstream/main merge, mobile redesign or release changes.
