@@ -4,6 +4,8 @@ Date: 2026-10-12
 Branch: `refactor/riverpod-architecture`
 Starting verified baseline: Checkpoint 63, code commit `8a67248`, analyzer clean, 223 tests passed.
 
+**Verified Checkpoint 64 R2:** code/CI marker `1e39a1e`, Flutter analyzer **0 issues**, **235 tests passed**. [Successful CI run](https://github.com/anzilr/SubtitleStudio/actions/runs/38288554117).
+
 ## Key findings from source-level caller audit
 
 ### Live Find & Replace was still bypassing history
