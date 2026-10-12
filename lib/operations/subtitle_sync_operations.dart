@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/screens/edit/repositories/subtitle_repository.dart';
+import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
 import 'package:subtitle_studio/utils/time_parser.dart';
 
 class SyncResult {
@@ -19,6 +20,7 @@ class SubtitleSyncOperations {
   static Future<SyncResult> shiftTimecodes({
     required SubtitleRepository subtitleRepository,
     required int subtitleId,
+    int? sessionId,
     required List<SubtitleLine> subtitleLines,
     required String newStartTime,
     required String newEndTime,
@@ -83,10 +85,7 @@ class SubtitleSyncOperations {
         final newEndMs = newStartMs + duration;
         
         // Create updated subtitle
-        final updatedLine = SubtitleLine()
-          ..index = line.index
-          ..original = line.original
-          ..edited = line.edited
+        final updatedLine = CheckpointStateReducer.copyLine(line)
           ..startTime = formatDuration(newStartMs)
           ..endTime = formatDuration(newEndMs);
         
@@ -94,10 +93,19 @@ class SubtitleSyncOperations {
       }
       
       // Update in database
-      final success = await subtitleRepository.updateMultipleLines(
-        subtitleId,
-        updatedLines,
-      );
+      final success = sessionId == null
+          ? await subtitleRepository.updateMultipleLines(
+              subtitleId,
+              updatedLines,
+            )
+          : await subtitleRepository.updateMultipleLinesWithHistory(
+              collectionId: subtitleId,
+              sessionId: sessionId,
+              expectedLines: subtitleLines,
+              updatedLines: updatedLines,
+              operationType: 'sync',
+              description: 'Shifted subtitle timecodes',
+            );
       
       if (!success) {
         return SyncResult(
@@ -126,6 +134,7 @@ class SubtitleSyncOperations {
   static Future<SyncResult> shiftSelectedTimecodes({
     required SubtitleRepository subtitleRepository,
     required int subtitleId,
+    int? sessionId,
     required List<SubtitleLine> allSubtitleLines,
     required List<int> selectedIndices,
     required String newStartTime,
@@ -201,10 +210,7 @@ class SubtitleSyncOperations {
         final newEndMs = newStartMs + duration;
         
         // Create updated subtitle
-        final updatedLine = SubtitleLine()
-          ..index = line.index
-          ..original = line.original
-          ..edited = line.edited
+        final updatedLine = CheckpointStateReducer.copyLine(line)
           ..startTime = formatDuration(newStartMs)
           ..endTime = formatDuration(newEndMs);
         
@@ -212,10 +218,19 @@ class SubtitleSyncOperations {
       }
       
       // Update in database (only the selected lines)
-      final success = await subtitleRepository.updateMultipleLines(
-        subtitleId,
-        updatedLines,
-      );
+      final success = sessionId == null
+          ? await subtitleRepository.updateMultipleLines(
+              subtitleId,
+              updatedLines,
+            )
+          : await subtitleRepository.updateMultipleLinesWithHistory(
+              collectionId: subtitleId,
+              sessionId: sessionId,
+              expectedLines: selectedLines,
+              updatedLines: updatedLines,
+              operationType: 'sync',
+              description: 'Shifted selected subtitle timecodes',
+            );
       
       if (!success) {
         return SyncResult(
@@ -243,6 +258,7 @@ class SubtitleSyncOperations {
   static Future<SyncResult> adjustFramerate({
     required SubtitleRepository subtitleRepository,
     required int subtitleId,
+    int? sessionId,
     required List<SubtitleLine> subtitleLines,
     required double sourceFramerate,
     required double targetFramerate,
@@ -283,10 +299,7 @@ class SubtitleSyncOperations {
         );
         
         // Create updated subtitle
-        final updatedLine = SubtitleLine()
-          ..index = line.index
-          ..original = line.original
-          ..edited = line.edited
+        final updatedLine = CheckpointStateReducer.copyLine(line)
           ..startTime = formatDuration(newStartDuration)
           ..endTime = formatDuration(newEndDuration);
         
@@ -294,10 +307,19 @@ class SubtitleSyncOperations {
       }
       
       // Update in database
-      final success = await subtitleRepository.updateMultipleLines(
-        subtitleId,
-        updatedLines,
-      );
+      final success = sessionId == null
+          ? await subtitleRepository.updateMultipleLines(
+              subtitleId,
+              updatedLines,
+            )
+          : await subtitleRepository.updateMultipleLinesWithHistory(
+              collectionId: subtitleId,
+              sessionId: sessionId,
+              expectedLines: subtitleLines,
+              updatedLines: updatedLines,
+              operationType: 'sync',
+              description: 'Adjusted subtitle framerate',
+            );
       
       if (!success) {
         return SyncResult(
