@@ -17,11 +17,33 @@ class WaveformSubtitleRepository {
     required int subtitleCollectionId,
     required int sessionId,
     required List<SubtitleLine> updatedLines,
+    List<SubtitleLine>? expectedLines,
   }) async {
     if (updatedLines.isEmpty) return true;
 
     try {
-      final result = await _historyTransaction.commit(
+      final updates = <int, SubtitleLine>{};
+      for (final line in updatedLines) {
+        if (line.index <= 0 || updates.containsKey(line.index)) {
+          return false;
+        }
+        updates[line.index] = CheckpointStateReducer.copyLine(line);
+      }
+      final expected = <int, SubtitleLine>{};
+      if (expectedLines != null) {
+        for (final line in expectedLines) {
+          if (line.index <= 0 || expected.containsKey(line.index)) {
+            return false;
+          }
+          expected[line.index] = CheckpointStateReducer.copyLine(line);
+        }
+        if (expected.length != updates.length ||
+            !updates.keys.every(expected.containsKey)) {
+          return false;
+        }
+      }
+
+      await _historyTransaction.commit(
         sessionId: sessionId,
         subtitleCollectionId: subtitleCollectionId,
         operationType: 'edit',
@@ -30,29 +52,43 @@ class WaveformSubtitleRepository {
             : 'Adjusted timing for \${updatedLines.length} lines',
         buildMutation: (currentLines) {
           final nextLines = CheckpointStateReducer.copyLines(currentLines);
-          final replacements = <int, SubtitleLine>{
-            for (final line in updatedLines) line.index: line,
-          };
           final matchedIndexes = <int>{};
           final deltas = <SubtitleLineDelta>[];
 
           for (var i = 0; i < nextLines.length; i++) {
             final current = nextLines[i];
-            final replacement = replacements[current.index];
+            final replacement = updates[current.index];
             if (replacement == null) continue;
+            if (!matchedIndexes.add(current.index)) {
+              throw StateError('Duplicate destination subtitle cue index.');
+            }
 
-            matchedIndexes.add(current.index);
+            final before = expected[current.index];
+            if (expectedLines != null &&
+                (before == null ||
+                 !CheckpointStateReducer.samePersistedLine(current, before))) {
+              throw StateError('Waveform edit is stale; refresh the subtitle.');
+            }
+
+            // Waveform owns timing only; never overwrite unrelated edits,
+            // comments, marks or resolution flags from a cached UI line.
+            final after = CheckpointStateReducer.copyLine(current)
+              ..startTime = replacement.startTime
+              ..endTime = replacement.endTime;
+            if (CheckpointStateReducer.samePersistedLine(current, after)) {
+              continue;
+            }
             deltas.add(
               SubtitleLineDelta()
                 ..changeType = 'modify'
                 ..lineIndex = i
                 ..beforeState = CheckpointStateReducer.copyLine(current)
-                ..afterState = CheckpointStateReducer.copyLine(replacement),
+                ..afterState = CheckpointStateReducer.copyLine(after),
             );
-            nextLines[i] = CheckpointStateReducer.copyLine(replacement);
+            nextLines[i] = after;
           }
 
-          if (matchedIndexes.length != replacements.length) {
+          if (matchedIndexes.length != updates.length) {
             throw StateError(
               'One or more waveform subtitle lines were not found.',
             );
@@ -68,7 +104,8 @@ class WaveformSubtitleRepository {
         },
       );
 
-      return result.checkpointId != 0 || updatedLines.isEmpty;
+      // An unchanged requested timing edit is a successful no-op.
+      return true;
     } catch (error, stackTrace) {
       await logError(
         'WaveformSubtitleRepository: failed atomic timing update',
