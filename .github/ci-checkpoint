@@ -1,16 +1,18 @@
-Riverpod migration checkpoint 62
+Riverpod migration checkpoint 63
 Date: 2026-10-12
 Checks:
 - flutter analyze
 - flutter test -j 1
 
 Focus:
-- V2 history for preview-guarded sparse subtitle batch edits
-- live Sync sheet and Malayalam normalization use session-scoped transactions
-- reject stale, deleted, renumbered and duplicate cue updates atomically
-- preserve unrelated edits and mark/comment/resolved data in timing operations
-- prevent legacy updateMultipleLines from partially persisting invalid batches
-- audit PC workspace reuse of Riverpod controllers, repositories and widgets
-- keep mobile presentation paths untouched
+- Edit Line Save As writes only location metadata from fresh Isar state
+- reject Save As ownership mismatch and empty file paths
+- handle nullable legacy originalFileUri safely
+- waveform V2 timing edit preserves original/edited text and annotations
+- reject stale expected waveform snapshots and invalid duplicate cue batches
+- do not mutate waveform UI time cache before successful persistence
+- return success without new commit for unchanged waveform timing
+- legacy waveform batch updates are atomic and timing-only
+- keep mobile widgets/layout and desktop concepts unchanged
 
-No native platform builds, main/upstream changes, or release-tag changes.
+No native platform builds, main/upstream changes or release-tag changes.
