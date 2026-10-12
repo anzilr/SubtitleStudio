@@ -183,6 +183,38 @@ void main() {
       expect(await _readLines(harness, seeded.subtitleCollectionId), isEmpty);
     });
 
+    test('stale observed HEAD cannot perform undo after another checkout',
+        () async {
+      final rootId = await manager.createInitialSnapshot(
+        sessionId: seeded.sessionId,
+        subtitleCollectionId: seeded.subtitleCollectionId,
+      );
+      final manualId = await manager.createManualCheckpoint(
+        sessionId: seeded.sessionId,
+        subtitleCollectionId: seeded.subtitleCollectionId,
+        customDescription: 'New HEAD',
+      );
+
+      // Simulate a navigation action that selected rootId before the
+      // manual checkpoint advanced HEAD to manualId.
+      expect(
+        await manager.checkoutCheckpoint(
+          checkpointId: rootId,
+          sessionId: seeded.sessionId,
+          ifCurrentHeadId: rootId,
+        ),
+        isFalse,
+      );
+      expect((await manager.getHeadCheckpoint(seeded.sessionId))!.id,
+          manualId);
+      expect(
+        (await _readLines(harness, seeded.subtitleCollectionId))
+            .map((line) => line.original)
+            .toList(),
+        ['A', 'B'],
+      );
+    });
+
     test('manual checkpoint is a v2 state snapshot commit', () async {
       final initialId = await manager.createInitialSnapshot(
         sessionId: seeded.sessionId,
