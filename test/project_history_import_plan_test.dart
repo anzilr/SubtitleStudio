@@ -2,7 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/services/checkpoint_history_metadata.dart';
 import 'package:subtitle_studio/services/checkpoint_state_hasher.dart';
-import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
 import 'package:subtitle_studio/services/project_document_codec.dart';
 import 'package:subtitle_studio/widgets/session_selection/project_history_import_plan.dart';
 
@@ -120,6 +119,44 @@ void main() {
         result.checkpoints.where((checkpoint) => checkpoint.isActive).toList();
     expect(heads, hasLength(1));
     expect(heads.single.id, 2);
+  });
+
+  test('unsupported history version is not treated as a legacy checkpoint',
+      () {
+    expect(
+      () => PreparedProjectHistory.build([
+        _snapshot(
+          id: 1,
+          isActive: true,
+          metadata: '{"_historyVersion":3,"_stateSemantics":"after-operation"}',
+        ),
+      ], toSubtitleLine: _modelLine),
+      throwsA(isA<ProjectHistoryImportException>()),
+    );
+  });
+
+  test('checkpoints from different original sessions are rejected', () {
+    final second = ProjectCheckpointData.create(
+      id: 2,
+      sessionId: 99,
+      subtitleCollectionId: 12,
+      timestamp: DateTime.utc(2026, 10, 12, 12, 0, 2).toIso8601String(),
+      operationType: 'snapshot',
+      description: 'Foreign',
+      parentCheckpointId: 1,
+      isActive: false,
+      checkpointType: 'snapshot',
+      metadata: null,
+      deltas: const [],
+      snapshot: [_line('Foreign')],
+    );
+    expect(
+      () => PreparedProjectHistory.build([
+        _snapshot(id: 1, isActive: true),
+        second,
+      ], toSubtitleLine: _modelLine),
+      throwsA(isA<ProjectHistoryImportException>()),
+    );
   });
 
   test('missing parent is rejected', () {
