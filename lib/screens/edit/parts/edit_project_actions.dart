@@ -39,11 +39,10 @@ extension _EditProjectActions on _EditScreenState {
           String? filePath = subtitleCollection.filePath;
           
           // Use originalFileUri if available, otherwise fall back to filePath
-          String? targetPath = (originalFileUri!.isNotEmpty) 
-              ? originalFileUri 
-              : filePath;
-          
-          if (targetPath!.isNotEmpty) {
+          final String? targetPath =
+              (originalFileUri?.isNotEmpty ?? false) ? originalFileUri : filePath;
+
+          if (targetPath != null && targetPath.isNotEmpty) {
             print('Attempting to save to: $targetPath');
             if (await PlatformFileHandler.writeFile(
               content: srtContent,
@@ -55,7 +54,7 @@ extension _EditProjectActions on _EditScreenState {
               print('Save successful to: $targetPath');
               
               // Update originalFileUri if it wasn't set (for older entries)
-              if (originalFileUri.isEmpty) {
+              if (originalFileUri == null || originalFileUri.isEmpty) {
                 final updated = await _controller.updateOriginalFileUri(targetPath);
                 if (updated) {
                   print('Updated originalFileUri to: $targetPath');
