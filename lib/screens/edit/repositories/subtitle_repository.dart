@@ -973,32 +973,52 @@ class SubtitleRepository {
   /// original/mark/comment metadata.
   Future<void> syncSourceViewToDatabase(
     int collectionId,
-    List<SubtitleEntry> entries,
-  ) async {
+    List<SubtitleEntry> entries, {
+    int? sessionId,
+  }) async {
     logInfo(
       'SubtitleRepository: Syncing ${entries.length} source view entries to database',
     );
 
     try {
-      final collection = await _isar.subtitleCollections.get(collectionId);
-      if (collection == null) {
-        throw Exception('Subtitle collection $collectionId not found');
+      if (sessionId != null) {
+        await _historyTransaction.commit(
+          sessionId: sessionId,
+          subtitleCollectionId: collectionId,
+          operationType: 'source-view',
+          description: 'Saved Source View changes',
+          buildMutation: (currentLines) {
+            final reconciled = SourceViewReconciler.reconcile(
+              existingLines: currentLines,
+              entries: entries,
+            );
+            return CheckpointMutationPlan(
+              nextLines: reconciled,
+              deltas: CheckpointStateReducer.diffAsIndexDeltas(
+                currentLines,
+                reconciled,
+              ),
+              // Source View permits arbitrary reordering and bulk replacement.
+              forceSnapshot: true,
+            );
+          },
+        );
+      } else {
+        // Compatibility-only entrypoint for callers not yet session-scoped.
+        // The active editor always supplies its session above.
+        await _isar.writeTxn(() async {
+          final collection = await _isar.subtitleCollections.get(collectionId);
+          if (collection == null) {
+            throw StateError('Subtitle collection $collectionId not found');
+          }
+          collection.lines = SourceViewReconciler.reconcile(
+            existingLines: collection.lines,
+            entries: entries,
+          );
+          await _isar.subtitleCollections.put(collection);
+        });
       }
-
-      final reconciled = SourceViewReconciler.reconcile(
-        existingLines: collection.lines,
-        entries: entries,
-      );
-
-      await _isar.writeTxn(() async {
-        collection.lines = reconciled;
-        await _isar.subtitleCollections.put(collection);
-      });
-
-      logInfo(
-        'SubtitleRepository: Successfully synced source view '
-        '(${collection.lines.length} lines)',
-      );
+      logInfo('SubtitleRepository: Source View synced successfully');
     } catch (e) {
       logError('SubtitleRepository: Error syncing source view: $e');
       rethrow;
