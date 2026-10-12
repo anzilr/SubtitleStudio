@@ -2,10 +2,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/screens/edit/repositories/subtitle_repository.dart';
+import 'package:subtitle_studio/screens/edit/models/subtitle_entry.dart';
 import 'package:subtitle_studio/screens/edit_line/repositories/edit_line_preferences_repository.dart';
 import 'package:subtitle_studio/screens/edit_line/repositories/edit_line_repository.dart';
 import 'package:subtitle_studio/services/checkpoint_history_metadata.dart';
 import 'package:subtitle_studio/services/checkpoint_repository.dart';
+import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
 
 import 'support/test_isar_harness.dart';
 
@@ -225,4 +227,74 @@ void main() {
     expect(original.lines.first.comment, isNull);
     expect(original.lines.first.resolved, isFalse);
   });
+
+  test('Source View bulk replacement is a single validated V2 commit',
+      () async {
+    final ids = await _seed(harness);
+    final root = await checkpoints.createInitialSnapshot(
+      sessionId: ids.sessionId,
+      subtitleCollectionId: ids.collectionId,
+    );
+    await editor.syncSourceViewToDatabase(ids.collectionId, [
+      SubtitleEntry(
+        index: '2',
+        startTime: '00:00:02,000',
+        endTime: '00:00:02,800',
+        text: 'Two revised',
+      ),
+      SubtitleEntry(
+        index: '99',
+        startTime: '00:00:03,000',
+        endTime: '00:00:03,800',
+        text: 'Inserted',
+      ),
+      SubtitleEntry(
+        index: '1',
+        startTime: '00:00:01,000',
+        endTime: '00:00:01,800',
+        text: 'One',
+      ),
+    ], sessionId: ids.sessionId);
+
+    final history = await checkpoints.getCheckpointsForSession(ids.sessionId);
+    expect(history, hasLength(2));
+    expect(history.singleWhere((c) => c.operationType == 'source-view')
+        .checkpointType, 'snapshot');
+    expect((await checkpoints.validateHistory(ids.sessionId)).isHealthy, isTrue);
+    final changed = (await editor.fetchSubtitleCollection(ids.collectionId))!;
+    expect(changed.lines.map((l) => l.original).toList(),
+        ['Two', 'Inserted', 'One']);
+    expect(changed.lines.first.edited, 'Two revised');
+
+    final headId = (await checkpoints.getHeadCheckpoint(ids.sessionId))!.id;
+    expect(await checkpoints.undoToCheckpoint(
+      checkpointId: root,
+      sessionId: ids.sessionId,
+    ), isTrue);
+    expect((await editor.fetchSubtitleCollection(ids.collectionId))!
+        .lines.map((l) => l.original).toList(), ['One', 'Two']);
+    expect(await checkpoints.redoToCheckpoint(
+      checkpointId: headId,
+      sessionId: ids.sessionId,
+    ), isTrue);
+    expect((await editor.fetchSubtitleCollection(ids.collectionId))!
+        .lines.map((l) => l.original).toList(),
+        ['Two', 'Inserted', 'One']);
+  });
+
+  test('positional diff replays arbitrary shrink, grow and no-op states', () {
+    for (final (before, after) in <(List<SubtitleLine>, List<SubtitleLine>)>[
+      ([_line(1, 'A'), _line(2, 'B')], [_line(1, 'C')]),
+      ([_line(1, 'A')], [_line(1, 'A'), _line(2, 'B')]),
+      ([_line(1, 'A')], <SubtitleLine>[]),
+      (<SubtitleLine>[], [_line(1, 'A')]),
+      ([_line(1, 'A')], [_line(1, 'A')]),
+    ]) {
+      final deltas = CheckpointStateReducer.diffAsIndexDeltas(before, after);
+      final replayed = CheckpointStateReducer.copyLines(before);
+      CheckpointStateReducer.applyDeltasStrictInPlace(replayed, deltas);
+      expect(CheckpointStateReducer.samePersistedLines(replayed, after), isTrue);
+    }
+  });
+
 }
