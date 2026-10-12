@@ -133,6 +133,56 @@ void main() {
       expect(snapshot.deltas, isEmpty);
     });
 
+    test('v2 checkout preserves exact committed indexes without reindexing',
+        () async {
+      final original = [_line(7, 'Unusual index'), _line(11, 'Next line')];
+      await _writeLines(
+        harness,
+        seeded.subtitleCollectionId,
+        original,
+      );
+      final root = await manager.createInitialSnapshot(
+        sessionId: seeded.sessionId,
+        subtitleCollectionId: seeded.subtitleCollectionId,
+      );
+      expect(root, isNonZero);
+
+      await _writeLines(harness, seeded.subtitleCollectionId,
+          [_line(1, 'Modified')]);
+      final restored = await manager.checkoutCheckpoint(
+        checkpointId: root,
+        sessionId: seeded.sessionId,
+      );
+      expect(restored, isTrue);
+      final lines = await _readLines(harness, seeded.subtitleCollectionId);
+      expect(lines.map((line) => line.index).toList(), [7, 11]);
+      expect(lines.map((line) => line.original).toList(),
+          ['Unusual index', 'Next line']);
+    });
+
+    test('empty v2 initial snapshot can be checked out', () async {
+      await _writeLines(
+        harness,
+        seeded.subtitleCollectionId,
+        const <SubtitleLine>[],
+      );
+      final root = await manager.createInitialSnapshot(
+        sessionId: seeded.sessionId,
+        subtitleCollectionId: seeded.subtitleCollectionId,
+      );
+      expect(root, isNonZero);
+      await _writeLines(
+        harness,
+        seeded.subtitleCollectionId,
+        [_line(1, 'External edit')],
+      );
+      expect(await manager.checkoutCheckpoint(
+        checkpointId: root,
+        sessionId: seeded.sessionId,
+      ), isTrue);
+      expect(await _readLines(harness, seeded.subtitleCollectionId), isEmpty);
+    });
+
     test('manual checkpoint is a v2 state snapshot commit', () async {
       final initialId = await manager.createInitialSnapshot(
         sessionId: seeded.sessionId,
