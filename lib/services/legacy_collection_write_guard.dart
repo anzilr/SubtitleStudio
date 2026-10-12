@@ -1,4 +1,5 @@
 import 'package:isar_community/isar.dart';
+import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/services/checkpoint_history_metadata.dart';
 
 /// Protects V2 history from compatibility-only full-collection replacements.
