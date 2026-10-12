@@ -46,6 +46,7 @@ import 'package:subtitle_studio/services/checkpoint_timeline.dart';
 import 'package:subtitle_studio/services/checkpoint_preferences_repository.dart';
 import 'package:subtitle_studio/services/checkpoint_reconstructor.dart';
 import 'package:subtitle_studio/services/checkpoint_store.dart';
+import 'package:subtitle_studio/services/checkpoint_reference_catalog.dart';
 import 'dart:convert';
 
 class CheckpointManager {
@@ -679,6 +680,11 @@ class CheckpointManager {
   /// Returns the current single HEAD commit for [sessionId].
   Future<Checkpoint?> getHeadCheckpoint(int sessionId) {
     return _getCurrentHeadCheckpoint(sessionId);
+  }
+
+  /// Derived, read-only refs until the dedicated Isar ref schema lands.
+  Future<List<CheckpointReference>> getReferencesForSession(int sessionId) {
+    return _store.getReferencesForSession(sessionId);
   }
 
   /// Validates the complete history graph and reconstructs every v2 commit.
