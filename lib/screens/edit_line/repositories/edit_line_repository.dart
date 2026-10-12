@@ -11,6 +11,7 @@ import 'package:subtitle_studio/utils/subtitle_parser.dart'; // For SimpleSubtit
 import 'package:subtitle_studio/utils/platform_file_handler.dart';
 import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
 import 'package:subtitle_studio/services/checkpoint_history_transaction.dart';
+import 'package:subtitle_studio/services/checkpoint_line_metadata_service.dart';
 
 /// Repository layer for EditLineScreen operations
 /// 
@@ -278,6 +279,49 @@ class EditLineRepository {
     }
   }
 
+  /// Atomic insert used by active Edit Line UI.
+  Future<bool> addSubtitleLineWithHistory({
+    required Id collectionId,
+    required SubtitleLine line,
+    required int insertIndex,
+    required int sessionId,
+  }) async {
+    try {
+      await _historyTransaction.commit(
+        sessionId: sessionId,
+        subtitleCollectionId: collectionId,
+        operationType: 'add',
+        description: 'Added line at position ${insertIndex + 1}',
+        buildMutation: (currentLines) {
+          if (insertIndex < 0 || insertIndex > currentLines.length) {
+            throw RangeError.index(insertIndex, currentLines, 'insertIndex');
+          }
+          final next = CheckpointStateReducer.copyLines(currentLines)
+            ..insert(insertIndex, CheckpointStateReducer.copyLine(line));
+          return CheckpointMutationPlan(
+            nextLines: sortAndReindexSubtitleLines(next),
+            deltas: [
+              SubtitleLineDelta()
+                ..changeType = 'add'
+                ..lineIndex = insertIndex
+                ..afterState = CheckpointStateReducer.copyLine(line),
+            ],
+            forceSnapshot: true,
+          );
+        },
+      );
+      return true;
+    } catch (error, stackTrace) {
+      await logError(
+        'Failed to add subtitle line with history',
+        error: error,
+        stackTrace: stackTrace,
+        context: 'EditLineRepository.addSubtitleLineWithHistory',
+      );
+      return false;
+    }
+  }
+
   Future<bool> addSubtitleLine(
     Id collectionId,
     SubtitleLine line,
@@ -388,14 +432,25 @@ class EditLineRepository {
   Future<bool> markSubtitleLine(
     Id collectionId,
     int lineIndex,
-    bool marked,
-  ) async {
+    bool marked, {
+    int? sessionId,
+  }) async {
     await logInfo(
       'Marking line $lineIndex in collection $collectionId as $marked',
       context: 'EditLineRepository.markSubtitleLine',
     );
 
     try {
+      if (sessionId != null) {
+        return await CheckpointLineMetadataService(_isar).change(
+          sessionId: sessionId,
+          collectionId: collectionId,
+          lineIndex: lineIndex,
+          description: marked ? 'Marked line ${lineIndex + 1}' : 'Unmarked line ${lineIndex + 1}',
+          modify: (line) => line.marked = marked,
+        );
+      }
+
       final success = await _isar.writeTxn(() async {
         final collection = await _isar.subtitleCollections.get(collectionId);
         if (collection == null ||
@@ -437,14 +492,24 @@ class EditLineRepository {
   Future<bool> updateSubtitleLineComment(
     Id collectionId,
     int lineIndex,
-    String? comment,
-  ) async {
+    String? comment, {
+    int? sessionId,
+  }) async {
     await logInfo(
       'Updating comment for line $lineIndex in collection $collectionId',
       context: 'EditLineRepository.updateSubtitleLineComment',
     );
 
     try {
+      if (sessionId != null) {
+        return await CheckpointLineMetadataService(_isar).change(
+          sessionId: sessionId,
+          collectionId: collectionId,
+          lineIndex: lineIndex,
+          description: 'Updated comment on line ${lineIndex + 1}',
+          modify: (line) => line.comment = comment,
+        );
+      }
       final success = await _isar.writeTxn(() async {
         final collection = await _isar.subtitleCollections.get(collectionId);
         if (collection == null ||
@@ -486,9 +551,19 @@ class EditLineRepository {
   Future<bool> updateSubtitleLineResolved(
     Id collectionId,
     int lineIndex,
-    bool resolved,
-  ) async {
+    bool resolved, {
+    int? sessionId,
+  }) async {
     try {
+      if (sessionId != null) {
+        return await CheckpointLineMetadataService(_isar).change(
+          sessionId: sessionId,
+          collectionId: collectionId,
+          lineIndex: lineIndex,
+          description: 'Updated resolution of line ${lineIndex + 1}',
+          modify: (line) => line.resolved = resolved,
+        );
+      }
       return await _isar.writeTxn(() async {
         final collection = await _isar.subtitleCollections.get(collectionId);
         if (collection == null ||
