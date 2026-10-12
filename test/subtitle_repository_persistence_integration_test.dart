@@ -183,6 +183,52 @@ void main() {
           .encoding, 'UTF-8');
     });
 
+    test('legacy raw collection writer cannot overwrite V2 subtitle history',
+        () async {
+      final collectionId = await _seedCollection(harness);
+      late int sessionId;
+      await harness.isar.writeTxn(() async {
+        sessionId = await harness.isar.sessions.put(
+          Session(
+            fileName: 'safe-v2.srt',
+            subtitleCollectionId: collectionId,
+          ),
+        );
+      });
+
+      final old = (await repository.fetchSubtitleCollection(collectionId))!;
+      final history = CheckpointRepository(harness.isar);
+      await history.createInitialSnapshot(
+        sessionId: sessionId,
+        subtitleCollectionId: collectionId,
+      );
+      final updated = _line(
+        index: 1,
+        text: 'Newer V2 state',
+        start: '00:00:01,000',
+        end: '00:00:01,900',
+      );
+      expect(await repository.saveLineChanges(
+        collectionId, updated, sessionId: sessionId,
+      ), isTrue);
+
+      old.lines.first.original = 'Stale write';
+      expect(await repository.updateCollection(old), isFalse);
+      final current = (await repository.fetchSubtitleCollection(collectionId))!;
+      expect(current.lines.first.original, 'Newer V2 state');
+      expect((await history.validateHistory(sessionId)).isHealthy, isTrue);
+    });
+
+    test('legacy full collection writer is available for unversioned data',
+        () async {
+      final collectionId = await _seedCollection(harness);
+      final source = (await repository.fetchSubtitleCollection(collectionId))!;
+      source.encoding = 'UTF-16';
+      expect(await repository.updateCollection(source), isTrue);
+      expect((await repository.fetchSubtitleCollection(collectionId))!
+          .encoding, 'UTF-16');
+    });
+
     test('text edit is an atomic v2 delta commit', () async {
       final collectionId = await _seedCollection(harness);
       late int sessionId;
