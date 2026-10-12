@@ -56,6 +56,51 @@ void main() {
       );
     });
 
+    test('empty v2 snapshot is a valid committed subtitle state', () {
+      final root = _snapshot(id: 1, lines: const <SubtitleLine>[]);
+      final restored = CheckpointReconstructor.reconstructPostOperation(
+        checkpoints: [root],
+        targetCheckpointId: root.id,
+      );
+      expect(restored, isEmpty);
+      expect(CheckpointStateHasher.hashLines(restored),
+          CheckpointHistoryMetadata.stateHash(root));
+    });
+
+    test('empty v2 snapshot can be parent of a valid add delta', () {
+      final root = _snapshot(id: 1, lines: const <SubtitleLine>[]);
+      final added = _line(1, 'First line');
+      final commit = Checkpoint(
+        sessionId: 1,
+        subtitleCollectionId: 1,
+        timestamp: DateTime.utc(2026, 10, 4, 13),
+        operationType: 'add',
+        description: 'Add first line',
+        parentCheckpointId: 1,
+        isActive: true,
+        checkpointType: 'delta',
+        deltas: [
+          SubtitleLineDelta()
+            ..changeType = 'add'
+            ..lineIndex = 0
+            ..afterState = added,
+        ],
+        snapshot: const <SubtitleLine>[],
+        metadata: CheckpointHistoryMetadata.encodePostOperation(
+          parentStateHash: CheckpointStateHasher.hashLines(
+            const <SubtitleLine>[],
+          ),
+          stateHash: CheckpointStateHasher.hashLines([added]),
+        ),
+      )..id = 2;
+
+      final restored = CheckpointReconstructor.reconstructPostOperation(
+        checkpoints: [root, commit],
+        targetCheckpointId: 2,
+      );
+      expect(restored.single.original, 'First line');
+    });
+
     test('tampered snapshot is rejected', () {
       final root = _snapshot(
         id: 1,
