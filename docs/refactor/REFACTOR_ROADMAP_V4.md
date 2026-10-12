@@ -2,11 +2,10 @@
 
 > **October 12, 2026 progress addendum** — This document's checkpoint-45
 > inventory and older step list are retained as an historical baseline.
-> The current verified quality gate is **Checkpoint 65 R3** (`3dbd0fa`):
-> zero analyzer issues and **239 tests passed**. Checkpoint 66 adds a
-> read-only typed Git-like reference catalog, stricter HEAD resolution and
-> transactional branch-safe pruning. Persisted named refs remain a later
-> schema-migration milestone;
+> The current verified quality gate is **Checkpoint 66** (`4dd480b`):
+> zero analyzer issues and **248 tests passed**. The read-only typed Git-like
+> reference catalog, stricter HEAD validation, and atomic retention pruning
+> are verified. Persisted named refs remain a later schema-migration milestone;
 > desktop layout remains deferred.
 >
 > **New roadmap requirement — Expanded SRT text encodings (requested 2026-10-12):**
