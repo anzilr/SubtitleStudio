@@ -2,7 +2,6 @@ import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/services/checkpoint_head_reference.dart';
 import 'package:subtitle_studio/services/checkpoint_history_metadata.dart';
 import 'package:subtitle_studio/services/checkpoint_history_validator.dart';
-import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
 import 'package:subtitle_studio/services/project_document_codec.dart';
 
 /// Import failure is separate from subtitle recovery. The UI can explicitly
