@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/services/checkpoint_store.dart';
+import 'package:subtitle_studio/services/checkpoint_history_metadata.dart';
 import 'package:subtitle_studio/services/checkpoint_state_hasher.dart';
 import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
 
@@ -350,4 +351,161 @@ void main() {
     expect(await store.getCheckpoint(firstId), isNull);
     expect(await store.getCheckpoint(secondId), isNotNull);
   });
+  test('HEAD lookup rejects V2 history with missing or multiple active flags',
+      () async {
+    final root = Checkpoint(
+      sessionId: 31,
+      subtitleCollectionId: 310,
+      timestamp: DateTime.utc(2026, 10, 12),
+      operationType: 'snapshot',
+      description: 'Initial state',
+      isActive: false,
+      checkpointType: 'snapshot',
+      deltas: const [],
+      snapshot: [_line(1, 'A')],
+      metadata: CheckpointHistoryMetadata.encodePostOperation(),
+    );
+    await store.putCheckpoint(root);
+    await expectLater(
+      store.getCurrentHeadCheckpoint(31),
+      throwsA(isA<CheckpointIntegrityException>()),
+    );
+    final current = (await store.getCheckpoint(root.id))!..isActive = true;
+    await store.putCheckpoint(current);
+    final duplicate = Checkpoint(
+      sessionId: 31,
+      subtitleCollectionId: 310,
+      timestamp: DateTime.utc(2026, 10, 12, 1),
+      operationType: 'edit',
+      description: 'Duplicate HEAD',
+      isActive: true,
+      parentCheckpointId: root.id,
+      checkpointType: 'snapshot',
+      deltas: const [],
+      snapshot: [_line(1, 'B')],
+      metadata: CheckpointHistoryMetadata.encodePostOperation(),
+    );
+    await store.putCheckpoint(duplicate);
+    await expectLater(
+      store.getCurrentHeadCheckpoint(31),
+      throwsA(isA<CheckpointIntegrityException>()),
+    );
+  });
+
+  test('transactional pruning preserves current HEAD and newest branch tips',
+      () async {
+    final root = Checkpoint(
+      sessionId: 32,
+      subtitleCollectionId: 320,
+      timestamp: DateTime.utc(2026, 10, 12),
+      operationType: 'snapshot',
+      description: 'Initial state',
+      isActive: false,
+      checkpointType: 'snapshot',
+      deltas: const [],
+      snapshot: [_line(1, 'Base')],
+      metadata: CheckpointHistoryMetadata.encodePostOperation(),
+    );
+    final rootId = await store.putCheckpoint(root);
+    final branchIds = <int>[];
+    for (var i = 0; i < 4; i++) {
+      final branch = Checkpoint(
+        sessionId: 32,
+        subtitleCollectionId: 320,
+        timestamp: DateTime.utc(2026, 10, 12, i + 1),
+        operationType: 'edit',
+        description: 'Alternate branch $i',
+        parentCheckpointId: rootId,
+        isActive: i == 3,
+        checkpointType: 'snapshot',
+        deltas: const [],
+        snapshot: [_line(1, 'Branch $i')],
+        metadata: CheckpointHistoryMetadata.encodePostOperation(),
+      );
+      branchIds.add(await store.putCheckpoint(branch));
+    }
+
+    expect(await store.pruneSession(
+      sessionId: 32,
+      maxCheckpoints: 3,
+    ), 1);
+
+    // Three retained branch tips + root may legitimately exceed the limit.
+    final surviving = await store.getCheckpointsForSession(32);
+    expect(surviving.map((c) => c.id).toSet(), {
+      rootId, branchIds[1], branchIds[2], branchIds[3],
+    });
+    expect((await store.getCurrentHeadCheckpoint(32))?.id, branchIds[3]);
+  });
+
+  test('pruning considers HEAD moved immediately before the transaction',
+      () async {
+    final root = Checkpoint(
+      sessionId: 33,
+      subtitleCollectionId: 330,
+      timestamp: DateTime.utc(2026, 10, 12),
+      operationType: 'snapshot',
+      description: 'Initial state',
+      isActive: false,
+      checkpointType: 'snapshot',
+      deltas: const [],
+      snapshot: [_line(1, 'Root')],
+      metadata: CheckpointHistoryMetadata.encodePostOperation(),
+    );
+    final rootId = await store.putCheckpoint(root);
+    final tips = <int>[];
+    for (var i = 0; i < 4; i++) {
+      tips.add(await store.putCheckpoint(Checkpoint(
+        sessionId: 33,
+        subtitleCollectionId: 330,
+        timestamp: DateTime.utc(2026, 10, 12, i + 1),
+        operationType: 'edit',
+        description: 'Tip $i',
+        parentCheckpointId: rootId,
+        isActive: i == 3,
+        checkpointType: 'snapshot',
+        deltas: const [],
+        snapshot: [_line(1, 'Tip $i')],
+        metadata: CheckpointHistoryMetadata.encodePostOperation(),
+      )));
+    }
+    // A previous cleanup preflight would treat this oldest tip as removable.
+    await harness.isar.writeTxn(() async {
+      final oldHead = (await harness.isar.checkpoints.get(tips[3]))!
+        ..isActive = false;
+      final newHead = (await harness.isar.checkpoints.get(tips[0]))!
+        ..isActive = true;
+      await harness.isar.checkpoints.putAll([oldHead, newHead]);
+    });
+    expect(await store.pruneSession(
+      sessionId: 33,
+      maxCheckpoints: 3,
+    ), 1);
+    final live = await store.getCheckpointsForSession(33);
+    expect(live.any((c) => c.id == tips.first), isTrue);
+    expect((await store.getCurrentHeadCheckpoint(33))?.id, tips.first);
+    expect(live.any((c) => c.id == tips[1]), isFalse);
+  });
+
+  test('direct deletion cannot bypass active HEAD retention', () async {
+    final cp = Checkpoint(
+      sessionId: 34,
+      subtitleCollectionId: 340,
+      timestamp: DateTime.utc(2026, 10, 12),
+      operationType: 'snapshot',
+      description: 'Initial state',
+      isActive: true,
+      checkpointType: 'snapshot',
+      deltas: const [],
+      snapshot: [_line(1, 'Keep')],
+      metadata: CheckpointHistoryMetadata.encodePostOperation(),
+    );
+    final id = await store.putCheckpoint(cp);
+    await expectLater(
+      store.deleteCheckpointIds([id]),
+      throwsStateError,
+    );
+    expect((await store.getCurrentHeadCheckpoint(34))?.id, id);
+  });
+
 }
