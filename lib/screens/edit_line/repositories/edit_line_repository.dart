@@ -135,6 +135,9 @@ class EditLineRepository {
   /// 
   /// Updates original text, edited text, start time, and end time
   /// Returns true if successful, false otherwise
+  /// Compatibility-only 1-based line edit. V2 histories must use
+  /// saveSubtitleLineChanges(sessionId: ...) to preserve transactional commits.
+  /// Read, guard, and write occur in the same Isar transaction.
   Future<bool> updateSubtitleLine({
     required Id collectionId,
     required int lineIndex,
@@ -143,59 +146,28 @@ class EditLineRepository {
     required String startTime,
     required String endTime,
   }) async {
-    await logInfo(
-      'Updating subtitle line $lineIndex in collection $collectionId',
-      context: 'EditLineRepository.updateSubtitleLine',
-    );
-
     try {
-      return await logPerformance(
-        'Update subtitle line',
-        () async {
-          final collection = await _isar.subtitleCollections.get(collectionId);
+      return await _isar.writeTxn(() async {
+        final collection = await _isar.subtitleCollections.get(collectionId);
+        if (collection == null ||
+            lineIndex < 1 ||
+            lineIndex > collection.lines.length) return false;
+        if (!await LegacyCollectionWriteGuard.canReplaceEntireCollection(
+          _isar, collectionId,
+        )) return false;
 
-          if (collection == null) {
-            await logWarning(
-              'Collection $collectionId not found',
-              context: 'EditLineRepository.updateSubtitleLine',
-            );
-            return false;
-          }
-
-          // Validate index bounds (1-based)
-          if (lineIndex < 1 || lineIndex > collection.lines.length) {
-            await logWarning(
-              'Index $lineIndex out of bounds',
-              context: 'EditLineRepository.updateSubtitleLine',
-            );
-            return false;
-          }
-
-          // Update the line (0-based array access)
-          final arrayIndex = lineIndex - 1;
-          collection.lines[arrayIndex].original = originalText;
-          collection.lines[arrayIndex].edited = editedText;
-          collection.lines[arrayIndex].startTime = startTime;
-          collection.lines[arrayIndex].endTime = endTime;
-
-          // Write to database
-          await _isar.writeTxn(() async {
-            await _isar.subtitleCollections.put(collection);
-          });
-
-          await logInfo(
-            'Successfully updated line $lineIndex',
-            context: 'EditLineRepository.updateSubtitleLine',
-          );
-
-          return true;
-        },
-        context: 'EditLineRepository',
-      );
-    } catch (e, stackTrace) {
+        final line = collection.lines[lineIndex - 1];
+        line.original = originalText;
+        line.edited = editedText;
+        line.startTime = startTime;
+        line.endTime = endTime;
+        await _isar.subtitleCollections.put(collection);
+        return true;
+      });
+    } catch (error, stackTrace) {
       await logError(
-        'Failed to update subtitle line',
-        error: e,
+        'Failed to update legacy subtitle line',
+        error: error,
         stackTrace: stackTrace,
         context: 'EditLineRepository.updateSubtitleLine',
       );
@@ -337,6 +309,9 @@ class EditLineRepository {
           return false;
         }
 
+        if (!await LegacyCollectionWriteGuard.canReplaceEntireCollection(
+          _isar, collectionId,
+        )) return false;
         final lines = List<SubtitleLine>.from(collection.lines)
           ..insert(insertIndex, line);
         collection.lines = sortAndReindexSubtitleLines(lines);
@@ -440,6 +415,9 @@ class EditLineRepository {
           return false;
         }
 
+        if (!await LegacyCollectionWriteGuard.canReplaceEntireCollection(
+          _isar, collectionId,
+        )) return false;
         final remaining = List<SubtitleLine>.from(collection.lines)
           ..removeAt(lineIndex);
         collection.lines = sortAndReindexSubtitleLines(remaining);
@@ -502,6 +480,9 @@ class EditLineRepository {
           return false;
         }
 
+        if (!await LegacyCollectionWriteGuard.canReplaceEntireCollection(
+          _isar, collectionId,
+        )) return false;
         collection.lines[lineIndex].marked = marked;
         await _isar.subtitleCollections.put(collection);
         return true;
@@ -561,6 +542,9 @@ class EditLineRepository {
           return false;
         }
 
+        if (!await LegacyCollectionWriteGuard.canReplaceEntireCollection(
+          _isar, collectionId,
+        )) return false;
         collection.lines[lineIndex].comment = comment;
         await _isar.subtitleCollections.put(collection);
         return true;
@@ -615,6 +599,9 @@ class EditLineRepository {
           return false;
         }
 
+        if (!await LegacyCollectionWriteGuard.canReplaceEntireCollection(
+          _isar, collectionId,
+        )) return false;
         collection.lines[lineIndex].resolved = resolved;
         await _isar.subtitleCollections.put(collection);
         return true;
