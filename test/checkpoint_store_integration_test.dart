@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/services/checkpoint_store.dart';
+import 'package:subtitle_studio/services/checkpoint_state_hasher.dart';
+import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
 
 import 'support/test_isar_harness.dart';
 
@@ -84,6 +86,9 @@ void main() {
       sessionId: 10,
       targetCheckpoint: target!,
       collection: collection,
+      expectedHeadId: secondId,
+      expectedWorkingStateHash:
+          CheckpointStateHasher.hashLines([_line(1, 'Current')]),
     );
 
     final storedCollection = await store.getSubtitleCollection(collectionId);
@@ -98,6 +103,157 @@ void main() {
       checkpoints.firstWhere((checkpoint) => checkpoint.id == secondId).isActive,
       isFalse,
     );
+  });
+
+  test('checkout rejects stale HEAD and preserves the current document',
+      () async {
+    late int collectionId;
+    await harness.isar.writeTxn(() async {
+      collectionId = await harness.isar.subtitleCollections.put(
+        SubtitleCollection(
+          fileName: 'race-test.srt',
+          encoding: 'UTF-8',
+          lines: [_line(1, 'Current')],
+        ),
+      );
+    });
+    final root = Checkpoint(
+      sessionId: 11,
+      subtitleCollectionId: collectionId,
+      timestamp: DateTime.utc(2026, 10, 3, 9),
+      operationType: 'snapshot',
+      description: 'Initial state',
+      isActive: false,
+      checkpointType: 'snapshot',
+      deltas: const [],
+      snapshot: [_line(1, 'Initial')],
+    );
+    final next = Checkpoint(
+      sessionId: 11,
+      subtitleCollectionId: collectionId,
+      timestamp: DateTime.utc(2026, 10, 3, 10),
+      operationType: 'edit',
+      description: 'Second',
+      isActive: true,
+      checkpointType: 'delta',
+      deltas: const [],
+      snapshot: const [],
+    );
+    final rootId = await store.putCheckpoint(root);
+    final nextId = await store.putCheckpoint(next);
+    final proposed = await store.getSubtitleCollection(collectionId);
+    proposed!.lines = [_line(1, 'Stale restored')];
+
+    expect(
+      () => store.restoreCollectionAndActivateOnly(
+        sessionId: 11,
+        targetCheckpoint: root,
+        collection: proposed,
+        expectedHeadId: rootId,
+        expectedWorkingStateHash:
+            CheckpointStateHasher.hashLines([_line(1, 'Current')]),
+      ),
+      throwsA(isA<CheckpointConcurrentModificationException>()),
+    );
+
+    expect((await store.getSubtitleCollection(collectionId))!
+        .lines.single.original, 'Current');
+    expect((await store.getCurrentHeadCheckpoint(11))!.id, nextId);
+  });
+
+  test('checkout rejects concurrent working-tree changes even if HEAD matches',
+      () async {
+    late int collectionId;
+    await harness.isar.writeTxn(() async {
+      collectionId = await harness.isar.subtitleCollections.put(
+        SubtitleCollection(
+          fileName: 'race-test.srt',
+          encoding: 'UTF-8',
+          lines: [_line(1, 'Before')],
+        ),
+      );
+    });
+    final root = Checkpoint(
+      sessionId: 12,
+      subtitleCollectionId: collectionId,
+      timestamp: DateTime.utc(2026, 10, 3),
+      operationType: 'snapshot',
+      description: 'Initial state',
+      isActive: true,
+      checkpointType: 'snapshot',
+      deltas: const [],
+      snapshot: [_line(1, 'Before')],
+    );
+    final rootId = await store.putCheckpoint(root);
+    final stale = (await store.getSubtitleCollection(collectionId))!;
+    stale.lines = [_line(1, 'Requested restore')];
+    await harness.isar.writeTxn(() async {
+      final current =
+          (await harness.isar.subtitleCollections.get(collectionId))!;
+      current.lines = [_line(1, 'Concurrent edit')];
+      await harness.isar.subtitleCollections.put(current);
+    });
+
+    expect(
+      () => store.restoreCollectionAndActivateOnly(
+        sessionId: 12,
+        targetCheckpoint: root,
+        collection: stale,
+        expectedHeadId: rootId,
+        expectedWorkingStateHash:
+            CheckpointStateHasher.hashLines([_line(1, 'Before')]),
+      ),
+      throwsA(isA<CheckpointIntegrityException>()),
+    );
+
+    expect((await store.getSubtitleCollection(collectionId))!
+        .lines.single.original, 'Concurrent edit');
+    expect((await store.getCurrentHeadCheckpoint(12))!.id, rootId);
+  });
+
+  test('checkout does not overwrite unrelated file metadata', () async {
+    late int collectionId;
+    await harness.isar.writeTxn(() async {
+      collectionId = await harness.isar.subtitleCollections.put(
+        SubtitleCollection(
+          fileName: 'original.srt',
+          encoding: 'UTF-8',
+          lines: [_line(1, 'Before')],
+        ),
+      );
+    });
+    final root = Checkpoint(
+      sessionId: 13,
+      subtitleCollectionId: collectionId,
+      timestamp: DateTime.utc(2026, 10, 3),
+      operationType: 'snapshot',
+      description: 'Initial state',
+      isActive: true,
+      checkpointType: 'snapshot',
+      deltas: const [],
+      snapshot: [_line(1, 'Before')],
+    );
+    final rootId = await store.putCheckpoint(root);
+    final stale = (await store.getSubtitleCollection(collectionId))!;
+    stale.lines = [_line(1, 'Restored')];
+    await harness.isar.writeTxn(() async {
+      final fresh =
+          (await harness.isar.subtitleCollections.get(collectionId))!;
+      fresh.fileName = 'renamed.srt';
+      await harness.isar.subtitleCollections.put(fresh);
+    });
+
+    await store.restoreCollectionAndActivateOnly(
+      sessionId: 13,
+      targetCheckpoint: root,
+      collection: stale,
+      expectedHeadId: rootId,
+      expectedWorkingStateHash:
+          CheckpointStateHasher.hashLines([_line(1, 'Before')]),
+    );
+    final restored = (await store.getSubtitleCollection(collectionId))!;
+    expect(restored.fileName, 'renamed.srt');
+    expect(restored.lines.single.original, 'Restored');
   });
 
   test('insertAsHead keeps exactly one HEAD and checks expected HEAD',
