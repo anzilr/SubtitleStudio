@@ -1,17 +1,15 @@
-Riverpod migration checkpoint 58 R2
+Riverpod migration checkpoint 59
 Date: 2026-10-12
 Checks:
 - flutter analyze --no-fatal-infos --no-fatal-warnings
 - flutter test -j 1
 
 Focus:
-- prove non-null transaction HEAD after root and legacy selection
-- accept single legacy HEAD in mixed v1/v2 history
-- restore valid empty v2 snapshots
-- preserve exact v2 persisted subtitle indexes on checkout
-- run real Isar integration regressions for empty checkout
-- prevent stale target checkpoint writes from erasing restored HEAD
-- verify previously inactive target becomes sole HEAD in real Isar
-- keep upstream and release branches untouched
+- atomic checkout with HEAD compare-and-swap and working subtitle hash
+- preserve concurrent collection metadata and reject stale undo/redo
+- validate .msone graph, version, source ownership and v2 integrity before import
+- import/replace session, subtitle collection and checkpoints in one Isar transaction
+- ask before subtitle-only recovery when history is invalid
+- add pure and Isar regression coverage
 
-Platform builds intentionally disabled.
+No platform builds. Preserve upstream and release branches.
