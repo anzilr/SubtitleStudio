@@ -46,8 +46,10 @@ Line and Waveform screens. No Isar schema or mobile layout modifications.
 - Legacy waveform batch validation rejects missing/duplicate cues atomically.
 
 ## Status and following work
-- CI for Checkpoint 63: analyzer + `flutter test -j 1` at the marker; record
-  exact results after the run.
+- **Checkpoint 63 verified:** CI marker `8a67248`, `flutter analyze`
+  reported **0 issues** and serialized `flutter test -j 1` reported
+  **223 tests passed**. See
+  https://github.com/anzilr/SubtitleStudio/actions/runs/38285975951.
 - Remaining legacy APIs (including `SubtitleRepository.updateCollection`,
   `EditLineRepository.updateSubtitleCollection`, and direct standalone
   insert/delete/split helpers) remain **compatibility-only**, and should not be
