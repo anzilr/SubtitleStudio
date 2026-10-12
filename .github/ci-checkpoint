@@ -1,14 +1,15 @@
-Riverpod migration checkpoint 57
-Date: 2026-10-04
+Riverpod migration checkpoint 58
+Date: 2026-10-12
 Checks:
-- flutter analyze
+- flutter analyze --no-fatal-infos --no-fatal-warnings
 - flutter test -j 1
 
 Focus:
-- centralize HEAD semantics behind CheckpointHeadReference
-- keep Checkpoint.isActive as a storage compatibility detail only
-- allow mixed v1/v2 history to checkout a legacy commit as HEAD
-- route transaction, validator, retention policy, store, and project import through HEAD abstraction
-- add pure HEAD-reference and mixed-history validation regression coverage
+- prove non-null transaction HEAD after root and legacy selection
+- accept single legacy HEAD in mixed v1/v2 history
+- restore valid empty v2 snapshots
+- preserve exact v2 persisted subtitle indexes on checkout
+- run real Isar integration regressions for empty checkout
+- keep upstream and release branches untouched
 
 Platform builds intentionally disabled.
