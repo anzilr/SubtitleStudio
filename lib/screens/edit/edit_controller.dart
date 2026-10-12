@@ -346,6 +346,13 @@ class EditController extends Notifier<EditState> {
     return _subtitleRepo.updateCollection(collection);
   }
 
+  Future<bool> updateOriginalFileUri(String originalFileUri) {
+    return _subtitleRepo.updateOriginalFileUri(
+      collectionId: subtitleCollectionId,
+      originalFileUri: originalFileUri,
+    );
+  }
+
   Future<bool> updateLastEditedIndex(int index) {
     return _subtitleRepo.updateLastEditedIndex(sessionId, index);
   }
