@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/database/models/models.dart';
+import 'package:subtitle_studio/features/search_replace/search_replace_planner.dart';
+import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
 import 'package:subtitle_studio/screens/edit/providers/subtitle_repository_provider.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -8,6 +10,7 @@ import 'package:google_fonts/google_fonts.dart';
 class SearchReplaceSheet extends ConsumerStatefulWidget {
   final List<SubtitleLine> subtitleLines;
   final int subtitleId;
+  final int sessionId;
   final bool isReplaceMode;
   final Function() onRefresh;
   final Function(int) onLineSelected;
@@ -16,6 +19,7 @@ class SearchReplaceSheet extends ConsumerStatefulWidget {
     super.key,
     required this.subtitleLines,
     required this.subtitleId,
+    required this.sessionId,
     required this.isReplaceMode,
     required this.onRefresh,
     required this.onLineSelected,
@@ -72,7 +76,7 @@ class _SearchReplaceSheetState extends ConsumerState<SearchReplaceSheet> {
           _searchResults.add(
             SearchResult(
               lineIndex: i,
-              line: line,
+              line: CheckpointStateReducer.copyLine(line),
               matchStart: match.start,
               matchEnd: match.end,
               originalText: originalText,
@@ -87,7 +91,7 @@ class _SearchReplaceSheetState extends ConsumerState<SearchReplaceSheet> {
           _searchResults.add(
             SearchResult(
               lineIndex: i,
-              line: line,
+              line: CheckpointStateReducer.copyLine(line),
               matchStart: index,
               matchEnd: index + term.length,
               originalText: originalText,
@@ -148,53 +152,48 @@ class _SearchReplaceSheetState extends ConsumerState<SearchReplaceSheet> {
 
     if (!shouldReplace) return;
 
-    final Map<int, SubtitleLine> updatedLinesMap = {};
+    try {
+      final plan = SubtitleSearchReplacePlanner.build(
+        matches: _searchResults.map((result) => SubtitleSearchMatch(
+          line: result.line,
+          start: result.matchStart,
+          end: result.matchEnd,
+        )),
+        searchTerm: searchTerm,
+        replacement: replaceTerm,
+        caseSensitive: _caseSensitive,
+      );
 
-    for (final result in _searchResults) {
-      final oldText = result.line.edited ?? result.line.original;
+      if (plan.updatedLines.isEmpty) return;
+      final success = await ref
+          .read(subtitleRepositoryProvider)
+          .updateMultipleLinesWithHistory(
+            collectionId: widget.subtitleId,
+            sessionId: widget.sessionId,
+            expectedLines: plan.expectedLines,
+            updatedLines: plan.updatedLines,
+            operationType: 'replace',
+            description: 'Replaced ${plan.replacements} subtitle text matches',
+          );
 
-      RegExp pattern;
-      if (_wholeWord) {
-        pattern = RegExp('\\b${RegExp.escape(searchTerm)}\\b', caseSensitive: _caseSensitive);
-      } else {
-        pattern = RegExp(RegExp.escape(searchTerm), caseSensitive: _caseSensitive);
+      if (!mounted) return;
+      if (!success) {
+        SnackbarHelper.showError(
+          context,
+          'Subtitle text changed. Refresh the search before replacing.',
+        );
+        return;
       }
-
-      final newText = oldText.replaceAll(pattern, replaceTerm);
-
-      if (!updatedLinesMap.containsKey(result.line.index)) {
-        final updatedLine = SubtitleLine()
-          ..index = result.line.index
-          ..startTime = result.line.startTime
-          ..endTime = result.line.endTime
-          ..original = result.line.original
-          ..edited = newText
-          ..marked = result.line.marked
-          ..comment = result.line.comment
-          ..resolved = result.line.resolved;
-
-        updatedLinesMap[result.line.index] = updatedLine;
-      }
-    }
-
-    final updatedLines = updatedLinesMap.values.toList();
-
-    final success = await ref
-        .read(subtitleRepositoryProvider)
-        .updateMultipleLines(widget.subtitleId, updatedLines);
-
-    if (success) {
       widget.onRefresh();
-      Navigator.pop(context);
       SnackbarHelper.showSuccess(
         context,
-        'Replaced ${_searchResults.length} occurrences in ${updatedLines.length} lines',
+        'Replaced ${plan.replacements} occurrences in '
+        '${plan.updatedLines.length} lines',
       );
-    } else {
-      SnackbarHelper.showError(
-        context,
-        'Failed to replace text',
-      );
+      Navigator.pop(context);
+    } on FormatException catch (error) {
+      if (!mounted) return;
+      SnackbarHelper.showError(context, error.message);
     }
   }
 
@@ -259,63 +258,52 @@ class _SearchReplaceSheetState extends ConsumerState<SearchReplaceSheet> {
 
     if (!shouldReplace) return;
 
-    final Map<int, SubtitleLine> updatedLinesMap = {};
+    try {
+      final plan = SubtitleSearchReplacePlanner.build(
+        matches: _selectedIndices.map((index) {
+          final result = _searchResults[index];
+          return SubtitleSearchMatch(
+            line: result.line,
+            start: result.matchStart,
+            end: result.matchEnd,
+          );
+        }),
+        searchTerm: searchTerm,
+        replacement: replaceTerm,
+        caseSensitive: _caseSensitive,
+      );
 
-    for (final resultIndex in _selectedIndices) {
-      final result = _searchResults[resultIndex];
-      final oldText = result.line.edited ?? result.line.original;
+      final success = await ref
+          .read(subtitleRepositoryProvider)
+          .updateMultipleLinesWithHistory(
+            collectionId: widget.subtitleId,
+            sessionId: widget.sessionId,
+            expectedLines: plan.expectedLines,
+            updatedLines: plan.updatedLines,
+            operationType: 'replace',
+            description: 'Replaced ${plan.replacements} selected matches',
+          );
 
-      final beforeText = oldText.substring(0, result.matchStart);
-      final afterText = oldText.substring(result.matchEnd);
-
-      final newText = beforeText + replaceTerm + afterText;
-
-      if (updatedLinesMap.containsKey(result.line.index)) {
-        updatedLinesMap[result.line.index] = SubtitleLine()
-          ..index = result.line.index
-          ..startTime = result.line.startTime
-          ..endTime = result.line.endTime
-          ..original = result.line.original
-          ..edited = newText
-          ..marked = result.line.marked
-          ..comment = result.line.comment
-          ..resolved = result.line.resolved;
-      } else {
-        updatedLinesMap[result.line.index] = SubtitleLine()
-          ..index = result.line.index
-          ..startTime = result.line.startTime
-          ..endTime = result.line.endTime
-          ..original = result.line.original
-          ..edited = newText
-          ..marked = result.line.marked
-          ..comment = result.line.comment
-          ..resolved = result.line.resolved;
+      if (!mounted) return;
+      if (!success) {
+        SnackbarHelper.showError(
+          context,
+          'Subtitle text changed. Refresh the search before replacing.',
+        );
+        return;
       }
-    }
-
-    final updatedLines = updatedLinesMap.values.toList();
-
-    final success = await ref
-        .read(subtitleRepositoryProvider)
-        .updateMultipleLines(widget.subtitleId, updatedLines);
-
-    if (success) {
       widget.onRefresh();
-      setState(() {
-        _selectionMode = false;
-        _selectedIndices = {};
-      });
       SnackbarHelper.showSuccess(
         context,
-        'Replaced ${_selectedIndices.length} occurrences in ${updatedLines.length} lines',
+        'Replaced ${plan.replacements} occurrences in '
+        '${plan.updatedLines.length} lines',
       );
-
-      _performSearch();
-    } else {
-      SnackbarHelper.showError(
-        context,
-        'Failed to replace text',
-      );
+      // The current search result offsets are now invalid; close the
+      // sheet rather than leaving stale selected matches on screen.
+      Navigator.pop(context);
+    } on FormatException catch (error) {
+      if (!mounted) return;
+      SnackbarHelper.showError(context, error.message);
     }
   }
 
