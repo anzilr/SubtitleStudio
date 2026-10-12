@@ -64,6 +64,15 @@ class CheckpointHistoryTransaction {
     late List<SubtitleLine> persistedLines;
 
     await _isar.writeTxn(() async {
+      // Session ownership is part of this atomic mutation contract. Never
+      // attach a commit for session A to session B's subtitle collection.
+      final session = await _isar.sessions.get(sessionId);
+      if (session == null || session.subtitleCollectionId != subtitleCollectionId) {
+        throw StateError(
+          'Session $sessionId does not own subtitle collection '
+          '$subtitleCollectionId.',
+        );
+      }
       final collection =
           await _isar.subtitleCollections.get(subtitleCollectionId);
       if (collection == null) {
