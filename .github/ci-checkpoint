@@ -1,7 +1,7 @@
-Riverpod migration checkpoint 64
+Riverpod migration checkpoint 64 R2
 Date: 2026-10-12
 Checks:
-- flutter analyze
+- flutter analyze (zero issues required)
 - flutter test -j 1
 
 Focus:
