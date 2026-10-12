@@ -139,26 +139,31 @@ class WaveformSubtitleRepository {
           return false;
         }
 
-        final replacements = <int, SubtitleLine>{
-          for (final line in updatedLines) line.index: line,
-        };
-        final matchedIndexes = <int>{};
-
-        for (int i = 0; i < collection.lines.length; i++) {
-          final currentIndex = collection.lines[i].index;
-          final replacement = replacements[currentIndex];
-          if (replacement != null) {
-            collection.lines[i] = replacement;
-            matchedIndexes.add(currentIndex);
+        final replacements = <int, SubtitleLine>{};
+        for (final line in updatedLines) {
+          if (line.index <= 0 || replacements.containsKey(line.index)) {
+            return false;
           }
+          replacements[line.index] =
+              CheckpointStateReducer.copyLine(line);
         }
 
-        if (matchedIndexes.length != replacements.length) {
-          await logWarning(
-            'WaveformSubtitleRepository: one or more subtitle lines were '
-            'not found in collection $subtitleCollectionId',
-          );
-          return false;
+        // Validate the entire requested batch before mutating anything.
+        final matched = <int>{};
+        for (final line in collection.lines) {
+          if (replacements.containsKey(line.index) &&
+              !matched.add(line.index)) {
+            return false;
+          }
+        }
+        if (matched.length != replacements.length) return false;
+
+        for (final line in collection.lines) {
+          final replacement = replacements[line.index];
+          if (replacement == null) continue;
+          // Even the compatibility path may only change waveform timing.
+          line.startTime = replacement.startTime;
+          line.endTime = replacement.endTime;
         }
 
         await _isar.subtitleCollections.put(collection);
