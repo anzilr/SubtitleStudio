@@ -197,6 +197,12 @@ void main() {
   test('Find & Replace groups selected matches into one reversible V2 commit',
       () async {
     final ids = await _seed(harness);
+    await harness.isar.writeTxn(() async {
+      final collection =
+          (await harness.isar.subtitleCollections.get(ids.collectionId))!;
+      collection.lines[1].original = 'red red';
+      await harness.isar.subtitleCollections.put(collection);
+    });
     final root = await history.createInitialSnapshot(
       sessionId: ids.sessionId,
       subtitleCollectionId: ids.collectionId,
@@ -206,9 +212,9 @@ void main() {
     final plan = SubtitleSearchReplacePlanner.build(
       matches: [
         SubtitleSearchMatch(line: text, start: 0, end: 3),
-        SubtitleSearchMatch(line: text, start: 3, end: 6),
+        SubtitleSearchMatch(line: text, start: 4, end: 7),
       ],
-      searchTerm: '',
+      searchTerm: 'red',
       replacement: 'x',
       caseSensitive: true,
     );
@@ -227,7 +233,7 @@ void main() {
     expect(checkpoint.deltas, hasLength(1));
     expect((await history.validateHistory(ids.sessionId)).isHealthy, isTrue);
     expect((await repository.fetchSubtitleCollection(ids.collectionId))!
-        .lines[1].edited, 'xx');
+        .lines[1].edited, 'x x');
 
     expect(await history.undoToCheckpoint(
       checkpointId: root,
@@ -240,7 +246,7 @@ void main() {
       sessionId: ids.sessionId,
     ), isTrue);
     expect((await repository.fetchSubtitleCollection(ids.collectionId))!
-        .lines[1].edited, 'xx');
+        .lines[1].edited, 'x x');
   });
 
   test('timecode resync commits V2 history and preserves annotations',
