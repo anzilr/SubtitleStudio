@@ -6,7 +6,6 @@ import 'package:subtitle_studio/screens/edit/repositories/subtitle_repository.da
 import 'package:subtitle_studio/screens/edit_line/repositories/edit_line_preferences_repository.dart';
 import 'package:subtitle_studio/screens/edit_line/repositories/edit_line_repository.dart';
 import 'package:subtitle_studio/services/checkpoint_repository.dart';
-import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
 
 import 'support/test_isar_harness.dart';
 
