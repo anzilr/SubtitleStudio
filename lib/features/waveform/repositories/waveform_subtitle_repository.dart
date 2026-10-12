@@ -1,6 +1,7 @@
 import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/services/checkpoint_history_transaction.dart';
+import 'package:subtitle_studio/services/legacy_collection_write_guard.dart';
 import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 
@@ -139,6 +140,9 @@ class WaveformSubtitleRepository {
           return false;
         }
 
+        if (!await LegacyCollectionWriteGuard.canReplaceEntireCollection(
+          _isar, subtitleCollectionId,
+        )) return false;
         final replacements = <int, SubtitleLine>{};
         for (final line in updatedLines) {
           if (line.index <= 0 || replacements.containsKey(line.index)) {
