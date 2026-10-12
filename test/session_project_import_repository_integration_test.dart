@@ -3,6 +3,7 @@ import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/services/project_document_codec.dart';
 import 'package:subtitle_studio/widgets/session_selection/session_project_import_repository.dart';
+import 'package:subtitle_studio/widgets/session_selection/project_history_import_plan.dart';
 
 import 'support/test_isar_harness.dart';
 
@@ -139,7 +140,7 @@ void main() {
     expect(collection!.fileName, 'typed.srt');
     expect(collection.lines.single.original, 'One');
   });
-  test('invalid imported checkpoint graph is discarded without losing subtitles',
+  test('invalid history rejects atomically unless subtitle-only recovery is chosen',
       () async {
     final broken = ProjectCheckpointData.create(
       id: 300,
@@ -181,10 +182,23 @@ void main() {
       ),
     );
 
+    expect(
+      () => repository.importAsNewSession(
+        projectDocument: document,
+        srtFileInfo: const {'useImportingFile': 'true'},
+        originalProjectUri: '/projects/broken-history.msone',
+      ),
+      throwsA(isA<ProjectHistoryImportException>()),
+    );
+    expect(await harness.isar.sessions.count(), 0);
+    expect(await harness.isar.subtitleCollections.count(), 0);
+    expect(await harness.isar.checkpoints.count(), 0);
+
     final session = await repository.importAsNewSession(
       projectDocument: document,
       srtFileInfo: const {'useImportingFile': 'true'},
       originalProjectUri: '/projects/broken-history.msone',
+      importSubtitlesOnly: true,
     );
 
     final collection =
@@ -197,6 +211,120 @@ void main() {
         .sessionIdEqualTo(session.id)
         .findAll();
     expect(history, isEmpty);
+  });
+  test('failed replacement preserves existing session, lines and history',
+      () async {
+    late Session previous;
+    await harness.isar.writeTxn(() async {
+      final collectionId = await harness.isar.subtitleCollections.put(
+        SubtitleCollection(
+          fileName: 'old.srt',
+          encoding: 'UTF-8',
+          lines: [
+            SubtitleLine()
+              ..index = 1
+              ..startTime = '00:00:01,000'
+              ..endTime = '00:00:01,900'
+              ..original = 'Keep me',
+          ],
+        ),
+      );
+      previous = Session(
+        fileName: 'old.srt',
+        subtitleCollectionId: collectionId,
+      );
+      await harness.isar.sessions.put(previous);
+      await harness.isar.checkpoints.put(Checkpoint(
+        sessionId: previous.id,
+        subtitleCollectionId: collectionId,
+        timestamp: DateTime.utc(2026, 10, 3),
+        operationType: 'snapshot',
+        description: 'Old checkpoint',
+        checkpointType: 'snapshot',
+        isActive: true,
+        deltas: const [],
+        snapshot: const [],
+      ));
+    });
+
+    final brokenHistory = ProjectCheckpointData.create(
+      id: 40,
+      sessionId: 7,
+      subtitleCollectionId: 11,
+      timestamp: DateTime.utc(2026, 10, 3).toIso8601String(),
+      operationType: 'edit',
+      description: 'Broken',
+      parentCheckpointId: 999,
+      isActive: true,
+      checkpointType: 'delta',
+      metadata: null,
+      deltas: const [],
+      snapshot: const [],
+    );
+    final document = ProjectDocument.create(
+      version: '2.0',
+      appVersion: '3.0.0',
+      session: ProjectSessionData.create(
+        fileName: 'new.srt',
+        lastEditedIndex: null,
+        editMode: true,
+        projectFilePath: null,
+      ),
+      subtitleCollection: ProjectSubtitleCollectionData.create(
+        fileName: 'new.srt',
+        filePath: null,
+        originalFileUri: null,
+        encoding: 'UTF-8',
+        lines: [_line(1, 'Replacement')],
+      ),
+      checkpoints: [brokenHistory],
+      metadata: ProjectMetadataData.create(
+        totalLines: 1,
+        editedLines: 0,
+        markedLines: 0,
+        lastSaved: DateTime.utc(2026, 10, 3).toIso8601String(),
+      ),
+    );
+
+    expect(
+      () => repository.replaceSession(
+        session: previous,
+        projectDocument: document,
+        srtFileInfo: const {'useImportingFile': 'true'},
+        originalProjectUri: '/projects/broken.msone',
+      ),
+      throwsA(isA<ProjectHistoryImportException>()),
+    );
+    final collection = (await harness.isar.subtitleCollections
+        .get(previous.subtitleCollectionId))!;
+    expect(collection.lines.single.original, 'Keep me');
+    expect((await harness.isar.sessions.get(previous.id))!.fileName, 'old.srt');
+    final history = await harness.isar.checkpoints
+        .filter()
+        .sessionIdEqualTo(previous.id)
+        .findAll();
+    expect(history, hasLength(1));
+    expect(history.single.description, 'Old checkpoint');
+
+    await repository.replaceSession(
+      session: previous,
+      projectDocument: document,
+      srtFileInfo: const {'useImportingFile': 'true'},
+      originalProjectUri: '/projects/broken.msone',
+      importSubtitlesOnly: true,
+    );
+    expect(
+      (await harness.isar.subtitleCollections
+          .get(previous.subtitleCollectionId))!.lines.single.original,
+      'Replacement',
+    );
+    expect(
+      await harness.isar.checkpoints
+          .filter()
+          .sessionIdEqualTo(previous.id)
+          .findAll(),
+      isEmpty,
+    );
   });
 
 }
