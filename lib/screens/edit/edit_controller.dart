@@ -297,10 +297,11 @@ class EditController extends Notifier<EditState> {
   }
 
   Future<bool> addSubtitleLine(SubtitleLine line, int insertIndex) async {
-    final success = await _subtitleRepo.addLine(
-      subtitleCollectionId,
-      line,
-      insertIndex,
+    final success = await _subtitleRepo.addLineWithHistory(
+      collectionId: subtitleCollectionId,
+      line: line,
+      insertIndex: insertIndex,
+      sessionId: sessionId,
     );
     if (success) {
       await refreshSubtitleLines();
@@ -372,6 +373,7 @@ class EditController extends Notifier<EditState> {
         subtitleCollectionId,
         index,
         marked,
+        sessionId: sessionId,
       );
       if (!success) return false;
 
@@ -420,6 +422,7 @@ class EditController extends Notifier<EditState> {
         subtitleCollectionId,
         index,
         comment,
+        sessionId: sessionId,
       );
       if (!success) return false;
 
@@ -461,6 +464,7 @@ class EditController extends Notifier<EditState> {
       final success = await _subtitleRepo.unmarkLine(
         subtitleCollectionId,
         index,
+        sessionId: sessionId,
       );
       if (!success) return false;
 
@@ -503,6 +507,7 @@ class EditController extends Notifier<EditState> {
         subtitleCollectionId,
         index,
         resolved,
+        sessionId: sessionId,
       );
       if (!success) return false;
 
@@ -541,7 +546,14 @@ class EditController extends Notifier<EditState> {
     try {
       logInfo('EditController: Deleting line at index $index');
 
-      await _subtitleRepo.deleteLine(subtitleCollectionId, index);
+      final deleted = await _subtitleRepo.deleteLineWithHistory(
+        collectionId: subtitleCollectionId,
+        index: index,
+        sessionId: sessionId,
+      );
+      if (!deleted) {
+        throw StateError('Atomic subtitle delete failed.');
+      }
 
       // Refresh to get updated lines
       await refreshSubtitleLines();
