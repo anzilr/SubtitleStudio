@@ -4,6 +4,8 @@ Date: 2026-10-12
 Branch: `refactor/riverpod-architecture`
 Starting verified baseline: Checkpoint 65 R3 (`3dbd0fa`), analyzer zero issues, 239 tests passing.
 
+**Checkpoint 66 verified:** code/CI marker [`4dd480b`](https://github.com/anzilr/SubtitleStudio/commit/4dd480ba0ab6c1a66b9a9393a08b51e627ad3893), zero analyzer issues and **248 tests passed** in [GitHub Actions run 38292020835](https://github.com/anzilr/SubtitleStudio/actions/runs/38292020835).
+
 ## What was implemented
 
 ### Typed reference catalog (read-only, no Isar schema change)
