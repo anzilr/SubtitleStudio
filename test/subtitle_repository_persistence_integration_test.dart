@@ -163,6 +163,63 @@ void main() {
       );
     });
 
+    test('updating export URI cannot overwrite intervening subtitle edits',
+        () async {
+      final collectionId = await _seedCollection(harness);
+      late int sessionId;
+      await harness.isar.writeTxn(() async {
+        sessionId = await harness.isar.sessions.put(
+          Session(
+            subtitleCollectionId: collectionId,
+            fileName: 'metadata-only.srt',
+          ),
+        );
+      });
+
+      final stale = await repository.fetchSubtitleCollection(collectionId);
+      expect(stale?.originalFileUri, isNull);
+
+      final updated = _line(
+        index: 1,
+        text: 'Edited after load',
+        start: '00:00:01,000',
+        end: '00:00:01,900',
+      );
+      expect(
+        await repository.saveLineChanges(
+          collectionId,
+          updated,
+          sessionId: sessionId,
+        ),
+        isTrue,
+      );
+
+      expect(
+        await repository.updateOriginalFileUri(
+          collectionId: collectionId,
+          originalFileUri: '/subtitles/metadata-only.srt',
+        ),
+        isTrue,
+      );
+      final current = (await repository.fetchSubtitleCollection(collectionId))!;
+      expect(current.originalFileUri, '/subtitles/metadata-only.srt');
+      expect(current.lines.first.original, 'Edited after load');
+      expect(current.lines.length, 3);
+      expect((await CheckpointRepository(harness.isar)
+          .validateHistory(sessionId)).isHealthy, isTrue);
+    });
+
+    test('updating URI on missing collection fails without creating it',
+        () async {
+      expect(
+        await repository.updateOriginalFileUri(
+          collectionId: 999999,
+          originalFileUri: '/nope.srt',
+        ),
+        isFalse,
+      );
+    });
+
     test('first atomic edit auto-creates an untouched v2 root', () async {
       final collectionId = await _seedCollection(harness);
       late int sessionId;
