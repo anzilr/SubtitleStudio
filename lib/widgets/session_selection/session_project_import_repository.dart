@@ -6,7 +6,7 @@ import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/services/project_document_codec.dart';
 import 'package:subtitle_studio/services/checkpoint_head_reference.dart';
-import 'package:subtitle_studio/utils/logging_helpers.dart';
+import 'package:subtitle_studio/widgets/session_selection/project_history_import_plan.dart';
 
 final sessionProjectImportRepositoryProvider =
     Provider<SessionProjectImportRepository>((ref) {
@@ -31,51 +31,82 @@ class SessionProjectImportRepository {
     required ProjectDocument projectDocument,
     required Map<String, String?> srtFileInfo,
     required String? originalProjectUri,
+    bool importSubtitlesOnly = false,
   }) async {
+    // Validate before any write: an invalid history cannot partially
+    // overwrite an existing session or destroy its previous checkpoints.
+    final history = importSubtitlesOnly
+        ? null
+        : PreparedProjectHistory.build(
+            projectDocument.checkpoints,
+            toSubtitleLine: _toSubtitleLine,
+          );
     final subtitleData = projectDocument.subtitleCollection;
     final subtitleLines = _parseSubtitleLines(subtitleData.lines);
 
-    final collection =
-        await _isar.subtitleCollections.get(session.subtitleCollectionId);
-    if (collection == null) {
-      throw StateError('Session subtitle collection not found');
-    }
-
-    _applySubtitleFileSelection(
-      collection: collection,
-      subtitleData: subtitleData,
-      srtFileInfo: srtFileInfo,
-    );
-    collection.encoding = subtitleData.encoding;
-    collection.lines = subtitleLines;
-
-    _applySessionSelection(
-      session: session,
-      subtitleData: subtitleData,
-      sessionData: projectDocument.session,
-      srtFileInfo: srtFileInfo,
-      originalProjectUri: originalProjectUri,
-    );
-
+    late Session updatedSession;
     await _isar.writeTxn(() async {
+      final currentSession = await _isar.sessions.get(session.id);
+      if (currentSession == null) {
+        throw StateError('Session was deleted during project replacement.');
+      }
+      final collection = await _isar.subtitleCollections
+          .get(currentSession.subtitleCollectionId);
+      if (collection == null) {
+        throw StateError('Session subtitle collection not found.');
+      }
+
+      _applySubtitleFileSelection(
+        collection: collection,
+        subtitleData: subtitleData,
+        srtFileInfo: srtFileInfo,
+      );
+      collection.encoding = subtitleData.encoding;
+      collection.lines = subtitleLines;
+      _applySessionSelection(
+        session: currentSession,
+        subtitleData: subtitleData,
+        sessionData: projectDocument.session,
+        srtFileInfo: srtFileInfo,
+        originalProjectUri: originalProjectUri,
+      );
+
+      // Old history describes the old working tree and must not be mixed with
+      // the imported graph. Deletion and replacement share one transaction.
+      final oldCheckpoints = await _isar.checkpoints
+          .filter()
+          .sessionIdEqualTo(currentSession.id)
+          .findAll();
+      if (oldCheckpoints.isNotEmpty) {
+        await _isar.checkpoints.deleteAll(
+          oldCheckpoints.map((checkpoint) => checkpoint.id).toList(),
+        );
+      }
       await _isar.subtitleCollections.put(collection);
-      await _isar.sessions.put(session);
+      await _isar.sessions.put(currentSession);
+      await _persistCheckpointsInTransaction(
+        sessionId: currentSession.id,
+        subtitleCollectionId: currentSession.subtitleCollectionId,
+        history: history,
+      );
+      updatedSession = currentSession;
     });
 
-    await _importCheckpoints(
-      sessionId: session.id,
-      subtitleCollectionId: session.subtitleCollectionId,
-      checkpoints: projectDocument.checkpoints,
-    );
-
-    return session;
+    return updatedSession;
   }
 
   Future<Session> importAsNewSession({
     required ProjectDocument projectDocument,
     required Map<String, String?> srtFileInfo,
     required String? originalProjectUri,
+    bool importSubtitlesOnly = false,
   }) async {
+    final history = importSubtitlesOnly
+        ? null
+        : PreparedProjectHistory.build(
+            projectDocument.checkpoints,
+            toSubtitleLine: _toSubtitleLine,
+          );
     final sessionData = projectDocument.session;
     final subtitleData = projectDocument.subtitleCollection;
     final subtitleLines = _parseSubtitleLines(subtitleData.lines);
@@ -104,13 +135,12 @@ class SessionProjectImportRepository {
         projectFilePath: originalProjectUri,
       );
       await _isar.sessions.put(session);
+      await _persistCheckpointsInTransaction(
+        sessionId: session.id,
+        subtitleCollectionId: collectionId,
+        history: history,
+      );
     });
-
-    await _importCheckpoints(
-      sessionId: session.id,
-      subtitleCollectionId: session.subtitleCollectionId,
-      checkpoints: projectDocument.checkpoints,
-    );
 
     return session;
   }
@@ -218,170 +248,61 @@ class SessionProjectImportRepository {
     );
   }
 
-  Future<void> _importCheckpoints({
+  /// Called only inside the surrounding session/collection write transaction.
+  /// The source graph has already been validated in memory.
+  Future<void> _persistCheckpointsInTransaction({
     required int sessionId,
     required int subtitleCollectionId,
-    required List<ProjectCheckpointData> checkpoints,
+    required PreparedProjectHistory? history,
   }) async {
-    if (checkpoints.isEmpty) return;
+    if (history == null || history.checkpoints.isEmpty) return;
 
-    try {
-      final sourceIds = <int>{};
-      final parentById = <int, int?>{};
+    final imported = <Checkpoint>[];
+    final idMap = <int, int>{};
+    for (final source in history.checkpoints) {
+      final checkpoint = Checkpoint(
+        sessionId: sessionId,
+        subtitleCollectionId: subtitleCollectionId,
+        timestamp: source.timestamp,
+        operationType: source.operationType,
+        description: source.description,
+        parentCheckpointId: null,
+        isActive: false,
+        checkpointType: source.checkpointType,
+        metadata: source.metadata,
+        deltas: source.deltas,
+        snapshot: source.snapshot,
+      );
+      final newId = await _isar.checkpoints.put(checkpoint);
+      imported.add(checkpoint);
+      idMap[source.id] = newId;
+    }
 
-      for (final data in checkpoints) {
-        final sourceId = data.id;
-        if (sourceId == null) {
-          throw const FormatException(
-            'Project checkpoint history has no stable checkpoint IDs. '
-            'Subtitle data can still be imported, but history cannot be '
-            'safely reconstructed.',
-          );
+    for (var i = 0; i < history.checkpoints.length; i++) {
+      final original = history.checkpoints[i];
+      final parentId = original.parentCheckpointId;
+      if (parentId != null) {
+        final mappedParent = idMap[parentId];
+        if (mappedParent == null) {
+          throw StateError('Validated project graph lost parent $parentId.');
         }
-        if (!sourceIds.add(sourceId)) {
-          throw FormatException(
-            'Project checkpoint history contains duplicate ID $sourceId.',
-          );
-        }
-        parentById[sourceId] = data.parentCheckpointId;
+        imported[i].parentCheckpointId = mappedParent;
       }
-
-      for (final entry in parentById.entries) {
-        final parentId = entry.value;
-        if (parentId != null && !sourceIds.contains(parentId)) {
-          throw FormatException(
-            'Project checkpoint ${entry.key} references missing parent '
-            '$parentId.',
-          );
-        }
-      }
-
-      for (final sourceId in sourceIds) {
-        final visited = <int>{};
-        int? currentId = sourceId;
-        while (currentId != null) {
-          if (!visited.add(currentId)) {
-            throw FormatException(
-              'Project checkpoint history contains a parent cycle at '
-              '$currentId.',
-            );
-          }
-          currentId = parentById[currentId];
-        }
-      }
-
-      final imported = <Checkpoint>[];
-      final idMap = <int, int>{};
-      int? importedHeadIndex;
-
-      for (var i = 0; i < checkpoints.length; i++) {
-        if (!checkpoints[i].isActive) continue;
-        if (importedHeadIndex == null) {
-          importedHeadIndex = i;
-          continue;
-        }
-
-        final currentTimestamp =
-            DateTime.tryParse(checkpoints[i].timestamp ?? '');
-        final selectedTimestamp =
-            DateTime.tryParse(checkpoints[importedHeadIndex].timestamp ?? '');
-        if (currentTimestamp != null &&
-            (selectedTimestamp == null ||
-                currentTimestamp.isAfter(selectedTimestamp))) {
-          importedHeadIndex = i;
-        }
-      }
-
-      if (importedHeadIndex == null) {
-        for (var i = 0; i < checkpoints.length; i++) {
-          final currentTimestamp =
-              DateTime.tryParse(checkpoints[i].timestamp ?? '');
-          if (currentTimestamp == null) continue;
-          if (importedHeadIndex == null) {
-            importedHeadIndex = i;
-            continue;
-          }
-          final selectedTimestamp =
-              DateTime.tryParse(checkpoints[importedHeadIndex].timestamp ?? '');
-          if (selectedTimestamp == null ||
-              currentTimestamp.isAfter(selectedTimestamp)) {
-            importedHeadIndex = i;
-          }
-        }
-      }
-
-      await _isar.writeTxn(() async {
-        for (var i = 0; i < checkpoints.length; i++) {
-          final data = checkpoints[i];
-          final timestamp = data.timestamp;
-          if (timestamp == null) {
-            throw const FormatException(
-              'Project checkpoint is missing its timestamp.',
-            );
-          }
-
-          final checkpoint = Checkpoint(
-            sessionId: sessionId,
-            subtitleCollectionId: subtitleCollectionId,
-            timestamp: DateTime.parse(timestamp),
-            operationType: data.operationType,
-            description: data.description,
-            parentCheckpointId: null,
-            isActive: false,
-            checkpointType: data.checkpointType,
-            metadata: data.metadata,
-            deltas: data.deltas.map(_toDelta).toList(growable: false),
-            snapshot: _parseSubtitleLines(data.snapshot),
-          );
-
-          final newId = await _isar.checkpoints.put(checkpoint);
-          imported.add(checkpoint);
-          idMap[data.id!] = newId;
-        }
-
-        for (var i = 0; i < checkpoints.length; i++) {
-          final parentKey = checkpoints[i].parentCheckpointId;
-          if (parentKey != null) {
-            final mappedParent = idMap[parentKey];
-            if (mappedParent == null) {
-              throw FormatException(
-                'Project checkpoint parent $parentKey could not be remapped.',
-              );
-            }
-            imported[i].parentCheckpointId = mappedParent;
-          }
-        }
-
-        if (importedHeadIndex != null) {
-          CheckpointHeadReference.moveInMemory(
-            checkpoints: imported,
-            checkpointId: imported[importedHeadIndex].id,
-          );
-        } else {
-          CheckpointHeadReference.clearInMemory(imported);
-        }
-
-        if (imported.isNotEmpty) {
-          await _isar.checkpoints.putAll(imported);
-        }
-      });
-    } catch (error, stackTrace) {
-      logWarning(
-        'Project checkpoint import failed: $error',
-        stackTrace: stackTrace,
+      imported[i].isActive = original.isActive;
+    }
+    // Explicitly preserve the selected HEAD after ID remapping.
+    final head = history.checkpoints
+        .where((checkpoint) => checkpoint.isActive)
+        .firstOrNull;
+    if (head != null) {
+      CheckpointHeadReference.moveInMemory(
+        checkpoints: imported,
+        checkpointId: idMap[head.id]!,
       );
     }
+    await _isar.checkpoints.putAll(imported);
   }
 
-  SubtitleLineDelta _toDelta(ProjectDeltaData data) {
-    return SubtitleLineDelta()
-      ..changeType = data.changeType
-      ..lineIndex = data.lineIndex
-      ..beforeState =
-          data.beforeState == null ? null : _toSubtitleLine(data.beforeState!)
-      ..afterState =
-          data.afterState == null ? null : _toSubtitleLine(data.afterState!);
-  }
 }
 
 class _ResolvedFileSelection {
