@@ -2,12 +2,14 @@
 
 > **October 12, 2026 progress addendum** — This document's checkpoint-45
 > inventory and older step list are retained as an historical baseline.
-> The current verified quality gate is **Checkpoint 60 R2** (`343f261`):
-> zero analyzer issues and **201 tests passed**. Checkpoint 61 is in progress
+> The current verified quality gate is **Checkpoint 61 R2** (`e42b411`):
+> zero analyzer issues and **209 tests passed**. Checkpoint 62 is in progress
 > on `refactor/riverpod-architecture`. See
 > [Checkpoint 59 history integrity](CHECKPOINT59_HISTORY_SAFETY.md),
 > [Checkpoint 60 mutation migration](CHECKPOINT60_LIVE_MUTATION_MIGRATION.md)
-> and [Checkpoint 61 import/metadata safety](CHECKPOINT61_COMMENT_IMPORT_AND_METADATA_SAFETY.md).
+> [Checkpoint 61 import/metadata safety](CHECKPOINT61_COMMENT_IMPORT_AND_METADATA_SAFETY.md),
+> [Checkpoint 62 batch edit migration](CHECKPOINT62_BATCH_MUTATION_AND_DESKTOP_REUSE.md), and
+> [desktop reuse audit](DESKTOP_WORKSPACE_REUSE_AUDIT_2026-10-12.md).
 > Next phases: finish raw/sessionless persistence migration, then persisted
 > HEAD/branch/bookmark references, history graph UI and archived-format fixtures.
 > Desktop UI redesign must be isolated from the existing mobile widget layout.
