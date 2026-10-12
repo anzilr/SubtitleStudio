@@ -1,4 +1,4 @@
-Riverpod migration checkpoint 58
+Riverpod migration checkpoint 58 R2
 Date: 2026-10-12
 Checks:
 - flutter analyze --no-fatal-infos --no-fatal-warnings
@@ -10,6 +10,8 @@ Focus:
 - restore valid empty v2 snapshots
 - preserve exact v2 persisted subtitle indexes on checkout
 - run real Isar integration regressions for empty checkout
+- prevent stale target checkpoint writes from erasing restored HEAD
+- verify previously inactive target becomes sole HEAD in real Isar
 - keep upstream and release branches untouched
 
 Platform builds intentionally disabled.
