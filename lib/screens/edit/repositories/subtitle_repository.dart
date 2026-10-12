@@ -148,6 +148,89 @@ class SubtitleRepository {
   ///
   /// Cue numbers are matched by [SubtitleLine.index], so callers can submit a
   /// sparse set of modified lines without rewriting unrelated entries.
+  /// Apply a sparse batch from a preview using a single V2 commit.
+  ///
+  /// The caller provides the exact lines that it originally displayed.
+  /// We match by stable cue number and compare each expected line against
+  /// the current Isar state *inside* the history transaction. If any target
+  /// has changed, reject the whole batch instead of overwriting newer edits.
+  /// Unrelated lines are copied from current storage, never from UI state.
+  Future<bool> updateMultipleLinesWithHistory({
+    required int collectionId,
+    required int sessionId,
+    required List<SubtitleLine> expectedLines,
+    required List<SubtitleLine> updatedLines,
+    required String operationType,
+    required String description,
+  }) async {
+    if (updatedLines.isEmpty) return true;
+
+    try {
+      final expectedByCue = <int, SubtitleLine>{};
+      for (final line in expectedLines) {
+        if (line.index <= 0 || expectedByCue.containsKey(line.index)) {
+          throw const FormatException('Expected cue numbers must be unique and positive.');
+        }
+        expectedByCue[line.index] = CheckpointStateReducer.copyLine(line);
+      }
+
+      final updatedByCue = <int, SubtitleLine>{};
+      for (final line in updatedLines) {
+        if (line.index <= 0 || updatedByCue.containsKey(line.index) ||
+            !expectedByCue.containsKey(line.index)) {
+          throw const FormatException('Updated cues must be unique and present in the expected snapshot.');
+        }
+        updatedByCue[line.index] = CheckpointStateReducer.copyLine(line);
+      }
+
+      await _historyTransaction.commit(
+        sessionId: sessionId,
+        subtitleCollectionId: collectionId,
+        operationType: operationType,
+        description: description,
+        buildMutation: (currentLines) {
+          final nextLines = CheckpointStateReducer.copyLines(currentLines);
+          final seen = <int>{};
+          final deltas = <SubtitleLineDelta>[];
+
+          for (var position = 0; position < nextLines.length; position++) {
+            final current = nextLines[position];
+            final replacement = updatedByCue[current.index];
+            if (replacement == null) continue;
+            if (!seen.add(current.index)) {
+              throw StateError('Duplicate destination cue ${current.index}.');
+            }
+            final expected = expectedByCue[current.index]!;
+            if (!CheckpointStateReducer.samePersistedLine(current, expected)) {
+              throw StateError('Subtitle cue ${current.index} changed after preview; refresh before applying.');
+            }
+            if (CheckpointStateReducer.samePersistedLine(current, replacement)) {
+              continue;
+            }
+            deltas.add(SubtitleLineDelta()
+              ..changeType = 'modify'
+              ..lineIndex = position
+              ..beforeState = CheckpointStateReducer.copyLine(current)
+              ..afterState = CheckpointStateReducer.copyLine(replacement));
+            nextLines[position] = CheckpointStateReducer.copyLine(replacement);
+          }
+
+          if (seen.length != updatedByCue.length) {
+            throw StateError('One or more subtitle cues were removed or renumbered since preview.');
+          }
+          return CheckpointMutationPlan(
+            nextLines: nextLines,
+            deltas: deltas,
+          );
+        },
+      );
+      return true;
+    } catch (error) {
+      logError('SubtitleRepository: Atomic batch update rejected: $error');
+      return false;
+    }
+  }
+
   Future<bool> updateMultipleLines(
     int collectionId,
     List<SubtitleLine> updatedLines,
