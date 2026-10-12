@@ -1,18 +1,17 @@
-Riverpod migration checkpoint 65 R3
+Riverpod migration checkpoint 66
 Date: 2026-10-12
 Checks:
-- flutter analyze (strict zero issues required)
+- flutter analyze (zero issues)
 - flutter test -j 1
 
 Focus:
-- sessionless Editor and Edit Line mutations refuse documents with V2 history
-- legacy raw line updates read and write inside the same Isar transaction
-- sessionless Source View and waveform writes cannot bypass V2 history
-- legacy unversioned/v1 editing paths remain supported
-- add Isar regressions for active HEAD and legacy compatibility
-- add expanded SRT encoding support for parsing and compiling to roadmap ONLY
-- defer desktop workspace, persisted HEAD/branch/bookmark implementation
+- derive typed Git-like HEAD, alternate branch-tip and manual bookmark refs
+- share read-only reference catalog via checkpoint repository interface
+- reject missing and multiple active HEADs in V2 histories
+- validate new checkpoint parent and session/collection in insertAsHead
+- recalculate retention policy within Isar writeTxn, using live HEAD
+- refuse unsafe ID-based deletion of active checkpoint graphs
+- exercise legacy HEAD compatibility and real Isar pruning regressions
+- preserve source encoding roadmap research; desktop layout deferred
 
-No native platform builds, mobile UI changes, main/upstream merge, release-tag changes.
-
-Regression note: preserve external working-tree reconciliation test via direct Isar mutation, not legacy sessionless edit.
+No new Isar schema, native builds, mobile redesign, upstream merges or release tags.
