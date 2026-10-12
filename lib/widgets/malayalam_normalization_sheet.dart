@@ -8,12 +8,14 @@ import 'package:subtitle_studio/utils/snackbar_helper.dart';
 
 class MalayalamNormalizationSheet extends ConsumerStatefulWidget {
   final int subtitleCollectionId;
+  final int sessionId;
   final List<SubtitleLine> subtitleLines;
   final VoidCallback onNormalizationComplete;
 
   const MalayalamNormalizationSheet({
     super.key,
     required this.subtitleCollectionId,
+    required this.sessionId,
     required this.subtitleLines,
     required this.onNormalizationComplete,
   });
@@ -136,12 +138,14 @@ class _MalayalamNormalizationSheetState extends ConsumerState<MalayalamNormaliza
 
     try {
       final updatedLines = <SubtitleLine>[];
+      final expectedLines = <SubtitleLine>[];
 
       for (int i = 0; i < _previewResults.length; i++) {
         if (_selectedChanges[i] != true) continue;
 
         final preview = _previewResults[i];
         final source = preview.subtitleLine;
+        expectedLines.add(source);
 
         updatedLines.add(
           SubtitleLine()
@@ -158,9 +162,13 @@ class _MalayalamNormalizationSheetState extends ConsumerState<MalayalamNormaliza
 
       final success = await ref
           .read(subtitleRepositoryProvider)
-          .updateMultipleLines(
-            widget.subtitleCollectionId,
-            updatedLines,
+          .updateMultipleLinesWithHistory(
+            collectionId: widget.subtitleCollectionId,
+            sessionId: widget.sessionId,
+            expectedLines: expectedLines,
+            updatedLines: updatedLines,
+            operationType: 'normalize',
+            description: 'Normalized selected Malayalam subtitle text',
           );
 
       if (!mounted) return;
