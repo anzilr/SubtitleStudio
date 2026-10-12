@@ -36,8 +36,6 @@ class CheckpointHeadReference {
     List<Checkpoint> checkpoints,
   ) {
     final active = activeCheckpoints(checkpoints);
-    if (active.isEmpty) return null;
-
     final containsV2 =
         checkpoints.any(CheckpointHistoryMetadata.isPostOperation);
     if (containsV2 && active.length != 1) {
@@ -47,7 +45,7 @@ class CheckpointHeadReference {
       );
     }
 
-    return active.first;
+    return active.isEmpty ? null : active.first;
   }
 
   static void moveInMemory({
