@@ -88,6 +88,65 @@ void main() {
   });
 
   group('EditLineRepository persistence', () {
+    test('Save As updates paths without overwriting subsequent subtitle edits',
+        () async {
+      final ids = await _seed(harness);
+      final stale = await repository.fetchSubtitleCollection(ids.collectionId);
+      expect(stale, isNotNull);
+
+      // Simulate a concurrent edit while the Save As file picker was open.
+      await harness.isar.writeTxn(() async {
+        final fresh =
+            (await harness.isar.subtitleCollections.get(ids.collectionId))!;
+        fresh.lines.first.original = 'Newer edit';
+        fresh.lines.last.comment = 'Review note';
+        await harness.isar.subtitleCollections.put(fresh);
+      });
+
+      expect(await repository.updateSubtitleSaveLocation(
+        collectionId: ids.collectionId,
+        sessionId: ids.sessionId,
+        filePath: '/subtitles/saved-as.srt',
+        originalFileUri: '/subtitles/saved-as.srt',
+      ), isTrue);
+
+      final saved =
+          (await repository.fetchSubtitleCollection(ids.collectionId))!;
+      expect(saved.filePath, '/subtitles/saved-as.srt');
+      expect(saved.originalFileUri, '/subtitles/saved-as.srt');
+      expect(saved.lines.first.original, 'Newer edit');
+      expect(saved.lines.last.comment, 'Review note');
+      expect(await harness.isar.checkpoints.count(), 0);
+    });
+
+    test('Save As cannot mutate another session or a missing collection',
+        () async {
+      final ids = await _seed(harness);
+      expect(await repository.updateSubtitleSaveLocation(
+        collectionId: ids.collectionId,
+        sessionId: ids.sessionId + 100000,
+        filePath: '/different.srt',
+        originalFileUri: '/different.srt',
+      ), isFalse);
+      expect(await repository.updateSubtitleSaveLocation(
+        collectionId: ids.collectionId + 100000,
+        sessionId: ids.sessionId,
+        filePath: '/different.srt',
+        originalFileUri: '/different.srt',
+      ), isFalse);
+      expect(await repository.updateSubtitleSaveLocation(
+        collectionId: ids.collectionId,
+        sessionId: ids.sessionId,
+        filePath: '',
+        originalFileUri: '/different.srt',
+      ), isFalse);
+      final current =
+          (await repository.fetchSubtitleCollection(ids.collectionId))!;
+      expect(current.filePath, isNull);
+      expect(current.originalFileUri, isNull);
+      expect(current.lines.first.original, 'One');
+    });
+
     test('save stores an atomic v2 post-operation checkpoint', () async {
       final ids = await _seed(harness);
       await harness.isar.writeTxn(() async {
