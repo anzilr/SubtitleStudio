@@ -799,6 +799,28 @@ class SubtitleRepository {
       return false;
     }
   }
+  /// Update only the saved file URI on a freshly loaded collection.
+  ///
+  /// Callers may have loaded their subtitle collection before a long-running
+  /// file save. Rewriting that stale object could erase intervening edits.
+  Future<bool> updateOriginalFileUri({
+    required int collectionId,
+    required String originalFileUri,
+  }) async {
+    try {
+      return await _isar.writeTxn(() async {
+        final current = await _isar.subtitleCollections.get(collectionId);
+        if (current == null) return false;
+        current.originalFileUri = originalFileUri;
+        await _isar.subtitleCollections.put(current);
+        return true;
+      });
+    } catch (error) {
+      logError('SubtitleRepository: File URI update failed: $error');
+      return false;
+    }
+  }
+
   /// Persist a changed subtitle collection.
   Future<bool> updateCollection(SubtitleCollection collection) async {
     try {
