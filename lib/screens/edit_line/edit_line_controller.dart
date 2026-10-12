@@ -498,6 +498,7 @@ class EditLineController extends Notifier<EditLineState> {
       _subtitleCollectionId,
       zeroBasedIndex,
       marked,
+      sessionId: state.sessionId,
     );
   }
 
@@ -506,6 +507,7 @@ class EditLineController extends Notifier<EditLineState> {
       _subtitleCollectionId,
       zeroBasedIndex,
       comment,
+      sessionId: state.sessionId,
     );
   }
 
@@ -514,6 +516,7 @@ class EditLineController extends Notifier<EditLineState> {
       _subtitleCollectionId,
       zeroBasedIndex,
       resolved,
+      sessionId: state.sessionId,
     );
   }
 
@@ -530,10 +533,11 @@ class EditLineController extends Notifier<EditLineState> {
   }
 
   Future<bool> addLine(SubtitleLine line, int insertIndex) {
-    return _repository.addSubtitleLine(
-      _subtitleCollectionId,
-      line,
-      insertIndex,
+    return _repository.addSubtitleLineWithHistory(
+      collectionId: _subtitleCollectionId,
+      line: line,
+      insertIndex: insertIndex,
+      sessionId: state.sessionId,
     );
   }
 
@@ -564,15 +568,22 @@ class EditLineController extends Notifier<EditLineState> {
         return false;
       }
 
+      final previous = state.subtitleLine!;
+      final updated = SubtitleLine()
+        ..index = previous.index
+        ..startTime = state.startTime
+        ..endTime = state.endTime
+        ..original = state.originalText
+        ..edited = state.editedText
+        ..marked = previous.marked
+        ..comment = previous.comment
+        ..resolved = previous.resolved;
       final success = await logPerformance(
         'Save subtitle line',
-        () => _repository.updateSubtitleLine(
+        () => _repository.saveSubtitleLineChanges(
           collectionId: _subtitleCollectionId,
-          lineIndex: state.subtitleLine!.index,
-          originalText: state.originalText,
-          editedText: state.editedText,
-          startTime: state.startTime,
-          endTime: state.endTime,
+          updatedLine: updated,
+          sessionId: state.sessionId,
         ),
         context: 'EditLineController',
       );
