@@ -2,9 +2,10 @@
 
 > **October 12, 2026 progress addendum** — This document's checkpoint-45
 > inventory and older step list are retained as an historical baseline.
-> The current verified quality gate is **Checkpoint 63** (`8a67248`):
-> zero analyzer issues and **223 tests passed**. Checkpoint 64 focuses on
-> remaining legacy writer callers; desktop layout is deferred
+> The current verified quality gate is **Checkpoint 64 R2** (`1e39a1e`):
+> zero analyzer issues and **235 tests passed**. Next, continue classifying
+> compatibility-only writers and then Git-style HEAD/branch/bookmark refs;
+> desktop layout remains deferred
 > on `refactor/riverpod-architecture`. See
 > [Checkpoint 59 history integrity](CHECKPOINT59_HISTORY_SAFETY.md),
 > [Checkpoint 60 mutation migration](CHECKPOINT60_LIVE_MUTATION_MIGRATION.md),
