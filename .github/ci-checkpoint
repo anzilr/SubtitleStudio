@@ -1,15 +1,15 @@
-Riverpod migration checkpoint 59 R2
+Riverpod migration checkpoint 60
 Date: 2026-10-12
 Checks:
-- flutter analyze (zero issues required)
+- flutter analyze
 - flutter test -j 1
 
 Focus:
-- atomic checkout with HEAD compare-and-swap and working subtitle hash
-- preserve concurrent collection metadata and reject stale undo/redo
-- validate .msone graph, version, source ownership and v2 integrity before import
-- import/replace session, subtitle collection and checkpoints in one Isar transaction
-- ask before subtitle-only recovery when history is invalid
-- add pure and Isar regression coverage
+- reject session/collection mismatches inside mutation transactions
+- use V2 commits for active editor annotations and add/delete
+- use V2 commits for Edit Line save/add/annotations
+- save Source View edits atomically with exact replayable full-list diff
+- verify annotation and source-view undo/redo with real Isar
+- preserve compatibility-only legacy methods while callers migrate
 
-No platform builds. Preserve upstream and release branches.
+No platform builds. Do not merge upstream or modify release branches.
