@@ -1,6 +1,8 @@
 import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/services/checkpoint_head_reference.dart';
+import 'package:subtitle_studio/services/checkpoint_state_hasher.dart';
+import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
 
 /// Low-level Isar persistence boundary for checkpoint history.
 ///
@@ -129,6 +131,8 @@ class CheckpointStore {
     required int sessionId,
     required Checkpoint targetCheckpoint,
     required SubtitleCollection collection,
+    required int? expectedHeadId,
+    required String expectedWorkingStateHash,
   }) async {
     await _isar.writeTxn(() async {
       final allCheckpoints = await _isar.checkpoints
@@ -136,17 +140,45 @@ class CheckpointStore {
           .sessionIdEqualTo(sessionId)
           .findAll();
 
+      final actualHead =
+          CheckpointHeadReference.resolveForMutation(allCheckpoints);
+      if (actualHead?.id != expectedHeadId) {
+        throw CheckpointConcurrentModificationException(
+          expectedHeadId: expectedHeadId,
+          actualHeadId: actualHead?.id,
+        );
+      }
+
+      final target = allCheckpoints
+          .where((checkpoint) => checkpoint.id == targetCheckpoint.id)
+          .firstOrNull;
+      if (target == null ||
+          target.subtitleCollectionId != collection.id ||
+          target.sessionId != sessionId) {
+        throw StateError('Checkpoint target is missing or belongs to another '
+            'session/collection.');
+      }
+
+      // Fetch inside the write transaction. A stale caller-side collection
+      // must never overwrite a concurrent edit or unrelated file metadata.
+      final stored = await _isar.subtitleCollections.get(collection.id);
+      if (stored == null) {
+        throw StateError('Subtitle collection was deleted during checkout.');
+      }
+      if (CheckpointStateHasher.hashLines(stored.lines) !=
+          expectedWorkingStateHash) {
+        throw CheckpointIntegrityException(
+          'Subtitle working tree changed during checkpoint checkout.',
+        );
+      }
+
       CheckpointHeadReference.moveInMemory(
         checkpoints: allCheckpoints,
-        checkpointId: targetCheckpoint.id,
+        checkpointId: target.id,
       );
-
-      if (allCheckpoints.isNotEmpty) {
-        await _isar.checkpoints.putAll(allCheckpoints);
-      }
-      // Do not reinsert targetCheckpoint: it may be a stale object whose
-      // isActive=false would overwrite the selected HEAD we just persisted.
-      await _isar.subtitleCollections.put(collection);
+      await _isar.checkpoints.putAll(allCheckpoints);
+      stored.lines = CheckpointStateReducer.copyLines(collection.lines);
+      await _isar.subtitleCollections.put(stored);
     });
   }
 
