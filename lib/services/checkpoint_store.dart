@@ -144,7 +144,8 @@ class CheckpointStore {
       if (allCheckpoints.isNotEmpty) {
         await _isar.checkpoints.putAll(allCheckpoints);
       }
-      await _isar.checkpoints.put(targetCheckpoint);
+      // Do not reinsert targetCheckpoint: it may be a stale object whose
+      // isActive=false would overwrite the selected HEAD we just persisted.
       await _isar.subtitleCollections.put(collection);
     });
   }
