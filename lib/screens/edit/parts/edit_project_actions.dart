@@ -56,9 +56,12 @@ extension _EditProjectActions on _EditScreenState {
               
               // Update originalFileUri if it wasn't set (for older entries)
               if (originalFileUri.isEmpty) {
-                subtitleCollection.originalFileUri = targetPath;
-                await _controller.saveSubtitleCollection(subtitleCollection);
-                print('Updated originalFileUri to: $targetPath');
+                final updated = await _controller.updateOriginalFileUri(targetPath);
+                if (updated) {
+                  print('Updated originalFileUri to: $targetPath');
+                } else {
+                  logWarning('File saved, but originalFileUri metadata update failed.');
+                }
               }
             } else {
               print('PlatformFileHandler.writeFile returned false for: $targetPath');
