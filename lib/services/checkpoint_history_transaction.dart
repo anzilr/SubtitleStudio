@@ -300,18 +300,9 @@ class CheckpointHistoryTransaction {
 
   Future<void> _cleanup(int sessionId) async {
     final maxCheckpoints = await _preferences.getMaxCheckpoints();
-    final checkpoints = await _store.getCheckpointsForSession(sessionId);
-    final head = await _store.getCurrentHeadCheckpoint(sessionId);
-
-    final toDelete = CheckpointPolicy.cleanupCandidates(
-      checkpoints: checkpoints,
+    await _store.pruneSession(
+      sessionId: sessionId,
       maxCheckpoints: maxCheckpoints,
-      headCheckpointId: head?.id,
-    );
-    if (toDelete.isEmpty) return;
-
-    await _store.deleteCheckpointIds(
-      toDelete.map((checkpoint) => checkpoint.id),
     );
   }
 }
