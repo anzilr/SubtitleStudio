@@ -8,6 +8,7 @@ import 'package:subtitle_studio/services/project_document_codec.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/screens/edit/edit_screen_host.dart';
 import 'package:subtitle_studio/widgets/session_selection/session_project_import_repository.dart';
+import 'package:subtitle_studio/widgets/session_selection/project_history_import_plan.dart';
 import 'package:subtitle_studio/utils/srt_compiler.dart';
 import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
 import 'package:subtitle_studio/utils/platform_file_handler.dart';
@@ -246,6 +247,35 @@ class _SessionSelectionSheetState extends ConsumerState<SessionSelectionSheet> {
     }
   }
 
+  Future<bool> _confirmSubtitleOnlyRecovery(
+    ProjectHistoryImportException error,
+  ) async {
+    if (!mounted) return false;
+    final recover = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Project history cannot be restored'),
+        content: Text(
+          '${error.message}\n\n'
+          'The original project has not been changed. You can import '
+          'only its subtitle lines, but its undo/redo checkpoints will '
+          'not be available in the imported session.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Import subtitles only'),
+          ),
+        ],
+      ),
+    );
+    return recover ?? false;
+  }
+
   Future<void> _replaceSession(Session session) async {
     setState(() {
       _isReplacing = true;
@@ -264,14 +294,25 @@ class _SessionSelectionSheetState extends ConsumerState<SessionSelectionSheet> {
         return;
       }
 
-      final updatedSession = await ref
-          .read(sessionProjectImportRepositoryProvider)
-          .replaceSession(
-            session: session,
-            projectDocument: widget.projectDocument,
-            srtFileInfo: srtFileInfo,
-            originalProjectUri: widget.originalFileUri,
-          );
+      final repository = ref.read(sessionProjectImportRepositoryProvider);
+      Session updatedSession;
+      try {
+        updatedSession = await repository.replaceSession(
+          session: session,
+          projectDocument: widget.projectDocument,
+          srtFileInfo: srtFileInfo,
+          originalProjectUri: widget.originalFileUri,
+        );
+      } on ProjectHistoryImportException catch (error) {
+        if (!await _confirmSubtitleOnlyRecovery(error)) return;
+        updatedSession = await repository.replaceSession(
+          session: session,
+          projectDocument: widget.projectDocument,
+          srtFileInfo: srtFileInfo,
+          originalProjectUri: widget.originalFileUri,
+          importSubtitlesOnly: true,
+        );
+      }
 
         if (mounted) {
           SnackbarHelper.showSuccess(
@@ -333,13 +374,23 @@ class _SessionSelectionSheetState extends ConsumerState<SessionSelectionSheet> {
         return;
       }
 
-      final createdSession = await ref
-          .read(sessionProjectImportRepositoryProvider)
-          .importAsNewSession(
-            projectDocument: widget.projectDocument,
-            srtFileInfo: srtFileInfo,
-            originalProjectUri: widget.originalFileUri,
-          );
+      final repository = ref.read(sessionProjectImportRepositoryProvider);
+      Session createdSession;
+      try {
+        createdSession = await repository.importAsNewSession(
+          projectDocument: widget.projectDocument,
+          srtFileInfo: srtFileInfo,
+          originalProjectUri: widget.originalFileUri,
+        );
+      } on ProjectHistoryImportException catch (error) {
+        if (!await _confirmSubtitleOnlyRecovery(error)) return;
+        createdSession = await repository.importAsNewSession(
+          projectDocument: widget.projectDocument,
+          srtFileInfo: srtFileInfo,
+          originalProjectUri: widget.originalFileUri,
+          importSubtitlesOnly: true,
+        );
+      }
 
       if (mounted) {
         SnackbarHelper.showSuccess(
