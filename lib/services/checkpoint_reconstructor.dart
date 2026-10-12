@@ -35,7 +35,6 @@ class CheckpointReconstructor {
       targetCheckpointId: targetCheckpointId,
     );
     if (nearestSnapshot == null ||
-        nearestSnapshot.snapshot.isEmpty ||
         !CheckpointHistoryMetadata.isPostOperation(nearestSnapshot)) {
       throw StateError(
         'Checkpoint $targetCheckpointId has no compatible v2 snapshot '
