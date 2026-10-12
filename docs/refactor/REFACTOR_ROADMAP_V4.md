@@ -1,5 +1,18 @@
 # SubtitleStudio Refactor Roadmap v4
 
+> **October 12, 2026 progress addendum** — This document's checkpoint-45
+> inventory and older step list are retained as an historical baseline.
+> The current verified quality gate is **Checkpoint 60 R2** (`343f261`):
+> zero analyzer issues and **201 tests passed**. Checkpoint 61 is in progress
+> on `refactor/riverpod-architecture`. See
+> [Checkpoint 59 history integrity](CHECKPOINT59_HISTORY_SAFETY.md),
+> [Checkpoint 60 mutation migration](CHECKPOINT60_LIVE_MUTATION_MIGRATION.md)
+> and [Checkpoint 61 import/metadata safety](CHECKPOINT61_COMMENT_IMPORT_AND_METADATA_SAFETY.md).
+> Next phases: finish raw/sessionless persistence migration, then persisted
+> HEAD/branch/bookmark references, history graph UI and archived-format fixtures.
+> Desktop UI redesign must be isolated from the existing mobile widget layout.
+
+
 Date: 2026-10-03
 Branch: `refactor/riverpod-architecture`
 Original audit head: `cff387f69257e37bb3b6ef26111b2683a57bf510`
