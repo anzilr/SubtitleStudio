@@ -478,7 +478,7 @@ extension _EditLinePersistence on EditSubtitleScreenState {
     bool saveSuccessful = false;
     String? originalFileUri = _subtitle!.originalFileUri;
     
-    if (originalFileUri!.isNotEmpty) {
+    if (originalFileUri != null && originalFileUri.isNotEmpty) {
       try {
         if (Platform.isAndroid && originalFileUri.startsWith('content://')) {
           // Use SAF to write to the content URI
@@ -698,10 +698,16 @@ extension _EditLinePersistence on EditSubtitleScreenState {
           
           // Update the subtitle collection with new paths
           if (saveSuccessful && newFilePath != null) {
-            _subtitle!.filePath = newFilePath;
-            _subtitle!.originalFileUri = newOriginalUri;
-            
-            final updateSuccess = await _editLineController.saveCollection(_subtitle!);
+            final updateSuccess = await _editLineController
+                .updateSubtitleSaveLocation(
+                  filePath: newFilePath,
+                  originalFileUri: newOriginalUri ?? newFilePath,
+                );
+            if (updateSuccess) {
+              // Update only the local file-location fields after persistence.
+              _subtitle!.filePath = newFilePath;
+              _subtitle!.originalFileUri = newOriginalUri ?? newFilePath;
+            }
             
             if (updateSuccess && mounted) {
               ScaffoldMessenger.of(contxt).showSnackBar(
