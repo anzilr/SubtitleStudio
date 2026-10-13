@@ -98,13 +98,13 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
 
   Future<String?> _enterName(String title, String prefix,
       {String initial = ''}) async {
-    final controller = TextEditingController(text: initial);
+    var entered = initial;
     final suffix = await showDialog<String>(
       context: context,
       builder: (dialog) => AlertDialog(
         title: Text(title),
         content: TextField(
-          controller: controller,
+          onChanged: (value) => entered = value,
           key: const ValueKey('history-ref-name'),
           autofocus: true,
           decoration: const InputDecoration(
@@ -116,12 +116,11 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
         actions: [
           TextButton(onPressed: () => Navigator.pop(dialog),
               child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(dialog, controller.text),
+          FilledButton(onPressed: () => Navigator.pop(dialog, entered),
               child: const Text('Save')),
         ],
       ),
     );
-    controller.dispose();
     if (suffix == null || suffix.trim().isEmpty) return null;
     return prefix + suffix.trim();
   }

@@ -1,12 +1,11 @@
-Riverpod migration checkpoint 72 R2
+Riverpod migration checkpoint 72 R3
 Date: 2026-10-13
 Checks:
-- flutter analyze with zero warnings/issues
+- flutter analyze zero issues
 - flutter test -j 1
 
-Scope:
-- mobile branch-aware history graph and named refs actions
-- inject history command contract for deterministic widget tests
-- Isar persistence separately exercised by existing integration tests
-- retry warnings, checkout confirmations and lifecycle safety
-- no desktop shell, schema change or upstream edits
+Changes:
+- branch-aware mobile timeline and persistent refs actions
+- deterministic injectable widget test commands
+- text dialog input without early controller disposal (R2 regression)
+- no desktop shell, schema change, upstream or tag change
