@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/services/checkpoint_store.dart';
 import 'package:subtitle_studio/services/checkpoint_history_metadata.dart';
+import 'package:subtitle_studio/services/checkpoint_reference_migration_plan.dart';
 import 'package:subtitle_studio/services/checkpoint_state_hasher.dart';
 import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
 
@@ -506,6 +507,76 @@ void main() {
       throwsStateError,
     );
     expect((await store.getCurrentHeadCheckpoint(34))?.id, id);
+  });
+
+  test('migration preview reads Isar history without rewriting legacy HEAD',
+      () async {
+    final root = Checkpoint(
+      sessionId: 88,
+      subtitleCollectionId: 880,
+      timestamp: DateTime.utc(2026, 10, 13, 10),
+      operationType: 'snapshot',
+      description: 'Legacy root',
+      isActive: true,
+      checkpointType: 'snapshot',
+      deltas: const [],
+      snapshot: [_line(1, 'Initial')],
+    );
+    final rootId = await store.putCheckpoint(root);
+    final second = Checkpoint(
+      sessionId: 88,
+      subtitleCollectionId: 880,
+      timestamp: DateTime.utc(2026, 10, 13, 11),
+      operationType: 'edit',
+      description: 'Legacy edit',
+      parentCheckpointId: rootId,
+      isActive: true,
+      checkpointType: 'snapshot',
+      deltas: const [],
+      snapshot: [_line(1, 'Edited')],
+    );
+    final secondId = await store.putCheckpoint(second);
+
+    final CheckpointReferenceMigrationPlan preview =
+        await store.previewReferenceMigration(88);
+    expect(preview.sessionId, 88);
+    expect(preview.headCheckpointId, secondId);
+    expect(preview.requiresLegacyHeadNormalization, isTrue);
+    expect(preview.references.map((ref) => ref.name),
+        ['HEAD', 'refs/heads/main']);
+
+    // A dry run must never silently migrate or normalize the stored archive.
+    final original = await store.getCheckpointsForSession(88);
+    expect(original.where((checkpoint) => checkpoint.isActive), hasLength(2));
+    final remapped = preview.remap(
+      destinationSessionId: 99,
+      destinationCollectionId: 990,
+      idMap: {rootId: 1001, secondId: 1002},
+    );
+    expect(remapped.headCheckpointId, 1002);
+    expect((await store.getCheckpointsForSession(99)), isEmpty);
+  });
+
+  test('migration preview rejects corrupt V2 HEAD without altering database',
+      () async {
+    final invalid = Checkpoint(
+      sessionId: 89,
+      subtitleCollectionId: 890,
+      timestamp: DateTime.utc(2026, 10, 13),
+      operationType: 'snapshot',
+      description: 'Invalid HEAD',
+      isActive: false,
+      checkpointType: 'snapshot',
+      deltas: const [],
+      snapshot: [_line(1, 'Current')],
+      metadata: CheckpointHistoryMetadata.encodePostOperation(),
+    );
+    final checkpointId = await store.putCheckpoint(invalid);
+    await expectLater(
+      store.previewReferenceMigration(89),
+      throwsA(isA<CheckpointIntegrityException>()),
+    );
+    expect((await store.getCheckpoint(checkpointId))!.isActive, isFalse);
   });
 
 }
