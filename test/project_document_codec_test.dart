@@ -73,6 +73,70 @@ void main() {
       );
     });
 
+    test('versioned .msone refs survive codec round-trip', () {
+      final references = ProjectHistoryReferencesData.create(entries: const [
+        ProjectHistoryReferenceData(
+          name: 'HEAD', kind: 'head', targetCheckpointId: 42,
+        ),
+        ProjectHistoryReferenceData(
+          name: 'refs/heads/main', kind: 'branch', targetCheckpointId: 42,
+        ),
+        ProjectHistoryReferenceData(
+          name: 'refs/bookmarks/manual-35',
+          kind: 'bookmark', targetCheckpointId: 35,
+        ),
+      ]);
+      final encoded = references.toJson();
+      final restored = ProjectHistoryReferencesData.fromJson(encoded);
+      expect(restored.schemaVersion, 1);
+      expect(restored.entries.map((ref) => ref.name),
+          ['HEAD', 'refs/heads/main', 'refs/bookmarks/manual-35']);
+      expect(restored.entries.last.targetCheckpointId, 35);
+      expect(() => restored.entries.clear(), throwsUnsupportedError);
+    });
+
+    test('rejects malformed history references and unsupported versions', () {
+      final validHead = {
+        'name': 'HEAD', 'kind': 'head', 'targetCheckpointId': 5,
+      };
+      for (final entry in [
+        {'name': '../escape', 'kind': 'branch', 'targetCheckpointId': 5},
+        {'name': 'refs/heads/../test', 'kind': 'branch', 'targetCheckpointId': 5},
+        {'name': 'refs/heads/main', 'kind': 'bookmark', 'targetCheckpointId': 5},
+        {'name': 'refs/heads/main', 'kind': 'branch', 'targetCheckpointId': -1},
+        {'name': 'refs/heads/e.lock', 'kind': 'branch', 'targetCheckpointId': 5},
+        {'name': 'refs/heads/test', 'kind': 'other', 'targetCheckpointId': 5},
+      ]) {
+        expect(
+          () => ProjectHistoryReferencesData.fromJson({
+            'schemaVersion': 1, 'entries': [validHead, entry],
+          }),
+          throwsFormatException,
+        );
+      }
+      for (final refs in [
+        {'schemaVersion': 2, 'entries': [validHead]},
+        {'schemaVersion': 1, 'entries': [validHead, validHead]},
+        {'schemaVersion': 1, 'entries': [
+          {'name': 'refs/heads/main', 'kind': 'branch', 'targetCheckpointId': 5},
+        ]},
+      ]) {
+        expect(
+          () => ProjectHistoryReferencesData.fromJson(refs),
+          throwsFormatException,
+        );
+      }
+    });
+
+    test('older .msone archives leave the new optional section absent', () {
+      final old = ProjectDocumentCodec.decode(
+        '{"version":"1.0","session":{},'
+        '"subtitleCollection":{"lines":[]},"checkpoints":[]}',
+      );
+      expect(old.historyReferences, isNull);
+      expect(old.toJson().containsKey('historyRefs'), isFalse);
+    });
+
     test('allows projects without checkpoints for compatibility', () {
       final document = ProjectDocumentCodec.decode(
         '''
