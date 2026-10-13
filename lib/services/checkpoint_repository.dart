@@ -37,13 +37,16 @@ class CheckpointRepository {
     return _manager.getCheckpointsForSession(sessionId);
   }
 
+  /// Reject a checkout based on a stale displayed HEAD.
   Future<bool> checkoutCheckpoint({
     required int checkpointId,
     required int sessionId,
+    int? ifCurrentHeadId,
   }) {
     return _manager.checkoutCheckpoint(
       checkpointId: checkpointId,
       sessionId: sessionId,
+      ifCurrentHeadId: ifCurrentHeadId,
     );
   }
 
@@ -104,7 +107,14 @@ class CheckpointRepository {
   Future<bool> checkoutBranch({
     required int sessionId,
     required String name,
-  }) => _manager.checkoutBranch(sessionId: sessionId, name: name);
+    int? ifCurrentHeadId,
+    int? ifBranchTipId,
+  }) => _manager.checkoutBranch(
+    sessionId: sessionId,
+    name: name,
+    ifCurrentHeadId: ifCurrentHeadId,
+    ifBranchTipId: ifBranchTipId,
+  );
 
   Future<List<HistoryRef>> getPersistentReferences(int sessionId) =>
       _manager.getPersistentReferences(sessionId);

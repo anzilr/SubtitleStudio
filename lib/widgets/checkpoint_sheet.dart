@@ -5,6 +5,7 @@ import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/screens/screen_help.dart';
 import 'package:subtitle_studio/widgets/checkpoint_history_panel.dart';
+import 'package:subtitle_studio/services/checkpoint_timeline.dart';
 
 /// Edit History Sheet - User-friendly undo/redo interface
 /// 
@@ -49,6 +50,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
   bool _isLoading = true;
   bool _showGraph = true;
   int _graphRefreshVersion = 0;
+  int _historyLoadGeneration = 0;
   List<CheckpointNode> _treeNodes = [];
   final ScrollController _scrollController = ScrollController();
 
@@ -60,6 +62,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
   
   @override
   void dispose() {
+    _historyLoadGeneration++;
     _scrollController.dispose();
     super.dispose();
   }
@@ -87,31 +90,10 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
     }).toList();
   }
   
-  /// Check if a checkpoint is a descendant of another
-  bool _isDescendantOf(Checkpoint checkpoint, int ancestorId) {
-    int? currentParentId = checkpoint.parentCheckpointId;
-    
-    while (currentParentId != null) {
-      if (currentParentId == ancestorId) {
-        return true;
-      }
-      
-      // Find parent checkpoint
-      final parent = _checkpoints.firstWhere(
-        (cp) => cp.id == currentParentId,
-        orElse: () => checkpoint, // Fallback to avoid infinite loop
-      );
-      
-      if (parent.id == checkpoint.id) break; // Avoid infinite loop
-      currentParentId = parent.parentCheckpointId;
-    }
-    
-    return false;
-  }
-
   int? _currentCheckpointId; // Track the current/latest point in history
   
   Future<void> _loadHistory() async {
+    final loadId = ++_historyLoadGeneration;
     setState(() => _isLoading = true);
     
     try {
@@ -130,7 +112,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
         }
       }
 
-      if (!mounted) return;
+      if (!mounted || loadId != _historyLoadGeneration) return;
 
       setState(() {
         _checkpoints = checkpoints;
@@ -148,7 +130,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
         });
       }
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || loadId != _historyLoadGeneration) return;
       setState(() => _isLoading = false);
       SnackbarHelper.showError(
         context,
@@ -189,14 +171,11 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
   }
 
   Future<void> _restoreCheckpoint(Checkpoint checkpoint) async {
-    // Count future checkpoints that will be affected
-    int futureCheckpointsCount = 0;
-    for (final cp in _checkpoints) {
-      if (cp.parentCheckpointId == checkpoint.id || 
-          _isDescendantOf(cp, checkpoint.id)) {
-        futureCheckpointsCount++;
-      }
-    }
+    // O(history size), cycle-bounded traversal, including alternate branches.
+    final futureCheckpointsCount = CheckpointTimeline.descendantIds(
+      checkpoints: _checkpoints,
+      parentCheckpointId: checkpoint.id,
+    ).length;
     
     // Show confirmation dialog with warning about future checkpoints
     final confirmed = await showDialog<bool>(
@@ -382,7 +361,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Mark an important moment in your work. You can easily jump back to any save point to undo multiple changes at once.',
+                        'Saves a named snapshot in this project\'s history, not a separate backup file. Use a bookmark to label an existing commit without adding a snapshot.',
                         style: TextStyle(
                           fontSize: 13,
                           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
@@ -467,7 +446,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                     SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Create Full Backup',
+                        'Create In-app Snapshot',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -492,7 +471,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                           Icon(Icons.info_outline, size: 16, color: Colors.orange.shade700),
                           const SizedBox(width: 8),
                           Text(
-                            'What is a Full Backup?',
+                            'What is an In-app Snapshot?',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: Colors.orange.shade700,
@@ -502,7 +481,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'A complete backup of all subtitles at this moment. Provides the most reliable way to restore your work to this exact point.',
+                        'Saves a snapshot in this project\'s edit history. It does not create a separate backup file. Export your project for an independent copy.',
                         style: TextStyle(
                           fontSize: 13,
                           color: Colors.orange.shade900,
@@ -562,7 +541,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
       await _loadHistory();
       
       if (mounted) {
-        SnackbarHelper.showSuccess(context, 'Full backup created: $name');
+        SnackbarHelper.showSuccess(context, 'In-app snapshot created: $name');
       }
     }
   }
@@ -614,35 +593,26 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
     }
   }
   
-  /// Build tree view with visual connections
-  Widget _buildTreeView(BuildContext context, bool isDark, Color onSurfaceColor, Color mutedColor, Color borderColor) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: _treeNodes.asMap().entries.map((entry) {
-        final index = entry.key;
-        final node = entry.value;
-        final isFirst = index == 0;
-        final isLast = index == _treeNodes.length - 1;
-        
-        // Check if next node has different depth (indicates branching)
-        final nextNode = index < _treeNodes.length - 1 ? _treeNodes[index + 1] : null;
-        final hasNextNodeAtDifferentDepth = nextNode != null && nextNode.depth != node.depth;
-        
+  /// Lazily build the legacy cards rather than allocating every card eagerly.
+  Widget _buildTreeView(BuildContext context, bool isDark,
+      Color onSurfaceColor, Color mutedColor, Color borderColor) {
+    return ListView.builder(
+      controller: _scrollController,
+      padding: const EdgeInsets.all(16),
+      itemCount: _treeNodes.length,
+      itemBuilder: (context, index) {
+        final node = _treeNodes[index];
         return _buildTreeNode(
-          context,
-          node,
-          isDark,
-          onSurfaceColor,
-          mutedColor,
-          borderColor,
-          isFirst: isFirst,
-          isLast: isLast,
-          showBranchLine: hasNextNodeAtDifferentDepth,
+          context, node, isDark, onSurfaceColor, mutedColor, borderColor,
+          isFirst: index == 0,
+          isLast: index == _treeNodes.length - 1,
+          showBranchLine: index + 1 < _treeNodes.length &&
+              _treeNodes[index + 1].depth != node.depth,
         );
-      }).toList(),
+      },
     );
   }
-  
+
   /// Get checkpoint type details (icon, color, size)
   Map<String, dynamic> _getCheckpointTypeDetails(String operationType, String checkpointType) {
     if (checkpointType == 'snapshot') {
@@ -1005,7 +975,13 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                 ? CheckpointHistoryPanel(
                     sessionId: widget.sessionId,
                     refreshVersion: _graphRefreshVersion,
-                    onCheckpointRestored: widget.onCheckpointRestored,
+                    onCheckpointRestored: () {
+                      // Close the sheet before allowing the editor callback
+                      // to trigger route/state changes.
+                      if (!mounted) return;
+                      Navigator.of(context).pop();
+                      widget.onCheckpointRestored();
+                    },
                   )
                 : _isLoading
                 ? const Center(
@@ -1045,11 +1021,9 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                           ),
                         ),
                       )
-                    : SingleChildScrollView(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.all(16),
-                        child: _buildTreeView(context, isDark, onSurfaceColor, mutedColor, borderColor),
-                      ),
+                    : _buildTreeView(
+                        context, isDark, onSurfaceColor, mutedColor, borderColor),
+
           ),
 
           // Action buttons
@@ -1090,7 +1064,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                         foregroundColor: Colors.white,
                       ),
                       icon: const Icon(Icons.save, size: 18),
-                      label: const Text('Full Backup'),
+                      label: const Text('Snapshot'),
                     ),
                   ),
                 ),

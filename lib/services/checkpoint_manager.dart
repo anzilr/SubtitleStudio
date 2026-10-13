@@ -691,15 +691,23 @@ class CheckpointManager {
   Future<bool> checkoutBranch({
     required int sessionId,
     required String name,
+    int? ifCurrentHeadId,
+    int? ifBranchTipId,
   }) async {
     try {
       final target = await _historyRefs.resolveBranch(
         sessionId: sessionId,
         name: name,
       );
+      // Refuse a branch that advanced while a confirmation was open.
+      // The transactional restore also checks the tip again.
+      if (ifBranchTipId != null && target != ifBranchTipId) {
+        return false;
+      }
       return await undoToCheckpoint(
         checkpointId: target,
         sessionId: sessionId,
+        ifCurrentHeadId: ifCurrentHeadId,
         attachBranchName: name,
       );
     } on StateError {

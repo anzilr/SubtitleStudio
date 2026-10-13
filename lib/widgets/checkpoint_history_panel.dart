@@ -28,6 +28,8 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
   CheckpointHistoryGraph? _graph;
   String? _error;
   bool _busy = true;
+  // Reserve dialogs too, so two actions cannot both receive confirmation.
+  bool _dialogPending = false;
   int _generation = 0;
 
   HistoryGraphCommands get _actions => widget.commands ?? CheckpointHistoryActions(
@@ -88,7 +90,7 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
     } catch (_) {
       if (!mounted || request != _generation) return;
       setState(() => _busy = false);
-      _notify('History was not changed. Verify the reference name.');
+      _notify('History operation could not be completed. Reloading the latest state.');
       await _reload();
     }
   }
@@ -103,7 +105,8 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
       context: context,
       builder: (dialog) => AlertDialog(
         title: Text(title),
-        content: TextField(
+        content: TextFormField(
+          initialValue: initial,
           onChanged: (value) => entered = value,
           key: const ValueKey('history-ref-name'),
           autofocus: true,
@@ -143,9 +146,12 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
   Future<void> _checkout({
     required String target,
     required bool branch,
-    required Future<CheckpointHistoryGraph?> Function() action,
+    required Future<CheckpointHistoryGraph?> Function(int expectedHeadId) action,
   }) async {
-    if (_busy) return;
+    if (_busy || _dialogPending || _graph?.headCheckpointId == null) return;
+    _dialogPending = true;
+    try {
+    final expectedHeadId = _graph!.headCheckpointId!;
     final confirmed = await _confirm(
       branch ? 'Switch branch?' : 'Check out commit?',
       branch
@@ -160,7 +166,7 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
     final request = ++_generation;
     setState(() => _busy = true);
     try {
-      final result = await action();
+      final result = await action(expectedHeadId);
       if (!mounted || request != _generation) return;
       if (result == null) {
         setState(() => _busy = false);
@@ -169,18 +175,23 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
         return;
       }
       setState(() { _graph = result; _busy = false; });
+      // The owning sheet closes itself before invoking the editor callback.
       widget.onCheckpointRestored();
-      if (mounted) Navigator.of(context).pop();
     } catch (_) {
       if (!mounted || request != _generation) return;
       setState(() => _busy = false);
-      _notify('Checkout failed; history was not switched.');
+      _notify('Checkout could not be confirmed. Reloading current history.');
       await _reload();
+    }
+    } finally {
+      _dialogPending = false;
     }
   }
 
   Future<void> _create(String kind, int checkpointId) async {
-    if (_busy) return;
+    if (_busy || _dialogPending) return;
+    _dialogPending = true;
+    try {
     final branch = kind == 'branch';
     final name = await _enterName(
       branch ? 'Create branch' : 'Bookmark commit',
@@ -190,20 +201,30 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
     await _run(() => branch
       ? _actions.createBranch(name: name, checkpointId: checkpointId)
       : _actions.createBookmark(name: name, checkpointId: checkpointId));
+    } finally {
+      _dialogPending = false;
+    }
   }
 
   Future<void> _referenceAction(String command,
       HistoryGraphReference historyRef) async {
-    if (_busy) return;
+    if (_busy || _dialogPending) return;
     if (command == 'switch') {
       await _checkout(target: 'branch "' + _shortName(historyRef) + '"',
         branch: true,
-        action: () => _actions.checkoutBranch(historyRef.name));
+        action: (headId) => _actions.checkoutBranch(
+          historyRef.name,
+          ifCurrentHeadId: headId,
+          ifBranchTipId: historyRef.checkpointId,
+        ));
     } else if (command == 'checkout') {
       await _checkout(target: 'commit #' + historyRef.checkpointId.toString(),
         branch: false,
-        action: () => _actions.checkoutCommit(historyRef.checkpointId));
+        action: (headId) => _actions.checkoutCommit(
+          historyRef.checkpointId, ifCurrentHeadId: headId));
     } else if (command == 'rename' && historyRef.canRename) {
+      _dialogPending = true;
+      try {
       final name = await _enterName(
         'Rename ' + historyRef.kind,
         historyRef.kind == 'branch' ? 'refs/heads/' : 'refs/bookmarks/',
@@ -212,13 +233,21 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
         await _run(() => _actions.renameReference(
           name: historyRef.name, newName: name));
       }
+      } finally {
+        _dialogPending = false;
+      }
     } else if (command == 'delete' && historyRef.canDelete) {
+      _dialogPending = true;
+      try {
       final yes = await _confirm('Delete reference?',
         'Remove "' + _shortName(historyRef) + '"? The checkpoint is not '
         'deleted immediately, but may later become eligible for pruning.',
         'Delete');
       if (yes && mounted) {
         await _run(() => _actions.deleteReference(historyRef.name));
+      }
+      } finally {
+        _dialogPending = false;
       }
     }
   }
@@ -303,7 +332,8 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
             onSelected: (value) {
               if (value == 'checkout') {
                 _checkout(target: 'checkpoint ' + label, branch: false,
-                  action: () => _actions.checkoutCommit(node.checkpointId));
+                  action: (headId) => _actions.checkoutCommit(
+                    node.checkpointId, ifCurrentHeadId: headId));
               } else {
                 _create(value, node.checkpointId);
               }
@@ -336,7 +366,9 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
         onPressed: _reload, icon: const Icon(Icons.refresh),
         label: const Text('No history yet · Refresh')));
     }
-    final nodes = graph.newestFirst;
+    // Index the immutable topological list in reverse without copying it
+    // on every busy/refresh rebuild (important for large edit histories).
+    final nodes = graph.nodes;
     return Column(children: [
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -354,21 +386,21 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
             icon: const Icon(Icons.refresh)),
         ]),
       ),
-      SizedBox(height: 64, child: ListView(
+      SizedBox(height: 64, child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12),
-        children: [
-          for (final historyRef in graph.references)
-            Padding(padding: const EdgeInsets.only(right: 6),
-              child: Center(child: _refMenu(historyRef))),
-        ],
+        itemCount: graph.references.length,
+        itemBuilder: (_, index) => Padding(
+          padding: const EdgeInsets.only(right: 6),
+          child: Center(child: _refMenu(graph.references[index])),
+        ),
       )),
       if (_busy) const LinearProgressIndicator(),
       Expanded(child: ListView.builder(
         key: const ValueKey('history-graph-list'),
         padding: const EdgeInsets.all(12),
         itemCount: nodes.length,
-        itemBuilder: (_, index) => _commitRow(nodes[index]),
+        itemBuilder: (_, index) => _commitRow(nodes[nodes.length - index - 1]),
       )),
     ]);
   }

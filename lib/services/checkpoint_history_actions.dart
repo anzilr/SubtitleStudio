@@ -23,8 +23,13 @@ abstract interface class HistoryGraphCommands {
     required String name, required String newName,
   });
   Future<CheckpointHistoryGraph> deleteReference(String name);
-  Future<CheckpointHistoryGraph?> checkoutBranch(String name);
-  Future<CheckpointHistoryGraph?> checkoutCommit(int checkpointId);
+  Future<CheckpointHistoryGraph?> checkoutBranch(String name, {
+    int? ifCurrentHeadId,
+    int? ifBranchTipId,
+  });
+  Future<CheckpointHistoryGraph?> checkoutCommit(int checkpointId, {
+    int? ifCurrentHeadId,
+  });
 }
 
 class CheckpointHistoryActions implements HistoryGraphCommands {
@@ -68,17 +73,30 @@ class CheckpointHistoryActions implements HistoryGraphCommands {
     return load();
   }
 
-  Future<CheckpointHistoryGraph?> checkoutBranch(String name) async {
-    if (!await _repository.checkoutBranch(sessionId: sessionId, name: name)) {
+  Future<CheckpointHistoryGraph?> checkoutBranch(String name, {
+    int? ifCurrentHeadId,
+    int? ifBranchTipId,
+  }) async {
+    if (!await _repository.checkoutBranch(
+      sessionId: sessionId,
+      name: name,
+      ifCurrentHeadId: ifCurrentHeadId,
+      ifBranchTipId: ifBranchTipId,
+    )) {
       return null;
     }
     return load();
   }
 
   /// Direct commit checkout deliberately detaches HEAD (Checkpoint 70).
-  Future<CheckpointHistoryGraph?> checkoutCommit(int checkpointId) async {
+  Future<CheckpointHistoryGraph?> checkoutCommit(int checkpointId, {
+    int? ifCurrentHeadId,
+  }) async {
     if (!await _repository.checkoutCheckpoint(
-        sessionId: sessionId, checkpointId: checkpointId)) {
+      sessionId: sessionId,
+      checkpointId: checkpointId,
+      ifCurrentHeadId: ifCurrentHeadId,
+    )) {
       return null;
     }
     return load();
