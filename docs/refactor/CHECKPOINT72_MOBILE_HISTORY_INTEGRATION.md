@@ -40,3 +40,18 @@ Quality gate: flutter analyze and flutter test -j 1 at checkpoint.
   checkpoint_history_actions_integration_test.dart and existing integration
   suites. This keeps UI testing deterministic without losing persistence tests.
 
+
+## Verified Checkpoint 72 R3
+
+- Code gate: [`6667a4e`](https://github.com/anzilr/SubtitleStudio/commit/6667a4ea317e9603d674309b8999f2f5e5e04fda).
+- [Successful GitHub Actions run](https://github.com/anzilr/SubtitleStudio/actions/runs/38452604391).
+- `flutter analyze`: **No issues found** (including warnings).
+- `flutter test -j 1`: **287 tests passed**, three additional widget tests
+  beyond Checkpoint 71.
+- R1 used native Isar in a widget-test fake async zone and was replaced by an
+  injectable fake command contract; the first run was cancelled.
+- R2 found a real TextEditingController early-disposal bug in the new dialog
+  (285 passed, two failed). Replaced dialog controller with local onChanged
+  input state; R3 is green.
+- No native builds, changes to database schemas, upstream changes, desktop
+  workspace or release tag changes.

@@ -1,19 +1,21 @@
 # SubtitleStudio Refactor Roadmap v4
 
-> **October 13, 2026 progress addendum** — This roadmap retains the older
-> checkpoint-45 inventory for historical context. The current verified gate
-> is **Checkpoint 71 R2** ([code commit `bed5566`](https://github.com/anzilr/SubtitleStudio/commit/bed5566007e93ca6d95f7e596899cf069ce77277),
-> [successful CI](https://github.com/anzilr/SubtitleStudio/actions/runs/38449841062)):
-> **284 passing Flutter tests, zero analyzer issues**. Persistent history
-> refs, Git-style checkout and branch/bookmark operations (Checkpoint 70)
-> now feed a pure, immutable history DAG and a shared command boundary
-> (Checkpoint 71). The graph includes parent/children, deterministic
-> topological order, HEAD ancestry, attached/detached branches and actual
-> reference names. Invalid histories fail closed. **No new UI shell has
-> been implemented.** Next: existing mobile history presentation, with
-> desktop layout postponed; extended SRT encoding (parse AND compile),
-> waveform performance and released-data/platform qualification remain.
-> See [Checkpoint 71 implementation report](CHECKPOINT71_HISTORY_GRAPH_AND_COMMANDS.md).
+> **October 13, 2026 progress addendum** — The earlier checkpoint-45
+> inventory remains below for historical context. Current **verified**
+> quality gate: **Checkpoint 72 R3**, code commit
+> [`6667a4e`](https://github.com/anzilr/SubtitleStudio/commit/6667a4ea317e9603d674309b8999f2f5e5e04fda),
+> [successful CI](https://github.com/anzilr/SubtitleStudio/actions/runs/38452604391):
+> **287 tests passed, 0 analyzer issues**.
+> Mobile Edit History now defaults to the shared branch-aware graph, with
+> persistent branch/bookmark actions and safe checkout confirmations.
+> The prior classic timeline is available via a toggle and existing snapshot
+> actions remain. The graphical view shows parent IDs and fork markers rather
+> than a full lane-routed DAG. See
+> [Checkpoint 72 report](CHECKPOINT72_MOBILE_HISTORY_INTEGRATION.md).
+> Checkpoint 71 remains the UI-independent graph/commands foundation.
+> Desktop shell still deferred. Encoding for SRT parse AND compile, waveform
+> performance, archived production backup fixtures and native platform builds
+> remain outstanding.
 
 > **New roadmap requirement — Expanded SRT text encodings (requested 2026-10-12):**
 > Reference implementation research: [KDE Subtitle Composer and Subtitle Edit
