@@ -31,11 +31,14 @@ class ProjectSaveCoordinator {
   }) async {
     final checkpoints =
         await _checkpointRepository.getCheckpointsForSession(session.id);
+    final persistentRefs = await _checkpointRepository
+        .getPersistentReferences(session.id);
 
     return ProjectDocumentBuilder.build(
       session: session,
       subtitleCollection: subtitleCollection,
       checkpoints: checkpoints,
+      persistentReferences: persistentRefs,
       projectVersion: projectVersion,
       appVersion: appVersion,
     );
