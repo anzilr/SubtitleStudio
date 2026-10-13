@@ -131,87 +131,11 @@ class HistoryRefRepository {
     };
     if (prefix.isEmpty || !name.startsWith(prefix)) return false;
     final suffix = name.substring(prefix.length);
-    final safe = RegExp(r'^[A-Za-z0-9][A-Za-z0-9_.-]* Existing records are
-  /// validated rather than overwritten, even if startup is repeated.
-  Future<List<HistoryRef>> ensureMigrated(int sessionId) {
-    return _isar.writeTxn(() =>
-        ensureMigratedInTransaction(_isar, sessionId: sessionId));
-  }
-
-  /// Read persisted refs; automatically upgrade old history atomically.
-  Future<List<HistoryRef>> getReferences(int sessionId) async {
-    final refs = await ensureMigrated(sessionId);
-    return List<HistoryRef>.unmodifiable(refs);
-  }
-
-  /// Advance the single HEAD ref in the SAME transaction as a commit.
-  /// If HEAD is attached, advance that named branch too. A direct checkout
-  /// instead detaches HEAD and keeps prior branch tips unchanged.
-  static Future<void> moveHeadInTransaction(
-    Isar isar, {
-    required int sessionId,
-    required int checkpointId,
-    bool detach = false,
-    String? attachBranchName,
-  }) async {
-    final refs = await ensureMigratedInTransaction(
-      isar, sessionId: sessionId,
-    );
-    if (refs.isEmpty) {
-      throw const CheckpointIntegrityException('Cannot move empty HEAD.');
-    }
-    final head = refs.firstWhere((r) => r.name == 'HEAD');
-    final commits = await isar.checkpoints
-        .filter().sessionIdEqualTo(sessionId).findAll();
-    if (!commits.any((c) =>
-        c.id == checkpointId &&
-        c.subtitleCollectionId == head.subtitleCollectionId)) {
-      throw const CheckpointIntegrityException(
-        'HEAD cannot target a missing or foreign checkpoint.',
-      );
-    }
-    final branchName = attachBranchName ??
-        (detach ? null : head.symbolicBranchName);
-    final matching = refs.where((r) =>
-        r.name == branchName && r.kind == 'branch').firstOrNull;
-    if (branchName != null && matching == null) {
-      throw const CheckpointIntegrityException(
-        'Attached branch was deleted during HEAD movement.',
-      );
-    }
-    if (attachBranchName != null &&
-        matching!.targetCheckpointId != checkpointId) {
-      throw const CheckpointIntegrityException(
-        'Branch tip changed during checkout.',
-      );
-    }
-    final now = DateTime.now().toUtc();
-    head.targetCheckpointId = checkpointId;
-    head.symbolicBranchName = branchName;
-    head.updatedAt = now;
-    if (branchName != null && attachBranchName == null) {
-      matching!.targetCheckpointId = checkpointId;
-      matching.updatedAt = now;
-      await isar.historyRefs.put(matching);
-    }
-    await isar.historyRefs.put(head);
-  }
-
-  static Future<void> deleteSessionRefsInTransaction(
-    Isar isar, {
-    required int sessionId,
-  }) async {
-    final refs = await isar.historyRefs
-        .filter().sessionIdEqualTo(sessionId).findAll();
-    if (refs.isNotEmpty) {
-      await isar.historyRefs.deleteAll(refs.map((r) => r.id).toList());
-    }
-  }
-}
-);
+    final safe = RegExp(r'^[A-Za-z0-9][A-Za-z0-9_.-]*');
     return suffix.split('/').every((part) =>
         part.isNotEmpty && part != '.' && part != '..' &&
-        !part.endsWith('.lock') && safe.hasMatch(part));
+        !part.endsWith('.lock') &&
+        safe.firstMatch(part)?.end == part.length);
   }
 
   static bool _collides(String name, Iterable<String> existing) =>
@@ -333,6 +257,7 @@ class HistoryRefRepository {
     required int sessionId,
     required int checkpointId,
     bool detach = false,
+    String? attachBranchName,
   }) async {
     final refs = await ensureMigratedInTransaction(
       isar, sessionId: sessionId,
@@ -350,18 +275,31 @@ class HistoryRefRepository {
         'HEAD cannot target a missing or foreign checkpoint.',
       );
     }
-    final branchName = detach ? null : head.symbolicBranchName;
+    final branchName =
+        attachBranchName ?? (detach ? null : head.symbolicBranchName);
+    final match = refs.where((ref) =>
+        ref.name == branchName && ref.kind == 'branch').firstOrNull;
+    if (branchName != null && match == null) {
+      throw const CheckpointIntegrityException(
+        'Attached branch was deleted during HEAD movement.',
+      );
+    }
+    if (attachBranchName != null &&
+        match!.targetCheckpointId != checkpointId) {
+      throw const CheckpointIntegrityException(
+        'Branch tip changed during checkout.',
+      );
+    }
     final now = DateTime.now().toUtc();
     head.targetCheckpointId = checkpointId;
     head.symbolicBranchName = branchName;
     head.updatedAt = now;
-    if (branchName != null) {
-      final branch = refs.firstWhere((r) => r.name == branchName);
-      branch.targetCheckpointId = checkpointId;
-      branch.updatedAt = now;
-      await isar.historyRefs.put(branch);
+    if (branchName != null && attachBranchName == null) {
+      match!.targetCheckpointId = checkpointId;
+      match.updatedAt = now;
+      await isar.historyRefs.put(match);
     }
-    await isar.historyRefs.put(head);
+        await isar.historyRefs.put(head);
   }
 
   static Future<void> deleteSessionRefsInTransaction(
