@@ -47,6 +47,7 @@ import 'package:subtitle_studio/services/checkpoint_preferences_repository.dart'
 import 'package:subtitle_studio/services/checkpoint_reconstructor.dart';
 import 'package:subtitle_studio/services/checkpoint_store.dart';
 import 'package:subtitle_studio/services/checkpoint_reference_catalog.dart';
+import 'package:subtitle_studio/services/checkpoint_reference_migration_plan.dart';
 import 'dart:convert';
 
 class CheckpointManager {
@@ -683,6 +684,12 @@ class CheckpointManager {
   }
 
   /// Derived, read-only refs until the dedicated Isar ref schema lands.
+  Future<CheckpointReferenceMigrationPlan> previewReferenceMigration(
+    int sessionId,
+  ) {
+    return _store.previewReferenceMigration(sessionId);
+  }
+
   Future<List<CheckpointReference>> getReferencesForSession(int sessionId) {
     return _store.getReferencesForSession(sessionId);
   }
