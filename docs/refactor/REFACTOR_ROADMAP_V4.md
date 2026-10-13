@@ -2,11 +2,12 @@
 
 > **October 12, 2026 progress addendum** — This document's checkpoint-45
 > inventory and older step list are retained as an historical baseline.
-> The current verified quality gate is **Checkpoint 69 R3** (`fd958dc`):
-> zero analyzer issues and **272 tests passed**. Checkpoint 70 implements
-> named branch/bookmark management, attached versus detached HEAD checkout,
-> and .msone preservation of custom reference names. Verification is
-> tracked in the Checkpoint 70 handoff;
+> The current verified quality gate is **Checkpoint 70 R3** (`d5667ec`):
+> zero analyzer issues and **276 tests passed**. Named branch and bookmark
+> operations, detached vs. attached HEAD checkout, branch-local commits,
+> and .msone preservation of custom reference names are verified.
+> A graphical history interface, device builds and release compatibility
+> checks remain future milestones;
 > desktop layout remains deferred.
 >
 > **New roadmap requirement — Expanded SRT text encodings (requested 2026-10-12):**
