@@ -9,6 +9,7 @@ import 'package:subtitle_studio/services/checkpoint_head_reference.dart';
 import 'package:subtitle_studio/widgets/session_selection/project_history_import_plan.dart';
 import 'package:subtitle_studio/widgets/session_selection/project_history_reference_import_plan.dart';
 import 'package:subtitle_studio/services/checkpoint_reference_migration_plan.dart';
+import 'package:subtitle_studio/services/history_ref_repository.dart';
 
 final sessionProjectImportRepositoryProvider =
     Provider<SessionProjectImportRepository>((ref) {
@@ -81,6 +82,11 @@ class SessionProjectImportRepository {
 
       // Old history describes the old working tree and must not be mixed with
       // the imported graph. Deletion and replacement share one transaction.
+      // Remove previous refs and checkpoints in one transaction. Otherwise
+      // refs could temporarily point at the deleted, replaced history.
+      await HistoryRefRepository.deleteSessionRefsInTransaction(
+        _isar, sessionId: currentSession.id,
+      );
       final oldCheckpoints = await _isar.checkpoints
           .filter()
           .sessionIdEqualTo(currentSession.id)
@@ -326,6 +332,12 @@ class SessionProjectImportRepository {
       idMap: idMap,
     );
     await _isar.checkpoints.putAll(imported);
+    // Derive refs from the newly assigned Isar checkpoint IDs, still inside
+    // the same import transaction. Archived legacy files without historyRefs
+    // get identical deterministic references.
+    await HistoryRefRepository.ensureMigratedInTransaction(
+      _isar, sessionId: sessionId,
+    );
   }
 
 }
