@@ -234,6 +234,7 @@ class CheckpointStore {
     required SubtitleCollection collection,
     required int? expectedHeadId,
     required String expectedWorkingStateHash,
+    String? attachBranchName,
   }) async {
     await _isar.writeTxn(() async {
       final allCheckpoints = await _isar.checkpoints
@@ -284,7 +285,11 @@ class CheckpointStore {
       stored.lines = CheckpointStateReducer.copyLines(collection.lines);
       await _isar.subtitleCollections.put(stored);
       await HistoryRefRepository.moveHeadInTransaction(
-        _isar, sessionId: sessionId, checkpointId: target.id,
+        _isar,
+        sessionId: sessionId,
+        checkpointId: target.id,
+        detach: attachBranchName == null,
+        attachBranchName: attachBranchName,
       );
     });
   }
