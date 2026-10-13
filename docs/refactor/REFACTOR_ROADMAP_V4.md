@@ -3,9 +3,9 @@
 > **October 12, 2026 progress addendum** — This document's checkpoint-45
 > inventory and older step list are retained as an historical baseline.
 > The current verified quality gate is **Checkpoint 67** (`cac51c3`):
-> zero analyzer issues and **258 tests passed**. The read-only validated
-> ref migration/remapping plan and attached Subtitle Composer waveform/encoding
-> source audit are complete. Persisted Isar refs remain a future migration gate;
+> zero analyzer issues and **258 tests passed**. Checkpoint 68 adds optional,
+> versioned portable .msone historyRefs with strict import validation and ID
+> remapping. True named Isar refs still require generated-schema migration;
 > desktop layout remains deferred.
 >
 > **New roadmap requirement — Expanded SRT text encodings (requested 2026-10-12):**
@@ -44,6 +44,7 @@
 > [Checkpoint 65 mutation boundaries](CHECKPOINT65_LEGACY_MUTATION_BOUNDARIES.md),
 > [Checkpoint 66 reference foundation](CHECKPOINT66_REFERENCE_FOUNDATION.md),
 > [Checkpoint 67 ref migration plan](CHECKPOINT67_REFERENCE_MIGRATION_AND_SUBTITLECOMPOSER.md),
+> [Checkpoint 68 portable .msone references](CHECKPOINT68_PORTABLE_HISTORY_REFERENCES.md),
 > [attached KDE waveform and encoding study](SUBTITLECOMPOSER_WAVEFORM_AND_ENCODING_SOURCE_AUDIT.md), and
 > [desktop reuse audit](DESKTOP_WORKSPACE_REUSE_AUDIT_2026-10-12.md).
 > Next phases: finish raw/sessionless persistence migration, then persisted
