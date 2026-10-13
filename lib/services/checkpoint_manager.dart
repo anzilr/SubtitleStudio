@@ -697,7 +697,7 @@ class CheckpointManager {
         sessionId: sessionId,
         name: name,
       );
-      return undoToCheckpoint(
+      return await undoToCheckpoint(
         checkpointId: target,
         sessionId: sessionId,
         attachBranchName: name,
