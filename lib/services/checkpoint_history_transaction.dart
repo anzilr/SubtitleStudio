@@ -2,6 +2,7 @@ import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/services/checkpoint_history_metadata.dart';
 import 'package:subtitle_studio/services/checkpoint_head_reference.dart';
+import 'package:subtitle_studio/services/history_ref_repository.dart';
 import 'package:subtitle_studio/services/checkpoint_policy.dart';
 import 'package:subtitle_studio/services/checkpoint_preferences_repository.dart';
 import 'package:subtitle_studio/services/checkpoint_reconstructor.dart';
@@ -87,6 +88,13 @@ class CheckpointHistoryTransaction {
           .sortByTimestampDesc()
           .findAll();
 
+      // Seed refs while the prior HEAD is still active. Do not recreate
+      // main from a later detached checkout or partially written mutation.
+      if (checkpoints.isNotEmpty) {
+        await HistoryRefRepository.ensureMigratedInTransaction(
+          _isar, sessionId: sessionId,
+        );
+      }
       final active =
           CheckpointHeadReference.activeCheckpoints(checkpoints).toList();
 
@@ -212,6 +220,11 @@ class CheckpointHistoryTransaction {
         checkpointId = 0;
         persistedLines =
             CheckpointStateReducer.copyLines(currentLines);
+        // The mutation can create a root or external-state sync even if the
+        // requested edit was a no-op; persist that HEAD in the same txn.
+        await HistoryRefRepository.moveHeadInTransaction(
+          _isar, sessionId: sessionId, checkpointId: head.id,
+        );
         return;
       }
 
@@ -284,6 +297,9 @@ class CheckpointHistoryTransaction {
           CheckpointStateReducer.copyLines(plan.nextLines);
       await _isar.subtitleCollections.put(collection);
       checkpointId = await _isar.checkpoints.put(checkpoint);
+      await HistoryRefRepository.moveHeadInTransaction(
+        _isar, sessionId: sessionId, checkpointId: checkpointId,
+      );
       persistedLines =
           CheckpointStateReducer.copyLines(collection.lines);
     });
