@@ -3,6 +3,7 @@ import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/services/checkpoint_manager.dart';
 import 'package:subtitle_studio/services/checkpoint_history_validator.dart';
 import 'package:subtitle_studio/services/checkpoint_reference_catalog.dart';
+import 'package:subtitle_studio/services/checkpoint_reference_migration_plan.dart';
 
 /// Injectable checkpoint boundary used by migrated repositories.
 ///
@@ -49,6 +50,13 @@ class CheckpointRepository {
 
   Future<Checkpoint?> getHeadCheckpoint(int sessionId) {
     return _manager.getHeadCheckpoint(sessionId);
+  }
+
+  /// Dry-run the legacy/V2 ref migration; persistence is intentionally deferred.
+  Future<CheckpointReferenceMigrationPlan> previewReferenceMigration(
+    int sessionId,
+  ) {
+    return _manager.previewReferenceMigration(sessionId);
   }
 
   Future<List<CheckpointReference>> getReferencesForSession(int sessionId) {
