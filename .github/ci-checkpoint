@@ -1,6 +1,7 @@
-Riverpod migration checkpoint 68
+Riverpod migration checkpoint 68 R2
 Date: 2026-10-13
 Checks:
+- revalidate rebuilt codec after safe insertion fix
 - flutter analyze (zero issues)
 - flutter test -j 1
 
