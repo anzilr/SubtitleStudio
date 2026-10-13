@@ -48,6 +48,7 @@ import 'package:subtitle_studio/services/checkpoint_reconstructor.dart';
 import 'package:subtitle_studio/services/checkpoint_store.dart';
 import 'package:subtitle_studio/services/checkpoint_reference_catalog.dart';
 import 'package:subtitle_studio/services/checkpoint_reference_migration_plan.dart';
+import 'package:subtitle_studio/services/history_ref_repository.dart';
 import 'dart:convert';
 
 class CheckpointManager {
@@ -519,6 +520,7 @@ class CheckpointManager {
     required int checkpointId,
     required int sessionId,
     int? ifCurrentHeadId,
+    String? attachBranchName,
   }) async {
     try {
       // An undo or redo may use an earlier HEAD observation. Reject a stale
@@ -555,6 +557,7 @@ class CheckpointManager {
           collection: collection,
           expectedHeadId: expectedHeadId,
           expectedWorkingStateHash: expectedWorkingStateHash,
+          attachBranchName: attachBranchName,
         );
       }
 
@@ -609,6 +612,7 @@ class CheckpointManager {
         collection: collection,
         expectedHeadId: expectedHeadId,
         expectedWorkingStateHash: expectedWorkingStateHash,
+        attachBranchName: attachBranchName,
       );
 
       logInfo(
@@ -633,6 +637,7 @@ class CheckpointManager {
     required SubtitleCollection collection,
     required int? expectedHeadId,
     required String expectedWorkingStateHash,
+    String? attachBranchName,
   }) async {
     try {
       final checkpoints = await getCheckpointsForSession(sessionId);
@@ -650,6 +655,7 @@ class CheckpointManager {
         collection: collection,
         expectedHeadId: expectedHeadId,
         expectedWorkingStateHash: expectedWorkingStateHash,
+        attachBranchName: attachBranchName,
       );
 
       logInfo(
@@ -676,6 +682,27 @@ class CheckpointManager {
       sessionId: sessionId,
       ifCurrentHeadId: ifCurrentHeadId,
     );
+  }
+
+  /// Switch to a stored named branch and restore its exact checkpoint.
+  /// The Isar checkout transaction re-verifies that its tip did not move.
+  Future<bool> checkoutBranch({
+    required int sessionId,
+    required String name,
+  }) async {
+    try {
+      final target = await HistoryRefRepository(_store.isar).resolveBranch(
+        sessionId: sessionId,
+        name: name,
+      );
+      return undoToCheckpoint(
+        checkpointId: target,
+        sessionId: sessionId,
+        attachBranchName: name,
+      );
+    } on StateError {
+      return false;
+    }
   }
 
   /// Returns the current single HEAD commit for [sessionId].
