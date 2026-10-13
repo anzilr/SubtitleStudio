@@ -4,6 +4,8 @@ import 'package:subtitle_studio/services/checkpoint_manager.dart';
 import 'package:subtitle_studio/services/checkpoint_history_validator.dart';
 import 'package:subtitle_studio/services/checkpoint_reference_catalog.dart';
 import 'package:subtitle_studio/services/checkpoint_reference_migration_plan.dart';
+import 'package:subtitle_studio/services/checkpoint_history_graph.dart';
+import 'package:subtitle_studio/services/checkpoint_history_graph_reader.dart';
 
 /// Injectable checkpoint boundary used by migrated repositories.
 ///
@@ -11,8 +13,15 @@ import 'package:subtitle_studio/services/checkpoint_reference_migration_plan.dar
 /// CheckpointManager instance.
 class CheckpointRepository {
   final CheckpointManager _manager;
+  final CheckpointHistoryGraphReader _graphReader;
 
-  CheckpointRepository(Isar isar) : _manager = CheckpointManager(isar);
+  CheckpointRepository(Isar isar)
+      : _manager = CheckpointManager(isar),
+        _graphReader = CheckpointHistoryGraphReader(isar);
+
+  /// One validated snapshot for a mobile or desktop history interface.
+  Future<CheckpointHistoryGraph> getHistoryGraph(int sessionId) =>
+      _graphReader.load(sessionId);
 
   Future<int> createInitialSnapshot({
     required int sessionId,
