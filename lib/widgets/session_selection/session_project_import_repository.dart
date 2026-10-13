@@ -103,6 +103,7 @@ class SessionProjectImportRepository {
         subtitleCollectionId: currentSession.subtitleCollectionId,
         history: history,
         referencePlan: referencePlan,
+        portableRefs: importSubtitlesOnly ? null : projectDocument.historyReferences,
       );
       updatedSession = currentSession;
     });
@@ -161,6 +162,7 @@ class SessionProjectImportRepository {
         subtitleCollectionId: collectionId,
         history: history,
         referencePlan: referencePlan,
+        portableRefs: importSubtitlesOnly ? null : projectDocument.historyReferences,
       );
     });
 
@@ -277,6 +279,7 @@ class SessionProjectImportRepository {
     required int subtitleCollectionId,
     required PreparedProjectHistory? history,
     required CheckpointReferenceMigrationPlan? referencePlan,
+    required ProjectHistoryReferencesData? portableRefs,
   }) async {
     if (history == null || history.checkpoints.isEmpty) return;
 
@@ -332,12 +335,43 @@ class SessionProjectImportRepository {
       idMap: idMap,
     );
     await _isar.checkpoints.putAll(imported);
-    // Derive refs from the newly assigned Isar checkpoint IDs, still inside
-    // the same import transaction. Archived legacy files without historyRefs
-    // get identical deterministic references.
-    await HistoryRefRepository.ensureMigratedInTransaction(
-      _isar, sessionId: sessionId,
-    );
+    if (portableRefs == null) {
+      // Legacy archives without a ref section receive deterministic refs.
+      await HistoryRefRepository.ensureMigratedInTransaction(
+        _isar, sessionId: sessionId,
+      );
+    } else {
+      final byName = {
+        for (final entry in portableRefs.entries) entry.name: entry,
+      };
+      final archiveHead = byName['HEAD']!;
+      final attachment = archiveHead.attachmentSpecified
+          ? archiveHead.symbolicBranchName
+          : (byName['refs/heads/main']?.targetCheckpointId ==
+                  archiveHead.targetCheckpointId
+              ? 'refs/heads/main'
+              : null);
+      final now = DateTime.now().toUtc();
+      final refs = <HistoryRef>[
+        for (final entry in portableRefs.entries)
+          HistoryRef(
+            sessionId: sessionId,
+            subtitleCollectionId: subtitleCollectionId,
+            name: entry.name,
+            kind: entry.kind,
+            targetCheckpointId: idMap[entry.targetCheckpointId]!,
+            symbolicBranchName: entry.name == 'HEAD' ? attachment : null,
+            createdAt: now,
+            updatedAt: now,
+          ),
+      ];
+      await _isar.historyRefs.putAll(refs);
+      // Recheck every target, namespace and symbolic branch inside the
+      // import transaction; any failure rolls the whole project back.
+      await HistoryRefRepository.ensureMigratedInTransaction(
+        _isar, sessionId: sessionId,
+      );
+    }
   }
 
 }
