@@ -40,7 +40,7 @@ class TestIsarHarness {
           SessionSchema,
           SubtitleCollectionSchema,
           DictionaryEntrySchema,
-          CheckpointSchema,
+          CheckpointSchema, HistoryRefSchema,
           VideoPreferencesSchema,
           TutorialStatusSchema,
         ],
