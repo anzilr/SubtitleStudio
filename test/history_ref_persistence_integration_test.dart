@@ -8,6 +8,7 @@ import 'package:subtitle_studio/services/checkpoint_repository.dart';
 import 'package:subtitle_studio/services/checkpoint_store.dart';
 import 'package:subtitle_studio/services/history_ref_repository.dart';
 import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
+import 'package:subtitle_studio/services/checkpoint_state_hasher.dart';
 
 import 'support/test_isar_harness.dart';
 
@@ -203,7 +204,7 @@ void main() {
       }
     });
     final initial = await refs.ensureMigrated(ids.sessionId);
-    expect(initial.length, 7); // HEAD, main, five automatic branch refs except HEAD => 6
+    expect(initial.length, 6); // HEAD, main and four alternate tips
     expect(await store.pruneSession(
       sessionId: ids.sessionId,
       maxCheckpoints: 2,
