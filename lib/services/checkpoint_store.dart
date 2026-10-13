@@ -284,7 +284,7 @@ class CheckpointStore {
       stored.lines = CheckpointStateReducer.copyLines(collection.lines);
       await _isar.subtitleCollections.put(stored);
       await HistoryRefRepository.moveHeadInTransaction(
-        _isar, sessionId: sessionId, checkpointId: target.id, detach: true,
+        _isar, sessionId: sessionId, checkpointId: target.id,
       );
     });
   }
