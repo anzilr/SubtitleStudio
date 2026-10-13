@@ -2,11 +2,10 @@
 
 > **October 12, 2026 progress addendum** — This document's checkpoint-45
 > inventory and older step list are retained as an historical baseline.
-> The current verified quality gate is **Checkpoint 66** (`4dd480b`):
-> zero analyzer issues and **248 tests passed**. Checkpoint 67 implements
-> a read-only, validated migration/remapping plan for future persisted history
-> refs and audits the attached Subtitle Composer waveform/encoding source.
-> Actual Isar reference persistence remains a separate schema-migration gate;
+> The current verified quality gate is **Checkpoint 67** (`cac51c3`):
+> zero analyzer issues and **258 tests passed**. The read-only validated
+> ref migration/remapping plan and attached Subtitle Composer waveform/encoding
+> source audit are complete. Persisted Isar refs remain a future migration gate;
 > desktop layout remains deferred.
 >
 > **New roadmap requirement — Expanded SRT text encodings (requested 2026-10-12):**
