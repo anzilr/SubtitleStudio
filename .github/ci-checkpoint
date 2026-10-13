@@ -1,17 +1,18 @@
-Riverpod migration checkpoint 66
-Date: 2026-10-12
+Riverpod migration checkpoint 67
+Date: 2026-10-13
 Checks:
 - flutter analyze (zero issues)
 - flutter test -j 1
 
 Focus:
-- derive typed Git-like HEAD, alternate branch-tip and manual bookmark refs
-- share read-only reference catalog via checkpoint repository interface
-- reject missing and multiple active HEADs in V2 histories
-- validate new checkpoint parent and session/collection in insertAsHead
-- recalculate retention policy within Isar writeTxn, using live HEAD
-- refuse unsafe ID-based deletion of active checkpoint graphs
-- exercise legacy HEAD compatibility and real Isar pruning regressions
-- preserve source encoding roadmap research; desktop layout deferred
+- deterministic dry-run history ref migration for legacy and V2 histories
+- validate parent graph, session ownership, duplicate IDs and cycles
+- normalize legacy HEAD only when future persisted migration is validated
+- fail closed on missing/multiple V2 HEAD markers
+- remap imported reference targets without altering names or database
+- expose read-only migration preview through shared repo/manager/store
+- pure and real Isar regressions for legacy refs, malformed graphs and ID maps
+- document source-grounded encoding and waveform ideas from attached KDE archive
+- no Isar schema changes, no generated file edits and no desktop UI work
 
-No new Isar schema, native builds, mobile redesign, upstream merges or release tags.
+No native platform builds or upstream/release modifications.
