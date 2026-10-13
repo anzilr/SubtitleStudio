@@ -1,5 +1,7 @@
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/services/project_document_codec.dart';
+import 'package:subtitle_studio/services/checkpoint_reference_migration_plan.dart';
+import 'package:subtitle_studio/services/checkpoint_reference_catalog.dart';
 
 /// Builds the typed document stored in a .msone project file.
 ///
@@ -17,6 +19,10 @@ class ProjectDocumentBuilder {
     DateTime? now,
   }) {
     final timestamp = (now ?? DateTime.now()).toIso8601String();
+    // Export a versioned view of the current logical refs. These names are
+    // derived from the checkpoint graph until durable Isar refs are available.
+    // Invalid graphs fail before a project file is written.
+    final historyPlan = CheckpointReferenceMigrationPlan.prepare(checkpoints);
 
     return ProjectDocument.create(
       version: projectVersion,
@@ -40,6 +46,20 @@ class ProjectDocumentBuilder {
       checkpoints: checkpoints
           .map(_serializeCheckpoint)
           .toList(growable: false),
+      historyReferences: historyPlan.references.isEmpty
+          ? null
+          : ProjectHistoryReferencesData.create(entries: [
+              for (final ref in historyPlan.references)
+                ProjectHistoryReferenceData(
+                  name: ref.name,
+                  kind: switch (ref.kind) {
+                    CheckpointReferenceKind.head => 'head',
+                    CheckpointReferenceKind.branchTip => 'branch',
+                    CheckpointReferenceKind.manualBookmark => 'bookmark',
+                  },
+                  targetCheckpointId: ref.checkpointId,
+                ),
+            ]),
       metadata: ProjectMetadataData.create(
         totalLines: subtitleCollection.lines.length,
         editedLines: subtitleCollection.lines
