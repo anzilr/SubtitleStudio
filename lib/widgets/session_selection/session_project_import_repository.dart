@@ -7,6 +7,8 @@ import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/services/project_document_codec.dart';
 import 'package:subtitle_studio/services/checkpoint_head_reference.dart';
 import 'package:subtitle_studio/widgets/session_selection/project_history_import_plan.dart';
+import 'package:subtitle_studio/widgets/session_selection/project_history_reference_import_plan.dart';
+import 'package:subtitle_studio/services/checkpoint_reference_migration_plan.dart';
 
 final sessionProjectImportRepositoryProvider =
     Provider<SessionProjectImportRepository>((ref) {
@@ -40,6 +42,12 @@ class SessionProjectImportRepository {
         : PreparedProjectHistory.build(
             projectDocument.checkpoints,
             toSubtitleLine: _toSubtitleLine,
+          );
+    final referencePlan = importSubtitlesOnly
+        ? null
+        : ProjectHistoryReferenceImportPlan.prepare(
+            data: projectDocument.historyReferences,
+            history: history,
           );
     final subtitleData = projectDocument.subtitleCollection;
     final subtitleLines = _parseSubtitleLines(subtitleData.lines);
@@ -88,6 +96,7 @@ class SessionProjectImportRepository {
         sessionId: currentSession.id,
         subtitleCollectionId: currentSession.subtitleCollectionId,
         history: history,
+        referencePlan: referencePlan,
       );
       updatedSession = currentSession;
     });
@@ -108,6 +117,12 @@ class SessionProjectImportRepository {
             toSubtitleLine: _toSubtitleLine,
           );
     final sessionData = projectDocument.session;
+    final referencePlan = importSubtitlesOnly
+        ? null
+        : ProjectHistoryReferenceImportPlan.prepare(
+            data: projectDocument.historyReferences,
+            history: history,
+          );
     final subtitleData = projectDocument.subtitleCollection;
     final subtitleLines = _parseSubtitleLines(subtitleData.lines);
 
@@ -139,6 +154,7 @@ class SessionProjectImportRepository {
         sessionId: session.id,
         subtitleCollectionId: collectionId,
         history: history,
+        referencePlan: referencePlan,
       );
     });
 
@@ -254,6 +270,7 @@ class SessionProjectImportRepository {
     required int sessionId,
     required int subtitleCollectionId,
     required PreparedProjectHistory? history,
+    required CheckpointReferenceMigrationPlan? referencePlan,
   }) async {
     if (history == null || history.checkpoints.isEmpty) return;
 
@@ -300,6 +317,14 @@ class SessionProjectImportRepository {
         checkpointId: idMap[head.id]!,
       );
     }
+    // Remap all portable reference targets before the transaction completes.
+    // Durable ref persistence is deliberately deferred until generated Isar
+    // schemas are verified. Only derived refs were accepted by preflight.
+    referencePlan?.remap(
+      destinationSessionId: sessionId,
+      destinationCollectionId: subtitleCollectionId,
+      idMap: idMap,
+    );
     await _isar.checkpoints.putAll(imported);
   }
 
