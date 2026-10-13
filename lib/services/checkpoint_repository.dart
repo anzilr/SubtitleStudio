@@ -63,6 +63,43 @@ class CheckpointRepository {
     return _manager.getReferencesForSession(sessionId);
   }
 
+  Future<HistoryRef> createBranch({
+    required int sessionId,
+    required String name,
+    required int checkpointId,
+  }) => _manager.createBranch(
+    sessionId: sessionId, name: name, checkpointId: checkpointId,
+  );
+
+  Future<HistoryRef> createBookmark({
+    required int sessionId,
+    required String name,
+    required int checkpointId,
+  }) => _manager.createBookmark(
+    sessionId: sessionId, name: name, checkpointId: checkpointId,
+  );
+
+  Future<void> renameReference({
+    required int sessionId,
+    required String name,
+    required String newName,
+  }) => _manager.renameReference(
+    sessionId: sessionId, name: name, newName: newName,
+  );
+
+  Future<void> deleteReference({
+    required int sessionId,
+    required String name,
+  }) => _manager.deleteReference(sessionId: sessionId, name: name);
+
+  Future<bool> checkoutBranch({
+    required int sessionId,
+    required String name,
+  }) => _manager.checkoutBranch(sessionId: sessionId, name: name);
+
+  Future<List<HistoryRef>> getPersistentReferences(int sessionId) =>
+      _manager.getPersistentReferences(sessionId);
+
   Future<CheckpointHistoryHealth> validateHistory(int sessionId) {
     return _manager.validateHistory(sessionId);
   }
