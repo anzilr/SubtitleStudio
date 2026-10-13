@@ -95,6 +95,17 @@ void main() {
       expect(line.comment, 'Check wording');
       expect(line.resolved, isTrue);
 
+      expect(document.historyReferences, isNotNull);
+      expect(document.historyReferences!.schemaVersion, 1);
+      expect(
+        document.historyReferences!.entries
+            .map((ref) => (ref.name, ref.kind, ref.targetCheckpointId))
+            .toList(),
+        [
+          ('HEAD', 'head', 42),
+          ('refs/heads/main', 'branch', 42),
+        ],
+      );
       final exportedCheckpoint = document.checkpoints.single;
       expect(exportedCheckpoint.id, 42);
       expect(exportedCheckpoint.checkpointType, 'delta');
