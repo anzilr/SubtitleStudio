@@ -4,6 +4,7 @@ import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/screens/screen_help.dart';
+import 'package:subtitle_studio/widgets/checkpoint_history_panel.dart';
 
 /// Edit History Sheet - User-friendly undo/redo interface
 /// 
@@ -46,6 +47,8 @@ class CheckpointNode {
 class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
   List<Checkpoint> _checkpoints = [];
   bool _isLoading = true;
+  bool _showGraph = true;
+  int _graphRefreshVersion = 0;
   List<CheckpointNode> _treeNodes = [];
   final ScrollController _scrollController = ScrollController();
 
@@ -131,6 +134,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
 
       setState(() {
         _checkpoints = checkpoints;
+        _graphRefreshVersion++;
         _currentCheckpointId = currentCheckpoint?.id;
         _buildTree();
         _isLoading = false;
@@ -966,6 +970,11 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                       ],
                     ),
                   ),
+                  IconButton(
+                    tooltip: _showGraph ? 'Show classic timeline' : 'Show history graph',
+                    onPressed: () => setState(() => _showGraph = !_showGraph),
+                    icon: Icon(_showGraph ? Icons.view_timeline : Icons.account_tree_outlined),
+                  ),
                   // Help button
                   IconButton(
                     onPressed: () {
@@ -989,9 +998,16 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
               ),
             ),
 
-          // Checkpoints timeline (linear)
+          // Shared graph by default. The classic view remains available for
+          // backwards-compatible mobile history interactions.
           Expanded(
-            child: _isLoading
+            child: _showGraph
+                ? CheckpointHistoryPanel(
+                    sessionId: widget.sessionId,
+                    refreshVersion: _graphRefreshVersion,
+                    onCheckpointRestored: widget.onCheckpointRestored,
+                  )
+                : _isLoading
                 ? const Center(
                     child: Padding(
                       padding: EdgeInsets.all(48.0),
