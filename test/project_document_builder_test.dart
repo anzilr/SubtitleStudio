@@ -119,6 +119,63 @@ void main() {
       expect(exportedSnapshot.original, 'Before');
     });
 
+    test('persists named branches, bookmarks, and detached HEAD in .msone',
+        () {
+      final session = Session(
+        fileName: 'archived.srt', subtitleCollectionId: 15,
+      )..id = 8;
+      final collection = SubtitleCollection(
+        fileName: 'archived.srt',
+        encoding: 'UTF-8',
+        lines: [_line(index: 1, original: 'Text')],
+      )..id = 15;
+      final checkpoint = Checkpoint(
+        sessionId: 8,
+        subtitleCollectionId: 15,
+        timestamp: DateTime.utc(2026, 10, 13),
+        operationType: 'snapshot',
+        description: 'Initial',
+        isActive: true,
+        checkpointType: 'snapshot',
+        deltas: const [],
+        snapshot: [_line(index: 1, original: 'Text')],
+      )..id = 30;
+      final now = DateTime.utc(2026, 10, 13);
+      HistoryRef makeRef(String name, String kind, {String? attached}) =>
+          HistoryRef(
+            sessionId: 8, subtitleCollectionId: 15,
+            name: name, kind: kind, targetCheckpointId: 30,
+            symbolicBranchName: attached,
+            createdAt: now, updatedAt: now,
+          );
+      final refs = [
+        makeRef('HEAD', 'head'),
+        makeRef('refs/heads/main', 'branch'),
+        makeRef('refs/heads/custom-review', 'branch'),
+        makeRef('refs/bookmarks/approved', 'bookmark'),
+      ];
+      final document = ProjectDocumentBuilder.build(
+        session: session,
+        subtitleCollection: collection,
+        checkpoints: [checkpoint],
+        persistentReferences: refs,
+        projectVersion: '2.0',
+        appVersion: '3.0.0',
+      );
+      final restored = ProjectDocumentCodec.decode(
+        ProjectDocumentCodec.encode(document),
+      );
+      expect(restored.historyReferences!.entries.map((r) => r.name).toSet(), {
+        'HEAD', 'refs/heads/main', 'refs/heads/custom-review',
+        'refs/bookmarks/approved',
+      });
+      final head = restored.historyReferences!.entries
+          .firstWhere((r) => r.name == 'HEAD');
+      expect(head.attachmentSpecified, isTrue);
+      expect(head.symbolicBranchName, isNull);
+      expect(restored.checkpoints.single.id, 30);
+    });
+
     test('derives stable metadata from the collection', () {
       final collection = SubtitleCollection(
         fileName: 'sample.srt',
