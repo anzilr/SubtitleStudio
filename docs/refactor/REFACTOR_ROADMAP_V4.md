@@ -2,10 +2,10 @@
 
 > **October 12, 2026 progress addendum** — This document's checkpoint-45
 > inventory and older step list are retained as an historical baseline.
-> The current verified quality gate is **Checkpoint 67** (`cac51c3`):
-> zero analyzer issues and **258 tests passed**. Checkpoint 68 adds optional,
-> versioned portable .msone historyRefs with strict import validation and ID
-> remapping. True named Isar refs still require generated-schema migration;
+> The current verified quality gate is **Checkpoint 68 R2** (`b16793a`):
+> zero analyzer issues and **266 tests passed**. Optional, versioned .msone
+> historyRefs are now exported and validated on import, with atomic checkpoint
+> ID remapping. True named Isar refs still require generated-schema migration;
 > desktop layout remains deferred.
 >
 > **New roadmap requirement — Expanded SRT text encodings (requested 2026-10-12):**
