@@ -5,6 +5,7 @@ import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/services/checkpoint_history_metadata.dart';
 import 'package:subtitle_studio/services/checkpoint_repository.dart';
+import 'package:subtitle_studio/screens/edit/repositories/subtitle_repository.dart';
 import 'package:subtitle_studio/services/checkpoint_store.dart';
 import 'package:subtitle_studio/services/history_ref_repository.dart';
 import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
@@ -284,4 +285,175 @@ void main() {
       if (await dir.exists()) await dir.delete(recursive: true);
     }
   });
+  test('named refs are lightweight, validated, renamed and safely deleted',
+      () async {
+    final ids = await _seed(harness);
+    final history = CheckpointRepository(harness.isar);
+    final root = await history.createInitialSnapshot(
+      sessionId: ids.sessionId,
+      subtitleCollectionId: ids.collectionId,
+    );
+    final before = await harness.isar.checkpoints.count();
+    final branch = await history.createBranch(
+      sessionId: ids.sessionId,
+      name: 'refs/heads/feature/arabic',
+      checkpointId: root,
+    );
+    final bookmark = await history.createBookmark(
+      sessionId: ids.sessionId,
+      name: 'refs/bookmarks/review',
+      checkpointId: root,
+    );
+    expect(branch.targetCheckpointId, root);
+    expect(bookmark.targetCheckpointId, root);
+    expect(await harness.isar.checkpoints.count(), before);
+
+    await history.renameReference(
+      sessionId: ids.sessionId,
+      name: 'refs/bookmarks/review',
+      newName: 'refs/bookmarks/final',
+    );
+    final found = await history.getPersistentReferences(ids.sessionId);
+    expect(found.any((r) => r.name == 'refs/bookmarks/final'), isTrue);
+    expect(found.any((r) => r.name == 'refs/bookmarks/review'), isFalse);
+
+    await expectLater(
+      history.createBookmark(
+        sessionId: ids.sessionId,
+        name: 'refs/bookmarks/final',
+        checkpointId: root,
+      ),
+      throwsStateError,
+    );
+    await expectLater(
+      history.createBranch(
+        sessionId: ids.sessionId,
+        name: 'refs/heads/../invalid',
+        checkpointId: root,
+      ),
+      throwsFormatException,
+    );
+    await expectLater(
+      history.createBookmark(
+        sessionId: ids.sessionId,
+        name: 'refs/bookmarks/foreign',
+        checkpointId: root + 1000,
+      ),
+      throwsStateError,
+    );
+    await expectLater(
+      history.deleteReference(
+        sessionId: ids.sessionId,
+        name: 'refs/heads/main',
+      ),
+      throwsStateError,
+    );
+    await history.deleteReference(
+      sessionId: ids.sessionId,
+      name: 'refs/bookmarks/final',
+    );
+    expect((await history.getPersistentReferences(ids.sessionId))
+        .any((r) => r.name == 'refs/bookmarks/final'), isFalse);
+    expect(await harness.isar.checkpoints.count(), before);
+  });
+
+  test('direct checkout detaches HEAD; branch checkout and commits advance only attached tip',
+      () async {
+    final ids = await _seed(harness);
+    final history = CheckpointRepository(harness.isar);
+    final editor = SubtitleRepository(harness.isar, history);
+    final root = await history.createInitialSnapshot(
+      sessionId: ids.sessionId,
+      subtitleCollectionId: ids.collectionId,
+    );
+    expect(await editor.saveLineChanges(
+      ids.collectionId, _line('One')..edited = 'Main translation',
+      sessionId: ids.sessionId,
+    ), isTrue);
+    final mainCommit = (await history.getHeadCheckpoint(ids.sessionId))!.id;
+    expect(mainCommit, isNot(root));
+    await history.createBranch(
+      sessionId: ids.sessionId,
+      name: 'refs/heads/feature',
+      checkpointId: root,
+    );
+    expect(await history.checkoutBranch(
+      sessionId: ids.sessionId, name: 'refs/heads/feature',
+    ), isTrue);
+    var all = await history.getPersistentReferences(ids.sessionId);
+    expect(all.firstWhere((r) => r.name == 'HEAD').symbolicBranchName,
+        'refs/heads/feature');
+    expect(all.firstWhere((r) => r.name == 'refs/heads/main')
+        .targetCheckpointId, mainCommit);
+    expect((await editor.fetchSubtitleCollection(ids.collectionId))!
+        .lines.first.edited, isNull);
+
+    expect(await editor.saveLineChanges(
+      ids.collectionId, _line('One')..edited = 'Feature translation',
+      sessionId: ids.sessionId,
+    ), isTrue);
+    final featureCommit = (await history.getHeadCheckpoint(ids.sessionId))!.id;
+    all = await history.getPersistentReferences(ids.sessionId);
+    expect(all.firstWhere((r) => r.name == 'refs/heads/feature')
+        .targetCheckpointId, featureCommit);
+    expect(all.firstWhere((r) => r.name == 'refs/heads/main')
+        .targetCheckpointId, mainCommit);
+
+    expect(await history.checkoutCheckpoint(
+      checkpointId: root, sessionId: ids.sessionId,
+    ), isTrue);
+    all = await history.getPersistentReferences(ids.sessionId);
+    expect(all.firstWhere((r) => r.name == 'HEAD').symbolicBranchName,
+        isNull);
+    expect(all.firstWhere((r) => r.name == 'refs/heads/feature')
+        .targetCheckpointId, featureCommit);
+    await expectLater(
+      history.deleteReference(
+        sessionId: ids.sessionId, name: 'refs/heads/main',
+      ),
+      throwsStateError,
+    );
+    expect(await history.checkoutBranch(
+      sessionId: ids.sessionId, name: 'refs/heads/main',
+    ), isTrue);
+    expect((await editor.fetchSubtitleCollection(ids.collectionId))!
+        .lines.first.edited, 'Main translation');
+    expect((await history.getPersistentReferences(ids.sessionId))
+        .firstWhere((r) => r.name == 'HEAD').symbolicBranchName,
+        'refs/heads/main');
+  });
+
+  test('renaming an attached named branch updates symbolic HEAD atomically',
+      () async {
+    final ids = await _seed(harness);
+    final history = CheckpointRepository(harness.isar);
+    final root = await history.createInitialSnapshot(
+      sessionId: ids.sessionId,
+      subtitleCollectionId: ids.collectionId,
+    );
+    await history.createBranch(
+      sessionId: ids.sessionId,
+      name: 'refs/heads/topic',
+      checkpointId: root,
+    );
+    expect(await history.checkoutBranch(
+      sessionId: ids.sessionId, name: 'refs/heads/topic',
+    ), isTrue);
+    await history.renameReference(
+      sessionId: ids.sessionId,
+      name: 'refs/heads/topic',
+      newName: 'refs/heads/renamed',
+    );
+    final all = await history.getPersistentReferences(ids.sessionId);
+    expect(all.firstWhere((r) => r.name == 'HEAD').symbolicBranchName,
+        'refs/heads/renamed');
+    await expectLater(
+      history.deleteReference(
+        sessionId: ids.sessionId,
+        name: 'refs/heads/renamed',
+      ),
+      throwsStateError,
+    );
+  });
+
 }
