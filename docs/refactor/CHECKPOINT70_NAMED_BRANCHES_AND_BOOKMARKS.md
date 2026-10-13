@@ -4,6 +4,9 @@ Date: 2026-10-13
 Branch: `refactor/riverpod-architecture`
 Starting verified baseline: Checkpoint 69 R3, clean analyzer, 272 passing tests.
 
+**Verified Checkpoint 70 R3:** code/CI marker [`d5667ec`](https://github.com/anzilr/SubtitleStudio/commit/d5667ec03ddb62f158d7af66dc3e08ffdbefa0b7), **0 analyzer issues**, **276 passing tests**, [successful GitHub Actions run](https://github.com/anzilr/SubtitleStudio/actions/runs/38446405651). The initial run exposed a malformed code insertion in HistoryRefRepository; it was rebuilt from the verified baseline. R2 passed tests with one nonfatal warning; R3 is warning-free.
+
+
 ## Implementation
 
 - `HistoryRefRepository` now supports **lightweight** named branch and
