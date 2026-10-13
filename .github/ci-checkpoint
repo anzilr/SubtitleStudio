@@ -1,21 +1,16 @@
-Riverpod migration checkpoint 69 R3
+Riverpod migration checkpoint 70
 Date: 2026-10-13
 Checks:
-- flutter analyze (zero issues required)
+- flutter analyze (zero issues)
 - flutter test -j 1
 
 Focus:
-- generated additive Isar HistoryRef collection via pinned Flutter build_runner
-- include generated schema in production and integration Isar opens
-- idempotent transactional legacy ref migration and V2 validation
-- synchronize persisted HEAD/main during history mutation and checkout
-- reference-aware checkpoint retention and lifecycle deletion
-- atomically replace imported history and refs
-- compatibility test opening a real previous-schema file
-- leave named branch editing, full .msone custom labels and desktop UI to future checkpoint
-
-No native builds or changes to upstream/main/release tags.
-
-Regression note: permanent refs protect all alternate branches; retention cannot delete a named ref target.
-
-Regression note: include Isar query builder import in persistent ref pruning integration assertions.
+- transactional named branch and bookmark creation, rename and deletion
+- prevent invalid, colliding or foreign reference names and targets
+- direct checkout detaches HEAD without advancing a branch tip
+- named branch checkout validates target and attaches HEAD transactionally
+- subsequent commits update only the attached branch
+- preserve named refs and symbolic/detached HEAD in versioned .msone files
+- atomic import remaps all named ref targets; legacy archive compatibility
+- pure and real-Isar integration regressions
+- no UI changes, platform builds, upstream changes or release tag updates
