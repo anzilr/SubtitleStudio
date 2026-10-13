@@ -1,13 +1,12 @@
-Riverpod migration checkpoint 71 R2
+Riverpod migration checkpoint 72 R1
 Date: 2026-10-13
 Checks:
-- flutter analyze (zero issues and warnings)
+- flutter analyze (zero warnings/issues)
 - flutter test -j 1
 
-Focus:
-- immutable history graph and command facade for mobile/future desktop
-- topology, forks, HEAD ancestry, attached/detached state, named refs
-- transactional Isar snapshot and safe reference commands
-- pure and real-Isar regressions
-- fix unused import found in checkpoint 71 R1 analyzer
-- no mobile/desktop layouts, Isar schema, upstream/main or tags changed
+Scope:
+- mobile branch-aware history view defaults in CheckpointSheet
+- named reference actions, attached/detached checkout warnings
+- retain classic timeline and snapshot/save-point actions
+- widget tests with real Isar and stale/broken history safety
+- no desktop shell, native builds, generated schema or upstream changes
