@@ -1,4 +1,4 @@
-Riverpod migration checkpoint 69 R2
+Riverpod migration checkpoint 69 R3
 Date: 2026-10-13
 Checks:
 - flutter analyze (zero issues required)
@@ -17,3 +17,5 @@ Focus:
 No native builds or changes to upstream/main/release tags.
 
 Regression note: permanent refs protect all alternate branches; retention cannot delete a named ref target.
+
+Regression note: include Isar query builder import in persistent ref pruning integration assertions.
