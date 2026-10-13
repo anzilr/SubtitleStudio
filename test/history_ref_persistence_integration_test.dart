@@ -153,7 +153,9 @@ void main() {
     expect(currentRefs.singleWhere((r) => r.name == 'HEAD').targetCheckpointId,
         root);
     expect(currentRefs.singleWhere((r) => r.name == 'refs/heads/main')
-        .targetCheckpointId, root);
+        .targetCheckpointId, newId);
+    expect(currentRefs.singleWhere((r) => r.name == 'HEAD')
+        .symbolicBranchName, isNull);
   });
 
   test('invalid cross-session ref fails without rewriting checkpoint history',
