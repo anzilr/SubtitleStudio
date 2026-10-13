@@ -4,6 +4,8 @@ Date: 2026-10-13
 Branch: `refactor/riverpod-architecture`
 Starting verified baseline: Checkpoint 67, analyzer 0 issues, 258 tests passed (CI marker `cac51c3`).
 
+**Verified Checkpoint 68 R2:** code/CI marker [`b16793a`](https://github.com/anzilr/SubtitleStudio/commit/b16793a1c4e240e6056f2503557700ae8882bf82), **0 Flutter analyzer issues**, **266 tests passed**, [GitHub Actions run 38439105267](https://github.com/anzilr/SubtitleStudio/actions/runs/38439105267). The initial CI attempt caught a malformed automated insertion in the codec; it was corrected and the successful R2 run verified the final code. 
+
 ## Scope and why this is staged
 
 Checkpoint 67 prepared a read-only deterministic ref migration plan. The
