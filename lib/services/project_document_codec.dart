@@ -414,11 +414,16 @@ class ProjectHistoryReferenceData {
   final String name;
   final String kind;
   final int targetCheckpointId;
+  /// Meaningful only for HEAD. null with [attachmentSpecified] means detached.
+  final String? symbolicBranchName;
+  final bool attachmentSpecified;
 
   const ProjectHistoryReferenceData({
     required this.name,
     required this.kind,
     required this.targetCheckpointId,
+    this.symbolicBranchName,
+    this.attachmentSpecified = false,
   });
 
   factory ProjectHistoryReferenceData.fromJson(Map<String, dynamic> json) {
@@ -442,10 +447,21 @@ class ProjectHistoryReferenceData {
     if (!validPath || !correctNamespace || name.length > 180) {
       throw FormatException('Invalid .msone reference name or kind: $name.');
     }
+    final hasAttachment = json.containsKey('symbolicBranchName');
+    final attached = json['symbolicBranchName'];
+    if (hasAttachment &&
+        (kind != 'head' ||
+         (attached != null &&
+          (attached is! String ||
+           !attached.startsWith('refs/heads/'))))) {
+      throw const FormatException('Invalid .msone symbolic HEAD attachment.');
+    }
     return ProjectHistoryReferenceData(
       name: name,
       kind: kind,
       targetCheckpointId: id,
+      symbolicBranchName: attached is String ? attached : null,
+      attachmentSpecified: hasAttachment,
     );
   }
 
@@ -453,6 +469,8 @@ class ProjectHistoryReferenceData {
     'name': name,
     'kind': kind,
     'targetCheckpointId': targetCheckpointId,
+    if (kind == 'head' && attachmentSpecified)
+      'symbolicBranchName': symbolicBranchName,
   };
 }
 
