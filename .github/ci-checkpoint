@@ -1,18 +1,17 @@
-Riverpod migration checkpoint 67
+Riverpod migration checkpoint 68
 Date: 2026-10-13
 Checks:
 - flutter analyze (zero issues)
 - flutter test -j 1
 
 Focus:
-- deterministic dry-run history ref migration for legacy and V2 histories
-- validate parent graph, session ownership, duplicate IDs and cycles
-- normalize legacy HEAD only when future persisted migration is validated
-- fail closed on missing/multiple V2 HEAD markers
-- remap imported reference targets without altering names or database
-- expose read-only migration preview through shared repo/manager/store
-- pure and real Isar regressions for legacy refs, malformed graphs and ID maps
-- document source-grounded encoding and waveform ideas from attached KDE archive
-- no Isar schema changes, no generated file edits and no desktop UI work
+- optional versioned .msone historyRefs schema (without Isar schema changes)
+- strict HEAD, branch, bookmark names and target validation
+- export derived history refs and preserve old .msone decode compatibility
+- preflight import against validated checkpoint graph; reject unsupported named refs
+- remap source ref targets to newly inserted checkpoint IDs within import transaction
+- regressions for archive codec, builder, import and legacy compatibility
+- defer persistent HistoryRef Isar table until generated schema/database compatibility gate
+- desktop UI deferred; encoding and waveform remain separate roadmap milestones
 
-No native platform builds or upstream/release modifications.
+No platform builds, ungenerated models, upstream merges or release tag changes.
