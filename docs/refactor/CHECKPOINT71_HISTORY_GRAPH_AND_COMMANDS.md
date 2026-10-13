@@ -36,5 +36,13 @@ The next UI milestone can consume the same graph and command facade.
 - Extended symmetric SRT charset import/export, measured waveform caching,
   real released backup fixtures and platform build gates.
 
-Verification: GitHub analyzer/tests checkpoint gate is required; do not
-report counts until the run completes.
+## Verified result (R2)
+
+- Code/CI commit: [`bed5566`](https://github.com/anzilr/SubtitleStudio/commit/bed5566007e93ca6d95f7e596899cf069ce77277)
+- [Successful GitHub Actions quality run](https://github.com/anzilr/SubtitleStudio/actions/runs/38449841062)
+- `flutter analyze`: **No issues found**
+- `flutter test -j 1`: **284 tests passed** (8 new tests over Checkpoint 70)
+- Initial R1 gate passed tests but reported one unused test import;
+  removed and reran the complete quality gate, clean in R2.
+- No new Isar schema, native builds, upstream merges, mobile UI redesign,
+  desktop workspace, or release tag changes.

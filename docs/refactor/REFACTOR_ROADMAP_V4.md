@@ -1,15 +1,20 @@
 # SubtitleStudio Refactor Roadmap v4
 
-> **October 12, 2026 progress addendum** — This document's checkpoint-45
-> inventory and older step list are retained as an historical baseline.
-> The current verified quality gate is **Checkpoint 70 R3** (`d5667ec`):
-> zero analyzer issues and **276 tests passed**. Named branch and bookmark
-> operations, detached vs. attached HEAD checkout, branch-local commits,
-> and .msone preservation of custom reference names are verified.
-> A graphical history interface, device builds and release compatibility
-> checks remain future milestones;
-> desktop layout remains deferred.
->
+> **October 13, 2026 progress addendum** — This roadmap retains the older
+> checkpoint-45 inventory for historical context. The current verified gate
+> is **Checkpoint 71 R2** ([code commit `bed5566`](https://github.com/anzilr/SubtitleStudio/commit/bed5566007e93ca6d95f7e596899cf069ce77277),
+> [successful CI](https://github.com/anzilr/SubtitleStudio/actions/runs/38449841062)):
+> **284 passing Flutter tests, zero analyzer issues**. Persistent history
+> refs, Git-style checkout and branch/bookmark operations (Checkpoint 70)
+> now feed a pure, immutable history DAG and a shared command boundary
+> (Checkpoint 71). The graph includes parent/children, deterministic
+> topological order, HEAD ancestry, attached/detached branches and actual
+> reference names. Invalid histories fail closed. **No new UI shell has
+> been implemented.** Next: existing mobile history presentation, with
+> desktop layout postponed; extended SRT encoding (parse AND compile),
+> waveform performance and released-data/platform qualification remain.
+> See [Checkpoint 71 implementation report](CHECKPOINT71_HISTORY_GRAPH_AND_COMMANDS.md).
+
 > **New roadmap requirement — Expanded SRT text encodings (requested 2026-10-12):**
 > Reference implementation research: [KDE Subtitle Composer and Subtitle Edit
 > study](SRT_ENCODING_REFERENCE_RESEARCH_2026-10-12.md). The study links exact
