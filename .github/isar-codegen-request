@@ -1,0 +1,8 @@
+checkpoint: 69
+purpose: regenerate lib/database/models/models.g.dart for additive HistoryRef collection
+method: pinned Flutter 3.47.5 and committed isar_community_generator
+constraints:
+- run build_runner only
+- commit generated models.g.dart only
+- do not touch main, upstream or release tags
+- no native builds
