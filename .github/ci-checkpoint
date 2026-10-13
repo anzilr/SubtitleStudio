@@ -1,4 +1,4 @@
-Riverpod migration checkpoint 70
+Riverpod migration checkpoint 70 R2
 Date: 2026-10-13
 Checks:
 - flutter analyze (zero issues)
@@ -14,3 +14,5 @@ Focus:
 - atomic import remaps all named ref targets; legacy archive compatibility
 - pure and real-Isar integration regressions
 - no UI changes, platform builds, upstream changes or release tag updates
+
+Regression: reconstructed HistoryRefRepository class from last verified source after malformed patch insertion.
