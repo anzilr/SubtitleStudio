@@ -409,6 +409,285 @@ class ProjectMetadataData {
 ///
 /// The legacy map conversion remains only as a temporary compatibility bridge
 /// for import surfaces that have not yet migrated to typed project DTOs.
+/// Optional versioned, portable history reference section in .msone.
+///
+/// The first version carries only checkpoint IDs local to the archive.
+/// Import must verify the targets against the validated checkpoint graph.
+/// User-defined persistent refs are not yet supported by the Isar schema.
+class ProjectHistoryReferenceData {
+  final String name;
+  final String kind;
+  final int targetCheckpointId;
+
+  const ProjectHistoryReferenceData({
+    required this.name,
+    required this.kind,
+    required this.targetCheckpointId,
+  });
+
+  factory ProjectHistoryReferenceData.fromJson(Map<String, dynamic> json) {
+    final name = json['name'];
+    final kind = json['kind'];
+    final id = json['targetCheckpointId'];
+    if (name is! String || kind is! String || id is! int || id <= 0) {
+      throw const FormatException('Invalid .msone history reference entry.');
+    }
+    // Names are paths, never filesystem paths. Reject traversal and unsafe
+    // delimiters before any future storage or UI consumes archive data.
+    final validPart = RegExp(r'^[A-Za-z0-9][A-Za-z0-9_.-]*  final String version;
+  final ProjectSessionData session;
+  final ProjectSubtitleCollectionData subtitleCollection;
+  final List<ProjectCheckpointData> checkpoints;
+  final ProjectHistoryReferencesData? historyReferences;
+  final ProjectMetadataData metadata;
+  final String? createdAt;
+  final String? exportedAt;
+  final String? appVersion;
+  final Map<String, dynamic> _extra;
+
+  ProjectDocument._({
+    required this.version,
+    required this.session,
+    required this.subtitleCollection,
+    required this.checkpoints,
+    required this.historyReferences,
+    required this.metadata,
+    required this.createdAt,
+    required this.exportedAt,
+    required this.appVersion,
+    required Map<String, dynamic> extra,
+  }) : _extra = Map<String, dynamic>.unmodifiable(extra);
+
+  factory ProjectDocument.create({
+    required String version,
+    required ProjectSessionData session,
+    required ProjectSubtitleCollectionData subtitleCollection,
+    required List<ProjectCheckpointData> checkpoints,
+    ProjectHistoryReferencesData? historyReferences,
+    required ProjectMetadataData metadata,
+    String? createdAt,
+    String? exportedAt,
+    String? appVersion,
+  }) {
+    return ProjectDocument._(
+      version: version,
+      session: session,
+      subtitleCollection: subtitleCollection,
+      checkpoints: List<ProjectCheckpointData>.unmodifiable(checkpoints),
+      historyReferences: historyReferences,
+      metadata: metadata,
+      createdAt: createdAt,
+      exportedAt: exportedAt,
+      appVersion: appVersion,
+      extra: const <String, dynamic>{},
+    );
+  }
+
+  int get totalLines => subtitleCollection.lines.length;
+
+  String? get originalFileUri {
+    final value = subtitleCollection.originalFileUri;
+    return value != null && value.isNotEmpty ? value : null;
+  }
+
+  Map<String, dynamic> toJson() {
+    final json = Map<String, dynamic>.from(_extra);
+    json['version'] = version;
+    if (createdAt != null) json['createdAt'] = createdAt;
+    if (exportedAt != null) json['exportedAt'] = exportedAt;
+    if (appVersion != null) json['appVersion'] = appVersion;
+    json['session'] = session.toJson();
+    json['subtitleCollection'] = subtitleCollection.toJson();
+    json['checkpoints'] =
+        checkpoints.map((checkpoint) => checkpoint.toJson()).toList();
+    if (historyReferences != null) {
+      json['historyRefs'] = historyReferences!.toJson();
+    }
+    json['metadata'] = metadata.toJson();
+    return json;
+  }
+
+}
+
+class ProjectDocumentCodec {
+  const ProjectDocumentCodec._();
+
+  static ProjectDocument decode(String content) {
+    final Object? decoded;
+    try {
+      decoded = jsonDecode(content);
+    } on FormatException catch (error) {
+      throw FormatException(
+        'Invalid .msone JSON: ' + error.message,
+      );
+    }
+
+    if (decoded is! Map) {
+      throw const FormatException(
+        'Invalid .msone file: root must be an object.',
+      );
+    }
+
+    final raw = Map<String, dynamic>.from(decoded);
+
+    final versionValue = raw['version'];
+    if (versionValue is! String || versionValue.trim().isEmpty) {
+      throw const FormatException(
+        'Invalid .msone file: missing project version.',
+      );
+    }
+
+    final sessionMap = _jsonObject(
+      raw['session'],
+      'Invalid .msone file: missing session data.',
+    );
+    final collectionMap = _jsonObject(
+      raw['subtitleCollection'],
+      'Invalid .msone file: missing subtitle collection.',
+    );
+
+    final checkpointMaps = _jsonObjectList(
+      raw['checkpoints'],
+      'Invalid .msone file: checkpoints must be a list of objects.',
+    );
+
+    final refValue = raw['historyRefs'];
+    if (refValue != null && refValue is! Map) {
+      throw const FormatException(
+        'Invalid .msone file: historyRefs must be an object.',
+      );
+    }
+    final metadataValue = raw['metadata'];
+    if (metadataValue != null && metadataValue is! Map) {
+      throw const FormatException(
+        'Invalid .msone file: metadata must be an object.',
+      );
+    }
+
+    final extra = Map<String, dynamic>.from(raw)
+      ..remove('version')
+      ..remove('createdAt')
+      ..remove('exportedAt')
+      ..remove('appVersion')
+      ..remove('session')
+      ..remove('subtitleCollection')
+      ..remove('checkpoints')
+      ..remove('historyRefs')
+      ..remove('metadata');
+
+    return ProjectDocument._(
+      version: versionValue,
+      session: ProjectSessionData.fromJson(sessionMap),
+      subtitleCollection:
+          ProjectSubtitleCollectionData.fromJson(collectionMap),
+      checkpoints: checkpointMaps
+          .map(ProjectCheckpointData.fromJson)
+          .toList(growable: false),
+      historyReferences: refValue is Map
+          ? ProjectHistoryReferencesData.fromJson(
+              Map<String, dynamic>.from(refValue),
+            )
+          : null,
+      metadata: metadataValue is Map
+          ? ProjectMetadataData.fromJson(
+              Map<String, dynamic>.from(metadataValue),
+            )
+          : ProjectMetadataData.fromJson(const <String, dynamic>{}),
+      createdAt: raw['createdAt'] is String
+          ? raw['createdAt'] as String
+          : null,
+      exportedAt: raw['exportedAt'] is String
+          ? raw['exportedAt'] as String
+          : null,
+      appVersion: raw['appVersion'] is String
+          ? raw['appVersion'] as String
+          : null,
+      extra: extra,
+    );
+  }
+
+  static String encode(ProjectDocument document) {
+    return jsonEncode(document.toJson());
+  }
+}
+);
+    final parts = name.split('/');
+    final validPath = parts.every(
+      (part) => part != '.' && part != '..' &&
+          !part.endsWith('.lock') && validPart.hasMatch(part),
+    );
+    final correctNamespace = switch (kind) {
+      'head' => name == 'HEAD',
+      'branch' => name.startsWith('refs/heads/') && parts.length >= 3,
+      'bookmark' => name.startsWith('refs/bookmarks/') && parts.length >= 3,
+      _ => false,
+    };
+    if (!validPath || !correctNamespace || name.length > 180) {
+      throw FormatException('Invalid .msone reference name or kind: $name.');
+    }
+    return ProjectHistoryReferenceData(
+      name: name,
+      kind: kind,
+      targetCheckpointId: id,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'name': name,
+    'kind': kind,
+    'targetCheckpointId': targetCheckpointId,
+  };
+}
+
+class ProjectHistoryReferencesData {
+  static const int currentVersion = 1;
+
+  final int schemaVersion;
+  final List<ProjectHistoryReferenceData> entries;
+
+  ProjectHistoryReferencesData._({
+    required this.schemaVersion,
+    required List<ProjectHistoryReferenceData> entries,
+  }) : entries = List<ProjectHistoryReferenceData>.unmodifiable(entries);
+
+  factory ProjectHistoryReferencesData.create({
+    required List<ProjectHistoryReferenceData> entries,
+  }) => ProjectHistoryReferencesData.fromJson({
+    'schemaVersion': currentVersion,
+    'entries': entries.map((entry) => entry.toJson()).toList(),
+  });
+
+  factory ProjectHistoryReferencesData.fromJson(Map<String, dynamic> json) {
+    if (json['schemaVersion'] != currentVersion) {
+      throw const FormatException('Unsupported .msone history refs version.');
+    }
+    final raw = _jsonObjectList(
+      json['entries'],
+      'Invalid .msone file: history ref entries must be objects.',
+    );
+    final parsed = raw.map(ProjectHistoryReferenceData.fromJson).toList();
+    final names = <String>{};
+    for (final entry in parsed) {
+      if (!names.add(entry.name)) {
+        throw FormatException('Duplicate .msone history ref: ${entry.name}.');
+      }
+    }
+    if (parsed.isNotEmpty &&
+        parsed.where((entry) => entry.kind == 'head').length != 1) {
+      throw const FormatException('Nonempty history refs need exactly one HEAD.');
+    }
+    return ProjectHistoryReferencesData._(
+      schemaVersion: currentVersion,
+      entries: parsed,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'schemaVersion': schemaVersion,
+    'entries': entries.map((entry) => entry.toJson()).toList(),
+  };
+}
+
 class ProjectDocument {
   final String version;
   final ProjectSessionData session;
