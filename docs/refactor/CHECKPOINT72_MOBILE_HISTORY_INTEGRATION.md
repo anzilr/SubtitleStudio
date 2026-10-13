@@ -32,3 +32,11 @@ Baseline: Checkpoint 71 R2 — 284 tests passed, 0 analyzer issues.
   behavior for eventual desktop and review large-history scrolling.
 
 Quality gate: flutter analyze and flutter test -j 1 at checkpoint.
+
+## Test isolation
+- Widget tests inject HistoryGraphCommands with an in-memory fake, avoiding
+  native Isar async operations in Flutter's fake-async widget test zone.
+- Real Isar atomic reference/checkout coverage remains in
+  checkpoint_history_actions_integration_test.dart and existing integration
+  suites. This keeps UI testing deterministic without losing persistence tests.
+

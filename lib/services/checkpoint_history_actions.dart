@@ -8,7 +8,26 @@ import 'package:subtitle_studio/services/checkpoint_repository.dart';
 /// graph is refreshed from durable state after a successful operation.
 /// A rejected checkout returns null so the UI can display a warning without
 /// pretending that the requested branch or commit was activated.
-class CheckpointHistoryActions {
+/// Injectable command contract for a mobile or desktop history surface.
+/// Production uses CheckpointHistoryActions, widgets can use a deterministic
+/// fake without opening native Isar inside the widget-test zone.
+abstract interface class HistoryGraphCommands {
+  Future<CheckpointHistoryGraph> load();
+  Future<CheckpointHistoryGraph> createBranch({
+    required String name, required int checkpointId,
+  });
+  Future<CheckpointHistoryGraph> createBookmark({
+    required String name, required int checkpointId,
+  });
+  Future<CheckpointHistoryGraph> renameReference({
+    required String name, required String newName,
+  });
+  Future<CheckpointHistoryGraph> deleteReference(String name);
+  Future<CheckpointHistoryGraph?> checkoutBranch(String name);
+  Future<CheckpointHistoryGraph?> checkoutCommit(int checkpointId);
+}
+
+class CheckpointHistoryActions implements HistoryGraphCommands {
   final CheckpointRepository _repository;
   final int sessionId;
 

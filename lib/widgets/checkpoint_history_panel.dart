@@ -8,6 +8,7 @@ import 'package:subtitle_studio/services/checkpoint_history_graph.dart';
 class CheckpointHistoryPanel extends ConsumerStatefulWidget {
   final int sessionId;
   final int refreshVersion;
+  final HistoryGraphCommands? commands;
   final VoidCallback onCheckpointRestored;
 
   const CheckpointHistoryPanel({
@@ -15,6 +16,7 @@ class CheckpointHistoryPanel extends ConsumerStatefulWidget {
     required this.sessionId,
     required this.onCheckpointRestored,
     this.refreshVersion = 0,
+    this.commands,
   });
 
   @override
@@ -28,7 +30,7 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
   bool _busy = true;
   int _generation = 0;
 
-  CheckpointHistoryActions get _actions => CheckpointHistoryActions(
+  HistoryGraphCommands get _actions => widget.commands ?? CheckpointHistoryActions(
     ref.read(checkpointRepositoryProvider), sessionId: widget.sessionId);
 
   @override
