@@ -4,6 +4,7 @@ import 'package:subtitle_studio/services/checkpoint_head_reference.dart';
 import 'package:subtitle_studio/services/checkpoint_policy.dart';
 import 'package:subtitle_studio/services/checkpoint_reference_catalog.dart';
 import 'package:subtitle_studio/services/checkpoint_reference_migration_plan.dart';
+import 'package:subtitle_studio/services/history_ref_repository.dart';
 import 'package:subtitle_studio/services/checkpoint_state_hasher.dart';
 import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
 
@@ -84,8 +85,22 @@ class CheckpointStore {
   Future<List<CheckpointReference>> getReferencesForSession(
     int sessionId,
   ) async {
-    final history = await getCheckpointsForSession(sessionId);
-    return CheckpointReferenceCatalog.fromHistory(history);
+    final persisted = await HistoryRefRepository(_isar)
+        .getReferences(sessionId);
+    if (persisted.isEmpty) return const [];
+    return List<CheckpointReference>.unmodifiable([
+      for (final r in persisted)
+        CheckpointReference(
+          name: r.name,
+          checkpointId: r.targetCheckpointId,
+          kind: switch (r.kind) {
+            'head' => CheckpointReferenceKind.head,
+            'branch' => CheckpointReferenceKind.branchTip,
+            'bookmark' => CheckpointReferenceKind.manualBookmark,
+            _ => throw StateError('Unrecognized persisted history ref kind.'),
+          },
+        ),
+    ]);
   }
 
   Future<int> putCheckpoint(Checkpoint checkpoint) async {
@@ -113,10 +128,14 @@ class CheckpointStore {
       if (checkpoints.isEmpty || maxCheckpoints <= 0) return 0;
 
       final head = CheckpointHeadReference.resolveForMutation(checkpoints);
+      final refs = await HistoryRefRepository.ensureMigratedInTransaction(
+        _isar, sessionId: sessionId,
+      );
       final toDelete = CheckpointPolicy.cleanupCandidates(
         checkpoints: checkpoints,
         maxCheckpoints: maxCheckpoints,
         headCheckpointId: head?.id,
+        additionalProtectedIds: refs.map((r) => r.targetCheckpointId).toSet(),
       );
       if (toDelete.isEmpty) return 0;
       await _isar.checkpoints.deleteAll(
@@ -181,6 +200,11 @@ class CheckpointStore {
         );
       }
 
+      if (allCheckpoints.isNotEmpty) {
+        await HistoryRefRepository.ensureMigratedInTransaction(
+          _isar, sessionId: sessionId,
+        );
+      }
       final activeCheckpoints =
           CheckpointHeadReference.activeCheckpoints(allCheckpoints);
       CheckpointHeadReference.clearInMemory(activeCheckpoints);
@@ -190,6 +214,9 @@ class CheckpointStore {
 
       checkpoint.isActive = true;
       checkpointId = await _isar.checkpoints.put(checkpoint);
+      await HistoryRefRepository.moveHeadInTransaction(
+        _isar, sessionId: sessionId, checkpointId: checkpointId,
+      );
     });
 
     return checkpointId;
@@ -246,6 +273,9 @@ class CheckpointStore {
         );
       }
 
+      await HistoryRefRepository.ensureMigratedInTransaction(
+        _isar, sessionId: sessionId,
+      );
       CheckpointHeadReference.moveInMemory(
         checkpoints: allCheckpoints,
         checkpointId: target.id,
@@ -253,11 +283,17 @@ class CheckpointStore {
       await _isar.checkpoints.putAll(allCheckpoints);
       stored.lines = CheckpointStateReducer.copyLines(collection.lines);
       await _isar.subtitleCollections.put(stored);
+      await HistoryRefRepository.moveHeadInTransaction(
+        _isar, sessionId: sessionId, checkpointId: target.id, detach: true,
+      );
     });
   }
 
   Future<void> deleteCheckpointsForSession(int sessionId) async {
     await _isar.writeTxn(() async {
+      await HistoryRefRepository.deleteSessionRefsInTransaction(
+        _isar, sessionId: sessionId,
+      );
       final checkpoints = await _isar.checkpoints
           .filter()
           .sessionIdEqualTo(sessionId)
