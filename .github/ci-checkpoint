@@ -1,20 +1,14 @@
-Riverpod migration checkpoint 70 R3
+Riverpod migration checkpoint 71
 Date: 2026-10-13
 Checks:
-- flutter analyze (zero issues)
+- flutter analyze (zero warnings/issues expected)
 - flutter test -j 1
 
 Focus:
-- transactional named branch and bookmark creation, rename and deletion
-- prevent invalid, colliding or foreign reference names and targets
-- direct checkout detaches HEAD without advancing a branch tip
-- named branch checkout validates target and attaches HEAD transactionally
-- subsequent commits update only the attached branch
-- preserve named refs and symbolic/detached HEAD in versioned .msone files
-- atomic import remaps all named ref targets; legacy archive compatibility
-- pure and real-Isar integration regressions
-- no UI changes, platform builds, upstream changes or release tag updates
-
-Regression: reconstructed HistoryRefRepository class from last verified source after malformed patch insertion.
-
-Final gate: zero analyzer issues (including warnings), all named-ref and legacy regression tests.
+- read-only, immutable history DAG for any mobile/desktop presentation
+- deterministic parent-first depth, fork children and HEAD ancestry
+- persistence-proven branch/bookmark action facade
+- Isar transactional snapshot and rejection of inconsistent histories
+- real-Isar session-level actions plus pure graph regressions
+- no generated Isar model changes, UI layout changes or platform builds
+- no changes to main, upstream or release tags
