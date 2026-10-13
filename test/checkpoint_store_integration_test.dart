@@ -393,7 +393,7 @@ void main() {
     );
   });
 
-  test('transactional pruning preserves current HEAD and newest branch tips',
+  test('transactional pruning preserves every persisted alternate branch tip',
       () async {
     final root = Checkpoint(
       sessionId: 32,
@@ -429,12 +429,13 @@ void main() {
     expect(await store.pruneSession(
       sessionId: 32,
       maxCheckpoints: 3,
-    ), 1);
+    ), 0);
 
-    // Three retained branch tips + root may legitimately exceed the limit.
+    // Unlike the old ephemeral-tip policy, durable refs protect ALL named
+    // alternate branches and their ancestry, even above the retention limit.
     final surviving = await store.getCheckpointsForSession(32);
     expect(surviving.map((c) => c.id).toSet(), {
-      rootId, branchIds[1], branchIds[2], branchIds[3],
+      rootId, ...branchIds,
     });
     expect((await store.getCurrentHeadCheckpoint(32))?.id, branchIds[3]);
   });
@@ -481,11 +482,14 @@ void main() {
     expect(await store.pruneSession(
       sessionId: 33,
       maxCheckpoints: 3,
-    ), 1);
+    ), 0);
     final live = await store.getCheckpointsForSession(33);
-    expect(live.any((c) => c.id == tips.first), isTrue);
+    expect(live.map((cp) => cp.id).toSet(), {rootId, ...tips});
     expect((await store.getCurrentHeadCheckpoint(33))?.id, tips.first);
-    expect(live.any((c) => c.id == tips[1]), isFalse);
+    final persistedRefs = await harness.isar.historyRefs
+        .filter().sessionIdEqualTo(33).findAll();
+    expect(persistedRefs.firstWhere((ref) => ref.name == 'HEAD')
+        .targetCheckpointId, tips.first);
   });
 
   test('direct deletion cannot bypass active HEAD retention', () async {
