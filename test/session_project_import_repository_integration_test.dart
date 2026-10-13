@@ -102,6 +102,18 @@ void main() {
         lines: [_line(1, 'One')],
       ),
       checkpoints: [first, second],
+      historyReferences: ProjectHistoryReferencesData.create(entries: const [
+        ProjectHistoryReferenceData(
+          name: 'HEAD',
+          kind: 'head',
+          targetCheckpointId: 200,
+        ),
+        ProjectHistoryReferenceData(
+          name: 'refs/heads/main',
+          kind: 'branch',
+          targetCheckpointId: 200,
+        ),
+      ]),
       metadata: ProjectMetadataData.create(
         totalLines: 1,
         editedLines: 0,
