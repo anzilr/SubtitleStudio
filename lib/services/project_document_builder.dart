@@ -14,6 +14,7 @@ class ProjectDocumentBuilder {
     required Session session,
     required SubtitleCollection subtitleCollection,
     required List<Checkpoint> checkpoints,
+    List<HistoryRef>? persistentReferences,
     required String projectVersion,
     required String appVersion,
     DateTime? now,
@@ -23,6 +24,26 @@ class ProjectDocumentBuilder {
     // derived from the checkpoint graph until durable Isar refs are available.
     // Invalid graphs fail before a project file is written.
     final historyPlan = CheckpointReferenceMigrationPlan.prepare(checkpoints);
+    final liveRefs = persistentReferences;
+    // A stale export must never write refs targeting a different graph.
+    if (liveRefs != null && liveRefs.isNotEmpty) {
+      final ids = {for (final cp in checkpoints) cp.id: cp};
+      final names = <String>{};
+      for (final ref in liveRefs) {
+        final cp = ids[ref.targetCheckpointId];
+        if (!names.add(ref.name) || cp == null ||
+            ref.sessionId != session.id ||
+            cp.sessionId != ref.sessionId ||
+            cp.subtitleCollectionId != ref.subtitleCollectionId) {
+          throw StateError('Persistent refs do not match the exported history.');
+        }
+      }
+      if (liveRefs.where((ref) => ref.name == 'HEAD').length != 1 ||
+          liveRefs.firstWhere((ref) => ref.name == 'HEAD')
+              .targetCheckpointId != historyPlan.headCheckpointId) {
+        throw StateError('Export HEAD does not match the persisted checkpoint graph.');
+      }
+    }
 
     return ProjectDocument.create(
       version: projectVersion,
@@ -49,16 +70,29 @@ class ProjectDocumentBuilder {
       historyReferences: historyPlan.references.isEmpty
           ? null
           : ProjectHistoryReferencesData.create(entries: [
-              for (final ref in historyPlan.references)
-                ProjectHistoryReferenceData(
-                  name: ref.name,
-                  kind: switch (ref.kind) {
-                    CheckpointReferenceKind.head => 'head',
-                    CheckpointReferenceKind.branchTip => 'branch',
-                    CheckpointReferenceKind.manualBookmark => 'bookmark',
-                  },
-                  targetCheckpointId: ref.checkpointId,
-                ),
+              if (liveRefs != null && liveRefs.isNotEmpty)
+                for (final ref in liveRefs)
+                  ProjectHistoryReferenceData(
+                    name: ref.name,
+                    kind: ref.kind,
+                    targetCheckpointId: ref.targetCheckpointId,
+                    symbolicBranchName: ref.symbolicBranchName,
+                    attachmentSpecified: ref.name == 'HEAD',
+                  )
+              else
+                for (final ref in historyPlan.references)
+                  ProjectHistoryReferenceData(
+                    name: ref.name,
+                    kind: switch (ref.kind) {
+                      CheckpointReferenceKind.head => 'head',
+                      CheckpointReferenceKind.branchTip => 'branch',
+                      CheckpointReferenceKind.manualBookmark => 'bookmark',
+                    },
+                    targetCheckpointId: ref.checkpointId,
+                    symbolicBranchName:
+                        ref.name == 'HEAD' ? 'refs/heads/main' : null,
+                    attachmentSpecified: ref.name == 'HEAD',
+                  ),
             ]),
       metadata: ProjectMetadataData.create(
         totalLines: subtitleCollection.lines.length,
