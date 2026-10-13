@@ -1,14 +1,10 @@
-import 'package:subtitle_studio/services/checkpoint_reference_catalog.dart';
 import 'package:subtitle_studio/services/checkpoint_reference_migration_plan.dart';
 import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
 import 'package:subtitle_studio/services/project_document_codec.dart';
 import 'package:subtitle_studio/widgets/session_selection/project_history_import_plan.dart';
 
-/// Validates optional .msone reference data before any project import writes.
-///
-/// Checkpoint 68 can round-trip only *derived* refs: HEAD, main branch,
-/// alternate tips and manual checkpoint bookmarks. User-named persistent refs
-/// need the forthcoming generated Isar schema and must never be silently lost.
+/// Validates all archived refs against the complete graph before an import
+/// transaction. A valid custom name must never be silently regenerated.
 class ProjectHistoryReferenceImportPlan {
   const ProjectHistoryReferenceImportPlan._();
 
@@ -24,32 +20,38 @@ class ProjectHistoryReferenceImportPlan {
     }
     try {
       final plan = CheckpointReferenceMigrationPlan.prepare(history.checkpoints);
-      final expected = <String, (String, int)>{
-        for (final ref in plan.references)
-          ref.name: (
-            switch (ref.kind) {
-              CheckpointReferenceKind.head => 'head',
-              CheckpointReferenceKind.branchTip => 'branch',
-              CheckpointReferenceKind.manualBookmark => 'bookmark',
-            },
-            ref.checkpointId,
-          ),
-      };
-      if (data.entries.length != expected.length) {
+      final ids = plan.sourceCheckpointIds;
+      if (data.entries.isEmpty || ids.isEmpty) {
         throw const ProjectHistoryImportException(
-          'This project has history refs that cannot yet be safely '
-          'persisted. Import subtitles only or use a version supporting '
-          'named references.',
+          'A referenced history must contain checkpoints and HEAD.',
+        );
+      }
+      final named = {for (final ref in data.entries) ref.name: ref};
+      final head = named['HEAD'];
+      if (head == null || head.targetCheckpointId != plan.headCheckpointId) {
+        throw const ProjectHistoryImportException(
+          'Archived HEAD does not match the validated checkpoint graph.',
         );
       }
       for (final ref in data.entries) {
-        final target = expected[ref.name];
-        if (target == null ||
-            target.$1 != ref.kind ||
-            target.$2 != ref.targetCheckpointId) {
+        if (!ids.contains(ref.targetCheckpointId)) {
           throw ProjectHistoryImportException(
-            'Invalid or unsupported history ref: ${ref.name}. '
-            'No project changes have been made.',
+            'Missing checkpoint target for archived ref: ${ref.name}.',
+          );
+        }
+      }
+      final attachment = head.attachmentSpecified
+          ? head.symbolicBranchName
+          : (named['refs/heads/main']?.targetCheckpointId ==
+                  head.targetCheckpointId
+              ? 'refs/heads/main'
+              : null);
+      if (attachment != null) {
+        final branch = named[attachment];
+        if (branch == null || branch.kind != 'branch' ||
+            branch.targetCheckpointId != head.targetCheckpointId) {
+          throw const ProjectHistoryImportException(
+            'Archived symbolic HEAD does not agree with its branch tip.',
           );
         }
       }
