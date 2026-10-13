@@ -113,6 +113,16 @@ void main() {
           kind: 'branch',
           targetCheckpointId: 200,
         ),
+        ProjectHistoryReferenceData(
+          name: 'refs/heads/arabic-review',
+          kind: 'branch',
+          targetCheckpointId: 100,
+        ),
+        ProjectHistoryReferenceData(
+          name: 'refs/bookmarks/review-start',
+          kind: 'bookmark',
+          targetCheckpointId: 100,
+        ),
       ]),
       metadata: ProjectMetadataData.create(
         totalLines: 1,
@@ -145,6 +155,20 @@ void main() {
     expect(importedSecond.id, isNot(200));
     expect(importedSecond.parentCheckpointId, importedFirst.id);
     expect(importedSecond.deltas.single.afterState?.edited, 'Uno');
+    final savedRefs = await harness.isar.historyRefs
+        .filter().sessionIdEqualTo(session.id).findAll();
+    expect(savedRefs.map((r) => r.name).toSet(), {
+      'HEAD', 'refs/heads/main', 'refs/heads/arabic-review',
+      'refs/bookmarks/review-start',
+    });
+    expect(savedRefs.firstWhere((r) => r.name == 'HEAD')
+        .targetCheckpointId, importedSecond.id);
+    expect(savedRefs.firstWhere((r) => r.name == 'HEAD')
+        .symbolicBranchName, 'refs/heads/main');
+    expect(savedRefs.firstWhere((r) => r.name == 'refs/heads/arabic-review')
+        .targetCheckpointId, importedFirst.id);
+    expect(savedRefs.firstWhere((r) => r.name == 'refs/bookmarks/review-start')
+        .targetCheckpointId, importedFirst.id);
 
     final collection =
         await harness.isar.subtitleCollections.get(session.subtitleCollectionId);
