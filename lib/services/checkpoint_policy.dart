@@ -41,6 +41,7 @@ class CheckpointPolicy {
     required int maxCheckpoints,
     int? headCheckpointId,
     int protectedAlternateBranchTips = 2,
+    Set<int> additionalProtectedIds = const {},
   }) {
     if (maxCheckpoints <= 0 || checkpoints.length <= maxCheckpoints) {
       return const <Checkpoint>[];
@@ -53,6 +54,16 @@ class CheckpointPolicy {
       checkpoints: checkpoints,
       headCheckpointId: resolvedHeadId,
     );
+
+    // Every persistent named ref protects its checkpoint and ancestor chain.
+    for (final id in additionalProtectedIds) {
+      protectedIds.addAll(
+        CheckpointTimeline.ancestorPathIds(
+          checkpoints: checkpoints,
+          fromCheckpointId: id,
+        ),
+      );
+    }
 
     if (protectedAlternateBranchTips > 0) {
       final parentIds = <int>{
