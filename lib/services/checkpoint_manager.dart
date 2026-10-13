@@ -54,10 +54,12 @@ import 'dart:convert';
 class CheckpointManager {
   final CheckpointStore _store;
   final CheckpointPreferencesRepository _preferences;
+  final HistoryRefRepository _historyRefs;
 
   CheckpointManager(Isar isar)
       : _store = CheckpointStore(isar),
-        _preferences = CheckpointPreferencesRepository(isar);
+        _preferences = CheckpointPreferencesRepository(isar),
+        _historyRefs = HistoryRefRepository(isar);
 
   // Get maximum checkpoints from preferences (0 = unlimited)
   Future<int> getMaxCheckpoints() {
@@ -691,7 +693,7 @@ class CheckpointManager {
     required String name,
   }) async {
     try {
-      final target = await HistoryRefRepository(_store.isar).resolveBranch(
+      final target = await _historyRefs.resolveBranch(
         sessionId: sessionId,
         name: name,
       );
@@ -704,6 +706,48 @@ class CheckpointManager {
       return false;
     }
   }
+
+  /// Create a lightweight named branch or bookmark without duplicating a
+  /// snapshot. All ownership/name checks occur within one Isar transaction.
+  Future<HistoryRef> createBranch({
+    required int sessionId,
+    required String name,
+    required int checkpointId,
+  }) => _historyRefs.create(
+    sessionId: sessionId,
+    name: name,
+    kind: 'branch',
+    targetCheckpointId: checkpointId,
+  );
+
+  Future<HistoryRef> createBookmark({
+    required int sessionId,
+    required String name,
+    required int checkpointId,
+  }) => _historyRefs.create(
+    sessionId: sessionId,
+    name: name,
+    kind: 'bookmark',
+    targetCheckpointId: checkpointId,
+  );
+
+  Future<void> renameReference({
+    required int sessionId,
+    required String name,
+    required String newName,
+  }) => _historyRefs.rename(
+    sessionId: sessionId,
+    name: name,
+    newName: newName,
+  );
+
+  Future<void> deleteReference({
+    required int sessionId,
+    required String name,
+  }) => _historyRefs.delete(sessionId: sessionId, name: name);
+
+  Future<List<HistoryRef>> getPersistentReferences(int sessionId) =>
+      _historyRefs.getReferences(sessionId);
 
   /// Returns the current single HEAD commit for [sessionId].
   Future<Checkpoint?> getHeadCheckpoint(int sessionId) {
