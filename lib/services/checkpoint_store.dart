@@ -3,6 +3,7 @@ import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/services/checkpoint_head_reference.dart';
 import 'package:subtitle_studio/services/checkpoint_policy.dart';
 import 'package:subtitle_studio/services/checkpoint_reference_catalog.dart';
+import 'package:subtitle_studio/services/checkpoint_reference_migration_plan.dart';
 import 'package:subtitle_studio/services/checkpoint_state_hasher.dart';
 import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
 
@@ -69,6 +70,15 @@ class CheckpointStore {
         .sessionIdEqualTo(sessionId)
         .findAll();
     return CheckpointHeadReference.resolveForMutation(all);
+  }
+
+  /// Read-only preview for the future Isar HistoryRef schema migration.
+  /// No legacy active flags or stored checkpoints are mutated.
+  Future<CheckpointReferenceMigrationPlan> previewReferenceMigration(
+    int sessionId,
+  ) async {
+    final checkpoints = await getCheckpointsForSession(sessionId);
+    return CheckpointReferenceMigrationPlan.prepare(checkpoints);
   }
 
   Future<List<CheckpointReference>> getReferencesForSession(
