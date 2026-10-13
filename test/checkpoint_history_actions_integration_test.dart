@@ -93,4 +93,72 @@ void main() {
     expect(await harness.isar.checkpoints.count(), checkpointCount);
     expect(await harness.isar.historyRefs.count(), 3);
   });
+
+  test('checkout refuses a stale HEAD and stale named branch tip', () async {
+    late int sessionId;
+    late int collectionId;
+    await harness.isar.writeTxn(() async {
+      collectionId = await harness.isar.subtitleCollections.put(
+        SubtitleCollection(
+          fileName: 'checkout-race.srt',
+          encoding: 'UTF-8',
+          lines: [_line()],
+        ),
+      );
+      sessionId = await harness.isar.sessions.put(
+        Session(
+          fileName: 'checkout-race.srt',
+          subtitleCollectionId: collectionId,
+        ),
+      );
+    });
+    final repository = CheckpointRepository(harness.isar);
+    final actions = CheckpointHistoryActions(repository, sessionId: sessionId);
+    final root = await repository.createInitialSnapshot(
+      sessionId: sessionId, subtitleCollectionId: collectionId);
+    await actions.createBranch(
+      name: 'refs/heads/topic', checkpointId: root);
+    final next = await repository.createManualCheckpoint(
+      sessionId: sessionId,
+      subtitleCollectionId: collectionId,
+      customDescription: 'Newer state',
+    );
+    expect(next, isNot(root));
+
+    // A confirmation made at the old HEAD must not detach a newer commit.
+    expect(await actions.checkoutCommit(
+      root, ifCurrentHeadId: root), isNull);
+    expect((await repository.getHeadCheckpoint(sessionId))!.id, next);
+
+    // A branch label that changed after the dialog opened must be rejected.
+    expect(await actions.checkoutBranch(
+      'refs/heads/topic',
+      ifCurrentHeadId: next,
+      ifBranchTipId: next,
+    ), isNull);
+    expect((await repository.getHeadCheckpoint(sessionId))!.id, next);
+
+    // With both observed values current, branch switching succeeds.
+    final switched = await actions.checkoutBranch(
+      'refs/heads/topic',
+      ifCurrentHeadId: next,
+      ifBranchTipId: root,
+    );
+    expect(switched?.headCheckpointId, root);
+    expect(switched?.attachedBranchName, 'refs/heads/topic');
+
+    // A new commit advances the attached branch only.
+    final movedTip = await repository.createManualCheckpoint(
+      sessionId: sessionId,
+      subtitleCollectionId: collectionId,
+      customDescription: 'Topic change',
+    );
+    expect(movedTip, isNot(root));
+    expect(await actions.checkoutBranch(
+      'refs/heads/topic',
+      ifCurrentHeadId: movedTip,
+      ifBranchTipId: root,
+    ), isNull);
+    expect((await repository.getHeadCheckpoint(sessionId))!.id, movedTip);
+  });
 }

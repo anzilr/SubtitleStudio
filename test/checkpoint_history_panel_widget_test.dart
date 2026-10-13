@@ -8,6 +8,8 @@ import 'package:subtitle_studio/widgets/checkpoint_history_panel.dart';
 
 class FakeHistoryCommands implements HistoryGraphCommands {
   final bool corrupt;
+  int? lastExpectedHeadId;
+  int? lastExpectedTipId;
   final List<HistoryRef> refs;
   final Checkpoint checkpoint;
 
@@ -79,12 +81,22 @@ class FakeHistoryCommands implements HistoryGraphCommands {
   }
 
   @override
-  Future<CheckpointHistoryGraph?> checkoutBranch(String name) async =>
-      null;
+  Future<CheckpointHistoryGraph?> checkoutBranch(String name, {
+    int? ifCurrentHeadId,
+    int? ifBranchTipId,
+  }) async {
+    lastExpectedHeadId = ifCurrentHeadId;
+    lastExpectedTipId = ifBranchTipId;
+    return null;
+  }
 
   @override
-  Future<CheckpointHistoryGraph?> checkoutCommit(int checkpointId) async =>
-      null;
+  Future<CheckpointHistoryGraph?> checkoutCommit(int checkpointId, {
+    int? ifCurrentHeadId,
+  }) async {
+    lastExpectedHeadId = ifCurrentHeadId;
+    return null;
+  }
 }
 
 Widget _host(FakeHistoryCommands actions) => ProviderScope(
@@ -144,5 +156,44 @@ void main() {
         findsOneWidget);
     expect(find.byKey(const ValueKey('history-graph-list')), findsNothing);
     expect(find.text('Retry'), findsOneWidget);
+  });
+
+  testWidgets('checkout confirmation passes observed HEAD to guard races',
+      (tester) async {
+    final fake = FakeHistoryCommands();
+    await tester.pumpWidget(_host(fake));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('history-node-menu-1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Check out commit'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('detach HEAD'), findsOneWidget);
+    await tester.tap(find.text('Check out').last);
+    await tester.pumpAndSettle();
+
+    expect(fake.lastExpectedHeadId, 1);
+    expect(find.textContaining('Checkout refused'), findsOneWidget);
+    expect(find.text('On main'), findsOneWidget);
+  });
+
+  testWidgets('named checkout guards both HEAD and observed branch tip',
+      (tester) async {
+    final fake = FakeHistoryCommands();
+    await tester.pumpWidget(_host(fake));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(
+      const ValueKey('history-ref-menu-refs/heads/main')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Switch to branch'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('attach HEAD'), findsOneWidget);
+    await tester.tap(find.text('Switch').last);
+    await tester.pumpAndSettle();
+
+    expect(fake.lastExpectedHeadId, 1);
+    expect(fake.lastExpectedTipId, 1);
+    expect(find.text('On main'), findsOneWidget);
   });
 }
