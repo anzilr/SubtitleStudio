@@ -170,7 +170,7 @@ Future<Isar> initializeIsarWithRetry({int maxRetries = 3}) async {
     try {
       // Attempt to open Isar database with all required schemas
       final isar = await Isar.open(
-        [PreferencesSchema, SessionSchema, SubtitleCollectionSchema, DictionaryEntrySchema, CheckpointSchema, VideoPreferencesSchema, TutorialStatusSchema],
+        [PreferencesSchema, SessionSchema, SubtitleCollectionSchema, DictionaryEntrySchema, CheckpointSchema, HistoryRefSchema, VideoPreferencesSchema, TutorialStatusSchema],
         directory: dir.path, 
         name: "subtitlesInstance", // Unique database instance name
       );
