@@ -1,18 +1,17 @@
-Riverpod migration checkpoint 68 R2
+Riverpod migration checkpoint 69
 Date: 2026-10-13
 Checks:
-- revalidate rebuilt codec after safe insertion fix
-- flutter analyze (zero issues)
+- flutter analyze (zero issues required)
 - flutter test -j 1
 
 Focus:
-- optional versioned .msone historyRefs schema (without Isar schema changes)
-- strict HEAD, branch, bookmark names and target validation
-- export derived history refs and preserve old .msone decode compatibility
-- preflight import against validated checkpoint graph; reject unsupported named refs
-- remap source ref targets to newly inserted checkpoint IDs within import transaction
-- regressions for archive codec, builder, import and legacy compatibility
-- defer persistent HistoryRef Isar table until generated schema/database compatibility gate
-- desktop UI deferred; encoding and waveform remain separate roadmap milestones
+- generated additive Isar HistoryRef collection via pinned Flutter build_runner
+- include generated schema in production and integration Isar opens
+- idempotent transactional legacy ref migration and V2 validation
+- synchronize persisted HEAD/main during history mutation and checkout
+- reference-aware checkpoint retention and lifecycle deletion
+- atomically replace imported history and refs
+- compatibility test opening a real previous-schema file
+- leave named branch editing, full .msone custom labels and desktop UI to future checkpoint
 
-No platform builds, ungenerated models, upstream merges or release tag changes.
+No native builds or changes to upstream/main/release tags.
