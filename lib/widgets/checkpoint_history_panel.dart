@@ -114,7 +114,7 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
             labelText: 'Name',
             helperText: 'Letters, digits, /, dot, dash or underscore',
           ),
-          onSubmitted: (value) => Navigator.pop(dialog, value),
+          onFieldSubmitted: (value) => Navigator.pop(dialog, value),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(dialog),
