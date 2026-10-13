@@ -89,14 +89,12 @@ void main() {
     );
   });
 
-  test('unknown branch name cannot be silently discarded', () {
-    expect(
-      () => ProjectHistoryReferenceImportPlan.prepare(
-        data: _refs(10, branchName: 'refs/heads/my-feature'),
-        history: _history(),
-      ),
-      throwsA(isA<ProjectHistoryImportException>()),
+  test('custom branch names are now valid and preserved by import', () {
+    final plan = ProjectHistoryReferenceImportPlan.prepare(
+      data: _refs(10, branchName: 'refs/heads/my-feature'),
+      history: _history(),
     );
+    expect(plan!.headCheckpointId, 10);
   });
 
   test('unknown checkpoint targets and extra refs fail closed', () {
