@@ -1,4 +1,4 @@
-Riverpod migration checkpoint 70 R2
+Riverpod migration checkpoint 70 R3
 Date: 2026-10-13
 Checks:
 - flutter analyze (zero issues)
@@ -16,3 +16,5 @@ Focus:
 - no UI changes, platform builds, upstream changes or release tag updates
 
 Regression: reconstructed HistoryRefRepository class from last verified source after malformed patch insertion.
+
+Final gate: zero analyzer issues (including warnings), all named-ref and legacy regression tests.
