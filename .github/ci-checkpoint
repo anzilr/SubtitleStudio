@@ -1,11 +1,13 @@
-Riverpod migration checkpoint 72 R3
+Riverpod migration checkpoint 73 R1
 Date: 2026-10-13
 Checks:
-- flutter analyze zero issues
+- flutter analyze --no-fatal-infos --no-fatal-warnings; goal zero issues
 - flutter test -j 1
 
-Changes:
-- branch-aware mobile timeline and persistent refs actions
-- deterministic injectable widget test commands
-- text dialog input without early controller disposal (R2 regression)
-- no desktop shell, schema change, upstream or tag change
+Focus:
+- stale expected HEAD and branch-tip guards through repository and mobile UI
+- prevent concurrent history dialogs and stale callback navigation
+- lazy history list rendering and bounded legacy descendant traversal
+- accurately label in-app snapshot vs independent backup
+- widget, real-Isar, and large-history regression tests
+- no native builds, desktop shell, upstream merges, main or tag changes

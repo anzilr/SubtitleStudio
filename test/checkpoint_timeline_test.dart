@@ -208,5 +208,23 @@ void main() {
         {3, 4, 5},
       );
     });
+
+    test('large branched descendant traversal visits every branch once', () {
+      final commits = <Checkpoint>[
+        _checkpoint(id: 1, type: 'snapshot', second: 1),
+      ];
+      for (var id = 2; id <= 2501; id++) {
+        commits.add(_checkpoint(
+          id: id, parentId: id == 2501 ? 100 : id - 1,
+          type: 'delta', second: id,
+        ));
+      }
+      final descendants = CheckpointTimeline.descendantIds(
+        checkpoints: commits, parentCheckpointId: 1,
+      );
+      expect(descendants.length, 2500);
+      expect(descendants, containsAll([2, 100, 2500, 2501]));
+      expect(descendants, isNot(contains(1)));
+    });
   });
 }

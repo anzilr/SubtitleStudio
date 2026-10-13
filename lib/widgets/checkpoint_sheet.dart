@@ -49,6 +49,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
   List<Checkpoint> _checkpoints = [];
   bool _isLoading = true;
   bool _showGraph = true;
+  bool _classicCheckoutPending = false;
   int _graphRefreshVersion = 0;
   int _historyLoadGeneration = 0;
   List<CheckpointNode> _treeNodes = [];
@@ -171,6 +172,9 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
   }
 
   Future<void> _restoreCheckpoint(Checkpoint checkpoint) async {
+    if (_classicCheckoutPending) return;
+    _classicCheckoutPending = true;
+    try {
     // O(history size), cycle-bounded traversal, including alternate branches.
     final futureCheckpointsCount = CheckpointTimeline.descendantIds(
       checkpoints: _checkpoints,
@@ -286,9 +290,10 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
     );
 
     if (confirmed == true && mounted) {
-      final success = await ref.read(checkpointRepositoryProvider).undoToCheckpoint(
+      final success = await ref.read(checkpointRepositoryProvider).checkoutCheckpoint(
         checkpointId: checkpoint.id,
         sessionId: widget.sessionId,
+        ifCurrentHeadId: _currentCheckpointId,
       );
 
       if (success && mounted) {
@@ -297,12 +302,15 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
         
         if (mounted) {
           SnackbarHelper.showSuccess(context, 'Restored successfully');
-          widget.onCheckpointRestored();
           Navigator.pop(context);
+          widget.onCheckpointRestored();
         }
       } else if (mounted) {
         SnackbarHelper.showError(context, 'Failed to restore');
       }
+    }
+    } finally {
+      _classicCheckoutPending = false;
     }
   }
 
