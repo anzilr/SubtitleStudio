@@ -4,6 +4,8 @@ Date: 2026-10-13
 Branch: `refactor/riverpod-architecture`
 Starting verified baseline: Checkpoint 66 (code/CI marker `4dd480b`, analyzer 0 issues, 248 tests passed).
 
+**Verified Checkpoint 67:** CI marker [`cac51c3`](https://github.com/anzilr/SubtitleStudio/commit/cac51c3df0ee20339bbefb620dea9a7bea8f2422), **0 analyzer issues**, **258 passing tests**, [successful Actions run](https://github.com/anzilr/SubtitleStudio/actions/runs/38436889145).
+
 ## Implemented in this checkpoint
 
 ### Migration plan — deliberately read-only
