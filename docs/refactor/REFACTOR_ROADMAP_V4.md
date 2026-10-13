@@ -2,10 +2,12 @@
 
 > **October 12, 2026 progress addendum** — This document's checkpoint-45
 > inventory and older step list are retained as an historical baseline.
-> The current verified quality gate is **Checkpoint 68 R2** (`b16793a`):
-> zero analyzer issues and **266 tests passed**. Optional, versioned .msone
-> historyRefs are now exported and validated on import, with atomic checkpoint
-> ID remapping. True named Isar refs still require generated-schema migration;
+> The current verified quality gate is **Checkpoint 69 R3** (`fd958dc`):
+> zero analyzer issues and **272 tests passed**. The generated additive
+> HistoryRef Isar schema, transactional migration, HEAD synchronization,
+> reference-aware pruning and imported-history ref reconstruction are verified.
+> User-editable named refs, branch switching and full custom ref archiving
+> remain later work;
 > desktop layout remains deferred.
 >
 > **New roadmap requirement — Expanded SRT text encodings (requested 2026-10-12):**
@@ -45,6 +47,7 @@
 > [Checkpoint 66 reference foundation](CHECKPOINT66_REFERENCE_FOUNDATION.md),
 > [Checkpoint 67 ref migration plan](CHECKPOINT67_REFERENCE_MIGRATION_AND_SUBTITLECOMPOSER.md),
 > [Checkpoint 68 portable .msone references](CHECKPOINT68_PORTABLE_HISTORY_REFERENCES.md),
+> [Checkpoint 69 persisted Isar references](CHECKPOINT69_PERSISTENT_HISTORY_REFS.md),
 > [attached KDE waveform and encoding study](SUBTITLECOMPOSER_WAVEFORM_AND_ENCODING_SOURCE_AUDIT.md), and
 > [desktop reuse audit](DESKTOP_WORKSPACE_REUSE_AUDIT_2026-10-12.md).
 > Next phases: finish raw/sessionless persistence migration, then persisted
