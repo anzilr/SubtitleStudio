@@ -47,5 +47,14 @@ Baseline: Checkpoint 72 R3 — 287 tests, analyzer zero issues.
   actual media-scale performance remain qualification work.
 - Checkpoint snapshots do not replace separate project backups.
 
-## CI
-Flutter analyzer/tests milestone gate required before declaring verified.
+## Verified Checkpoint 73 R2
+
+- [Code commit `2f29cc5`](https://github.com/anzilr/SubtitleStudio/commit/2f29cc5b53150225c34ae44b44f50327fbcc87eb).
+- [Successful GitHub Actions run 38454127685](https://github.com/anzilr/SubtitleStudio/actions/runs/38454127685).
+- `flutter analyze`: **No issues found**, including warnings.
+- `flutter test -j 1`: **291 passed** (4 additional tests over Checkpoint 72).
+- Initial R1 gate found a TextFormField `onSubmitted` API mistake;
+  corrected to `onFieldSubmitted`, then R2 passed the full quality gate.
+- The latest documentation commit is not a separate code verification run.
+- No native platform builds, schema regeneration, desktop UI, upstream merge
+  or release tag changes.
