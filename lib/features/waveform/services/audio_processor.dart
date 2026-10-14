@@ -15,9 +15,15 @@ import 'package:subtitle_studio/features/waveform/repositories/waveform_preferen
 /// Service for processing audio files into waveform data
 class AudioProcessor {
   final WaveformPreferencesRepository _preferences;
+  /// Build-time experiment switch; production defaults to eager zoom buffers.
+  final bool useTiledZoom;
   WaveformProcessingMetrics? lastProcessingMetrics;
 
-  AudioProcessor(this._preferences);
+  AudioProcessor(
+    this._preferences, {
+    this.useTiledZoom = const bool.fromEnvironment(
+      'MS_ONE_TILED_WAVEFORM', defaultValue: false),
+  });
 
   /// Process audio file and generate waveform with zoom levels
   /// If subtitleCollectionId is provided, will check for cached data and save new data
@@ -119,7 +125,10 @@ class AudioProcessor {
 
       final downsampleMicroseconds = stopwatch.elapsedMicroseconds;
       // Step 3: Generate zoom levels (60% of total work)
-      if (kDebugMode) print('AudioProcessor: Step 3 - Generating zoom levels...');
+      if (kDebugMode) {
+        print('AudioProcessor: Step 3 - ' +
+            (useTiledZoom ? 'Generating zoom metadata...' : 'Generating zoom levels...'));
+      }
       final zoomLevels = await _generateZoomLevelsInIsolate(
         processedData, 
         (zoomProgress) {
@@ -223,30 +232,18 @@ class AudioProcessor {
     );
   }
 
-  /// Generate zoom levels in a background isolate
+  /// Prepare zoom data on the UI isolate (native extraction is separate).
+  /// Experimental tiled mode creates metadata only: no full-track
+  /// WaveformSample buffers or extra square-root scaling pass.
   Future<List<ZoomLevel>> _generateZoomLevelsInIsolate(
     WaveformData data,
     Function(double)? onProgress,
   ) async {
-    // For now, run on main isolate to avoid complexity
-    // Can be moved to isolate later if performance is an issue
-    final zoomGenerator = ZoomBufferGenerator(_preferences);
-    
-    // Generate zoom levels with progress reporting (0.0 to 0.9 of this step)
-    final zoomLevels = await zoomGenerator.generateZoomLevels(
+    return ZoomBufferGenerator(_preferences).prepareZoomLevels(
       data,
-      onProgress: (levelProgress) {
-        // This step represents 90% of zoom generation work
-        onProgress?.call(levelProgress * 0.9);
-      },
+      tiled: useTiledZoom,
+      onProgress: onProgress,
     );
-    
-    // Apply square root scaling to make quieter parts more visible (0.9 to 1.0 of this step)
-    onProgress?.call(0.95);
-    final scaledLevels = zoomGenerator.applyScaling(zoomLevels);
-    onProgress?.call(1.0);
-    
-    return scaledLevels;
   }
 
   /// Downsample audio asynchronously

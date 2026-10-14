@@ -70,6 +70,9 @@ class WaveformPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    assert(showSubtitlesOnly || tileSource != null ||
+        !zoomLevel.isMetadataOnly,
+        'Metadata-only zoom levels require a WaveformTileSource.');
     // Draw background
     final backgroundPaint = Paint()
       ..color = backgroundColor ?? Colors.black12

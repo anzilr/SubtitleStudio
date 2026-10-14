@@ -63,7 +63,11 @@ class WaveformWidgetState extends riverpod.ConsumerState<WaveformWidget> {
   WaveformTileSource? _tileSource;
 
   WaveformTileSource? _tilesFor(WaveformReady state) {
-    if (!widget.useTiledWaveform) return null;
+    // Metadata-only zoom descriptors have no eager channel arrays.
+    // Always supply a tile source even if this widget was instantiated
+    // with its explicit compatibility flag disabled.
+    if (!widget.useTiledWaveform &&
+        !state.currentZoomLevel.isMetadataOnly) return null;
     if (!identical(_tileBuffer, state.buffer)) {
       _tileBuffer = state.buffer;
       _tileSource = WaveformTileSource(
