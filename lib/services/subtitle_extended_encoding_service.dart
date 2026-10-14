@@ -45,6 +45,10 @@ class SubtitleExtendedEncodingService {
     'IBM437', 'IBM850', 'IBM852', 'IBM855', 'IBM866', 'IBM874',
     'Macintosh', 'Shift_JIS', 'EUC-JP', 'ISO-2022-JP',
     'EUC-KR', 'GBK', 'GB18030', 'Big5', 'Big5-HKSCS', 'TIS-620',
+    'IBM737', 'IBM775', 'IBM857', 'IBM860', 'IBM861', 'IBM862',
+    'IBM863', 'IBM864', 'IBM865', 'IBM869',
+    'MacCyrillic', 'MacGreek', 'MacTurkish', 'MacCentralEurope',
+    'GB2312', 'EUC-TW', 'HZ-GB-2312', 'ISO-2022-KR',
   ];
 
   static const Map<String, List<String>> _specialAliases = {
@@ -58,6 +62,14 @@ class SubtitleExtendedEncodingService {
     'Big5-HKSCS': ['Big5-HKSCS', 'BIG5_HKSCS'],
     'TIS-620': ['TIS-620', 'TIS620', 'ISO-8859-11'],
     'Macintosh': ['macintosh', 'x-mac-roman', 'mac-roman'],
+    'MacCyrillic': ['x-mac-cyrillic', 'mac-cyrillic', 'MacCyrillic'],
+    'MacGreek': ['x-mac-greek', 'mac-greek', 'MacGreek'],
+    'MacTurkish': ['x-mac-turkish', 'mac-turkish', 'MacTurkish'],
+    'MacCentralEurope': ['x-mac-ce', 'mac-centraleurope', 'MacCentralEurope'],
+    'GB2312': ['GB2312', 'GB_2312', 'EUC-CN'],
+    'EUC-TW': ['EUC-TW', 'EUC_TW'],
+    'HZ-GB-2312': ['HZ-GB-2312', 'HZ'],
+    'ISO-2022-KR': ['ISO-2022-KR', 'ISO2022KR'],
   };
 
   static String canonical(String label) {
@@ -103,20 +115,33 @@ class SubtitleExtendedEncodingService {
   static String _probeFor(String name) {
     if (name == 'Windows-1251' || name == 'KOI8-R' ||
         name == 'KOI8-U' || name == 'IBM866' ||
-        name == 'ISO-8859-5') return 'Я';
-    if (name == 'Windows-1256' || name == 'ISO-8859-6') return 'م';
-    if (name == 'Windows-1255' || name == 'ISO-8859-8') return 'א';
-    if (name == 'Windows-1253' || name == 'ISO-8859-7') return 'Ω';
-    if (name == 'Windows-1250' || name == 'ISO-8859-2') return 'Č';
-    if (name == 'Windows-1254' || name == 'ISO-8859-9') return 'Ğ';
+        name == 'ISO-8859-5' || name == 'MacCyrillic') return 'Я';
+    if (name == 'Windows-1256' || name == 'ISO-8859-6' ||
+        name == 'IBM864') return 'م';
+    if (name == 'Windows-1255' || name == 'ISO-8859-8' ||
+        name == 'IBM862') return 'א';
+    if (name == 'Windows-1253' || name == 'ISO-8859-7' ||
+        name == 'IBM737' || name == 'IBM869' ||
+        name == 'MacGreek') return 'Ω';
+    if (name == 'Windows-1250' || name == 'ISO-8859-2' ||
+        name == 'IBM852' || name == 'MacCentralEurope') return 'Č';
+    if (name == 'Windows-1254' || name == 'ISO-8859-9' ||
+        name == 'IBM857' || name == 'MacTurkish') return 'Ğ';
     if (name == 'TIS-620' || name == 'ISO-8859-11' ||
         name == 'IBM874') return 'ก';
     if (name == 'Shift_JIS' || name == 'EUC-JP' ||
         name == 'ISO-2022-JP') return '日';
-    if (name == 'EUC-KR') return '한';
+    if (name == 'EUC-KR' || name == 'ISO-2022-KR') return '한';
     if (name == 'GBK' || name == 'GB18030' ||
-        name == 'Big5' || name == 'Big5-HKSCS') return '中';
-    return 'A';
+        name == 'Big5' || name == 'Big5-HKSCS' ||
+        name == 'GB2312' || name == 'EUC-TW' ||
+        name == 'HZ-GB-2312') return '中';
+    if (name == 'IBM775') return 'Ē';
+    if (name == 'IBM860') return 'ã';
+    if (name == 'IBM861') return 'Þ';
+    // Every remaining 8-bit alias must demonstrate a non-ASCII roundtrip,
+    // not merely report that its ASCII subset is available.
+    return 'é';
   }
 
   /// Validates that a candidate can encode AND decode its script probe.
