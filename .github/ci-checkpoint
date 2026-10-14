@@ -1,6 +1,5 @@
-Checkpoint 74 R1 quality gate, 2026-10-14
-Checks: flutter analyze (zero issues) and flutter test -j 1
-Focus: strict reversible Unicode/BOM and Windows-1252/Latin-1 encoding;
-raw byte subtitle imports, selected byte charset across platform exports;
-SRT roundtrips, >5 MiB content, malformed and unrepresentable data.
-No desktop redesign, Isar schema change or upstream branch changes.
+Checkpoint 74 R2 quality gate, 2026-10-14
+Checks: flutter analyze zero issues and flutter test -j 1.
+R1: 299 tests passed, two info-level redundant typed_data imports.
+R2 removes analyzer infos without altering codec/import/export behavior.
+No desktop UI redesign, Isar migration or upstream changes.

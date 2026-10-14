@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart' as fp;
 import 'package:subtitle_studio/utils/platform_file_handler.dart';
-import 'dart:typed_data';
 import 'package:subtitle_studio/utils/saf_file_handler.dart';
 import 'package:subtitle_studio/utils/saf_path_converter.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
