@@ -162,7 +162,7 @@ class AudioProcessor {
         decodedSamples: waveformData.totalSamples * waveformData.channels,
         displaySamples: processedData.totalSamples * processedData.channels,
         zoomPixels: zoomLevels.fold<int>(0,
-            (count, level) => count + level.pixelCount * level.channels),
+            (count, level) => count + level.materializedPixels),
       );
       lastProcessingMetrics = metrics;
       if (kDebugMode) {

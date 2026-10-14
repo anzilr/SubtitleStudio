@@ -1,6 +1,6 @@
-SubtitleStudio checkpoint 79 R1 | 2026-10-14
+SubtitleStudio checkpoint 79 R2 | 2026-10-14
 Quality gate flutter analyze and flutter test -j 1.
-Experimental MS_ONE_TILED_WAVEFORM metadata-only zoom level generation,
-no per-pixel allocations up front; default eager zoom unchanged.
-Regression: zoom parity, many sample sizes, mono/stereo, painter pixel
-parity and bounded tile LRU. No five-platform builds or schema changes.
+R2: count actual resident WaveformSample buckets, rather than
+virtual width of metadata-only zoom descriptors, in zoomPixels metrics.
+Metadata-only zoom generation and painter parity preserved.
+Default eager mode unchanged; no schema, upstream or native builds.

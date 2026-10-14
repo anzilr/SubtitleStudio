@@ -50,6 +50,9 @@ void main() {
           expect(metadata.pixelCount, materialized.pixelCount);
           expect(metadata.channels, channels);
           expect(metadata.data, isEmpty);
+          expect(metadata.materializedPixels, 0);
+          expect(materialized.materializedPixels,
+              materialized.pixelCount * materialized.channels);
           expect(metadata.getChannelData(0), isNull);
           expect(metadata.getSample(0, 0), isNull);
           expect(materialized.isMetadataOnly, isFalse);
@@ -86,6 +89,8 @@ void main() {
     expect(zooms, isNotEmpty);
     expect(zooms.length, lessThan(150));
     expect(zooms.every((level) => level.data.isEmpty), isTrue);
+    expect(zooms.fold<int>(0,
+        (total, level) => total + level.materializedPixels), 0);
     expect(zooms.every((level) => level.isMetadataOnly), isTrue);
     expect(zooms.every((level) => level.pixelCount > 0), isTrue);
     expect(zooms.every((level) => level.channels == 2), isTrue);

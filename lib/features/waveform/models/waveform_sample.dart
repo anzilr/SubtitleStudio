@@ -93,6 +93,9 @@ class ZoomLevel {
   }
 
   bool get isMetadataOnly => _metadataPixelCount != null;
+  /// Actual resident WaveformSample buckets (not virtual timeline width).
+  int get materializedPixels =>
+      data.fold<int>(0, (count, channel) => count + channel.length);
   int get channels => _metadataChannels ?? data.length;
   int get pixelCount =>
       _metadataPixelCount ?? (data.isEmpty ? 0 : data[0].length);

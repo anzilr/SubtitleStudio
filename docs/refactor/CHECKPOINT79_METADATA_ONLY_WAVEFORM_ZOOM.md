@@ -23,7 +23,9 @@ This checkpoint implements an independent Flutter adaptation, not copied code.
    prepareZoomLevels selects eager pixels + scaling or metadata only.
 3. AudioProcessor uses the compile-time MS_ONE_TILED_WAVEFORM flag, default false.
    In enabled mode it skips eager pixel-array generation and square-root pass.
-   Metrics zoomPixels records zero allocated full-track zoom buckets.
+   Metrics zoomPixels records zero allocated full-track zoom buckets
+   by summing the actual per-channel materialized array lengths,
+   not metadata-only virtual timeline widths.
 4. WaveformWidget automatically creates tiles for metadata-only levels even
    when a widget caller opted out of tiled paint explicitly. The painter
    asserts metadata levels are not painted without a tile source.
