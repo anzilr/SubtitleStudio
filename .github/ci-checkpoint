@@ -1,13 +1,6 @@
-Riverpod migration checkpoint 73 R2
-Date: 2026-10-13
-Checks:
-- flutter analyze, zero issues
-- flutter test -j 1
-
-Scope:
-- checkout race guards via expected HEAD/branch tip
-- safe dialog lifecycle and navigation
-- lazy histories and bounded legacy descendants
-- snapshot labels distinguish history from an external backup
-- corrected TextFormField onFieldSubmitted analyzer error from R1
-- no native builds, upstream/desktop/main/release changes
+Checkpoint 74 R1 quality gate, 2026-10-14
+Checks: flutter analyze (zero issues) and flutter test -j 1
+Focus: strict reversible Unicode/BOM and Windows-1252/Latin-1 encoding;
+raw byte subtitle imports, selected byte charset across platform exports;
+SRT roundtrips, >5 MiB content, malformed and unrepresentable data.
+No desktop redesign, Isar schema change or upstream branch changes.
