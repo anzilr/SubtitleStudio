@@ -3,6 +3,7 @@ import 'package:subtitle_studio/services/subtitle_encoding_decoder.dart';
 import 'package:subtitle_studio/services/subtitle_text_codec.dart';
 import 'package:subtitle_studio/services/subtitle_extended_encoding_service.dart';
 import 'package:subtitle_studio/widgets/subtitle_encoding_picker.dart';
+import 'package:subtitle_studio/services/subtitle_encoding_preview.dart';
 import 'package:subtitle_studio/utils/saf_file_handler.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -46,6 +47,7 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
   Uint8List? _fileBytes; // Raw SAF / desktop / iOS bytes
   String _encodingChoice = 'Auto';
   List<String> _availableEncodings = SubtitleTextCodec.supportedEncodings;
+  bool _previewLoading = false;
 
   @override
   void initState() {
@@ -78,6 +80,77 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
     );
     if (!mounted || choice == null) return;
     setState(() => _encodingChoice = choice);
+  }
+
+  /// Reuse identical raw-byte source for preview and final import.
+  Future<Uint8List> _readSourceBytes() async {
+    if (_fileBytes != null) return _fileBytes!;
+    if (_safUri != null && IntentHandler.isContentUri(_safUri!)) {
+      return SafFileHandler.readFileFromUri(_safUri!);
+    }
+    if (_selectedFilePath != null) {
+      return File(_selectedFilePath!).readAsBytes();
+    }
+    throw const FormatException('Select a subtitle file first.');
+  }
+
+  Future<void> _showEncodingPreview() async {
+    if (_previewLoading || _isLoading || _selectedFilePath == null) return;
+    final originalPath = _selectedFilePath;
+    final selected = _encodingChoice;
+    setState(() => _previewLoading = true);
+    try {
+      final bytes = await _readSourceBytes();
+      final preview = await const SubtitleEncodingPreview().generate(
+        bytes, selectedEncoding: selected == 'Auto' ? null : selected);
+      if (!mounted || originalPath != _selectedFilePath ||
+          selected != _encodingChoice) return;
+      await showDialog<void>(
+        context: context,
+        builder: (dialog) => AlertDialog(
+          title: Text('Preview — ' + preview.encoding),
+          content: SizedBox(
+            width: 520,
+            height: 330,
+            child: Column(children: [
+              if (preview.truncated)
+                const Text('Showing the first 500 characters only.'),
+              const SizedBox(height: 6),
+              Expanded(child: SingleChildScrollView(
+                child: SelectableText(
+                  preview.text,
+                  key: const ValueKey('subtitle-encoding-preview-text'),
+                ),
+              )),
+            ]),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialog).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (dialog) => AlertDialog(
+          title: const Text('Cannot preview this encoding'),
+          content: Text('$error\nTry another source encoding. '
+              'No subtitles have been imported.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialog).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _previewLoading = false);
+    }
   }
 
   Future<void> _selectFile() async {
@@ -228,18 +301,8 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
         }
       }
       
-      // Decode once from the *raw bytes*. A legacy charset is always
-      // manually selected: guessing Latin-1 would hide Windows-1252 errors.
-      final Uint8List? rawBytes;
-      if (_fileBytes != null) {
-        rawBytes = _fileBytes;
-      } else if (_safUri != null && IntentHandler.isContentUri(_safUri!)) {
-        rawBytes = await SafFileHandler.readFileFromUri(_safUri!);
-      } else if (_selectedFilePath != null) {
-        rawBytes = await File(_selectedFilePath!).readAsBytes();
-      } else {
-        rawBytes = null;
-      }
+      // The same byte reader and decoder drive preview and import.
+      final Uint8List rawBytes = await _readSourceBytes();
       if (rawBytes != null) {
         final decoded = await SubtitleEncodingDecoder.decodeBytesExtended(
           rawBytes,
@@ -456,11 +519,25 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
                 ),
               ),
               const SizedBox(height: 16),
-              OutlinedButton.icon(
-                key: const ValueKey('source-encoding-picker'),
-                onPressed: _isLoading ? null : _chooseEncoding,
-                icon: const Icon(Icons.manage_search),
-                label: Text('Source encoding: ' + _encodingChoice),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  OutlinedButton.icon(
+                    key: const ValueKey('source-encoding-picker'),
+                    onPressed: _isLoading ? null : _chooseEncoding,
+                    icon: const Icon(Icons.manage_search),
+                    label: Text('Source encoding: ' + _encodingChoice),
+                  ),
+                  OutlinedButton.icon(
+                    key: const ValueKey('source-encoding-preview'),
+                    onPressed: _isLoading || _previewLoading ||
+                            _selectedFilePath == null
+                        ? null : _showEncodingPreview,
+                    icon: const Icon(Icons.preview_outlined),
+                    label: Text(_previewLoading ? 'Loading preview...' : 'Preview'),
+                  ),
+                ],
               ),
               const Padding(
                 padding: EdgeInsets.only(top: 4),
