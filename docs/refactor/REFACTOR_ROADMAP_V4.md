@@ -1,19 +1,22 @@
 # SubtitleStudio Refactor Roadmap v4
 
-> **October 14, 2026 status:** Checkpoint **76 R2** verified:
-> [code `9e9c327`](https://github.com/anzilr/SubtitleStudio/commit/9e9c327f56a3fea3deed4689899050750cb0b426),
-> [CI success](https://github.com/anzilr/SubtitleStudio/actions/runs/38592368154),
-> **310 passing tests, 0 analyzer issues**.
-> Subtitle import/export now share a searchable encoding picker and
-> a strict source-text preview. Android intent byte readers no longer
-> guess Latin-1. Added 18 further capability-gated legacy charset
-> candidates: **58 native candidates + 9 portable profiles**; the count
-> actually supported on a given device may be lower. See
-> [Checkpoint 76 report](CHECKPOINT76_ENCODING_PICKER_PREVIEW_INTENTS.md).
-> The older checkpoint inventory below remains historical. The next
-> priorities are platform device qualification, smarter/language-ranked
-> detection with user preview, waveform performance, and checking file
-> intent/export scenarios on Android and Windows. Desktop shell deferred.
+> **October 14, 2026 progress:** Checkpoint **77 R1** verified.
+> [Code commit `7ff10e1`](https://github.com/anzilr/SubtitleStudio/commit/7ff10e13b03aaf219118fb4ff0dcca9c4a60d76e)
+> · [successful analyzer/test CI](https://github.com/anzilr/SubtitleStudio/actions/runs/38596363070):
+> **319 passing tests, 0 analyzer issues**.
+> Waveform cache reuse is now version/track-scoped with PCM integrity
+> checks; the Riverpod controller rejects stale async loads, and a
+> reusable bounded-LRU viewport tile engine is available with signed
+> min/max transients and source invalidation. Processing metrics provide
+> decode/downsample/zoom timing baselines for Android/Windows profiling.
+> The existing eager renderer has **not** been replaced or benchmarked;
+> no on-device performance improvement is claimed yet.
+> See [Checkpoint 77 report](CHECKPOINT77_WAVEFORM_SAFETY_AND_TILES.md).
+> Previous encoding milestone: Checkpoint 76, 67 candidate charset profiles
+> and searchable strict text previews. Next: compare eager and tiled waveform
+> on real media; benchmark first render latency/memory, integrate tiles
+> behind a parity-preserving toggle, and audit cancellable FFmpeg tasks.
+> Desktop shell is still postponed. No schema or upstream changes.
 >
 > **New roadmap requirement — Expanded SRT text encodings (requested 2026-10-12):**
 > Reference implementation research: [KDE Subtitle Composer and Subtitle Edit

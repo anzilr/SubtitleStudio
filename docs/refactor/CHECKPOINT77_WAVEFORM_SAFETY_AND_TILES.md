@@ -71,3 +71,32 @@ The comparison is architectural, not a measured speedup.
   existing zoom/scroll semantics.
 - No Isar schema changes, desktop workspace UI, upstream/main branch
   edits, PR merges, release tags or native five-platform build actions.
+
+## Verified quality gate
+
+- Verified code gate: [`7ff10e1`](https://github.com/anzilr/SubtitleStudio/commit/7ff10e13b03aaf219118fb4ff0dcca9c4a60d76e).
+- [GitHub Actions run 38596363070 — success](https://github.com/anzilr/SubtitleStudio/actions/runs/38596363070).
+- `flutter analyze`: **No issues found**, including warnings and infos.
+- `flutter test -j 1`: **319 tests passed**, nine new tests
+  compared to Checkpoint 76 (310 passed).
+- No Isar generator work, cross-platform native build jobs, or UI redesign
+  were performed.
+
+## Real-device qualification checklist for Checkpoint 78
+
+On **Android** and **Windows**, use a short voice clip plus a long media
+clip with multiple audio tracks. Open, zoom, seek, change audio track,
+reopen, edit subtitle timing, and exit during loading. Capture:
+
+1. AudioProcessor debug metrics: source acquisition, downsampling,
+   zoom generation, total, decoded samples, display samples and zoom pixels.
+2. Time to first visible waveform, zoom-to-zoom latency, UI scroll/jank,
+   peak application RSS using device tooling, and temporary PCM file growth.
+3. Stale waveform check when switching sources before extraction finishes.
+4. Cache invalidation after changing the local media file or selecting
+   another audio track; verify SAF replacement-in-place separately.
+5. Waveform screenshot/visual parity at multiple zooms before changing
+   the renderer; signed peaks must remain visible and subtitle overlays
+   must continue to use the existing V2 timing mutation service.
+
+These are manual qualification steps, **not** tests claimed to have been run.
