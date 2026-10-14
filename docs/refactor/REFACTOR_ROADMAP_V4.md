@@ -1,24 +1,25 @@
 # SubtitleStudio Refactor Roadmap v4
 
-> **October 14, 2026: Checkpoint 79 R2 verified.**
-> [Quality-gated code `853f3ee`](https://github.com/anzilr/SubtitleStudio/commit/853f3ee3af1f492d381d9ac153b84eaa797584f9)
-> · [successful CI run](https://github.com/anzilr/SubtitleStudio/actions/runs/38611346020):
-> **327 tests passed, zero analyzer issues**.
-> The experimental tiled pipeline now builds **metadata-only zoom levels**
-> (sample-per-pixel, pixel count and channel count) instead of eagerly
-> allocating and scaling full-track zoom-pixel arrays. Pixel and geometry
-> parity checks match the prior eager pipeline; the renderer's default
-> remains eager unless built with
-> `--dart-define=MS_ONE_TILED_WAVEFORM=true`.
-> AudioProcessor metrics count actual materialized sample buckets (zero
-> in tiled metadata mode), not virtual metadata widths.
-> See [Checkpoint 79 report](CHECKPOINT79_METADATA_ONLY_WAVEFORM_ZOOM.md).
-> **Remaining:** full PCM extraction/loading and downsampled audio samples
-> are still retained. Next priority: compact streamed peak extraction and
-> versioned atomic peak caches, robust FFmpeg cancellation and temporary
-> file cleanup, audio timestamp gaps, and safe track selection. Android
-> and Windows device benchmarks have not been performed; defer the
-> desktop workspace and all upstream/release changes.
+> **October 14, 2026 — Checkpoint 80 R2 verified.**
+> [Code `3631738`](https://github.com/anzilr/SubtitleStudio/commit/3631738304e6d4e61869cd1b0f892da41be7066f)
+> · [Successful CI](https://github.com/anzilr/SubtitleStudio/actions/runs/38614517634):
+> **334 passing tests, 0 analyzer issues**.
+> The experimental waveform path now streams full-resolution PCM from
+> the temporary FFmpeg file into a bounded 16-sample peak reduction,
+> and persists versioned, checksummed mean/min/max records through
+> staged complete-write promotion. It avoids loading all full-resolution
+> PCM bytes into Dart memory; full PCM extraction to disk remains.
+> Audio requests can cancel desktop FFmpeg processes or a specific
+> FFmpegKit session, and stale state updates remain epoch-protected.
+> The extractor now accounts for timestamp gaps and refuses silently
+> falling back to another audio track. See
+> [Checkpoint 80 report](CHECKPOINT80_STREAMED_PEAK_CACHE_AND_FFMPEG.md).
+> The eager/default renderer, Isar schema and mobile layout are unchanged.
+> **Next:** native Android/Windows profiling and source/track verification,
+> invalid/corrupt cache and concurrent job hardening, plus optional
+> static/dynamic repaint separation and snap-interaction work inspired
+> by Subtitle Composer and Subtitle Edit. Do not change upstream/main,
+> tags or begin the desktop workspace yet.
 >
 > **Additional waveform reference, October 14, 2026: Subtitle Edit source audit.**
 > Alongside KDE Subtitle Composer, use the current Subtitle Edit Avalonia/C#
