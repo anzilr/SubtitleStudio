@@ -1,7 +1,5 @@
-SubtitleStudio Checkpoint 78 R1 | 2026-10-14
-Quality gate: flutter analyze (zero issues), flutter test -j 1.
-Scope: opt-in tiled painter behind MS_ONE_TILED_WAVEFORM flag;
-exact signed peak and raster parity against existing eager generator;
-fractional scroll offsets, long-track bounded LRU, synthetic
-allocation/timing diagnostic. No desktop UI redesign, native builds,
-Isar model change, upstream/main or release modifications.
+SubtitleStudio Checkpoint 78 R2 | 2026-10-14
+flutter analyze zero issues and flutter test -j 1
+R1 analysis failed on missing WaveformBuffer model import in widget.
+R2 fixes direct import, preserving opt-in painter parity functionality.
+No native platform builds, desktop layout, Isar schema or upstream changes.
