@@ -1,7 +1,5 @@
-SubtitleStudio Checkpoint 82 R1 | 2026-10-14
-Flutter analyzer + flutter test -j 1 only.
-Consolidate PCM extraction FFmpeg plan for desktop and FFmpegKit,
-preserve legacy Media Kit ID heuristic while admitting explicit
-ffmpeg:a:N audio ordinals, fail closed for invalid tracks, retain
-aresample async first_pts 0 and quote FFmpegKit paths. Seven plan tests
-and manual Windows two-track PTS probe; native results not claimed.
+SubtitleStudio Checkpoint 82 R2 | 2026-10-14
+Fix malformed generated Dart FFmpeg plan file caught by R1 analyzer.
+Complete clean, strict audioOrdinal and shared argument contract,
+plus portable PowerShell invalid-track argument splatting.
+Flutter analyze and flutter test -j 1, no native platform builds.

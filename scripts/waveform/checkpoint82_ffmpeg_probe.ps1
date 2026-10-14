@@ -52,7 +52,8 @@ Invoke-FFmpeg ($base + $pcm + @($auto))
 
 # Missing streams must fail explicitly rather than silently using audio 0.
 if (Test-Path $invalid) { Remove-Item $invalid -Force }
-& ffmpeg @($base + @("-map", "0:a:9") + $pcm + @($invalid)) 2> $failureLog
+$invalidOptions = $base + @("-map", "0:a:9") + $pcm + @($invalid)
+& ffmpeg @invalidOptions 2> $failureLog
 $invalidExit = $LASTEXITCODE
 if ($invalidExit -eq 0) {
     throw "Regression: selecting 0:a:9 incorrectly succeeded."
