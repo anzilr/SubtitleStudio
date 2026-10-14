@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:subtitle_studio/features/waveform/models/waveform_sample.dart';
 import 'package:subtitle_studio/features/waveform/services/zoom_buffer_generator.dart';
+import 'package:subtitle_studio/features/waveform/services/waveform_cache_identity.dart';
 import 'package:subtitle_studio/utils/ffmpeg_helper.dart';
 import 'package:ffmpeg_kit_flutter_new_min_gpl/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new_min_gpl/ffmpeg_kit_config.dart';
@@ -34,6 +35,13 @@ class AudioProcessor {
 
       // Check for cached waveform data if subtitle collection ID is provided
       if (subtitleCollectionId != null) {
+        final temporaryDirectory = await getTemporaryDirectory();
+        final expectedPath = await WaveformCacheIdentity.pcmPath(
+          temporaryDirectory: temporaryDirectory.path,
+          subtitleCollectionId: subtitleCollectionId,
+          sourcePath: audioFilePath,
+          audioTrackId: audioTrackId,
+        );
         final cache = await _preferences.getWaveformCache(
           subtitleCollectionId,
         );
@@ -41,7 +49,16 @@ class AudioProcessor {
           final pcmPath = cache.pcmPath;
           final pcmFile = File(pcmPath);
           
-          if (await pcmFile.exists()) {
+          final existingBytes = await pcmFile.exists()
+              ? await pcmFile.length() : -1;
+          if (WaveformCacheIdentity.metadataValid(
+            actualPath: pcmPath,
+            expectedPath: expectedPath,
+            byteLength: existingBytes,
+            totalSamples: cache.totalSamples,
+            channels: cache.channels,
+            sampleRate: cache.sampleRate,
+          )) {
             if (kDebugMode) {
               print('AudioProcessor: Loading from cached PCM file: $pcmPath');
             }
@@ -67,11 +84,17 @@ class AudioProcessor {
             await _preferences.clearWaveformCache(subtitleCollectionId);
             
             // Extract and cache new PCM
-            waveformData = await _extractAndCachePCM(audioFilePath, subtitleCollectionId, onProgress, audioTrackId);
+            waveformData = await _extractAndCachePCM(
+              audioFilePath, subtitleCollectionId, onProgress, audioTrackId,
+              expectedPath,
+            );
           }
         } else {
           // No cache exists, extract and save
-          waveformData = await _extractAndCachePCM(audioFilePath, subtitleCollectionId, onProgress, audioTrackId);
+          waveformData = await _extractAndCachePCM(
+              audioFilePath, subtitleCollectionId, onProgress, audioTrackId,
+              expectedPath,
+            );
         }
       } else {
         // No subtitle collection ID provided, process without caching
@@ -130,6 +153,7 @@ class AudioProcessor {
     int subtitleCollectionId,
     Function(double)? onProgress,
     String? audioTrackId,
+    String cacheOutputPath,
   ) async {
     if (Platform.isWindows || Platform.isLinux) {
       await _checkFFmpegAvailability();
@@ -142,6 +166,7 @@ class AudioProcessor {
       audioFilePath, 
       cacheForCollection: subtitleCollectionId,
       audioTrackId: audioTrackId,
+      cacheOutputPath: cacheOutputPath,
     );
     
     onProgress?.call(0.15);
@@ -157,10 +182,12 @@ class AudioProcessor {
   ) async {
     final file = File(pcmPath);
     final bytes = await file.readAsBytes();
-    
-    // Convert bytes to Int16List
-    final buffer = bytes.buffer;
-    final samples = Int16List.view(buffer);
+    if (channels != 1 || sampleRate != 44100 ||
+        bytes.isEmpty || bytes.length.isOdd ||
+        bytes.length != totalSamples * 2) {
+      throw const FormatException('Invalid cached PCM format/length.');
+    }
+    final samples = _decodePcm16Le(bytes);
     
     if (kDebugMode) {
       print('AudioProcessor: Loaded ${samples.length} samples from cache');
@@ -256,13 +283,14 @@ class AudioProcessor {
     String audioFilePath, {
     int? cacheForCollection,
     String? audioTrackId,
+    String? cacheOutputPath,
   }) async {
     try {
       // Get temporary directory
       final tempDir = await getTemporaryDirectory();
-      final outputPath = cacheForCollection != null
-          ? '${tempDir.path}/waveform_audio_$cacheForCollection.raw' // Persistent name for caching
-          : '${tempDir.path}/waveform_audio_${DateTime.now().millisecondsSinceEpoch}.raw'; // Temporary name
+      final outputPath = cacheOutputPath ??
+          (tempDir.path + Platform.pathSeparator + 'waveform_temp_' +
+              DateTime.now().microsecondsSinceEpoch.toString() + '.raw');
 
       if (kDebugMode) {
         print('AudioProcessor: Extracting audio to PCM: $outputPath');
@@ -437,9 +465,10 @@ class AudioProcessor {
         print('AudioProcessor: Read ${bytes.length} bytes of PCM data');
       }
 
-      // Convert bytes to Int16List
-      final buffer = bytes.buffer;
-      final samples = Int16List.view(buffer);
+      if (bytes.isEmpty || bytes.length.isOdd) {
+        throw const FormatException('Truncated or empty PCM extraction.');
+      }
+      final samples = _decodePcm16Le(bytes);
 
       // Use mono (1 channel)
       const channels = 1;
@@ -480,6 +509,23 @@ class AudioProcessor {
       }
       rethrow;
     }
+  }
+
+  /// Decode FFmpeg's little-endian signed 16-bit PCM on any host.
+  static Int16List _decodePcm16Le(Uint8List bytes) {
+    if (bytes.length.isOdd) {
+      throw const FormatException('Odd number of PCM bytes.');
+    }
+    if (Endian.host == Endian.little) {
+      return Int16List.view(
+          bytes.buffer, bytes.offsetInBytes, bytes.lengthInBytes ~/ 2);
+    }
+    final view = ByteData.sublistView(bytes);
+    final samples = Int16List(bytes.lengthInBytes ~/ 2);
+    for (var i = 0; i < samples.length; i++) {
+      samples[i] = view.getInt16(i * 2, Endian.little);
+    }
+    return samples;
   }
 
   /// Downsample audio to reduce data size (~3000 samples/sec max)
