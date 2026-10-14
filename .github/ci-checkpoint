@@ -1,7 +1,6 @@
-SubtitleStudio Checkpoint 80 R1 | 2026-10-14
-CI only flutter analyze and flutter test -j 1. Experimental tiled mode:
-streamed PCM mean+min/max reduction, versioned bounded checksum peak cache,
-atomic complete-write promotion, no full PCM read; PTS gap-aware FFmpeg,
-selected audio track fails visibly, cancellable desktop/native extraction,
-peak-reduction cancellation and temp cleanup. Eager remains default.
-No platform-native builds or database schema changes.
+SubtitleStudio Checkpoint 80 R2 | 2026-10-14
+Quality gate flutter analyze and flutter test -j 1.
+R1: 332 tests passed, 2 failed in WaveformController disposal because
+ref.read() is forbidden inside Riverpod ref.onDispose lifecycle callbacks.
+R2 captures AudioProcessor inside build and invokes it without ref reads.
+Peak cache and audio extraction code unchanged from R1.

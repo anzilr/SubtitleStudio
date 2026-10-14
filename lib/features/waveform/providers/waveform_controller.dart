@@ -47,10 +47,13 @@ class WaveformController extends Notifier<WaveformState> {
   @override
   WaveformState build() {
     _disposed = false;
+    // Resolve the dependency while provider access is valid; onDispose
+    // callbacks may not call ref.read or modify the provider graph.
+    final processor = ref.read(waveformAudioProcessorProvider);
     ref.onDispose(() {
       _disposed = true;
       _loadEpoch++; // Invalidate pending processing and progress callbacks.
-      _audioProcessor.cancelActive();
+      processor.cancelActive();
     });
     return const WaveformInitial();
   }
