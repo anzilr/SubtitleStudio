@@ -8,6 +8,7 @@ import 'package:subtitle_studio/features/waveform/providers/waveform_controller.
 import 'package:subtitle_studio/features/waveform/state/waveform_state.dart';
 import 'package:subtitle_studio/features/waveform/state/waveform_event.dart';
 import 'package:subtitle_studio/features/waveform/widgets/waveform_painter.dart';
+import 'package:subtitle_studio/features/waveform/services/waveform_tile_source.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/widgets/settings_sheet.dart';
 import 'package:subtitle_studio/utils/time_parser.dart';
@@ -28,6 +29,8 @@ class WaveformWidget extends riverpod.ConsumerStatefulWidget {
   final int? subtitleCollectionId; // For database updates
   final int? sessionId; // For checkpoint creation
   final int? highlightedSubtitleIndex; // Index of currently highlighted subtitle (0-based)
+  /// Opt in to tile-backed painting; false preserves the current UI.
+  final bool useTiledWaveform;
 
   const WaveformWidget({
     super.key,
@@ -41,6 +44,7 @@ class WaveformWidget extends riverpod.ConsumerStatefulWidget {
     this.subtitleCollectionId,
     this.sessionId,
     this.highlightedSubtitleIndex,
+    this.useTiledWaveform = false,
   });
 
   @override
@@ -50,6 +54,20 @@ class WaveformWidget extends riverpod.ConsumerStatefulWidget {
 class WaveformWidgetState extends riverpod.ConsumerState<WaveformWidget> {
   // Cache current subtitles for change detection
   List<SubtitleLine> _currentSubtitles = [];
+  WaveformBuffer? _tileBuffer;
+  WaveformTileSource? _tileSource;
+
+  WaveformTileSource? _tilesFor(WaveformReady state) {
+    if (!widget.useTiledWaveform) return null;
+    if (!identical(_tileBuffer, state.buffer)) {
+      _tileBuffer = state.buffer;
+      _tileSource = WaveformTileSource(
+        data: state.buffer.rawData,
+        sourceIdentity: state.sourceFilePath ?? 'waveform',
+      );
+    }
+    return _tileSource;
+  }
   
   // For detecting double taps on subtitle boxes (single tap → double tap now)
   int? _lastTappedSubtitleIndex;

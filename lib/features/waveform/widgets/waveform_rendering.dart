@@ -469,6 +469,7 @@ extension _WaveformRendering on WaveformWidgetState {
                                 size: Size.infinite,
                                 painter: WaveformPainter(
                                   zoomLevel: state.currentZoomLevel,
+                                  tileSource: _tilesFor(state),
                                   scrollOffset: state.scrollPosition,
                                   playbackPosition: state.playbackPosition,
                                   subtitles: _currentSubtitles,
@@ -503,6 +504,7 @@ extension _WaveformRendering on WaveformWidgetState {
                               size: Size.infinite,
                               painter: WaveformPainter(
                                   zoomLevel: state.currentZoomLevel,
+                                  tileSource: _tilesFor(state),
                                   scrollOffset: state.scrollPosition,
                                   playbackPosition: state.playbackPosition,
                                   subtitles: _currentSubtitles,

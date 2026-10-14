@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:subtitle_studio/features/waveform/models/waveform_sample.dart';
+import 'package:subtitle_studio/features/waveform/services/waveform_tile_source.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 
 /// Custom painter for rendering waveform visualization
 class WaveformPainter extends CustomPainter {
   final ZoomLevel zoomLevel;
+  /// Optional tile source; legacy eager rendering remains the default.
+  final WaveformTileSource? tileSource;
   final double scrollOffset; // in pixels
   final Duration playbackPosition;
   final List<SubtitleLine> subtitles;
@@ -38,6 +41,7 @@ class WaveformPainter extends CustomPainter {
 
   WaveformPainter({
     required this.zoomLevel,
+    this.tileSource,
     required this.scrollOffset,
     required this.playbackPosition,
     required this.subtitles,
@@ -78,6 +82,22 @@ class WaveformPainter extends CustomPainter {
     final availableHeight = size.height - totalSpacing;
     final dynamicChannelHeight = availableHeight / channels;
 
+    // Visible-range tiles use the same coordinate system, colors and
+    // overlays as eager ZoomLevel data.
+    final List<WaveformViewportTile>? tiles;
+    if (!showSubtitlesOnly && tileSource != null && size.width > 0) {
+      final firstPixel = scrollOffset.floor().clamp(0, zoomLevel.pixelCount);
+      final lastPixel = (scrollOffset + size.width).ceil()
+          .clamp(firstPixel, zoomLevel.pixelCount);
+      tiles = tileSource!.visibleTiles(
+        firstPixel: firstPixel,
+        visiblePixels: (lastPixel - firstPixel).clamp(0, 8192),
+        samplesPerPixel: samplesPerPixel,
+      );
+    } else {
+      tiles = null;
+    }
+
     // Draw waveform for each channel (only if not subtitle-only mode)
     if (!showSubtitlesOnly) {
       for (var ch = 0; ch < channels; ch++) {
@@ -88,6 +108,7 @@ class WaveformPainter extends CustomPainter {
           ch,
           yOffset,
           dynamicChannelHeight,
+          tiles,
         );
       }
     }
@@ -127,24 +148,37 @@ class WaveformPainter extends CustomPainter {
   }
 
   /// Draw waveform for a single channel
-  void _drawChannel(Canvas canvas, Size size, int channel, double yOffset, double dynamicChannelHeight) {
-    final channelData = zoomLevel.getChannelData(channel);
-    if (channelData == null) return;
+  void _drawChannel(Canvas canvas, Size size, int channel, double yOffset,
+      double dynamicChannelHeight, List<WaveformViewportTile>? tiles) {
+    final channelData = tiles == null ? zoomLevel.getChannelData(channel) : null;
+    if (tiles == null && channelData == null) return;
+    final tileWidth = tileSource?.tileWidth ?? 256;
+    final firstTileIndex = tiles == null || tiles.isEmpty
+        ? 0 : tiles.first.firstPixel ~/ tileWidth;
+    WaveformSample sampleAt(int pixel) {
+      if (tiles == null) return channelData![pixel];
+      final tile = tiles[pixel ~/ tileWidth - firstTileIndex];
+      return tile.channels[channel][pixel - tile.firstPixel];
+    }
 
     final centerY = yOffset + dynamicChannelHeight / 2;
     // Apply vertical zoom to amplitude
     final amplitude = dynamicChannelHeight / 2 * 0.98 * verticalZoom;
 
     // Calculate visible range
-    final startPixel = scrollOffset.floor();
-    final endPixel = (scrollOffset + size.width).ceil();
+    final startPixel = scrollOffset.floor().clamp(0, zoomLevel.pixelCount);
+    final endPixel = tiles == null
+        ? (scrollOffset + size.width).ceil()
+        : (scrollOffset + size.width).ceil()
+            .clamp(startPixel, zoomLevel.pixelCount)
+            .clamp(startPixel, startPixel + 8192);
 
     // Fill waveform area for better visibility (draw first, behind the stroke)
     final fillPath = Path();
     bool firstFillPoint = true;
 
-    for (var pixel = startPixel; pixel < endPixel && pixel < channelData.length; pixel++) {
-      final sample = channelData[pixel];
+    for (var pixel = startPixel; pixel < endPixel && pixel < (channelData?.length ?? zoomLevel.pixelCount); pixel++) {
+      final sample = sampleAt(pixel);
       final x = pixel - scrollOffset;
       final yMax = centerY - (sample.max * amplitude);
 
@@ -176,8 +210,8 @@ class WaveformPainter extends CustomPainter {
     final path = Path();
     bool isFirstPoint = true;
 
-    for (var pixel = startPixel; pixel < endPixel && pixel < channelData.length; pixel++) {
-      final sample = channelData[pixel];
+    for (var pixel = startPixel; pixel < endPixel && pixel < (channelData?.length ?? zoomLevel.pixelCount); pixel++) {
+      final sample = sampleAt(pixel);
       final x = pixel - scrollOffset;
 
       // Draw from min to max for this pixel
@@ -897,6 +931,7 @@ class WaveformPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant WaveformPainter oldDelegate) {
     return oldDelegate.scrollOffset != scrollOffset ||
+        oldDelegate.tileSource != tileSource ||
         oldDelegate.playbackPosition != playbackPosition ||
         oldDelegate.zoomLevel != zoomLevel ||
         oldDelegate.subtitles != subtitles ||
