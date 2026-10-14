@@ -50,6 +50,7 @@ class WaveformController extends Notifier<WaveformState> {
     ref.onDispose(() {
       _disposed = true;
       _loadEpoch++; // Invalidate pending processing and progress callbacks.
+      _audioProcessor.cancelActive();
     });
     return const WaveformInitial();
   }
@@ -166,6 +167,8 @@ class WaveformController extends Notifier<WaveformState> {
   ) async {
     final epoch = ++_loadEpoch;
     bool isCurrent() => !_disposed && _loadEpoch == epoch;
+    // Kill old platform decoding as well as ignoring late Riverpod results.
+    _audioProcessor.cancelActive();
     try {
       _setState(WaveformLoading(event.filePath, progress: 0.0));
 
@@ -392,6 +395,7 @@ class WaveformController extends Notifier<WaveformState> {
   /// Clear waveform
   void _onClearWaveform(ClearWaveform event) {
     _loadEpoch++; // A cleared screen must not be repopulated by an old load.
+    _audioProcessor.cancelActive();
     _setState(const WaveformInitial());
   }
 
