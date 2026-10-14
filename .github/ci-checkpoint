@@ -1,6 +1,7 @@
-SubtitleStudio Checkpoint 80 R2 | 2026-10-14
-Quality gate flutter analyze and flutter test -j 1.
-R1: 332 tests passed, 2 failed in WaveformController disposal because
-ref.read() is forbidden inside Riverpod ref.onDispose lifecycle callbacks.
-R2 captures AudioProcessor inside build and invokes it without ref reads.
-Peak cache and audio extraction code unchanged from R1.
+SubtitleStudio Checkpoint 81 R1 | 2026-10-14
+flutter analyze and flutter test -j 1 only.
+Harden peak cache same-path concurrency using a shared keyed FIFO guard,
+prune only expired owned peak/partial files, make unique extraction
+temp names; optional MS_ONE_LAYERED_WAVEFORM separates scenery from
+playhead/overlay with shouldRepaint isolation and pixel parity checks.
+No native builds, schema changes, desktop workspace or release edits.
