@@ -106,7 +106,7 @@ void main() {
     expect(list, isNot(contains('Big5')));
     expect(list, isNot(contains('ISO-8859-3')));
     expect(list.length, SubtitleTextCodec.supportedEncodings.length + 6);
-    expect(SubtitleExtendedEncodingService.extendedEncodings.length, 40);
+    expect(SubtitleExtendedEncodingService.extendedEncodings.length, 58);
     expect(SubtitleExtendedEncodingService.canonical('cp1251'),
         'Windows-1251');
     expect(SubtitleExtendedEncodingService.canonical('shift-jis'),

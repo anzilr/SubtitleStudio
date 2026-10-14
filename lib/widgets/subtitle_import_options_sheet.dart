@@ -43,7 +43,6 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
   String? _selectedFilePath;
   String _fileName = '';
   String? _safUri; // Store SAF URI for Android file operations
-  String? _fileContent; // Text-only legacy/intent callers
   Uint8List? _fileBytes; // Raw SAF / desktop / iOS bytes
   String _encodingChoice = 'Auto';
   List<String> _availableEncodings = SubtitleTextCodec.supportedEncodings;
@@ -167,7 +166,6 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
           _selectedFilePath = subtitleData['filePath'];
           _fileName = subtitleData['fileName'] ?? '';
           _safUri = subtitleData['safUri'];
-          _fileContent = subtitleData['content'] as String?;
           _fileBytes = subtitleData['bytes'] as Uint8List?;
           _encodingChoice = 'Auto';
           _isLoading = false;
@@ -303,22 +301,13 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
       
       // The same byte reader and decoder drive preview and import.
       final Uint8List rawBytes = await _readSourceBytes();
-      if (rawBytes != null) {
-        final decoded = await SubtitleEncodingDecoder.decodeBytesExtended(
-          rawBytes,
-          selectedEncoding: _encodingChoice == 'Auto'
-              ? null : _encodingChoice,
-        );
-        subtitleContent = decoded.content;
-        selectedEncoding = decoded.encoding;
-      } else if (_fileContent != null && _encodingChoice == 'Auto') {
-        // Backward compatibility with callers that supply only decoded text.
-        subtitleContent = _fileContent!;
-      } else {
-        throw const FormatException(
-          'Source bytes are unavailable. Choose a file to select its encoding.',
-        );
-      }
+      final decoded = await SubtitleEncodingDecoder.decodeBytesExtended(
+        rawBytes,
+        selectedEncoding: _encodingChoice == 'Auto'
+            ? null : _encodingChoice,
+      );
+      subtitleContent = decoded.content;
+      selectedEncoding = decoded.encoding;
 
       // Process and import subtitle content with selected options
       final subtitleData = await processAndImportSubtitleContent(
