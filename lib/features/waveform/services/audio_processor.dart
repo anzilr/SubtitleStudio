@@ -389,6 +389,7 @@ class AudioProcessor {
     bool reduceToPeaks = false,
     String? peakCachePath,
   }) async {
+    String? generatedOutputPath;
     try {
       final extractionEpoch = _requestEpoch;
       // Get temporary directory
@@ -396,6 +397,7 @@ class AudioProcessor {
       final outputPath = cacheOutputPath ??
           (tempDir.path + Platform.pathSeparator + 'waveform_temp_' +
               DateTime.now().microsecondsSinceEpoch.toString() + '.raw');
+      generatedOutputPath = outputPath;
 
       if (kDebugMode) {
         print('AudioProcessor: Extracting audio to PCM: $outputPath');
@@ -576,7 +578,8 @@ class AudioProcessor {
             throw ArgumentError('Missing compact peak cache path.');
           }
           return await WaveformPeakCache.build(
-            pcmFile: file, cacheFile: File(peakCachePath));
+            pcmFile: file, cacheFile: File(peakCachePath),
+            isCancelled: () => extractionEpoch != _requestEpoch);
         } finally {
           if (await file.exists()) await file.delete();
         }
@@ -625,6 +628,13 @@ class AudioProcessor {
         rawSamples: channelSamples,
       );
     } catch (e) {
+      // Never preserve a half-written temp PCM file on failed extraction,
+      // rejected track selection, cache corruption or user cancellation.
+      if (generatedOutputPath != null &&
+          (reduceToPeaks || cacheOutputPath == null)) {
+        final output = File(generatedOutputPath);
+        if (await output.exists()) await output.delete();
+      }
       if (kDebugMode) {
         print('AudioProcessor: Error extracting audio: $e');
       }

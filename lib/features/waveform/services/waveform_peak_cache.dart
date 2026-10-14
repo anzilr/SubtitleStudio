@@ -42,6 +42,7 @@ class WaveformPeakCache {
   static Future<WaveformData> build({
     required File pcmFile,
     required File cacheFile,
+    bool Function()? isCancelled,
   }) async {
     final bytes = await pcmFile.length();
     if (bytes.isOdd) {
@@ -68,6 +69,9 @@ class WaveformPeakCache {
     try {
       await writer.writeFrom(_header(frames, 0));
       await for (final chunk in pcmFile.openRead(0, frames * frameSize * 2)) {
+        if (isCancelled?.call() ?? false) {
+          throw StateError('Waveform peak generation was cancelled.');
+        }
         for (final byte in chunk) {
           if (pendingByte == null) {
             pendingByte = byte;
@@ -102,6 +106,9 @@ class WaveformPeakCache {
           high = -32768;
         }
       }
+      if (isCancelled?.call() ?? false) {
+        throw StateError('Waveform peak generation was cancelled.');
+      }
       if (emitted != frames || inputCount != 0 || pendingByte != null) {
         throw const FormatException('Incomplete PCM reduction.');
       }
@@ -110,6 +117,9 @@ class WaveformPeakCache {
       await writer.writeFrom(_header(frames, checksum));
       await writer.flush();
       await writer.close();
+      if (isCancelled?.call() ?? false) {
+        throw StateError('Waveform peak generation was cancelled.');
+      }
       // Preserve an existing complete cache if promotion itself fails.
       await staging.rename(cacheFile.path);
       return _asWaveform(result);
