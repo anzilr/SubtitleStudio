@@ -50,6 +50,7 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 // FontLoader is available via flutter services import above
 import 'package:subtitle_studio/widgets/video/video_player_preferences_repository.dart';
+import 'package:subtitle_studio/features/waveform/services/waveform_mpv_audio_stream_resolver.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/utils/responsive_layout.dart'; // Import responsive layout utilities
 import 'package:subtitle_studio/screens/screen_edit_line.dart'; // Import EditSubtitleScreenState
@@ -218,6 +219,28 @@ class VideoPlayerWidgetState extends ConsumerState<VideoPlayerWidget> with Autom
   
   // Public getter for external access to player instance
   Player get player => _player;
+
+  /// Maps the currently selected Media Kit audio ID to the exact FFmpeg
+  /// global stream using libmpv metadata. This deliberately fails closed:
+  /// ff-index may be unavailable for external or unsupported demuxers.
+  /// A caller can pass the resulting selector to LoadAudioFile.audioTrackId
+  /// instead of the legacy numeric Media Kit ID heuristic.
+  Future<String?> resolveWaveformSelectedAudioStream() async {
+    final selected = _currentAudioTrack?.id ?? _player.state.track.audio.id;
+    if (selected == 'auto') return null;
+    if (selected == 'no') {
+      throw StateError('Audio playback is disabled.');
+    }
+    final platform = _player.platform;
+    if (platform is! NativePlayer) {
+      throw UnsupportedError(
+        'Resolving mpv track metadata requires the native Media Kit player.');
+    }
+    return const WaveformMpvAudioStreamResolver().resolve(
+      selectedMpvId: selected,
+      getProperty: platform.getProperty,
+    );
+  }
   
   List<Subtitle> _currentSubtitles = [];
   List<Subtitle> _currentSecondarySubtitles = [];
