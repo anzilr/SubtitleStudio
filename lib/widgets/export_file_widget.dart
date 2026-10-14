@@ -7,7 +7,7 @@ import 'package:subtitle_studio/utils/app_logger.dart';
 import 'package:subtitle_studio/widgets/file_replace_dialog.dart';
 import 'package:file_picker/file_picker.dart' as fp;
 import 'dart:io';
-import 'dart:convert';
+import 'package:subtitle_studio/services/subtitle_text_codec.dart';
 import 'dart:typed_data';
 import '../database/models/models.dart';
 
@@ -29,12 +29,16 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
   late TextEditingController _fileNameController;
   late TextEditingController _filePathController;
   late TextEditingController _customTagController; // New controller for custom tag
-  String _selectedEncoding = "UTF-8"; // Default encoding
+  String _selectedEncoding = 'UTF-8'; // Explicit output charset/BOM.
   bool _exportOriginalAsWell = false; // Track if original lines should be exported separately
 
   @override
   void initState() {
     super.initState();
+    _selectedEncoding = SubtitleTextCodec.supportedEncodings.contains(
+            widget.subtitle.encoding)
+        ? widget.subtitle.encoding
+        : 'UTF-8';
     _fileNameController = TextEditingController(text: widget.subtitle.fileName);
     _filePathController =
         TextEditingController(text: widget.subtitle.filePath ?? '');
@@ -113,7 +117,11 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
   Future<void> _exportWithSAF(String fileName, String customTag) async {
     try {
       // Compile subtitle content
-      final content = SrtCompiler.generateSrtContent(widget.subtitle.lines, forceOriginal: _exportOriginalAsWell);
+      final content = SrtCompiler.generateSrtBytes(
+        widget.subtitle.lines,
+        encoding: _selectedEncoding,
+        forceOriginal: _exportOriginalAsWell,
+      );
       
       // Determine filename based on export option
       String exportFileName;
@@ -131,7 +139,7 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
       // Use SAF to save the file
       final success = await FilePickerConvenience.saveFile(
         context: context,
-        content: content,
+        bytes: Uint8List.fromList(content),
         fileName: exportFileName,
         mimeType: 'application/x-subrip', // Proper MIME type for SRT files
       );
@@ -159,7 +167,11 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
   Future<void> _exportWithFilePicker(String fileName, String customTag) async {
     try {
       // Compile subtitle content
-      final content = SrtCompiler.generateSrtContent(widget.subtitle.lines, forceOriginal: _exportOriginalAsWell);
+      final content = SrtCompiler.generateSrtBytes(
+        widget.subtitle.lines,
+        encoding: _selectedEncoding,
+        forceOriginal: _exportOriginalAsWell,
+      );
       
       // Determine filename based on export option
       String exportFileName;
@@ -175,7 +187,7 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
       }
       
       // Convert content to bytes for iOS file picker
-      final contentBytes = Uint8List.fromList(utf8.encode(content));
+      final contentBytes = Uint8List.fromList(content);
       
       // Use file picker to save the file on iOS
       final result = await fp.FilePicker.platform.saveFile(
@@ -528,7 +540,7 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
                       });
                     }
                   },
-                  items: ["UTF-8", "ISO-8859-1", "ASCII"].map((String encoding) {
+                  items: SubtitleTextCodec.supportedEncodings.map((String encoding) {
                     return DropdownMenuItem<String>(
                       value: encoding,
                       child: Text(encoding),
