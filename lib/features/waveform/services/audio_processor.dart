@@ -414,7 +414,7 @@ class AudioProcessor {
               print('AudioProcessor: Media kit track ID "$audioTrackId" -> FFmpeg index $trackIndex');
             }
           } else {
-            useTrackSelection = false;
+            throw FormatException('Invalid selected audio track ID: $audioTrackId');
           }
         }
         
@@ -432,6 +432,9 @@ class AudioProcessor {
         }
         
         args.addAll([
+          // Preserve presentation timestamp gaps (e.g. screen recordings)
+          // instead of silently squeezing subtitle/audio alignment.
+          '-af', 'aresample=async=1:first_pts=0',
           '-ac', '1', // Mono output
           '-ar', '44100',
           '-f', 's16le',
@@ -441,26 +444,7 @@ class AudioProcessor {
         
         var result = await Process.run('ffmpeg', args);
 
-        // If track selection failed, retry without it
-        if (result.exitCode != 0 && useTrackSelection) {
-          if (kDebugMode) {
-            print('AudioProcessor: Track selection failed, retrying with default audio track');
-          }
-          
-          // Rebuild args without track selection
-          final retryArgs = [
-            '-y',
-            '-i', normalizedPath,
-            '-ac', '1',
-            '-ar', '44100',
-            '-f', 's16le',
-            '-acodec', 'pcm_s16le',
-            outputPath,
-          ];
-          
-          result = await Process.run('ffmpeg', retryArgs);
-        }
-        
+        // A requested track must never silently switch to the default.
         if (result.exitCode != 0) {
           throw Exception('FFmpeg failed with exit code ${result.exitCode}: ${result.stderr}');
         }
@@ -485,7 +469,7 @@ class AudioProcessor {
               print('AudioProcessor: Media kit track ID "$audioTrackId" -> FFmpeg index $trackIndex');
             }
           } else {
-            useTrackSelection = false;
+            throw FormatException('Invalid selected audio track ID: $audioTrackId');
           }
         }
         
@@ -499,7 +483,8 @@ class AudioProcessor {
           }
         }
         
-        command += ' -ac 1 -ar 44100 -f s16le -acodec pcm_s16le "$outputPath"';
+        command += ' -af aresample=async=1:first_pts=0'
+            ' -ac 1 -ar 44100 -f s16le -acodec pcm_s16le "$outputPath"';
         
         if (kDebugMode) {
           print('AudioProcessor: FFmpegKit command: $command');
@@ -508,18 +493,7 @@ class AudioProcessor {
         var session = await FFmpegKit.execute(command);
         var returnCode = await session.getReturnCode();
         
-        // If track selection failed, retry without it (use default audio track)
-        if ((returnCode == null || !returnCode.isValueSuccess()) && useTrackSelection) {
-          if (kDebugMode) {
-            print('AudioProcessor: Track selection failed, retrying with default audio track');
-          }
-          
-          // Retry without track selection
-          command = '-y -i "$inputPath" -ac 1 -ar 44100 -f s16le -acodec pcm_s16le "$outputPath"';
-          session = await FFmpegKit.execute(command);
-          returnCode = await session.getReturnCode();
-        }
-        
+        // No implicit retry: wrong-language track would corrupt the cache.
         if (returnCode == null || !returnCode.isValueSuccess()) {
           final logs = await session.getLogs();
           final logMessages = logs.map((log) => log.getMessage()).join('\n');
