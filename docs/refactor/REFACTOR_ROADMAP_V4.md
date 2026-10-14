@@ -1,29 +1,32 @@
 # SubtitleStudio Refactor Roadmap v4
 
-> **October 14, 2026 — Checkpoint 81 R2 verified.**
-> [Quality-gated code `266f038`](https://github.com/anzilr/SubtitleStudio/commit/266f0382917d743bd41a325c63f6387bfde0d6d6)
-> · [successful Flutter analyzer/test CI](https://github.com/anzilr/SubtitleStudio/actions/runs/38617605939):
-> **344 tests passed, zero analyzer issues**.
-> Waveform peak cache validation, invalidation, generation and promotion
-> now serialize by destination key within one Dart isolate. Independent
-> audio sources still run concurrently; stale queued requests check
-> the existing epoch before mutating caches. Conservative housekeeping
-> prunes only expired SubtitleStudio peak files and abandoned partials,
-> respecting the current active destination. Extraction-temp filenames
-> include a monotonic counter.
+> **October 14, 2026 — Checkpoint 82 R2 verified.**
+> [Verified code commit](https://github.com/anzilr/SubtitleStudio/commit/7ee451c2f2555aec1bf1dc39872b12c60e79508b)
+> · [Successful Flutter analyzer/test CI](https://github.com/anzilr/SubtitleStudio/actions/runs/38622317190):
+> **351 tests passed, zero analyzer issues**.
+> Desktop FFmpeg Process.start and FFmpegKit now share the same
+> WaveformFfmpegPlan for audio stream mapping and timestamp-gap-aware
+> PCM extraction. Invalid explicitly selected tracks fail closed.
+> Historical numeric Media Kit IDs still use the prior heuristic;
+> a verified zero-based FFmpeg ordinal can be specified as ffmpeg:a:N.
+> Seven new unit tests check stream selection, the PTS filter,
+> argument agreement and FFmpegKit path quoting.
 >
-> Optional `MS_ONE_LAYERED_WAVEFORM=true` separates background/waveform
-> scenery from moving playback and subtitle overlays, with an isolated
-> scenery RepaintBoundary and pixel-identical composite tests.
-> The normal painter remains the default. See
-> [Checkpoint 81 report](CHECKPOINT81_WAVEFORM_CONCURRENCY_AND_LAYERS.md).
+> A Windows PowerShell probe can generate a controlled two-track MKV
+> with one delayed audio stream and write the results to JSON.
+> See [Checkpoint 82 report](CHECKPOINT82_AUDIO_TRACK_PTS_VERIFICATION.md)
+> and scripts/waveform/checkpoint82_ffmpeg_probe.ps1.
+> The probe has not been run on a user's device; actual Media Kit ID
+> correspondence and PTS/sync handling on Android and Windows are
+> therefore NOT considered verified.
 >
-> **Next priorities:** measure actual Android/Windows rendering and
-> FFmpeg cancellation, test PTS gaps and multitrack alignment on media,
-> prove that layering reduces jank, and consider bounded disk-backed
-> peak-window retrieval and process-safe coordination if multi-process
-> workers are introduced. No native platform builds, Isar schema
-> migration, desktop workspace or upstream/release changes yet.
+> **Next:** use real track metadata and the probe to replace the Media
+> Kit-to-FFmpeg ordinal heuristic; validate FFmpegKit cancellation and
+> Android SAF extraction against multi-track files; profile layered
+> waveform frame times/peak memory; continue subtitle gesture/snapping
+> research from Subtitle Composer and Subtitle Edit. Keep default eager
+> renderer, existing Isar schema, mobile UI, upstream/release tags and
+> deferred desktop workspace unchanged.
 >
 > **Additional waveform reference, October 14, 2026: Subtitle Edit source audit.**
 > Alongside KDE Subtitle Composer, use the current Subtitle Edit Avalonia/C#

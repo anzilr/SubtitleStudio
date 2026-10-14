@@ -88,3 +88,17 @@ Capture logcat with package PID, redacting private paths/user content.
 - Existing eager pipeline stays default. No Isar schema, desktop
   workspace, upstream/main/release tag changes or native five-platform
   CI builds.
+
+
+## Verified quality gate: R2
+
+- Verified code: https://github.com/anzilr/SubtitleStudio/commit/7ee451c2f2555aec1bf1dc39872b12c60e79508b
+- Successful analyzer/test run: https://github.com/anzilr/SubtitleStudio/actions/runs/38622317190
+- Flutter analyze: No issues found (zero errors, warnings or infos).
+- Flutter test -j 1: 351 tests passed, 7 more than Checkpoint 81 R2 (344).
+- Initial R1 failed analysis due a malformed generated plan file.
+  R2 replaced that file cleanly, and the entire suite completed.
+- No native-device audio tracks, FFmpegKit cancellation or Android SAF
+  alignment were verified; these remain manual qualifications.
+- Report/roadmap changes are documentation-only and do not trigger
+  another GitHub Actions gate.
