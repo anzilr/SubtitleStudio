@@ -97,6 +97,17 @@ void main() {
       }
     });
 
+    test('resolved global FFmpeg streams are distinct from audio ordinal maps', () {
+      expect(WaveformFfmpegPlan.streamMap('ffmpeg:stream:0'), '0:0');
+      expect(WaveformFfmpegPlan.streamMap('ffmpeg:stream:4'), '0:4');
+      const plan = WaveformFfmpegPlan(
+        inputPath: 'video.mkv', outputPath: 'audio.raw',
+        selectedTrackId: 'ffmpeg:stream:4',
+      );
+      expect(plan.arguments(), containsAllInOrder(['-map', '0:4']));
+      expect(plan.ffmpegKitCommand(), contains('-map 0:4'));
+    });
+
     test('desktop and FFmpegKit use the same ordered command arguments',
         () {
       const plan = WaveformFfmpegPlan(
