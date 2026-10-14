@@ -1,25 +1,24 @@
 # SubtitleStudio Refactor Roadmap v4
 
-> **October 14, 2026: Checkpoint 78 R3 verified.**
-> [Tested code commit `2b16918`](https://github.com/anzilr/SubtitleStudio/commit/2b1691891fefb781fb0d08fecc3a44ec05d57a66)
-> · [Successful CI run](https://github.com/anzilr/SubtitleStudio/actions/runs/38601795799):
-> **323 passing tests, zero analyzer issues**.
-> The reusable W2 waveform tile source is integrated through an opt-in
-> `WaveformPainter.tileSource`. Default behavior remains eager painting;
-> pass `--dart-define=MS_ONE_TILED_WAVEFORM=true` to build the comparison
-> mode. Actual signed per-channel min/max and rasterized pixel output
-> match the existing generator on deterministic fixtures at multiple zoom
-> levels and fractional scroll positions.
-> Synthetic CI diagnostic: **13,714 eager buckets (28 ms) versus 716 visible
-> tile buckets (12 ms)** in one run; these numbers are not real-device
-> speed or memory guarantees. The processing pipeline still eagerly
-> generates full zoom levels.
-> See [Checkpoint 78 report](CHECKPOINT78_WAVEFORM_TILE_PARITY.md).
-> Next: eliminate eager zoom allocation in experimental mode via zoom
-> metadata-only levels, compare Android/Windows profiler traces and
-> address FFmpeg cancellation, SAF source version and file cleanup.
-> Desktop workspace is postponed; main/upstream/releases and Isar schema
-> were not changed.
+> **October 14, 2026: Checkpoint 79 R2 verified.**
+> [Quality-gated code `853f3ee`](https://github.com/anzilr/SubtitleStudio/commit/853f3ee3af1f492d381d9ac153b84eaa797584f9)
+> · [successful CI run](https://github.com/anzilr/SubtitleStudio/actions/runs/38611346020):
+> **327 tests passed, zero analyzer issues**.
+> The experimental tiled pipeline now builds **metadata-only zoom levels**
+> (sample-per-pixel, pixel count and channel count) instead of eagerly
+> allocating and scaling full-track zoom-pixel arrays. Pixel and geometry
+> parity checks match the prior eager pipeline; the renderer's default
+> remains eager unless built with
+> `--dart-define=MS_ONE_TILED_WAVEFORM=true`.
+> AudioProcessor metrics count actual materialized sample buckets (zero
+> in tiled metadata mode), not virtual metadata widths.
+> See [Checkpoint 79 report](CHECKPOINT79_METADATA_ONLY_WAVEFORM_ZOOM.md).
+> **Remaining:** full PCM extraction/loading and downsampled audio samples
+> are still retained. Next priority: compact streamed peak extraction and
+> versioned atomic peak caches, robust FFmpeg cancellation and temporary
+> file cleanup, audio timestamp gaps, and safe track selection. Android
+> and Windows device benchmarks have not been performed; defer the
+> desktop workspace and all upstream/release changes.
 >
 > **Additional waveform reference, October 14, 2026: Subtitle Edit source audit.**
 > Alongside KDE Subtitle Composer, use the current Subtitle Edit Avalonia/C#

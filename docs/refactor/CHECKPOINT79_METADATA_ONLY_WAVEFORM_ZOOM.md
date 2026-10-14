@@ -68,3 +68,19 @@ Android:
   deferred to Checkpoint 80.
 - Main/upstream/tags, Isar schema, desktop workspace and platform build
   settings remain unchanged.
+
+## Verified R2 quality gate
+
+- [Verified code commit `853f3ee`](https://github.com/anzilr/SubtitleStudio/commit/853f3ee3af1f492d381d9ac153b84eaa797584f9)
+- [Successful GitHub Actions run 38611346020](https://github.com/anzilr/SubtitleStudio/actions/runs/38611346020)
+- `flutter analyze`: **No issues found**, including informational notices.
+- `flutter test -j 1`: **327 passed**, four new tests relative to
+  Checkpoint 78 R3's 323 passing tests.
+- Original R1 was also green, but an inspection noticed the existing
+  zoomPixels metric counted metadata-only virtual widths as allocated
+  memory. R2 introduced ZoomLevel.materializedPixels, made the
+  diagnostic sum actual resident sample buckets, and added assertions
+  before running the entire gate again.
+- No schema generator changes, upstream/main/tag changes, native
+  five-platform builds or desktop-workspace UI changes. Documentation
+  updates following the green gate do not trigger the workflow.
