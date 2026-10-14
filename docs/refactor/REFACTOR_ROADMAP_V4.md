@@ -21,6 +21,21 @@
 > Desktop workspace is postponed; main/upstream/releases and Isar schema
 > were not changed.
 >
+> **Additional waveform reference, October 14, 2026: Subtitle Edit source audit.**
+> Alongside KDE Subtitle Composer, use the current Subtitle Edit Avalonia/C#
+> waveform implementation and its regression/benchmark tests. See
+> [Subtitle Edit waveform source study](SUBTITLEEDIT_WAVEFORM_SOURCE_AUDIT_2026-10-14.md).
+> Key priorities: compact peak caches with atomic promotion and bounded header
+> validation; timestamp-gap-preserving audio extraction; static/dynamic render
+> layer separation and per-device-pixel extrema; shot/frame snapping with
+> screen-pixel tolerances; and regression/benchmarks for cache corruption,
+> long audio, high-DPI scrolling and stale source switching.
+> Prefer implementing **Checkpoint 79 experimental metadata-only zoom levels**
+> before changing user-facing waveform appearance. Checkpoint 80 can replace
+> raw full-track PCM buffering with streaming peak reduction/caching. Real
+> Android/Windows profiling remains required. Preserve signed extrema and
+> the current mobile workflow; keep desktop layout deferred.
+>
 > **New roadmap requirement — Expanded SRT text encodings (requested 2026-10-12):**
 > Reference implementation research: [KDE Subtitle Composer and Subtitle Edit
 > study](SRT_ENCODING_REFERENCE_RESEARCH_2026-10-12.md). The study links exact

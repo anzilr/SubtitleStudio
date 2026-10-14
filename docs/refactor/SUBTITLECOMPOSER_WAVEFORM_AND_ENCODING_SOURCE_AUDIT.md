@@ -70,3 +70,16 @@ The attached project is C++/Qt/KDE, not a drop-in Dart implementation. KDE code 
 Do not conflate waveform peak/bucket statistics with audio transcription, silence classification or FFT spectrogram functionality. The inspected `zoombuffer.cpp` is a time-domain waveform aggregation, not an FFT analysis pipeline.
 
 This research is separate from Checkpoint 67's Git-history reference migration code and requires no Flutter/native CI by itself.
+
+
+## Complementary source: Subtitle Edit (reviewed 2026-10-14)
+
+The KDE source study remains valid for streamed audio, viewport-oriented
+zoom work and interaction ownership. A separate audit of Subtitle Edit's
+Avalonia/Skia implementation and source-level tests is recorded in
+[Subtitle Edit waveform source study](SUBTITLEEDIT_WAVEFORM_SOURCE_AUDIT_2026-10-14.md).
+Subtitle Edit adds useful details on peak caches with corruption/atomic
+write tests, audio timestamp-gap preservation, static scenery layer
+caching, per-device-pixel peak extrema, and whole-cue shot-change
+snapping. These are references for future Flutter work, not copied
+implementations or claims that the current app already has them.
