@@ -465,9 +465,9 @@ extension _WaveformRendering on WaveformWidgetState {
                               onPanStart: (details) => _handleWaveformPanStart(details, state),
                               onPanUpdate: (details) => _handleWaveformPanUpdate(details, state),
                               onPanEnd: (details) => _handleWaveformPanEnd(),
-                              child: CustomPaint(
-                                size: Size.infinite,
-                                painter: WaveformPainter(
+                              child: Builder(
+                                builder: (context) {
+                                  final waveformPainter = WaveformPainter(
                                   zoomLevel: state.currentZoomLevel,
                                   tileSource: _tilesFor(state),
                                   scrollOffset: state.scrollPosition,
@@ -492,7 +492,33 @@ extension _WaveformRendering on WaveformWidgetState {
                                   addLineStartTime: state.addLineStartTime,
                                   addLineEndTime: state.addLineEndTime,
                                   highlightedSubtitleIndex: widget.highlightedSubtitleIndex,
-                                ),
+                                );
+                                  if (!widget.useLayeredWaveform) {
+                                    return CustomPaint(
+                                      size: Size.infinite,
+                                      painter: waveformPainter,
+                                    );
+                                  }
+                                  return Stack(
+                                    fit: StackFit.expand,
+                                    children: [
+                                      RepaintBoundary(
+                                        child: CustomPaint(
+                                          size: Size.infinite,
+                                          painter: waveformPainter.forLayer(
+                                            WaveformPaintLayer.scenery),
+                                        ),
+                                      ),
+                                      IgnorePointer(
+                                        child: CustomPaint(
+                                          size: Size.infinite,
+                                          painter: waveformPainter.forLayer(
+                                            WaveformPaintLayer.overlays),
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                },
                               ),
                             ),
                           ),

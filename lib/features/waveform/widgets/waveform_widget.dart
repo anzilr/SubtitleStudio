@@ -32,6 +32,8 @@ class WaveformWidget extends riverpod.ConsumerStatefulWidget {
   final int? highlightedSubtitleIndex; // Index of currently highlighted subtitle (0-based)
   /// Opt in to tile-backed painting; false preserves the current UI.
   final bool useTiledWaveform;
+  /// Experimental split static/dynamic render layers (default disabled).
+  final bool useLayeredWaveform;
 
   const WaveformWidget({
     super.key,
@@ -49,6 +51,8 @@ class WaveformWidget extends riverpod.ConsumerStatefulWidget {
     // Legacy eager painter is the shipping default on all platforms.
     this.useTiledWaveform = const bool.fromEnvironment(
       'MS_ONE_TILED_WAVEFORM', defaultValue: false),
+    this.useLayeredWaveform = const bool.fromEnvironment(
+      'MS_ONE_LAYERED_WAVEFORM', defaultValue: false),
 
   });
 
