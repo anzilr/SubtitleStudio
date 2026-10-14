@@ -6,8 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:subtitle_studio/features/waveform/models/waveform_sample.dart';
 import 'package:subtitle_studio/features/waveform/widgets/waveform_painter.dart';
 
-WaveformPainter _make(Duration position) => WaveformPainter(
-  zoomLevel: ZoomLevel(
+WaveformPainter _make(Duration position, {ZoomLevel? sourceZoom}) => WaveformPainter(
+  zoomLevel: sourceZoom ?? ZoomLevel(
     samplesPerPixel: 8,
     data: [
       List<WaveformSample>.generate(100, (i) =>
@@ -68,7 +68,8 @@ void main() {
 
   test('changing playhead invalidates only the dynamic render layer', () {
     final before = _make(Duration.zero);
-    final after = _make(const Duration(milliseconds: 180));
+    final after = _make(const Duration(milliseconds: 180),
+        sourceZoom: before.zoomLevel);
     expect(after.forLayer(WaveformPaintLayer.scenery).shouldRepaint(
       before.forLayer(WaveformPaintLayer.scenery)), isFalse);
     expect(after.forLayer(WaveformPaintLayer.overlays).shouldRepaint(

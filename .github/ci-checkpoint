@@ -1,7 +1,7 @@
-SubtitleStudio Checkpoint 81 R1 | 2026-10-14
-flutter analyze and flutter test -j 1 only.
-Harden peak cache same-path concurrency using a shared keyed FIFO guard,
-prune only expired owned peak/partial files, make unique extraction
-temp names; optional MS_ONE_LAYERED_WAVEFORM separates scenery from
-playhead/overlay with shouldRepaint isolation and pixel parity checks.
-No native builds, schema changes, desktop workspace or release edits.
+SubtitleStudio Checkpoint 81 R2 | 2026-10-14
+R1: 343 tests passed, 1 test fixture failed: playhead-only repaint
+test allocated a NEW ZoomLevel object for its second painter, which
+rightfully changed scenery identity.
+R2: share identical ZoomLevel instance for playback-only repaint test.
+Flutter analyze and flutter test -j 1; source-scoped cache concurrency,
+owned artifact expiration and layered pixel parity unchanged.
