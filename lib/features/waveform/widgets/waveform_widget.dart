@@ -44,7 +44,11 @@ class WaveformWidget extends riverpod.ConsumerStatefulWidget {
     this.subtitleCollectionId,
     this.sessionId,
     this.highlightedSubtitleIndex,
-    this.useTiledWaveform = false,
+    // Runtime experimentation: flutter run --dart-define=MS_ONE_TILED_WAVEFORM=true
+    // Legacy eager painter is the shipping default on all platforms.
+    this.useTiledWaveform = const bool.fromEnvironment(
+      'MS_ONE_TILED_WAVEFORM', defaultValue: false),
+
   });
 
   @override
