@@ -1,6 +1,6 @@
-Checkpoint 75 R2; 2026-10-14
-Quality gate: flutter analyze (zero issues), flutter test -j 1.
-R1: 302 tests passed, 1 test fixture failed due accidental Arabic
-initial glyph in expected Malayalam string (not codec behavior).
-R2 fixes fixture; charset implementation unchanged.
-No desktop layout, native builds, Isar schema or upstream changes.
+SubtitleStudio checkpoint 76 R1 quality gate — 2026-10-14
+Checks: flutter analyze zero issues, flutter test -j 1.
+Scope: searchable import/export charset picker, strict preview,
+raw-byte-first Android intent text readers, +18 capability-checked
+regional charset candidates, and regression tests.
+No five-platform native builds or upstream/main/release changes.
