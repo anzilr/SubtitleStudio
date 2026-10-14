@@ -36,6 +36,7 @@ final waveformControllerProvider =
 /// from BLoC without simultaneously rewriting every caller.
 class WaveformController extends Notifier<WaveformState> {
   bool _disposed = false;
+  int _loadEpoch = 0;
 
   AudioProcessor get _audioProcessor =>
       ref.read(waveformAudioProcessorProvider);
@@ -48,6 +49,7 @@ class WaveformController extends Notifier<WaveformState> {
     _disposed = false;
     ref.onDispose(() {
       _disposed = true;
+      _loadEpoch++; // Invalidate pending processing and progress callbacks.
     });
     return const WaveformInitial();
   }
@@ -162,6 +164,8 @@ class WaveformController extends Notifier<WaveformState> {
   Future<void> _onLoadAudioFile(
     LoadAudioFile event,
   ) async {
+    final epoch = ++_loadEpoch;
+    bool isCurrent() => !_disposed && _loadEpoch == epoch;
     try {
       _setState(WaveformLoading(event.filePath, progress: 0.0));
 
@@ -172,6 +176,7 @@ class WaveformController extends Notifier<WaveformState> {
         audioTrackId = await _preferences.getSelectedAudioTrackId(
           event.subtitleCollectionId!,
         );
+        if (!isCurrent()) return;
       }
 
       // Process audio in background (with caching if subtitle collection ID provided)
@@ -181,12 +186,13 @@ class WaveformController extends Notifier<WaveformState> {
         audioTrackId: audioTrackId,
         onProgress: (progress) {
           // Emit loading progress updates
-          if (!_disposed) {
+          if (isCurrent()) {
             _setState(WaveformLoading(event.filePath, progress: progress));
           }
         },
       );
 
+      if (!isCurrent()) return;
       // Start with zoom level 7 (default)
       int defaultZoomIndex = 7.clamp(0, buffer.zoomLevelCount - 1);
       double defaultVerticalZoom = 1.7; // Default 170% for better visibility
@@ -196,6 +202,7 @@ class WaveformController extends Notifier<WaveformState> {
         final savedZoom = await _preferences.getWaveformZoomLevels(
           event.subtitleCollectionId!,
         );
+        if (!isCurrent()) return;
         if (savedZoom != null) {
           defaultZoomIndex =
               savedZoom.zoomIndex.clamp(0, buffer.zoomLevelCount - 1);
@@ -203,6 +210,7 @@ class WaveformController extends Notifier<WaveformState> {
         }
       }
 
+      if (!isCurrent()) return;
       _setState(WaveformReady(
         buffer: buffer,
         currentZoomIndex: defaultZoomIndex,
@@ -215,6 +223,7 @@ class WaveformController extends Notifier<WaveformState> {
         subtitleCollectionId: event.subtitleCollectionId,
       ));
     } catch (e) {
+      if (!isCurrent()) return;
       _setState(WaveformError(
         'Failed to load audio: ${e.toString()}',
         filePath: event.filePath,
@@ -382,6 +391,7 @@ class WaveformController extends Notifier<WaveformState> {
 
   /// Clear waveform
   void _onClearWaveform(ClearWaveform event) {
+    _loadEpoch++; // A cleared screen must not be repopulated by an old load.
     _setState(const WaveformInitial());
   }
 
