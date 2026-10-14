@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
 import 'dart:io';
+import 'dart:convert';
 import 'package:subtitle_studio/services/subtitle_extended_encoding_service.dart';
 import 'package:path_provider/path_provider.dart';
 

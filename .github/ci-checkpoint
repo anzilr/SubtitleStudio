@@ -1,6 +1,6 @@
-SubtitleStudio checkpoint 76 R1 quality gate — 2026-10-14
-Checks: flutter analyze zero issues, flutter test -j 1.
-Scope: searchable import/export charset picker, strict preview,
-raw-byte-first Android intent text readers, +18 capability-checked
-regional charset candidates, and regression tests.
-No five-platform native builds or upstream/main/release changes.
+SubtitleStudio checkpoint 76 R2 | 2026-10-14
+flutter analyze with zero issues; flutter test -j 1.
+R1 analyzer failed because intent_handler still needs dart:convert for
+jsonDecode unrelated to the removed implicit Latin-1 charset fallback.
+R2 restores the import and reruns full tests.
+No native builds, main/upstream/release or desktop UI changes.
