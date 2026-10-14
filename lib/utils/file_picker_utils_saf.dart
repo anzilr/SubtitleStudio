@@ -153,7 +153,7 @@ class FilePickerSAF {
   /// [allowedExtensions] - List of allowed file extensions (e.g., ['.srt', '.vtt'])
   /// 
   /// Returns a Map with 'displayPath' and 'safUri' keys, or null if cancelled
-  static Future<Map<String, String?>?> pickFileWithInfo({
+  static Future<Map<String, dynamic>?> pickFileWithInfo({
     required BuildContext context,
     required String title,
     List<String>? allowedExtensions,
@@ -174,7 +174,7 @@ class FilePickerSAF {
           return {
             'displayPath': correctedPath, // Use corrected path
             'safUri': fileInfo.safUri,
-            'content': fileInfo.contentAsString, // Include the content to avoid double reading
+            'bytes': fileInfo.content, // Decode only after user chooses encoding
           };
         }
         return null;
@@ -194,11 +194,11 @@ class FilePickerSAF {
         // Read content for desktop
         try {
           final file = File(path);
-          final content = await file.readAsString();
+          final bytes = await file.readAsBytes();
           return {
             'displayPath': path,
-            'safUri': null, // No SAF URI on desktop
-            'content': content,
+            'safUri': null,
+            'bytes': bytes,
           };
         } catch (e) {
           if (context.mounted) {
@@ -392,7 +392,7 @@ class FilePickerConvenience {
 
   /// Pick a subtitle file with both display path and SAF URI information
   /// Returns a Map with 'displayPath' and 'safUri' keys, or null if cancelled
-  static Future<Map<String, String?>?> pickSubtitleFileWithInfo({
+  static Future<Map<String, dynamic>?> pickSubtitleFileWithInfo({
     required BuildContext context,
   }) async {
     return FilePickerSAF.pickFileWithInfo(

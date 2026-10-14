@@ -1,4 +1,8 @@
 import 'dart:io';
+import 'dart:typed_data';
+import 'package:subtitle_studio/services/subtitle_encoding_decoder.dart';
+import 'package:subtitle_studio/services/subtitle_text_codec.dart';
+import 'package:subtitle_studio/utils/saf_file_handler.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -37,7 +41,9 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
   String? _selectedFilePath;
   String _fileName = '';
   String? _safUri; // Store SAF URI for Android file operations
-  String? _fileContent; // Store the content that was already read to avoid double reading
+  String? _fileContent; // Text-only legacy/intent callers
+  Uint8List? _fileBytes; // Raw SAF / desktop / iOS bytes
+  String _encodingChoice = 'Auto';
 
   @override
   void initState() {
@@ -68,7 +74,9 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
           _selectedFilePath = subtitleData['filePath'];
           _fileName = subtitleData['fileName'] ?? '';
           _safUri = subtitleData['safUri'];
-          _fileContent = subtitleData['content'];
+          _fileContent = subtitleData['content'] as String?;
+          _fileBytes = subtitleData['bytes'] as Uint8List?;
+          _encodingChoice = 'Auto';
           _isLoading = false;
         });
       } else {
@@ -136,6 +144,7 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
 
     try {
       String subtitleContent;
+      String selectedEncoding = 'UTF-8';
       String displayPath = _selectedFilePath!;
       String? contentUri = _safUri; // Use stored SAF URI
       
@@ -199,28 +208,33 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
         }
       }
       
-      if (_fileContent != null) {
-        // Use the content that was already read during file selection
-        subtitleContent = _fileContent!;
-        if (mounted) {
-          SnackbarHelper.showInfo(context, 'Processing selected file...', duration: const Duration(seconds: 2));
-        }
-      } else if (_safUri != null) {
-        // Fallback: File was selected using SAF but content wasn't stored, read from SAF URI
-        if (mounted) {
-          SnackbarHelper.showInfo(context, 'Processing file from external storage...', duration: const Duration(seconds: 2));
-        }
-        
-        // Read content directly from SAF URI
-        subtitleContent = await IntentHandler.readContentFromUri(_safUri!);
-        
-        if (subtitleContent.isEmpty) {
-          throw Exception('Failed to read file content from external storage. The file may be empty or inaccessible.');
-        }
+      // Decode once from the *raw bytes*. A legacy charset is always
+      // manually selected: guessing Latin-1 would hide Windows-1252 errors.
+      final Uint8List? rawBytes;
+      if (_fileBytes != null) {
+        rawBytes = _fileBytes;
+      } else if (_safUri != null && IntentHandler.isContentUri(_safUri!)) {
+        rawBytes = await SafFileHandler.readFileFromUri(_safUri!);
+      } else if (_selectedFilePath != null) {
+        rawBytes = await File(_selectedFilePath!).readAsBytes();
       } else {
-        // Read content from regular file path
-        final file = File(_selectedFilePath!);
-        subtitleContent = await file.readAsString();
+        rawBytes = null;
+      }
+      if (rawBytes != null) {
+        final decoded = SubtitleEncodingDecoder.decodeBytes(
+          rawBytes,
+          selectedEncoding: _encodingChoice == 'Auto'
+              ? null : _encodingChoice,
+        );
+        subtitleContent = decoded.content;
+        selectedEncoding = decoded.encoding;
+      } else if (_fileContent != null && _encodingChoice == 'Auto') {
+        // Backward compatibility with callers that supply only decoded text.
+        subtitleContent = _fileContent!;
+      } else {
+        throw const FormatException(
+          'Source bytes are unavailable. Choose a file to select its encoding.',
+        );
       }
 
       // Process and import subtitle content with selected options
@@ -232,6 +246,7 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
         removeHearingImpairedLines: _removeHearingImpairedLines,
         mergeOverlappingSubtitles: _mergeOverlappingSubtitles,
         contentUri: contentUri, // Store SAF URI for future access
+        encoding: selectedEncoding,
         repository: ref.read(subtitleImportRepositoryProvider),
       );
 
@@ -420,8 +435,28 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
                   ),
                 ),
               ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                initialValue: _encodingChoice,
+                decoration: const InputDecoration(
+                  labelText: 'Source text encoding',
+                  helperText: 'Auto detects UTF BOM/valid UTF-8 only; '
+                      'choose a charset for older subtitle files.',
+                  border: OutlineInputBorder(),
+                ),
+                isExpanded: true,
+                items: ['Auto', ...SubtitleTextCodec.supportedEncodings]
+                    .map((label) => DropdownMenuItem(
+                      value: label, child: Text(label),
+                    )).toList(),
+                onChanged: _isLoading ? null : (value) {
+                  if (value != null) {
+                    setState(() => _encodingChoice = value);
+                  }
+                },
+              ),
               const SizedBox(height: 24),
-              
+
               // Set Project Directory Action Card
               Material(
                 color: Colors.transparent,

@@ -200,12 +200,13 @@ Future<SubtitleImportResult> processAndImportSubtitleContent(
   bool mergeOverlappingSubtitles =
       false, // Merge subtitles with timing conflicts
   String? contentUri, // Android SAF content URI for persistence
+  String encoding = 'UTF-8',
   required SubtitleImportRepository repository,
 }) async {
   try {
     // Step 1: Content Processing (no file system access needed)
     String srtContent = content; // Content already provided
-    String encoding = "UTF-8"; // Assume UTF-8 for content-based processing
+    // Content was decoded before parsing; retain its actual source policy.
 
     final parsedLines = _processSubtitleLines(
       srtContent,
@@ -244,12 +245,13 @@ Future<SubtitleImportResult> processSubtitleContentWithoutContext(
   bool removeHearingImpairedLines = false,
   bool mergeOverlappingSubtitles = false,
   String? contentUri, // Android SAF content URI for persistence
+  String encoding = 'UTF-8',
   required SubtitleImportRepository repository,
 }) async {
   try {
     // Step 1: Content Processing (no file system access needed)
     String srtContent = content; // Content already provided
-    String encoding = "UTF-8"; // Assume UTF-8 for content-based processing
+    // Content was decoded before parsing; retain its actual source policy.
 
     final parsedLines = _processSubtitleLines(
       srtContent,
