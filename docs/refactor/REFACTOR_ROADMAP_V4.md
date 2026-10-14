@@ -1,22 +1,25 @@
 # SubtitleStudio Refactor Roadmap v4
 
-> **October 14, 2026 progress:** Checkpoint **77 R1** verified.
-> [Code commit `7ff10e1`](https://github.com/anzilr/SubtitleStudio/commit/7ff10e13b03aaf219118fb4ff0dcca9c4a60d76e)
-> · [successful analyzer/test CI](https://github.com/anzilr/SubtitleStudio/actions/runs/38596363070):
-> **319 passing tests, 0 analyzer issues**.
-> Waveform cache reuse is now version/track-scoped with PCM integrity
-> checks; the Riverpod controller rejects stale async loads, and a
-> reusable bounded-LRU viewport tile engine is available with signed
-> min/max transients and source invalidation. Processing metrics provide
-> decode/downsample/zoom timing baselines for Android/Windows profiling.
-> The existing eager renderer has **not** been replaced or benchmarked;
-> no on-device performance improvement is claimed yet.
-> See [Checkpoint 77 report](CHECKPOINT77_WAVEFORM_SAFETY_AND_TILES.md).
-> Previous encoding milestone: Checkpoint 76, 67 candidate charset profiles
-> and searchable strict text previews. Next: compare eager and tiled waveform
-> on real media; benchmark first render latency/memory, integrate tiles
-> behind a parity-preserving toggle, and audit cancellable FFmpeg tasks.
-> Desktop shell is still postponed. No schema or upstream changes.
+> **October 14, 2026: Checkpoint 78 R3 verified.**
+> [Tested code commit `2b16918`](https://github.com/anzilr/SubtitleStudio/commit/2b1691891fefb781fb0d08fecc3a44ec05d57a66)
+> · [Successful CI run](https://github.com/anzilr/SubtitleStudio/actions/runs/38601795799):
+> **323 passing tests, zero analyzer issues**.
+> The reusable W2 waveform tile source is integrated through an opt-in
+> `WaveformPainter.tileSource`. Default behavior remains eager painting;
+> pass `--dart-define=MS_ONE_TILED_WAVEFORM=true` to build the comparison
+> mode. Actual signed per-channel min/max and rasterized pixel output
+> match the existing generator on deterministic fixtures at multiple zoom
+> levels and fractional scroll positions.
+> Synthetic CI diagnostic: **13,714 eager buckets (28 ms) versus 716 visible
+> tile buckets (12 ms)** in one run; these numbers are not real-device
+> speed or memory guarantees. The processing pipeline still eagerly
+> generates full zoom levels.
+> See [Checkpoint 78 report](CHECKPOINT78_WAVEFORM_TILE_PARITY.md).
+> Next: eliminate eager zoom allocation in experimental mode via zoom
+> metadata-only levels, compare Android/Windows profiler traces and
+> address FFmpeg cancellation, SAF source version and file cleanup.
+> Desktop workspace is postponed; main/upstream/releases and Isar schema
+> were not changed.
 >
 > **New roadmap requirement — Expanded SRT text encodings (requested 2026-10-12):**
 > Reference implementation research: [KDE Subtitle Composer and Subtitle Edit

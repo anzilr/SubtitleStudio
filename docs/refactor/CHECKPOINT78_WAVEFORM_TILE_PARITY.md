@@ -61,3 +61,21 @@ Omit the flag for the unchanged eager-rendering baseline. Collect
 `AudioProcessor.lastProcessingMetrics` and frame/memory profiler
 measurements for identical audio source and zoom positions. This document
 does not claim that physical-device profiling has already occurred.
+
+## Verified R3 CI outcome
+
+- [Code commit `2b16918`](https://github.com/anzilr/SubtitleStudio/commit/2b1691891fefb781fb0d08fecc3a44ec05d57a66)
+- [Successful Actions run 38601795799](https://github.com/anzilr/SubtitleStudio/actions/runs/38601795799)
+- `flutter analyze`: **No issues found**, including informational notices.
+- `flutter test -j 1`: **323 passed**, four more than Checkpoint 77.
+- Deterministic Linux runner diagnostic: **13,714 eager full-track buckets
+  in 28 ms versus 716 visible buckets in 12 ms**. No performance thresholds
+  were asserted; this is not an isolated, statistically meaningful device
+  benchmark or a process RSS measurement.
+- Initial R1 gate caught a missing direct import for `WaveformBuffer`.
+  The next run stalled during engine-backed image readback inside fake-async
+  widget testing and was superseded. R3 uses `tester.runAsync` for
+  image readback and passes the entire suite. This does not modify
+  production render behavior.
+- Documentation-only changes after the green gate do not consume another
+  GitHub Actions run; no native five-platform builds or upstream changes.
