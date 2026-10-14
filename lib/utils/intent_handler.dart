@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
 import 'dart:io';
-import 'dart:convert';
+import 'package:subtitle_studio/services/subtitle_extended_encoding_service.dart';
 import 'package:path_provider/path_provider.dart';
 
 /// Information about a file opened via intent
@@ -309,15 +309,23 @@ class IntentHandler {
 
   /// Read content from IntentFileInfo 
   /// This method knows whether to use SAF URI or file path for content reading
-  static Future<String> readContentFromIntentFile(IntentFileInfo fileInfo) async {
-    if (fileInfo.isContentUri && fileInfo.safUri != null && Platform.isAndroid) {
-      // Use SAF URI for content reading to maintain permissions
-      return await readContentFromUri(fileInfo.safUri!);
-    } else {
-      // Use regular file reading for local files or when temp file exists
-      final file = File(fileInfo.path);
-      return await file.readAsString();
+  static Future<Uint8List> readBytesFromIntentFile(
+      IntentFileInfo fileInfo) async {
+    if (fileInfo.isContentUri && fileInfo.safUri != null &&
+        Platform.isAndroid) {
+      return readBytesFromUri(fileInfo.safUri!);
     }
+    return File(fileInfo.path).readAsBytes();
+  }
+
+  /// Legacy text callers are strict and cannot silently guess Latin-1.
+  /// Prefer raw bytes for a UI-selected legacy encoding.
+  static Future<String> readContentFromIntentFile(
+      IntentFileInfo fileInfo, {String? encoding}) async {
+    final bytes = await readBytesFromIntentFile(fileInfo);
+    final decoded = await SubtitleExtendedEncodingService.standard.decode(
+      bytes, selectedEncoding: encoding);
+    return decoded.content;
   }
 
   /// Get the appropriate originalFileUri for database storage
@@ -445,39 +453,30 @@ class IntentHandler {
     }
   }
 
-  /// Read file content directly from content URI as string
-  /// This is Android-specific functionality for SAF compatibility
-  static Future<String> readContentFromUri(String contentUri) async {
-    // Only available on Android
+  /// Read original Android document bytes without charset guessing.
+  static Future<Uint8List> readBytesFromUri(String contentUri) async {
     if (!Platform.isAndroid) {
-      throw UnsupportedError("readContentFromUri is only available on Android platform");
+      throw UnsupportedError('readBytesFromUri requires Android');
     }
-    
     try {
-      final Uint8List? fileBytes = await _channel.invokeMethod('readFileFromContentUri', {'uri': contentUri});
-      
-      if (fileBytes != null) {
-        // Convert bytes to string using proper UTF-8 decoding
-        // This correctly handles multi-byte Unicode characters
-        try {
-          return utf8.decode(fileBytes);
-        } catch (e) {
-          // If UTF-8 decoding fails, try Latin-1 as fallback
-          // Latin-1 preserves all byte values as characters
-          if (kDebugMode) {
-            print('UTF-8 decoding failed, using Latin-1 fallback: $e');
-          }
-          return latin1.decode(fileBytes);
-        }
-      } else {
-        throw Exception('Failed to read file content from URI: No data received');
+      final data = await _channel.invokeMethod<Uint8List>(
+        'readFileFromContentUri', {'uri': contentUri});
+      if (data == null) {
+        throw const FormatException('No source bytes returned from intent.');
       }
+      return data;
     } on PlatformException catch (e) {
-      if (kDebugMode) {
-        print("Failed to read content from URI: '${e.message}'.");
-      }
-      throw Exception('Failed to read content from URI: ${e.message}');
+      throw Exception('Failed to read URI: ' + (e.message ?? e.code));
     }
+  }
+
+  /// Compatibility helper: decoding is now strict, not UTF-8→Latin-1.
+  static Future<String> readContentFromUri(
+      String contentUri, {String? encoding}) async {
+    final bytes = await readBytesFromUri(contentUri);
+    final decoded = await SubtitleExtendedEncodingService.standard.decode(
+        bytes, selectedEncoding: encoding);
+    return decoded.content;
   }
 
   /// Get file descriptor path for large files (Android only)
