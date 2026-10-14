@@ -90,3 +90,22 @@ To inspect selected IDs on Windows, run a DEBUG build, open a
 multitrack video and change the audio track; look for:
     Waveform selected track: mpv=... ffmpeg=ffmpeg:stream:N
 If metadata is unavailable the log explicitly says so.
+
+
+## R1 verified CI
+
+- Code commit:
+  https://github.com/anzilr/SubtitleStudio/commit/5095b2c1ca6cacf5c2c869f435e53fbd49988baf
+- GitHub Actions success:
+  https://github.com/anzilr/SubtitleStudio/actions/runs/38625039828
+- Flutter analysis: No issues found (0 errors, warnings or infos).
+- Flutter tests: 360 passed, compared with 351 in Checkpoint 82 R2.
+  Seven resolver tests, one new plan test, and one optional FFmpeg
+  generated-media integration test were added.
+- Generated-media extraction and PTS gap were independently reproduced
+  with command-line FFmpeg 7.1.5 on an isolated Linux environment,
+  showing global stream indexes 0 (video), 1 and 2 (audio), and
+  a leading silent interval on the 750ms-delayed audio stream.
+  This is **not** Android or Windows native app qualification.
+- Documentation-only changes after the code gate do not consume a new
+  analysis/test workflow run.
