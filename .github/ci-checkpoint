@@ -1,5 +1,6 @@
-SubtitleStudio Checkpoint 78 R2 | 2026-10-14
-flutter analyze zero issues and flutter test -j 1
-R1 analysis failed on missing WaveformBuffer model import in widget.
-R2 fixes direct import, preserving opt-in painter parity functionality.
-No native platform builds, desktop layout, Isar schema or upstream changes.
+Checkpoint 78 R3 analyzer/test gate | 2026-10-14
+R1: missing WaveformBuffer type import; R2: analyzer passes,
+but raster image-readback test still running under widget fake async.
+R3: tester.runAsync performs async Picture/Image readback correctly.
+Full flutter analyze and flutter test -j 1; zero issues expected.
+No changes to production waveform behavior or release branches.

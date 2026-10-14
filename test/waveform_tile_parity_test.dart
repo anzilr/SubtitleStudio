@@ -119,9 +119,15 @@ void main() {
           waveformColor: Colors.teal,
           backgroundColor: Colors.black,
         );
-        final eager = await _render(make(null));
-        final tiled = await _render(make(tiles));
-        expect(tiled, orderedEquals(eager), reason:
+        // Engine image readback is a real async operation. Using
+        // runAsync prevents deadlock under testWidgets' fake-async clock.
+        final comparison = await tester.runAsync(() async {
+          final eager = await _render(make(null));
+          final tiled = await _render(make(tiles));
+          return (eager: eager, tiled: tiled);
+        });
+        expect(comparison, isNotNull);
+        expect(comparison!.tiled, orderedEquals(comparison.eager), reason:
             'sample-per-pixel ' + level.samplesPerPixel.toString() +
             ' offset ' + offset.toString());
       }
