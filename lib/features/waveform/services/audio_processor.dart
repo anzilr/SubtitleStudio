@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:subtitle_studio/features/waveform/models/waveform_sample.dart';
@@ -19,6 +20,20 @@ class AudioProcessor {
   /// Build-time experiment switch; production defaults to eager zoom buffers.
   final bool useTiledZoom;
   WaveformProcessingMetrics? lastProcessingMetrics;
+  int _requestEpoch = 0;
+  Process? _activeDesktopProcess;
+  int? _activeNativeSessionId;
+
+  /// Cancel only this instance's FFmpeg work, not unrelated media sessions.
+  void cancelActive() {
+    _requestEpoch++;
+    _activeDesktopProcess?.kill();
+    final sessionId = _activeNativeSessionId;
+    if (sessionId != null) {
+      unawaited(FFmpegKit.cancel(sessionId));
+    }
+    _activeNativeSessionId = null;
+  }
 
   AudioProcessor(
     this._preferences, {
@@ -35,6 +50,8 @@ class AudioProcessor {
     int? subtitleCollectionId,
     String? audioTrackId,
   }) async {
+    cancelActive();
+    final epoch = _requestEpoch;
     final stopwatch = Stopwatch()..start();
     try {
       if (kDebugMode) {
@@ -127,6 +144,9 @@ class AudioProcessor {
         onProgress?.call(0.15);
       }
 
+      if (epoch != _requestEpoch) {
+        throw StateError('Waveform load was cancelled.');
+      }
       final sourceMicroseconds = stopwatch.elapsedMicroseconds;
       // Step 2: Downsample (20% of total work)
       if (kDebugMode) print('AudioProcessor: Step 2 - Downsampling...');
@@ -180,6 +200,9 @@ class AudioProcessor {
       lastProcessingMetrics = metrics;
       if (kDebugMode) {
         print('AudioProcessor: Processing complete: ' + metrics.toString());
+      }
+      if (epoch != _requestEpoch) {
+        throw StateError('Waveform load was cancelled.');
       }
       onProgress?.call(1.0);
       return buffer;
@@ -367,6 +390,7 @@ class AudioProcessor {
     String? peakCachePath,
   }) async {
     try {
+      final extractionEpoch = _requestEpoch;
       // Get temporary directory
       final tempDir = await getTemporaryDirectory();
       final outputPath = cacheOutputPath ??
@@ -442,11 +466,25 @@ class AudioProcessor {
           outputPath,
         ]);
         
-        var result = await Process.run('ffmpeg', args);
-
-        // A requested track must never silently switch to the default.
-        if (result.exitCode != 0) {
-          throw Exception('FFmpeg failed with exit code ${result.exitCode}: ${result.stderr}');
+        final process = await Process.start('ffmpeg',
+            ['-nostats', '-loglevel', 'error', ...args]);
+        _activeDesktopProcess = process;
+        if (extractionEpoch != _requestEpoch) {
+          process.kill();
+        }
+        final stdoutDone = process.stdout.drain<void>();
+        final stderrDone = process.stderr.transform(utf8.decoder).join();
+        final exitCode = await process.exitCode;
+        await stdoutDone;
+        final stderr = await stderrDone;
+        if (identical(_activeDesktopProcess, process)) {
+          _activeDesktopProcess = null;
+        }
+        if (extractionEpoch != _requestEpoch) {
+          throw StateError('Waveform extraction was cancelled.');
+        }
+        if (exitCode != 0) {
+          throw Exception('FFmpeg failed with exit code $exitCode: $stderr');
         }
       } else if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
         // Mobile/macOS platforms: Use FFmpegKit
@@ -490,9 +528,23 @@ class AudioProcessor {
           print('AudioProcessor: FFmpegKit command: $command');
         }
         
-        var session = await FFmpegKit.execute(command);
-        var returnCode = await session.getReturnCode();
-        
+        final completed = Completer<void>();
+        final session = await FFmpegKit.executeAsync(command, (_) {
+          if (!completed.isCompleted) completed.complete();
+        });
+        _activeNativeSessionId = session.getSessionId();
+        if (extractionEpoch != _requestEpoch) {
+          await FFmpegKit.cancel(session.getSessionId());
+        }
+        await completed.future;
+        if (_activeNativeSessionId == session.getSessionId()) {
+          _activeNativeSessionId = null;
+        }
+        if (extractionEpoch != _requestEpoch) {
+          throw StateError('Waveform extraction was cancelled.');
+        }
+        final returnCode = await session.getReturnCode();
+
         // No implicit retry: wrong-language track would corrupt the cache.
         if (returnCode == null || !returnCode.isValueSuccess()) {
           final logs = await session.getLogs();
@@ -505,6 +557,9 @@ class AudioProcessor {
         );
       }
 
+      if (extractionEpoch != _requestEpoch) {
+        throw StateError('Waveform extraction was cancelled.');
+      }
       if (kDebugMode) {
         print('AudioProcessor: FFmpeg extraction successful');
       }
@@ -656,6 +711,6 @@ class AudioProcessor {
 
   /// Cleanup resources
   void dispose() {
-    // Cleanup if needed
+    cancelActive();
   }
 }
