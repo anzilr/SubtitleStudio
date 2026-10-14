@@ -1,5 +1,8 @@
-Checkpoint 74 R2 quality gate, 2026-10-14
-Checks: flutter analyze zero issues and flutter test -j 1.
-R1: 299 tests passed, two info-level redundant typed_data imports.
-R2 removes analyzer infos without altering codec/import/export behavior.
-No desktop UI redesign, Isar migration or upstream changes.
+SubtitleStudio checkpoint 75 R1 | 2026-10-14
+Quality gate:
+- flutter analyze zero errors/warnings/info
+- flutter test -j 1
+Broaden encodings based on Subtitle Composer and Subtitle Edit patterns.
+Capability-probe 40 runtime legacy charsets with strict reverse roundtrip.
+All import/export uses shared codec; verify regional fixture bytes.
+No native builds, schema changes, desktop workspace or upstream modifications.
