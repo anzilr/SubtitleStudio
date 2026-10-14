@@ -1,6 +1,6 @@
-SubtitleStudio checkpoint 76 R2 | 2026-10-14
-flutter analyze with zero issues; flutter test -j 1.
-R1 analyzer failed because intent_handler still needs dart:convert for
-jsonDecode unrelated to the removed implicit Latin-1 charset fallback.
-R2 restores the import and reruns full tests.
-No native builds, main/upstream/release or desktop UI changes.
+SubtitleStudio checkpoint 77 R1 | 2026-10-14
+Run flutter analyze and flutter test -j 1 only.
+Scope: epoch-based waveform load invalidation; source/track/version-aware
+PCM cache with metadata validation; bounded signed-peak viewport tile
+source; duration and pixel count instrumentation; regression coverage.
+Desktop workspace deferred; no native builds, schema change or upstream edit.
