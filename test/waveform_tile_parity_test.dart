@@ -101,13 +101,16 @@ void main() {
       (tester) async {
     final pcm = _pcm();
     final levels = await _eager(pcm);
+    final metadata = await ZoomBufferGenerator(_Prefs()).generateZoomMetadata(pcm);
     final tiles = WaveformTileSource(
       data: pcm, sourceIdentity: 'paint', tileWidth: 71, maxTiles: 12);
-    for (final level in [levels.first, levels[levels.length ~/ 2]]) {
+    for (final index in [0, levels.length ~/ 2]) {
+      final level = levels[index];
+      final metadataLevel = metadata[index];
       for (final offset in [0.0, 27.25, 110.5]) {
         if (level.pixelCount < offset + 220) continue;
-        WaveformPainter make(WaveformTileSource? src) => WaveformPainter(
-          zoomLevel: level,
+        WaveformPainter make(WaveformTileSource? src, {bool metadataOnly = false}) => WaveformPainter(
+          zoomLevel: metadataOnly ? metadataLevel : level,
           tileSource: src,
           scrollOffset: offset,
           playbackPosition: Duration.zero,
@@ -124,12 +127,16 @@ void main() {
         final comparison = await tester.runAsync(() async {
           final eager = await _render(make(null));
           final tiled = await _render(make(tiles));
-          return (eager: eager, tiled: tiled);
+          final lazy = await _render(make(tiles, metadataOnly: true));
+          return (eager: eager, tiled: tiled, lazy: lazy);
         });
         expect(comparison, isNotNull);
         expect(comparison!.tiled, orderedEquals(comparison.eager), reason:
             'sample-per-pixel ' + level.samplesPerPixel.toString() +
             ' offset ' + offset.toString());
+        expect(comparison.lazy, orderedEquals(comparison.eager),
+            reason: 'metadata-only zoom ' + index.toString() +
+                ' offset ' + offset.toString());
       }
     }
     expect(tiles.cachedTileCount, lessThanOrEqualTo(12));
