@@ -9,6 +9,8 @@ import 'package:subtitle_studio/features/waveform/services/zoom_buffer_generator
 import 'package:subtitle_studio/features/waveform/services/waveform_cache_identity.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_processing_metrics.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_peak_cache.dart';
+import 'package:subtitle_studio/features/waveform/services/waveform_cache_coordinator.dart';
+import 'package:subtitle_studio/features/waveform/services/waveform_peak_cache_janitor.dart';
 import 'package:subtitle_studio/utils/ffmpeg_helper.dart';
 import 'package:ffmpeg_kit_flutter_new_min_gpl/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new_min_gpl/ffmpeg_kit_config.dart';
@@ -21,6 +23,7 @@ class AudioProcessor {
   final bool useTiledZoom;
   WaveformProcessingMetrics? lastProcessingMetrics;
   int _requestEpoch = 0;
+  static int _nextTemporaryId = 0;
   Process? _activeDesktopProcess;
   int? _activeNativeSessionId;
 
@@ -223,42 +226,69 @@ class AudioProcessor {
     required String? audioTrackId,
     required Function(double)? onProgress,
   }) async {
+    final requestEpoch = _requestEpoch;
+    void checkActive() {
+      if (requestEpoch != _requestEpoch) {
+        throw StateError('Waveform peak request was cancelled.');
+      }
+    }
+
     final temp = await getTemporaryDirectory();
+    checkActive();
     final key = await WaveformCacheIdentity.pcmPath(
       temporaryDirectory: temp.path,
       subtitleCollectionId: subtitleCollectionId ?? 0,
       sourcePath: sourcePath,
       audioTrackId: audioTrackId,
     );
+    checkActive();
     final cachePath = key.replaceFirst(RegExp(r'\.raw$'), '.pk1');
     final cacheFile = File(cachePath);
-    // SAF/content URIs can be replaced in place without a readable stat.
-    // Do not trust a stable URI hash until source version tracking exists.
     final persistent = !sourcePath.startsWith('content://');
-    if (persistent && await cacheFile.exists()) {
-      try {
-        onProgress?.call(0.1);
-        final cached = await WaveformPeakCache.load(cacheFile);
-        onProgress?.call(0.2);
-        return cached;
-      } on FileSystemException {
-        // Permission/transient issue: regenerate from the selected source.
-      } on FormatException {
-        // Corrupt header, payload, or checksum: never reuse it.
+
+    // Coordinate even across distinct AudioProcessor instances in this
+    // isolate; jobs for different audio files are not needlessly serialized.
+    return WaveformCacheCoordinator.shared.runExclusive(cachePath, () async {
+      checkActive(); // The request may have been superseded while queued.
+      // Expired caches and abandoned staging files are pruned without
+      // touching this destination or unrelated media/legacy PCM files.
+      await const WaveformPeakCacheJanitor().clean(
+        temp,
+        protectedPaths: {cachePath},
+      );
+      checkActive();
+      if (persistent && await cacheFile.exists()) {
+        try {
+          onProgress?.call(0.1);
+          final cached = await WaveformPeakCache.load(cacheFile);
+          checkActive();
+          onProgress?.call(0.2);
+          return cached;
+        } on FileSystemException {
+          // Regenerate if the recorded cache is no longer accessible.
+        } on FormatException {
+          // Reject truncated/corrupted or mismatched peak caches.
+        }
+        checkActive();
+        if (await cacheFile.exists()) await cacheFile.delete();
       }
-      if (await cacheFile.exists()) await cacheFile.delete();
-    }
-    final output = await _extractAudioToPCM(
-      sourcePath,
-      audioTrackId: audioTrackId,
-      reduceToPeaks: true,
-      peakCachePath: cachePath,
-    );
-    onProgress?.call(0.2);
-    if (!persistent && await cacheFile.exists()) {
-      await cacheFile.delete();
-    }
-    return output;
+
+      checkActive();
+      final output = await _extractAudioToPCM(
+        sourcePath,
+        audioTrackId: audioTrackId,
+        reduceToPeaks: true,
+        peakCachePath: cachePath,
+      );
+      checkActive();
+      onProgress?.call(0.2);
+      // SAF content can change without exposing a version; do not retain
+      // this cache beyond the single successful decode.
+      if (!persistent && await cacheFile.exists()) {
+        await cacheFile.delete();
+      }
+      return output;
+    });
   }
 
   /// Extract audio and cache the PCM file for future use
@@ -396,7 +426,8 @@ class AudioProcessor {
       final tempDir = await getTemporaryDirectory();
       final outputPath = cacheOutputPath ??
           (tempDir.path + Platform.pathSeparator + 'waveform_temp_' +
-              DateTime.now().microsecondsSinceEpoch.toString() + '.raw');
+              DateTime.now().microsecondsSinceEpoch.toString() + '_' +
+              (++_nextTemporaryId).toString() + '.raw');
       generatedOutputPath = outputPath;
 
       if (kDebugMode) {
