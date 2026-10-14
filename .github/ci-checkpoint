@@ -1,5 +1,7 @@
-SubtitleStudio Checkpoint 82 R2 | 2026-10-14
-Fix malformed generated Dart FFmpeg plan file caught by R1 analyzer.
-Complete clean, strict audioOrdinal and shared argument contract,
-plus portable PowerShell invalid-track argument splatting.
-Flutter analyze and flutter test -j 1, no native platform builds.
+SubtitleStudio Checkpoint 83 R1 | 2026-10-14
+CI flutter analyze and flutter test -j 1 only.
+Implement explicit MPV track-list ff-index resolver and global
+FFmpeg -map 0:N selector, expose via native Media Kit video widget;
+guard missing/duplicate metadata, preserve numeric compatibility;
+test interleaved tracks and optional FFmpeg-generated PTS gap fixture.
+No native platform build, Isar schema changes or upstream edits.
