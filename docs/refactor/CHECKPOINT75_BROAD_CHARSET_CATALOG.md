@@ -62,3 +62,23 @@ References:
 - https://invent.kde.org/multimedia/subtitlecomposer.git
 - https://github.com/SubtitleEdit/subtitleedit.git
 - https://pub.dev/packages/charset_converter/versions/2.3.0
+
+## Verified quality gate — R2
+
+- Code commit: [`d31d836`](https://github.com/anzilr/SubtitleStudio/commit/d31d8369ce1280ad7b8f77674db7c17db701cd89)
+- GitHub Actions: [38590459170 — success](https://github.com/anzilr/SubtitleStudio/actions/runs/38590459170)
+- Flutter analyzer: **No issues found** (including informational notices).
+- Full serialized tests: **303 tests passed**, four more than Checkpoint 74.
+- Initial R1 failed one test because of an accidental Arabic initial glyph
+  in an expected Malayalam test string, not because of encoding behavior.
+  The R2 fixture correction and full quality gate passed.
+- No platform-native builds, new dependencies, database schema modifications,
+  desktop workspace, upstream branch modifications or release tags changed.
+
+## Coverage note
+
+The 40 extra entries are **candidate codecs**, not a guarantee that all
+40 operate on any one platform. The only always-portable codecs are the
+9 fixed profiles. An exposed extended candidate has been probed for native
+read/write roundtrips, but full device-specific charset maps and vendor
+extensions still require integration tests on real devices.

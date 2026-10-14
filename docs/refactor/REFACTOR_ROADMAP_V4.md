@@ -1,20 +1,22 @@
 # SubtitleStudio Refactor Roadmap v4
 
-> **October 14, 2026 progress addendum** — Historical checkpoint inventories
-> follow below. Current verified quality gate: **Checkpoint 74 R2**,
-> [code commit `218a509`](https://github.com/anzilr/SubtitleStudio/commit/218a5094b48ab80fb58355009a80ccce4a1ef013),
-> [successful CI](https://github.com/anzilr/SubtitleStudio/actions/runs/38587191118):
-> **299 passing tests, zero analyzer issues**.
-> Implemented portable symmetric import/export for UTF-8 with/without BOM,
-> UTF-16LE/BE with/without BOM, ASCII, ISO-8859-1 and Windows-1252.
-> The primary mobile/desktop subtitle picker now retains source bytes for
-> decoding with explicit user override; SRT compiler and Android SAF/iOS
-> exporters share the same byte encoder. No silent legacy/UTF-8 fallback.
-> See [Checkpoint 74 report](CHECKPOINT74_SYMMETRIC_TEXT_ENCODING.md).
-> Earlier Checkpoint 73 stabilized Git-inspired history checkout/UI;
-> desktop shell remains deferred. Remaining: expanded regional charsets,
-> raw-byte boundaries for other intent imports, waveform performance and
-> deliberate device/native build qualification.
+> **October 14, 2026 progress addendum** — The legacy checkpoint inventory
+> remains below for historical reference. Newest verified quality gate:
+> **Checkpoint 75 R2** ([verified commit `d31d836`](https://github.com/anzilr/SubtitleStudio/commit/d31d8369ce1280ad7b8f77674db7c17db701cd89),
+> [successful CI](https://github.com/anzilr/SubtitleStudio/actions/runs/38590459170)):
+> **303 passing tests; zero analyzer issues**.
+> Regional encoding support builds on Checkpoint 74's portable, strict
+> symmetric codec: **40 dynamically capability-checked regional/legacy
+> candidate charsets** (Windows-125x, ISO-8859-x, KOI8, IBM/DOS,
+> Macintosh, Japanese, Korean, Chinese and Thai), in addition to the nine
+> fixed Unicode/basic encoding profiles. Import and export share strict
+> roundtrip validation; conversion cannot silently replace text.
+> See [Checkpoint 75 report](CHECKPOINT75_BROAD_CHARSET_CATALOG.md).
+> The device-specific selectable count is **not guaranteed to be 49**.
+> Next: optional broader platform-charset discovery, input preview and
+> language-specific detection, remaining raw-byte intent audit,
+> native device qualification, and waveform performance.
+> The desktop workspace remains deferred.
 >
 > **New roadmap requirement — Expanded SRT text encodings (requested 2026-10-12):**
 > Reference implementation research: [KDE Subtitle Composer and Subtitle Edit
