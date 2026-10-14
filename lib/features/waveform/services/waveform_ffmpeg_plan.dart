@@ -39,6 +39,22 @@ class WaveformFfmpegPlan {
     return n >= 1 ? n - 1 : 0;
   }
 
+  /// Global FFmpeg stream indexes differ from audio-only ordinals.
+  static String? streamMap(String? selectedTrackId) {
+    if (selectedTrackId != null &&
+        selectedTrackId.startsWith('ffmpeg:stream:')) {
+      final suffix = selectedTrackId.substring('ffmpeg:stream:'.length);
+      final index = int.tryParse(suffix);
+      if (index == null || index < 0 || index > 100000 ||
+          !RegExp(r'^[0-9]+$').hasMatch(suffix)) {
+        throw FormatException('Invalid global FFmpeg stream: $selectedTrackId');
+      }
+      return '0:$index';
+    }
+    final ordinal = audioOrdinal(selectedTrackId);
+    return ordinal == null ? null : '0:a:$ordinal';
+  }
+
   List<String> arguments() {
     if (inputPath.isEmpty || outputPath.isEmpty) {
       throw const FormatException('Audio input and output paths are required.');
@@ -49,7 +65,7 @@ class WaveformFfmpegPlan {
         throw const FormatException('Invalid FFmpeg audio path.');
       }
     }
-    final ordinal = audioOrdinal(selectedTrackId);
+    final map = streamMap(selectedTrackId);
     return List<String>.unmodifiable([
       '-nostdin',
       '-hide_banner',
@@ -57,7 +73,7 @@ class WaveformFfmpegPlan {
       '-loglevel', 'error',
       '-y',
       '-i', inputPath,
-      if (ordinal != null) ...['-map', '0:a:$ordinal'],
+      if (map != null) ...['-map', map],
       '-af', 'aresample=async=1:first_pts=0',
       '-ac', '1',
       '-ar', '44100',
