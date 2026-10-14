@@ -35,3 +35,22 @@ Baseline: Checkpoint 73 R2 — 291 tests, zero analyzer issues.
 - Native Android/iOS/macOS/Windows/Linux file-dialog testing remains pending.
 
 Reference: SRT_ENCODING_REFERENCE_RESEARCH_2026-10-12.md.
+
+## Verified gate (Checkpoint 74 R2)
+
+- **299 tests passed**, up from 291 in Checkpoint 73.
+- **0 analyzer issues** (no errors, warnings or info notices).
+- [Code commit `218a509`](https://github.com/anzilr/SubtitleStudio/commit/218a5094b48ab80fb58355009a80ccce4a1ef013).
+- [GitHub Actions success, run 38587191118](https://github.com/anzilr/SubtitleStudio/actions/runs/38587191118).
+- R1 passed the 299-test suite, but analyzer reported two informational
+  redundant Dart imports. R2 removed them and passed both gates.
+- Only the refactoring experiment branch was changed. Documentation-only
+  commits after the quality gate do not rerun the checkpoint CI.
+
+## Recommended follow-on checkpoint
+
+Target a **regional encoding expansion and remaining raw-byte input audit**:
+Windows-1250/1251/1256 with reversible test fixtures, plus Android intent
+inputs that still decode text before entering the common subtitle parser.
+Do not introduce platform-specific codec availability mismatches or silently
+replace unrepresentable text. Waveform tuning remains separately scheduled.

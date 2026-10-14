@@ -1,21 +1,21 @@
 # SubtitleStudio Refactor Roadmap v4
 
-> **October 13, 2026 progress addendum** — This roadmap retains the older
-> checkpoint-45 inventory for history. The newest verified gate is
-> **Checkpoint 73 R2** ([code commit `2f29cc5`](https://github.com/anzilr/SubtitleStudio/commit/2f29cc5b53150225c34ae44b44f50327fbcc87eb),
-> [green CI](https://github.com/anzilr/SubtitleStudio/actions/runs/38454127685)):
-> **291 passing tests, zero analyzer issues**. Mobile history now guards
-> checkout against changed HEAD/branch tips, avoids overlapping confirmation
-> dialogs and unsafe post-navigation pops, and uses lazily rendered graph/
-> classic timeline widgets. "Full Backup" has been clarified as an in-app
-> snapshot, not an external recovery file. See
-> [Checkpoint 73 report](CHECKPOINT73_HISTORY_SAFETY_AND_SCALE.md).
-> Checkpoint 72 integrated the reusable history graph into the mobile sheet
-> with classic-view compatibility; desktop layout remains deferred.
-> Remaining: SRT encoding for **both** parsing and compiling, waveform
-> optimization, production database upgrade fixtures, and deliberate
-> Android/iOS/Windows/macOS/Linux build/device qualification.
-
+> **October 14, 2026 progress addendum** — Historical checkpoint inventories
+> follow below. Current verified quality gate: **Checkpoint 74 R2**,
+> [code commit `218a509`](https://github.com/anzilr/SubtitleStudio/commit/218a5094b48ab80fb58355009a80ccce4a1ef013),
+> [successful CI](https://github.com/anzilr/SubtitleStudio/actions/runs/38587191118):
+> **299 passing tests, zero analyzer issues**.
+> Implemented portable symmetric import/export for UTF-8 with/without BOM,
+> UTF-16LE/BE with/without BOM, ASCII, ISO-8859-1 and Windows-1252.
+> The primary mobile/desktop subtitle picker now retains source bytes for
+> decoding with explicit user override; SRT compiler and Android SAF/iOS
+> exporters share the same byte encoder. No silent legacy/UTF-8 fallback.
+> See [Checkpoint 74 report](CHECKPOINT74_SYMMETRIC_TEXT_ENCODING.md).
+> Earlier Checkpoint 73 stabilized Git-inspired history checkout/UI;
+> desktop shell remains deferred. Remaining: expanded regional charsets,
+> raw-byte boundaries for other intent imports, waveform performance and
+> deliberate device/native build qualification.
+>
 > **New roadmap requirement — Expanded SRT text encodings (requested 2026-10-12):**
 > Reference implementation research: [KDE Subtitle Composer and Subtitle Edit
 > study](SRT_ENCODING_REFERENCE_RESEARCH_2026-10-12.md). The study links exact
