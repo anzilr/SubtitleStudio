@@ -1,25 +1,29 @@
 # SubtitleStudio Refactor Roadmap v4
 
-> **October 14, 2026 — Checkpoint 80 R2 verified.**
-> [Code `3631738`](https://github.com/anzilr/SubtitleStudio/commit/3631738304e6d4e61869cd1b0f892da41be7066f)
-> · [Successful CI](https://github.com/anzilr/SubtitleStudio/actions/runs/38614517634):
-> **334 passing tests, 0 analyzer issues**.
-> The experimental waveform path now streams full-resolution PCM from
-> the temporary FFmpeg file into a bounded 16-sample peak reduction,
-> and persists versioned, checksummed mean/min/max records through
-> staged complete-write promotion. It avoids loading all full-resolution
-> PCM bytes into Dart memory; full PCM extraction to disk remains.
-> Audio requests can cancel desktop FFmpeg processes or a specific
-> FFmpegKit session, and stale state updates remain epoch-protected.
-> The extractor now accounts for timestamp gaps and refuses silently
-> falling back to another audio track. See
-> [Checkpoint 80 report](CHECKPOINT80_STREAMED_PEAK_CACHE_AND_FFMPEG.md).
-> The eager/default renderer, Isar schema and mobile layout are unchanged.
-> **Next:** native Android/Windows profiling and source/track verification,
-> invalid/corrupt cache and concurrent job hardening, plus optional
-> static/dynamic repaint separation and snap-interaction work inspired
-> by Subtitle Composer and Subtitle Edit. Do not change upstream/main,
-> tags or begin the desktop workspace yet.
+> **October 14, 2026 — Checkpoint 81 R2 verified.**
+> [Quality-gated code `266f038`](https://github.com/anzilr/SubtitleStudio/commit/266f0382917d743bd41a325c63f6387bfde0d6d6)
+> · [successful Flutter analyzer/test CI](https://github.com/anzilr/SubtitleStudio/actions/runs/38617605939):
+> **344 tests passed, zero analyzer issues**.
+> Waveform peak cache validation, invalidation, generation and promotion
+> now serialize by destination key within one Dart isolate. Independent
+> audio sources still run concurrently; stale queued requests check
+> the existing epoch before mutating caches. Conservative housekeeping
+> prunes only expired SubtitleStudio peak files and abandoned partials,
+> respecting the current active destination. Extraction-temp filenames
+> include a monotonic counter.
+>
+> Optional `MS_ONE_LAYERED_WAVEFORM=true` separates background/waveform
+> scenery from moving playback and subtitle overlays, with an isolated
+> scenery RepaintBoundary and pixel-identical composite tests.
+> The normal painter remains the default. See
+> [Checkpoint 81 report](CHECKPOINT81_WAVEFORM_CONCURRENCY_AND_LAYERS.md).
+>
+> **Next priorities:** measure actual Android/Windows rendering and
+> FFmpeg cancellation, test PTS gaps and multitrack alignment on media,
+> prove that layering reduces jank, and consider bounded disk-backed
+> peak-window retrieval and process-safe coordination if multi-process
+> workers are introduced. No native platform builds, Isar schema
+> migration, desktop workspace or upstream/release changes yet.
 >
 > **Additional waveform reference, October 14, 2026: Subtitle Edit source audit.**
 > Alongside KDE Subtitle Composer, use the current Subtitle Edit Avalonia/C#

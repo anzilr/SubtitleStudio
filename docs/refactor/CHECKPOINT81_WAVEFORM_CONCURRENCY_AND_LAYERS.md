@@ -101,3 +101,20 @@ frame-rate or physical-device repaint profiling remains outstanding.
   full peak arrays is still a future scalability improvement.
 - Isar schema, main/upstream branches, release tags and desktop
   workspace are left untouched.
+
+## Verified R2 gate and correction
+
+- [Verified code commit `266f038`](https://github.com/anzilr/SubtitleStudio/commit/266f0382917d743bd41a325c63f6387bfde0d6d6).
+- [Successful GitHub Actions run 38617605939](https://github.com/anzilr/SubtitleStudio/actions/runs/38617605939).
+- `flutter analyze`: **No issues found**, including informational notices.
+- `flutter test -j 1`: **344 tests passed**; 10 new tests relative
+  to Checkpoint 80 R2 (334 passing).
+- The R1 gate had one failing newly added repaint test, because the
+  fixture created a different ZoomLevel instance in its second frame;
+  the scene correctly repainted when zoom identity changed.
+  R2 reused the same zoom object for a playback-only update. No
+  production code changed between R1 and R2. The composed-image pixel
+  parity test already passed in R1 and remains green in R2.
+- Native device timing, actual peak RSS, FFmpeg cancellation on every
+  target platform, and process-to-process file locking remain untested.
+- Documentation-only commit does not trigger extra CI usage.
