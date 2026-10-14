@@ -169,7 +169,7 @@ void main() {
   test('portable codecs still work without a registered plugin', () async {
     final service = SubtitleExtendedEncodingService(
       backend: FixtureBackend());
-    final bytes = await service.encode('مലയാളം 😀',
+    final bytes = await service.encode('മലയാളം 😀',
       encoding: 'UTF-8 BOM');
     final decoded = await service.decode(bytes);
     expect(decoded.encoding, 'UTF-8 BOM');

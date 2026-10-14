@@ -1,8 +1,6 @@
-SubtitleStudio checkpoint 75 R1 | 2026-10-14
-Quality gate:
-- flutter analyze zero errors/warnings/info
-- flutter test -j 1
-Broaden encodings based on Subtitle Composer and Subtitle Edit patterns.
-Capability-probe 40 runtime legacy charsets with strict reverse roundtrip.
-All import/export uses shared codec; verify regional fixture bytes.
-No native builds, schema changes, desktop workspace or upstream modifications.
+Checkpoint 75 R2; 2026-10-14
+Quality gate: flutter analyze (zero issues), flutter test -j 1.
+R1: 302 tests passed, 1 test fixture failed due accidental Arabic
+initial glyph in expected Malayalam string (not codec behavior).
+R2 fixes fixture; charset implementation unchanged.
+No desktop layout, native builds, Isar schema or upstream changes.
