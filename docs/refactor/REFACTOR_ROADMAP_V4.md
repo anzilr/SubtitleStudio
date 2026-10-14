@@ -1,22 +1,19 @@
 # SubtitleStudio Refactor Roadmap v4
 
-> **October 14, 2026 progress addendum** — The legacy checkpoint inventory
-> remains below for historical reference. Newest verified quality gate:
-> **Checkpoint 75 R2** ([verified commit `d31d836`](https://github.com/anzilr/SubtitleStudio/commit/d31d8369ce1280ad7b8f77674db7c17db701cd89),
-> [successful CI](https://github.com/anzilr/SubtitleStudio/actions/runs/38590459170)):
-> **303 passing tests; zero analyzer issues**.
-> Regional encoding support builds on Checkpoint 74's portable, strict
-> symmetric codec: **40 dynamically capability-checked regional/legacy
-> candidate charsets** (Windows-125x, ISO-8859-x, KOI8, IBM/DOS,
-> Macintosh, Japanese, Korean, Chinese and Thai), in addition to the nine
-> fixed Unicode/basic encoding profiles. Import and export share strict
-> roundtrip validation; conversion cannot silently replace text.
-> See [Checkpoint 75 report](CHECKPOINT75_BROAD_CHARSET_CATALOG.md).
-> The device-specific selectable count is **not guaranteed to be 49**.
-> Next: optional broader platform-charset discovery, input preview and
-> language-specific detection, remaining raw-byte intent audit,
-> native device qualification, and waveform performance.
-> The desktop workspace remains deferred.
+> **October 14, 2026 status:** Checkpoint **76 R2** verified:
+> [code `9e9c327`](https://github.com/anzilr/SubtitleStudio/commit/9e9c327f56a3fea3deed4689899050750cb0b426),
+> [CI success](https://github.com/anzilr/SubtitleStudio/actions/runs/38592368154),
+> **310 passing tests, 0 analyzer issues**.
+> Subtitle import/export now share a searchable encoding picker and
+> a strict source-text preview. Android intent byte readers no longer
+> guess Latin-1. Added 18 further capability-gated legacy charset
+> candidates: **58 native candidates + 9 portable profiles**; the count
+> actually supported on a given device may be lower. See
+> [Checkpoint 76 report](CHECKPOINT76_ENCODING_PICKER_PREVIEW_INTENTS.md).
+> The older checkpoint inventory below remains historical. The next
+> priorities are platform device qualification, smarter/language-ranked
+> detection with user preview, waveform performance, and checking file
+> intent/export scenarios on Android and Windows. Desktop shell deferred.
 >
 > **New roadmap requirement — Expanded SRT text encodings (requested 2026-10-12):**
 > Reference implementation research: [KDE Subtitle Composer and Subtitle Edit

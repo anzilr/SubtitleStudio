@@ -50,3 +50,20 @@ Baseline: Checkpoint 75 R2, 303 passing tests, analyzer 0.
   from Subtitle Composer or Subtitle Edit.
 - A separate desktop workspace remains deferred. Existing mobile layout
   is changed only in the encoding selector and preview surface.
+
+## Verified R2 gate
+
+- Quality-gated code: [`9e9c327`](https://github.com/anzilr/SubtitleStudio/commit/9e9c327f56a3fea3deed4689899050750cb0b426)
+- [Successful GitHub Actions run 38592368154](https://github.com/anzilr/SubtitleStudio/actions/runs/38592368154)
+- Analyzer: **No issues found**.
+- Serialized tests: **310 passed**, seven more than Checkpoint 75.
+- R1 analyzer detected the missing `dart:convert` import required by
+  unrelated `jsonDecode` in `intent_handler.dart`. R2 restored the
+  import and passed the entire quality gate with no other changes.
+- CI does not certify platform-channel charset support on physical
+  devices, full multibyte mapping tables, or correctness of linguistic
+  previews for ambiguous 8-bit encodings. Those remain explicit
+  validation work.
+- No release tag, upstream branch, Isar schema, desktop workspace or
+  native build was modified. The documentation-only commit does not
+  trigger additional CI usage.
