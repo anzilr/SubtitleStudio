@@ -1,6 +1,7 @@
-SubtitleStudio checkpoint 77 R1 | 2026-10-14
-Run flutter analyze and flutter test -j 1 only.
-Scope: epoch-based waveform load invalidation; source/track/version-aware
-PCM cache with metadata validation; bounded signed-peak viewport tile
-source; duration and pixel count instrumentation; regression coverage.
-Desktop workspace deferred; no native builds, schema change or upstream edit.
+SubtitleStudio Checkpoint 78 R1 | 2026-10-14
+Quality gate: flutter analyze (zero issues), flutter test -j 1.
+Scope: opt-in tiled painter behind MS_ONE_TILED_WAVEFORM flag;
+exact signed peak and raster parity against existing eager generator;
+fractional scroll offsets, long-track bounded LRU, synthetic
+allocation/timing diagnostic. No desktop UI redesign, native builds,
+Isar model change, upstream/main or release modifications.
