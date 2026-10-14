@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:subtitle_studio/services/subtitle_encoding_decoder.dart';
 import 'package:subtitle_studio/services/subtitle_text_codec.dart';
+import 'package:subtitle_studio/services/subtitle_extended_encoding_service.dart';
 import 'package:subtitle_studio/utils/saf_file_handler.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -43,10 +44,12 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
   String? _fileContent; // Text-only legacy/intent callers
   Uint8List? _fileBytes; // Raw SAF / desktop / iOS bytes
   String _encodingChoice = 'Auto';
+  List<String> _availableEncodings = SubtitleTextCodec.supportedEncodings;
 
   @override
   void initState() {
     super.initState();
+    _loadEncodings();
     // Initialize with pre-filled data if provided
     if (widget.initialFilePath != null) {
       _selectedFilePath = widget.initialFilePath;
@@ -57,6 +60,12 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
         _safUri = widget.originalSafUri;
       }
     }
+  }
+
+  Future<void> _loadEncodings() async {
+    final choices = await SubtitleExtendedEncodingService.standard
+        .availableEncodings();
+    if (mounted) setState(() => _availableEncodings = choices);
   }
 
   Future<void> _selectFile() async {
@@ -220,7 +229,7 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
         rawBytes = null;
       }
       if (rawBytes != null) {
-        final decoded = SubtitleEncodingDecoder.decodeBytes(
+        final decoded = await SubtitleEncodingDecoder.decodeBytesExtended(
           rawBytes,
           selectedEncoding: _encodingChoice == 'Auto'
               ? null : _encodingChoice,
@@ -444,7 +453,7 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
                   border: OutlineInputBorder(),
                 ),
                 isExpanded: true,
-                items: ['Auto', ...SubtitleTextCodec.supportedEncodings]
+                items: ['Auto', ..._availableEncodings]
                     .map((label) => DropdownMenuItem(
                       value: label, child: Text(label),
                     )).toList(),

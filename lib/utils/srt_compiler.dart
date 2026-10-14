@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:subtitle_studio/services/subtitle_text_codec.dart';
+import 'package:subtitle_studio/services/subtitle_extended_encoding_service.dart';
 import '../database/models/models.dart';
 import 'platform_check.dart';
 
@@ -61,10 +62,10 @@ class SrtCompiler {
       }
       
       // Write to file with specified encoding
-      await file.writeAsBytes(
-        SubtitleTextCodec.encode(buffer.toString(), encoding: subtitle.encoding),
-        flush: true,
-      );
+      // Encode before opening/truncating the file to preserve existing data.
+      final bytes = await SubtitleExtendedEncodingService.standard.encode(
+          buffer.toString(), encoding: subtitle.encoding);
+      await file.writeAsBytes(bytes, flush: true);
     } catch (e) {
       throw Exception('Error compiling SRT: $e');
     }
@@ -102,6 +103,18 @@ class SrtCompiler {
     required String encoding,
     bool forceOriginal = false,
   }) => SubtitleTextCodec.encode(
+      generateSrtContent(lines, forceOriginal: forceOriginal),
+      encoding: encoding,
+    );
+
+  /// Regional encodings use the same validated async codec on every platform.
+  static Future<List<int>> generateSrtBytesExtended(
+    List<SubtitleLine> lines, {
+    required String encoding,
+    bool forceOriginal = false,
+    SubtitleExtendedEncodingService service =
+        SubtitleExtendedEncodingService.standard,
+  }) => service.encode(
       generateSrtContent(lines, forceOriginal: forceOriginal),
       encoding: encoding,
     );
