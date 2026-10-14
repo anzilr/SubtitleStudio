@@ -14,6 +14,21 @@ extension VideoPlayerTrackActions on VideoPlayerWidgetState {
         trackLanguage: track.language,
       );
       debugPrint('✓ Audio track saved successfully');
+      // Development diagnostic only: compare the selected libmpv track ID
+      // against the FFmpeg stream index before enabling automatic reload.
+      // Missing ff-index is reported, NEVER guessed.
+      if (kDebugMode && track.id != 'auto' && track.id != 'no') {
+        try {
+          final selected = await resolveWaveformSelectedAudioStream();
+          if (mounted && _currentAudioTrack?.id == track.id) {
+            debugPrint('Waveform selected track: mpv=' + track.id +
+                ' ffmpeg=' + selected.toString());
+          }
+        } catch (error) {
+          debugPrint('Waveform stream mapping unavailable for mpv=' +
+              track.id + ': ' + error.toString());
+        }
+      }
     } catch (e) {
       debugPrint('✗ Error saving audio track selection: $e');
     }
