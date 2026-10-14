@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:subtitle_studio/features/waveform/models/waveform_sample.dart';
 import 'package:subtitle_studio/features/waveform/services/zoom_buffer_generator.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_cache_identity.dart';
+import 'package:subtitle_studio/features/waveform/services/waveform_processing_metrics.dart';
 import 'package:subtitle_studio/utils/ffmpeg_helper.dart';
 import 'package:ffmpeg_kit_flutter_new_min_gpl/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new_min_gpl/ffmpeg_kit_config.dart';
@@ -14,6 +15,7 @@ import 'package:subtitle_studio/features/waveform/repositories/waveform_preferen
 /// Service for processing audio files into waveform data
 class AudioProcessor {
   final WaveformPreferencesRepository _preferences;
+  WaveformProcessingMetrics? lastProcessingMetrics;
 
   AudioProcessor(this._preferences);
 
@@ -26,6 +28,7 @@ class AudioProcessor {
     int? subtitleCollectionId,
     String? audioTrackId,
   }) async {
+    final stopwatch = Stopwatch()..start();
     try {
       if (kDebugMode) {
         print('AudioProcessor: Starting audio processing for: $audioFilePath');
@@ -107,12 +110,14 @@ class AudioProcessor {
         onProgress?.call(0.15);
       }
 
+      final sourceMicroseconds = stopwatch.elapsedMicroseconds;
       // Step 2: Downsample (20% of total work)
       if (kDebugMode) print('AudioProcessor: Step 2 - Downsampling...');
       final processedData = await _downsampleAudioAsync(waveformData);
       if (kDebugMode) print('AudioProcessor: Downsampling complete');
       onProgress?.call(0.35);
 
+      final downsampleMicroseconds = stopwatch.elapsedMicroseconds;
       // Step 3: Generate zoom levels (60% of total work)
       if (kDebugMode) print('AudioProcessor: Step 3 - Generating zoom levels...');
       final zoomLevels = await _generateZoomLevelsInIsolate(
@@ -128,6 +133,7 @@ class AudioProcessor {
       if (kDebugMode) print('AudioProcessor: Zoom levels complete');
       onProgress?.call(0.95);
 
+      final zoomMicroseconds = stopwatch.elapsedMicroseconds;
       // Step 4: Create buffer (5% of total work)
       if (kDebugMode) print('AudioProcessor: Step 4 - Creating buffer...');
       final buffer = WaveformBuffer(
@@ -136,7 +142,23 @@ class AudioProcessor {
         defaultZoomIndex: zoomLevels.length ~/ 2,
       );
 
-      if (kDebugMode) print('AudioProcessor: Processing complete!');
+      stopwatch.stop();
+      final metrics = WaveformProcessingMetrics(
+        sourceAcquisition: Duration(microseconds: sourceMicroseconds),
+        downsampling: Duration(
+            microseconds: downsampleMicroseconds - sourceMicroseconds),
+        zoomGeneration: Duration(
+            microseconds: zoomMicroseconds - downsampleMicroseconds),
+        total: stopwatch.elapsed,
+        decodedSamples: waveformData.totalSamples * waveformData.channels,
+        displaySamples: processedData.totalSamples * processedData.channels,
+        zoomPixels: zoomLevels.fold<int>(0,
+            (count, level) => count + level.pixelCount * level.channels),
+      );
+      lastProcessingMetrics = metrics;
+      if (kDebugMode) {
+        print('AudioProcessor: Processing complete: ' + metrics.toString());
+      }
       onProgress?.call(1.0);
       return buffer;
     } catch (e) {
