@@ -7,6 +7,7 @@ import 'package:subtitle_studio/features/waveform/models/waveform_sample.dart';
 import 'package:subtitle_studio/features/waveform/services/zoom_buffer_generator.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_cache_identity.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_processing_metrics.dart';
+import 'package:subtitle_studio/features/waveform/services/waveform_peak_cache.dart';
 import 'package:subtitle_studio/utils/ffmpeg_helper.dart';
 import 'package:ffmpeg_kit_flutter_new_min_gpl/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new_min_gpl/ffmpeg_kit_config.dart';
@@ -42,8 +43,18 @@ class AudioProcessor {
 
       WaveformData waveformData;
 
+      // The experimental renderer uses a compact, source-scoped peak cache.
+      // PCM extraction still writes a temporary raw file, but it is reduced
+      // in bounded chunks and deleted without ever loading full PCM bytes.
+      if (useTiledZoom) {
+        waveformData = await _loadOrBuildPeakData(
+          audioFilePath,
+          subtitleCollectionId: subtitleCollectionId,
+          audioTrackId: audioTrackId,
+          onProgress: onProgress,
+        );
+      } else if (subtitleCollectionId != null) {
       // Check for cached waveform data if subtitle collection ID is provided
-      if (subtitleCollectionId != null) {
         final temporaryDirectory = await getTemporaryDirectory();
         final expectedPath = await WaveformCacheIdentity.pcmPath(
           temporaryDirectory: temporaryDirectory.path,
@@ -119,7 +130,9 @@ class AudioProcessor {
       final sourceMicroseconds = stopwatch.elapsedMicroseconds;
       // Step 2: Downsample (20% of total work)
       if (kDebugMode) print('AudioProcessor: Step 2 - Downsampling...');
-      final processedData = await _downsampleAudioAsync(waveformData);
+      final processedData = useTiledZoom
+          ? waveformData // Already reduced in bounded PCM chunks.
+          : await _downsampleAudioAsync(waveformData);
       if (kDebugMode) print('AudioProcessor: Downsampling complete');
       onProgress?.call(0.35);
 
@@ -176,6 +189,53 @@ class AudioProcessor {
       }
       rethrow;
     }
+  }
+
+
+  /// Compact peak cache is intentionally independent of the legacy PCM
+  /// Isar metadata; no schema migration or media-cache reinterpretation.
+  Future<WaveformData> _loadOrBuildPeakData(
+    String sourcePath, {
+    required int? subtitleCollectionId,
+    required String? audioTrackId,
+    required Function(double)? onProgress,
+  }) async {
+    final temp = await getTemporaryDirectory();
+    final key = await WaveformCacheIdentity.pcmPath(
+      temporaryDirectory: temp.path,
+      subtitleCollectionId: subtitleCollectionId ?? 0,
+      sourcePath: sourcePath,
+      audioTrackId: audioTrackId,
+    );
+    final cachePath = key.replaceFirst(RegExp(r'\.raw$'), '.pk1');
+    final cacheFile = File(cachePath);
+    // SAF/content URIs can be replaced in place without a readable stat.
+    // Do not trust a stable URI hash until source version tracking exists.
+    final persistent = !sourcePath.startsWith('content://');
+    if (persistent && await cacheFile.exists()) {
+      try {
+        onProgress?.call(0.1);
+        final cached = await WaveformPeakCache.load(cacheFile);
+        onProgress?.call(0.2);
+        return cached;
+      } on FileSystemException {
+        // Permission/transient issue: regenerate from the selected source.
+      } on FormatException {
+        // Corrupt header, payload, or checksum: never reuse it.
+      }
+      if (await cacheFile.exists()) await cacheFile.delete();
+    }
+    final output = await _extractAudioToPCM(
+      sourcePath,
+      audioTrackId: audioTrackId,
+      reduceToPeaks: true,
+      peakCachePath: cachePath,
+    );
+    onProgress?.call(0.2);
+    if (!persistent && await cacheFile.exists()) {
+      await cacheFile.delete();
+    }
+    return output;
   }
 
   /// Extract audio and cache the PCM file for future use
@@ -303,6 +363,8 @@ class AudioProcessor {
     int? cacheForCollection,
     String? audioTrackId,
     String? cacheOutputPath,
+    bool reduceToPeaks = false,
+    String? peakCachePath,
   }) async {
     try {
       // Get temporary directory
@@ -479,6 +541,17 @@ class AudioProcessor {
         throw Exception('FFmpeg failed to create output file');
       }
 
+      if (reduceToPeaks) {
+        try {
+          if (peakCachePath == null) {
+            throw ArgumentError('Missing compact peak cache path.');
+          }
+          return await WaveformPeakCache.build(
+            pcmFile: file, cacheFile: File(peakCachePath));
+        } finally {
+          if (await file.exists()) await file.delete();
+        }
+      }
       final bytes = await file.readAsBytes();
       if (kDebugMode) {
         print('AudioProcessor: Read ${bytes.length} bytes of PCM data');
