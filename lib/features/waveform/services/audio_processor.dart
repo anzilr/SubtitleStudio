@@ -11,6 +11,7 @@ import 'package:subtitle_studio/features/waveform/services/waveform_processing_m
 import 'package:subtitle_studio/features/waveform/services/waveform_peak_cache.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_cache_coordinator.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_peak_cache_janitor.dart';
+import 'package:subtitle_studio/features/waveform/services/waveform_ffmpeg_plan.dart';
 import 'package:subtitle_studio/utils/ffmpeg_helper.dart';
 import 'package:ffmpeg_kit_flutter_new_min_gpl/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new_min_gpl/ffmpeg_kit_config.dart';
@@ -453,54 +454,18 @@ class AudioProcessor {
 
       // Execute FFmpeg command based on platform
       if (Platform.isWindows || Platform.isLinux) {
-        // Desktop platforms: Use system FFmpeg via Process.run
-        bool useTrackSelection = audioTrackId != null && 
-                                 audioTrackId != 'auto' && 
-                                 audioTrackId.isNotEmpty;
-        int? trackIndex;
-        
-        if (useTrackSelection) {
-          final parsedId = int.tryParse(audioTrackId);
-          if (parsedId != null) {
-            // Media kit may use 1-based indexing, FFmpeg uses 0-based
-            // Try subtracting 1 if the ID seems to be 1-based (>= 1)
-            trackIndex = parsedId >= 1 ? parsedId - 1 : parsedId;
-            useTrackSelection = trackIndex >= 0;
-            
-            if (kDebugMode) {
-              print('AudioProcessor: Media kit track ID "$audioTrackId" -> FFmpeg index $trackIndex');
-            }
-          } else {
-            throw FormatException('Invalid selected audio track ID: $audioTrackId');
-          }
+        final plan = WaveformFfmpegPlan(
+          inputPath: normalizedPath,
+          outputPath: outputPath,
+          selectedTrackId: audioTrackId,
+        );
+        final args = plan.arguments();
+        if (kDebugMode) {
+          print('AudioProcessor: Audio ordinal: ' +
+              WaveformFfmpegPlan.audioOrdinal(audioTrackId).toString());
         }
-        
-        final args = [
-          '-y',
-          '-i', normalizedPath,
-        ];
-        
-        // Add audio track selection if specified
-        if (useTrackSelection && trackIndex != null) {
-          args.addAll(['-map', '0:a:$trackIndex']);
-          if (kDebugMode) {
-            print('AudioProcessor: Attempting to select audio track index $trackIndex');
-          }
-        }
-        
-        args.addAll([
-          // Preserve presentation timestamp gaps (e.g. screen recordings)
-          // instead of silently squeezing subtitle/audio alignment.
-          '-af', 'aresample=async=1:first_pts=0',
-          '-ac', '1', // Mono output
-          '-ar', '44100',
-          '-f', 's16le',
-          '-acodec', 'pcm_s16le',
-          outputPath,
-        ]);
-        
-        final process = await Process.start('ffmpeg',
-            ['-nostats', '-loglevel', 'error', ...args]);
+
+        final process = await Process.start('ffmpeg', args);
         _activeDesktopProcess = process;
         if (extractionEpoch != _requestEpoch) {
           process.kill();
@@ -523,40 +488,13 @@ class AudioProcessor {
         // Mobile/macOS platforms: Use FFmpegKit
         final inputPath = await _getSafReadableParameter(normalizedPath);
         
-        bool useTrackSelection = audioTrackId != null && 
-                                 audioTrackId != 'auto' && 
-                                 audioTrackId.isNotEmpty;
-        int? trackIndex;
-        
-        if (useTrackSelection) {
-          final parsedId = int.tryParse(audioTrackId);
-          if (parsedId != null) {
-            // Media kit may use 1-based indexing, FFmpeg uses 0-based
-            // Try subtracting 1 if the ID seems to be 1-based (>= 1)
-            trackIndex = parsedId >= 1 ? parsedId - 1 : parsedId;
-            useTrackSelection = trackIndex >= 0;
-            
-            if (kDebugMode) {
-              print('AudioProcessor: Media kit track ID "$audioTrackId" -> FFmpeg index $trackIndex');
-            }
-          } else {
-            throw FormatException('Invalid selected audio track ID: $audioTrackId');
-          }
-        }
-        
-        // Build command with optional audio track selection
-        String command = '-y -i "$inputPath"';
-        
-        if (useTrackSelection && trackIndex != null) {
-          command += ' -map 0:a:$trackIndex';
-          if (kDebugMode) {
-            print('AudioProcessor: Attempting to select audio track index $trackIndex');
-          }
-        }
-        
-        command += ' -af aresample=async=1:first_pts=0'
-            ' -ac 1 -ar 44100 -f s16le -acodec pcm_s16le "$outputPath"';
-        
+        final plan = WaveformFfmpegPlan(
+          inputPath: inputPath,
+          outputPath: outputPath,
+          selectedTrackId: audioTrackId,
+        );
+        final command = plan.ffmpegKitCommand();
+
         if (kDebugMode) {
           print('AudioProcessor: FFmpegKit command: $command');
         }
