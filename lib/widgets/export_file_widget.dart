@@ -9,6 +9,7 @@ import 'package:file_picker/file_picker.dart' as fp;
 import 'dart:io';
 import 'package:subtitle_studio/services/subtitle_text_codec.dart';
 import 'package:subtitle_studio/services/subtitle_extended_encoding_service.dart';
+import 'package:subtitle_studio/widgets/subtitle_encoding_picker.dart';
 import 'dart:typed_data';
 import '../database/models/models.dart';
 
@@ -59,6 +60,17 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
     final choices = await SubtitleExtendedEncodingService.standard
         .availableEncodings();
     if (mounted) setState(() => _availableEncodings = choices);
+  }
+
+  Future<void> _chooseEncoding() async {
+    final choice = await SubtitleEncodingPicker.show(
+      context: context,
+      title: 'Output subtitle encoding',
+      options: _availableEncodings,
+      selected: _selectedEncoding,
+    );
+    if (!mounted || choice == null) return;
+    setState(() => _selectedEncoding = choice);
   }
 
   Future<void> _pickFolder() async {
@@ -534,49 +546,14 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
               ),
               const SizedBox(height: 16),
 
-              // Encoding Dropdown
-              Container(
-                decoration: BoxDecoration(
-                  color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: borderColor,
-                    width: 1,
-                  ),
-                ),
-                child: DropdownButtonFormField<String>(
-                  initialValue: _selectedEncoding,
-                  onChanged: (String? newValue) {
-                    if (newValue != null) {
-                      setState(() {
-                        _selectedEncoding = newValue;
-                      });
-                    }
-                  },
-                  items: [
-                    if (!_availableEncodings.contains(_selectedEncoding))
-                      DropdownMenuItem<String>(
-                        value: _selectedEncoding,
-                        enabled: false,
-                        child: Text('Unavailable: ' + _selectedEncoding),
-                      ),
-                    ..._availableEncodings.map((encoding) =>
-                        DropdownMenuItem<String>(
-                          value: encoding, child: Text(encoding))),
-                  ],
-                  decoration: InputDecoration(
-                    labelText: 'Encoding',
-                    prefixIcon: Icon(
-                      Icons.code,
-                      color: primaryColor,
-                    ),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                    labelStyle: TextStyle(
-                      color: primaryColor,
-                    ),
-                  ),
-                ),
+              // Searchable encoding chooser replaces the long dropdown.
+              OutlinedButton.icon(
+                key: const ValueKey('output-encoding-picker'),
+                onPressed: _chooseEncoding,
+                icon: const Icon(Icons.manage_search),
+                label: Text(_availableEncodings.contains(_selectedEncoding)
+                    ? 'Output encoding: ' + _selectedEncoding
+                    : 'Unavailable on this device: ' + _selectedEncoding),
               ),
               const SizedBox(height: 20),
 

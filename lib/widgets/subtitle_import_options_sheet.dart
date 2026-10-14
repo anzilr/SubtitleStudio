@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:subtitle_studio/services/subtitle_encoding_decoder.dart';
 import 'package:subtitle_studio/services/subtitle_text_codec.dart';
 import 'package:subtitle_studio/services/subtitle_extended_encoding_service.dart';
+import 'package:subtitle_studio/widgets/subtitle_encoding_picker.dart';
 import 'package:subtitle_studio/utils/saf_file_handler.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -66,6 +67,17 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
     final choices = await SubtitleExtendedEncodingService.standard
         .availableEncodings();
     if (mounted) setState(() => _availableEncodings = choices);
+  }
+
+  Future<void> _chooseEncoding() async {
+    final choice = await SubtitleEncodingPicker.show(
+      context: context,
+      title: 'Source subtitle encoding',
+      options: ['Auto', ..._availableEncodings],
+      selected: _encodingChoice,
+    );
+    if (!mounted || choice == null) return;
+    setState(() => _encodingChoice = choice);
   }
 
   Future<void> _selectFile() async {
@@ -444,24 +456,18 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
                 ),
               ),
               const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                initialValue: _encodingChoice,
-                decoration: const InputDecoration(
-                  labelText: 'Source text encoding',
-                  helperText: 'Auto detects UTF BOM/valid UTF-8 only; '
-                      'choose a charset for older subtitle files.',
-                  border: OutlineInputBorder(),
+              OutlinedButton.icon(
+                key: const ValueKey('source-encoding-picker'),
+                onPressed: _isLoading ? null : _chooseEncoding,
+                icon: const Icon(Icons.manage_search),
+                label: Text('Source encoding: ' + _encodingChoice),
+              ),
+              const Padding(
+                padding: EdgeInsets.only(top: 4),
+                child: Text(
+                  'Auto uses a Unicode BOM or strict UTF-8. '
+                  'Choose a legacy charset explicitly.',
                 ),
-                isExpanded: true,
-                items: ['Auto', ..._availableEncodings]
-                    .map((label) => DropdownMenuItem(
-                      value: label, child: Text(label),
-                    )).toList(),
-                onChanged: _isLoading ? null : (value) {
-                  if (value != null) {
-                    setState(() => _encodingChoice = value);
-                  }
-                },
               ),
               const SizedBox(height: 24),
 
