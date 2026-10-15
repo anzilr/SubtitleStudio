@@ -159,6 +159,8 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
 
   // Navigation debouncing
   bool _isNavigating = false;
+  // Android system Back and AppBar Back must use the same exit flow.
+  bool _isLeavingEditor = false;
 
   // Source view support
   bool _isSourceView = false; // Track if we're in source view mode
@@ -299,6 +301,10 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
       debugPrint('EditScreen lifecycle: disposing session ${widget.sessionId}');
     }
     _itemPositionsListener.itemPositions.removeListener(_updateScrollbarPosition);
+    // A pending scroll-to-last-edited-cue loader is inserted into the root
+    // Overlay. Remove it before this route is disposed so it cannot intercept
+    // taps on the HomeScreen after a system Back gesture.
+    IsolatedLoaderController.hide();
     _waveformTrackReload.dispose();
     _resizeRatioSaveTimer?.cancel(); // Cancel resize ratio save timer
     _mobileResizeRatioSaveTimer?.cancel(); // Cancel mobile resize ratio save timer
@@ -571,6 +577,42 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
     );
   }
 
+  /// Use one navigation route for both system Back and the toolbar Back.
+  /// Keeping PopScope's automatic pop disabled lets us resolve pending
+  /// source edits and dispose transient UI before removing this route.
+  Future<void> _requestEditorExit() async {
+    if (!mounted || _isLeavingEditor) return;
+
+    if (_isRangeSelectionActive) {
+      _controller.cancelRangeSelection();
+      return;
+    }
+    if (_isSelectionMode) {
+      _clearSelection();
+      return;
+    }
+
+    _isLeavingEditor = true;
+    try {
+      if (!await _resolveSourceChangesBeforeLeaving() || !mounted) return;
+
+      final videoPlayer = _videoPlayerKey.currentState;
+      if (videoPlayer != null && videoPlayer.isInitialized()) {
+        videoPlayer.pause();
+      }
+      // The overlay may still be active if an initial cue scroll was
+      // interrupted while this screen was visible.
+      IsolatedLoaderController.hide();
+
+      if (kDebugMode) {
+        debugPrint('EditScreen lifecycle: requesting Navigator.pop for session ${widget.sessionId}');
+      }
+      Navigator.of(context).pop(true);
+    } finally {
+      _isLeavingEditor = false;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.watch(
@@ -605,34 +647,18 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
     });
 
     return PopScope(
-        canPop: !_isSelectionMode && !_isRangeSelectionActive && !_sourceViewDirty,
-        onPopInvokedWithResult: (bool didPop, Object? result) async {
-        if (!mounted) return;
-        if (kDebugMode) {
-          debugPrint('EditScreen lifecycle: pop didPop=$didPop, session=${widget.sessionId}, selection=$_isSelectionMode, range=$_isRangeSelectionActive, sourceDirty=$_sourceViewDirty');
-        }
-        // Once the route has popped, its child state must not be accessed.
-        if (didPop) return;
-        // Pause video when going back
-        if (_videoPlayerKey.currentState != null &&
-            _videoPlayerKey.currentState!.isInitialized()) {
-          _videoPlayerKey.currentState!.pause();
-        }
-        
-        if (_isRangeSelectionActive) {
-          _controller.cancelRangeSelection();
-        } else if (_isSelectionMode) {
-          // Handle selection mode back press
-          _clearSelection();
-        } else {
-          if (!didPop) {
-            if (!await _resolveSourceChangesBeforeLeaving()) return;
-            if (mounted) {
-              Navigator.of(context).pop(true);
-            }
+        // Android system Back must follow the same asynchronous exit path as
+        // the AppBar instead of automatically popping this route.
+        canPop: false,
+        onPopInvokedWithResult: (bool didPop, Object? result) {
+          if (!mounted) return;
+          if (kDebugMode) {
+            debugPrint('EditScreen lifecycle: pop didPop=$didPop, session=${widget.sessionId}');
           }
-        }
-      },
+          if (!didPop) {
+            unawaited(_requestEditorExit());
+          }
+        },
         child: FirstTimeInstructions(
           screenName: 'edit',
           instructions: editScreenInstructions,
@@ -653,12 +679,7 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
                 )
               : IconButton(
                   icon: Icon(Icons.arrow_back),
-                  onPressed: () async {
-                    if (!await _resolveSourceChangesBeforeLeaving()) return;
-                    if (mounted) {
-                      Navigator.of(context).pop(true);
-                    }
-                  },
+                  onPressed: () => unawaited(_requestEditorExit()),
                 ),
               title: _isRangeSelectionActive
                   ? Text('Select range: tap first & last')
