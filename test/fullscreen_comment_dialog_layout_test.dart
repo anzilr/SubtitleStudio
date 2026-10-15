@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:subtitle_studio/widgets/comment_dialog.dart';
@@ -41,6 +42,45 @@ void main() {
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
 
+    expect(find.text('Add Comment'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('comment Save stays open while persistence is pending',
+      (tester) async {
+    final saveGate = Completer<void>();
+    String? savedComment;
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: Builder(builder: (context) => TextButton(
+          onPressed: () => showDialog<void>(
+            context: context,
+            builder: (context) => Dialog(
+              child: CommentDialog(
+                onCommentSaved: (comment) {
+                  savedComment = comment;
+                  return saveGate.future;
+                },
+              ),
+            ),
+          ),
+          child: const Text('Open editor'),
+        )),
+      ),
+    ));
+
+    await tester.tap(find.text('Open editor'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, 'Remember this line');
+    await tester.ensureVisible(find.text('Add'));
+    await tester.tap(find.text('Add'));
+    await tester.pump();
+
+    expect(savedComment, 'Remember this line');
+    expect(find.text('Add Comment'), findsOneWidget);
+    saveGate.complete();
+    await tester.pumpAndSettle();
     expect(find.text('Add Comment'), findsNothing);
     expect(tester.takeException(), isNull);
   });
