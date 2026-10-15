@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:subtitle_studio/themes/studio_components.dart';
+import 'package:subtitle_studio/themes/studio_design_tokens.dart';
 import 'package:subtitle_studio/widgets/subtitle_encoding_picker.dart';
 
 /// Project-level encoding choice. The caller supplies the same
@@ -34,78 +36,95 @@ class ProjectEncodingSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final tokens = StudioDesignTokens.of(context);
     final isAvailable = options.contains(selected);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Character Encoding',
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-        ),
-        const SizedBox(height: 8),
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton(
-            key: const ValueKey('project-encoding-picker'),
-            onPressed: isLoading || isSaving ? null : () => _choose(context),
-            style: OutlinedButton.styleFrom(
-              alignment: Alignment.centerLeft,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 16,
-              ),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.text_format, size: 20),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    selected,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+    return StudioSurface(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const StudioSectionHeader(
+            title: 'Character Encoding',
+            icon: Icons.language,
+          ),
+          const SizedBox(height: StudioSpacing.sm),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              key: const ValueKey('project-encoding-picker'),
+              onPressed: isLoading || isSaving ? null : () => _choose(context),
+              style: OutlinedButton.styleFrom(
+                alignment: Alignment.centerLeft,
+                foregroundColor: tokens.onSurface,
+                backgroundColor: tokens.fieldSurface,
+                side: BorderSide(color: tokens.outline),
+                minimumSize: const Size(0, StudioSizing.touchTarget),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: StudioSpacing.md,
+                  vertical: StudioSpacing.sm,
                 ),
-                if (isLoading || isSaving)
-                  const SizedBox(
-                    height: 18,
-                    width: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                else
-                  const Icon(Icons.search, size: 20),
-              ],
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(StudioRadius.input),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.text_format, size: StudioSizing.icon,
+                      color: tokens.primaryAction),
+                  const SizedBox(width: StudioSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      selected,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (isLoading || isSaving)
+                    SizedBox(
+                      height: StudioSizing.icon,
+                      width: StudioSizing.icon,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: tokens.primaryAction,
+                      ),
+                    )
+                  else
+                    Icon(Icons.search, size: StudioSizing.icon,
+                        color: tokens.primaryAction),
+                ],
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: 8),
-        if (isLoading)
-          const Text('Checking supported encodings on this device…')
-        else if (isSaving)
-          const Text('Saving project encoding…')
-        else if (!isAvailable)
+          const SizedBox(height: StudioSpacing.xs),
+          if (isLoading)
+            const StudioStatusMessage(
+              message: 'Checking supported encodings on this device…',
+            )
+          else if (isSaving)
+            const StudioStatusMessage(
+              message: 'Saving project encoding…',
+            )
+          else if (!isAvailable)
+            const StudioStatusMessage(
+              tone: StudioStatusTone.caution,
+              message: 'The saved encoding is unavailable on this device. '
+                  'Select a supported encoding before exporting.',
+            )
+          else
+            StudioStatusMessage(
+              message: '${options.length} encodings available on this device. '
+                  'Search to choose a different encoding.',
+            ),
+          const SizedBox(height: StudioSpacing.xs),
           Text(
-            'The saved encoding is unavailable on this device. '
-            'Select a supported encoding before exporting.',
-            style: TextStyle(color: scheme.error),
-          )
-        else
-          Text(
-            '${options.length} encodings available on this device. '
-            'Search to choose a different encoding.',
-            style: Theme.of(context).textTheme.bodySmall,
+            'This setting controls the project’s preferred output encoding. '
+            'It does not reinterpret subtitle text already loaded into the editor.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: tokens.mutedText,
+                ),
           ),
-        const SizedBox(height: 4),
-        Text(
-          'This setting controls the project’s preferred output encoding. '
-          'It does not reinterpret subtitle text already loaded into the editor.',
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
