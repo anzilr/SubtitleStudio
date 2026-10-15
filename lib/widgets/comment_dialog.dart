@@ -161,7 +161,10 @@ class CommentDialogState extends State<CommentDialog> {
     try {
       // Call the callback to save the comment
       // The parent (screen_edit.dart) will handle marking the line if needed
-      widget.onCommentSaved(comment);
+      // Wait for asynchronous persistence before dismissing the editor.
+      // This also keeps the Save button disabled against double taps.
+      await Future.sync(() => widget.onCommentSaved(comment));
+      if (!mounted) return;
       
       // Only call Navigator.pop() if not in overlay mode
       if (!widget.isOverlayMode) {
@@ -205,6 +208,9 @@ class CommentDialogState extends State<CommentDialog> {
     final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
     final mutedColor = onSurfaceColor.withValues(alpha: 0.6);
     final borderColor = onSurfaceColor.withValues(alpha: 0.12);
+    // Landscape fullscreen playback has very little vertical space,
+    // especially when the keyboard is raised.
+    final compactLayout = MediaQuery.sizeOf(context).height < 500;
 
     Widget content = Container(
       constraints: BoxConstraints(
@@ -215,18 +221,18 @@ class CommentDialogState extends State<CommentDialog> {
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: EdgeInsets.all(compactLayout ? 12.0 : 24.0),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
             // Standard Header Structure
             Container(
-              padding: const EdgeInsets.symmetric(vertical: 16),
+              padding: EdgeInsets.symmetric(vertical: compactLayout ? 4 : 16),
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: EdgeInsets.all(compactLayout ? 8 : 12),
                     decoration: BoxDecoration(
                       color: Colors.blue.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
@@ -237,7 +243,7 @@ class CommentDialogState extends State<CommentDialog> {
                       size: 28,
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  SizedBox(width: compactLayout ? 8 : 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -248,8 +254,8 @@ class CommentDialogState extends State<CommentDialog> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
+                        if (!compactLayout) const SizedBox(height: 4),
+                        if (!compactLayout) Text(
                           _isEditing 
                             ? 'Modify your comment for this subtitle line'
                             : 'Add a comment to this subtitle line',
@@ -283,9 +289,9 @@ class CommentDialogState extends State<CommentDialog> {
             
             // Subtitle Content Display (if available)
             if (widget.originalText != null || widget.editedText != null) ...[
-              const SizedBox(height: 20),
+              SizedBox(height: compactLayout ? 8 : 20),
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(compactLayout ? 8 : 16),
                 decoration: BoxDecoration(
                   color: Colors.blue.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(12),
@@ -554,7 +560,7 @@ class CommentDialogState extends State<CommentDialog> {
               ),
             ],
             
-            const SizedBox(height: 20),
+            SizedBox(height: compactLayout ? 8 : 20),
             
             // Comment Input Field
             Container(
@@ -592,7 +598,7 @@ class CommentDialogState extends State<CommentDialog> {
                   ],
                   focusNode: _focusNode,
                   maxLines: null,
-                  minLines: 3,
+                  minLines: compactLayout ? 2 : 3,
                   keyboardType: TextInputType.multiline,
                   textInputAction: TextInputAction.newline,
                   decoration: InputDecoration(
@@ -615,7 +621,7 @@ class CommentDialogState extends State<CommentDialog> {
               ),
             ),
             
-            const SizedBox(height: 24),
+            SizedBox(height: compactLayout ? 12 : 24),
             
             // Action Buttons
             Row(
