@@ -113,58 +113,20 @@ extension _ProjectSettingsSections on _ProjectSettingsSheetState {
   }
 
   Widget _buildEncodingSection() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
-    final borderColor = onSurfaceColor.withValues(alpha: 0.12);
-    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle('Text Encoding', Icons.text_format, Colors.indigo),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Character Encoding',
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              decoration: BoxDecoration(
-                color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: borderColor,
-                  width: 1,
-                ),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: _selectedEncoding,
-                    isExpanded: true,
-                    items: _availableEncodings.map((encoding) {
-                      return DropdownMenuItem(
-                        value: encoding,
-                        child: Text(encoding),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      if (value != null) {
-                        _setProjectSettingsState(() {
-                          _selectedEncoding = value;
-                        });
-                        _updateEncoding(value);
-                      }
-                    },
-                  ),
-                ),
-              ),
-            ),
-          ],
+        _buildSectionTitle(
+          'Text Encoding',
+          Icons.text_format,
+          Colors.indigo,
+        ),
+        ProjectEncodingSelector(
+          selected: _selectedEncoding,
+          options: _availableEncodings,
+          isLoading: _encodingsLoading,
+          isSaving: _encodingSaveInProgress,
+          onSelected: _updateEncoding,
         ),
       ],
     );
