@@ -82,3 +82,19 @@ a native plugin delivers ff-index on every target.
 Checkpoint 85 candidate: run Android/Windows fixtures, correct MPV
 property availability across platforms, resolve failed/stale source
 selection lifecycle from logs, and benchmark tile/layer frame times.
+
+
+## Verified CI result (R1)
+
+- Verified code: https://github.com/anzilr/SubtitleStudio/commit/135caea87db1b64eebdca1bb798461701b0f265b
+- Successful CI: https://github.com/anzilr/SubtitleStudio/actions/runs/38760499546
+- flutter analyze: No issues found, including informational notices.
+- flutter test -j 1: **369 passing tests**, nine more than
+  Checkpoint 83 (360 tests). No failing or skipped regressions claimed.
+- New coordinator tests cover stale resolutions/failures, rapid
+  switches, explicit Auto, hiding, disposal, and source identity;
+  a ready-state regression covers preservation of track IDs.
+- The CI gate uses a Linux runner; it is not evidence that libmpv
+  ff-index, FFmpegKit, Windows or Android SAF work in all configurations.
+- The subsequent roadmap/report commit is documentation-only and does
+  not request additional GitHub Actions runs.

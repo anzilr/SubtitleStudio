@@ -1,32 +1,28 @@
 # SubtitleStudio Refactor Roadmap v4
 
-> **October 14, 2026 — Checkpoint 83 R1 CI verified.**
-> [Verified implementation](https://github.com/anzilr/SubtitleStudio/commit/5095b2c1ca6cacf5c2c869f435e53fbd49988baf)
-> · [Successful GitHub Actions](https://github.com/anzilr/SubtitleStudio/actions/runs/38625039828):
-> **360 passing tests, zero analyzer issues** (9 additional tests).
+> **October 15, 2026 — Checkpoint 84 R1 verified.**
+> [Verified code commit](https://github.com/anzilr/SubtitleStudio/commit/135caea87db1b64eebdca1bb798461701b0f265b)
+> · [Successful GitHub Actions](https://github.com/anzilr/SubtitleStudio/actions/runs/38760499546):
+> **369 passing tests, zero Flutter analyzer issues** (+9 tests).
 >
-> Libmpv tracks expose track-list/N/ff-index, a **global FFmpeg stream**
-> index different from Media Kit's mpv track ID and from FFmpeg's
-> audio-only ordinal. The new WaveformMpvAudioStreamResolver can query
-> the active native Media Kit player for an exact ff-index, producing
-> ffmpeg:stream:N for the unified extraction plan's -map 0:N.
-> It refuses absent, ambiguous and invalid metadata instead of
-> guessing. Debug builds can log resolved selected-track IDs.
+> The experimental MS_ONE_WAVEFORM_TRACK_SYNC=true path connects
+> Media Kit audio-track changes to the Checkpoint 83 libmpv ff-index
+> resolver and verified ffmpeg:stream:N loading. It clears the previous
+> waveform before metadata resolution, cancels stale requests, handles
+> explicit Auto mode rather than reusing saved track preferences, and
+> shows a visible error if the selected stream cannot be resolved.
+> The editor's responsive layouts, waveform toggle, regeneration,
+> media replacement, hiding and disposal all participate in
+> cancellation/invalidation. Effective audioTrackId is retained on
+> WaveformReady through copyWith.
 >
-> A generated-media test creates a video plus two audio streams,
-> including a 750ms audio PTS offset; the code verifies explicit
-> stream mapping and leading silence when command-line FFmpeg exists.
-> See [Checkpoint 83 report](CHECKPOINT83_MPV_FFINDEX_WAVEFORM_MAPPING.md).
->
-> **Not yet wired as the default:** the existing editor's waveform
-> load and audio-track change still use historical numeric-ID
-> compatibility unless explicitly supplied a resolved selector.
-> Android FFmpegKit/SAF, Windows Media Kit synchronization, native
-> cancellation and frame-time/memory profiling remain unverified.
-> Next: experimental source+track-aware reload wiring; native
-> verification and guarding stale waveform after resolution failure.
-> Keep the eager renderer, existing Isar schema, mobile interface,
-> upstream and release tags unchanged; desktop UI remains deferred.
+> See [Checkpoint 84 report](CHECKPOINT84_EXPERIMENTAL_TRACK_AWARE_WAVEFORM.md).
+> The default eager waveform and prior player behavior are unchanged.
+> **Still required:** Android/Windows media-track tests, FFmpegKit
+> cancellation and SAF tests, high-DPI layered/tiled rendering profiling,
+> and player-specific mpv property verification. Do not promote this
+> experimental flag to default or modify upstream/main/release tags.
+> Isar schema and the deferred desktop workspace are unchanged.
 >
 > **Additional waveform reference, October 14, 2026: Subtitle Edit source audit.**
 > Alongside KDE Subtitle Composer, use the current Subtitle Edit Avalonia/C#
