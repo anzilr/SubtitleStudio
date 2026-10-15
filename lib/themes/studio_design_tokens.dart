@@ -21,6 +21,7 @@ class StudioDesignTokens extends ThemeExtension<StudioDesignTokens> {
     required this.onEditingAccent,
     required this.caution,
     required this.onCaution,
+    required this.dangerText,
     required this.historyAlternate,
   });
 
@@ -37,6 +38,7 @@ class StudioDesignTokens extends ThemeExtension<StudioDesignTokens> {
   final Color onEditingAccent;
   final Color caution;
   final Color onCaution;
+  final Color dangerText;
   final Color historyAlternate;
 
   static const StudioDesignTokens light = StudioDesignTokens(
@@ -53,6 +55,7 @@ class StudioDesignTokens extends ThemeExtension<StudioDesignTokens> {
     onEditingAccent: const Color(0xFFFFFFFF),
     caution: const Color(0xFFD99B37),
     onCaution: const Color(0xFF111A2C),
+    dangerText: const Color(0xFFA33A39),
     historyAlternate: const Color(0xFF188579),
   );
 
@@ -70,6 +73,7 @@ class StudioDesignTokens extends ThemeExtension<StudioDesignTokens> {
     onEditingAccent: const Color(0xFF111A2C),
     caution: const Color(0xFFF2B85B),
     onCaution: const Color(0xFF111A2C),
+    dangerText: const Color(0xFFFF8A9A),
     historyAlternate: const Color(0xFF62DBCA),
   );
 
@@ -98,6 +102,7 @@ class StudioDesignTokens extends ThemeExtension<StudioDesignTokens> {
     Color? onEditingAccent,
     Color? caution,
     Color? onCaution,
+    Color? dangerText,
     Color? historyAlternate,
   }) {
     return StudioDesignTokens(
@@ -114,6 +119,7 @@ class StudioDesignTokens extends ThemeExtension<StudioDesignTokens> {
       onEditingAccent: onEditingAccent ?? this.onEditingAccent,
       caution: caution ?? this.caution,
       onCaution: onCaution ?? this.onCaution,
+      dangerText: dangerText ?? this.dangerText,
       historyAlternate: historyAlternate ?? this.historyAlternate,
     );
   }
@@ -138,6 +144,7 @@ class StudioDesignTokens extends ThemeExtension<StudioDesignTokens> {
       onEditingAccent: Color.lerp(onEditingAccent, other.onEditingAccent, t)!,
       caution: Color.lerp(caution, other.caution, t)!,
       onCaution: Color.lerp(onCaution, other.onCaution, t)!,
+      dangerText: Color.lerp(dangerText, other.dangerText, t)!,
       historyAlternate: Color.lerp(historyAlternate, other.historyAlternate, t)!,
     );
   }
