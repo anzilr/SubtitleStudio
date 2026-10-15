@@ -51,9 +51,179 @@ extension VideoFullscreenActions on VideoPlayerWidgetState {
     Overlay.of(context).insert(_fullscreenOverlay!);
   }
   
+  /// Portrait comment editing over fullscreen video.
+  ///
+  /// The custom fullscreen player is a manually inserted OverlayEntry. A
+  /// Navigator dialog cannot paint above it, and rotating with the video
+  /// OverlayEntry mounted can duplicate Media Kit's GlobalKeys. Temporarily
+  /// detach that entry, finish its disposal frame, then present a modal-route
+  /// overlay in portrait. On every exit path, restore video orientation and
+  /// reinsert the fullscreen player above the editor.
+  Future<void> showFullscreenCommentDialog(
+    Subtitle subtitle, {
+    String? originalText,
+    String? editedText,
+  }) async {
+    if (!mounted || !_isCustomFullscreen || _fullscreenCommentActive) return;
+
+    _fullscreenCommentActive = true;
+    final wasPlaying = _player.state.playing;
+    final shouldBeLandscape = _getVideoAspectRatio() > 1.0;
+    final fullscreenOrientations = shouldBeLandscape
+        ? <DeviceOrientation>[
+            DeviceOrientation.landscapeLeft,
+            DeviceOrientation.landscapeRight,
+          ]
+        : <DeviceOrientation>[
+            DeviceOrientation.portraitUp,
+            DeviceOrientation.portraitDown,
+          ];
+    var overlayDetached = false;
+
+    try {
+      if (wasPlaying) {
+        await _player.pause();
+      }
+      if (!mounted || !_isCustomFullscreen) return;
+
+      // The fullscreen entry must leave the tree BEFORE changing device
+      // orientation, otherwise its Video/controls keys can be mounted twice.
+      final oldOverlay = _fullscreenOverlay;
+      _fullscreenOverlay = null;
+      oldOverlay?.remove();
+      oldOverlay?.dispose();
+      overlayDetached = true;
+      await WidgetsBinding.instance.endOfFrame;
+      if (!mounted || !_isCustomFullscreen) return;
+
+      await SystemChrome.setEnabledSystemUIMode(
+        SystemUiMode.manual,
+        overlays: SystemUiOverlay.values,
+      );
+      if (Platform.isAndroid || Platform.isIOS) {
+        await SystemChrome.setPreferredOrientations(
+          const [DeviceOrientation.portraitUp],
+        );
+        await WidgetsBinding.instance.endOfFrame;
+      }
+      if (!mounted || !_isCustomFullscreen) return;
+
+      debugPrint('Fullscreen comments: opening portrait comment overlay');
+
+      // A route-backed modal is in the Navigator overlay and has reliable
+      // Back/barrier/keyboard semantics. With the fullscreen entry detached,
+      // this modal is guaranteed to render in front of the editor.
+      await showGeneralDialog<void>(
+        context: context,
+        barrierDismissible: true,
+        barrierLabel: 'Dismiss comment',
+        barrierColor: Colors.black87,
+        transitionDuration: Duration.zero,
+        pageBuilder: (modalContext, primaryAnimation, secondaryAnimation) {
+          void closeDialog() {
+            FocusScope.of(modalContext).unfocus();
+            if (modalContext.mounted) {
+              Navigator.of(modalContext, rootNavigator: true).pop();
+            }
+          }
+
+          final size = MediaQuery.sizeOf(modalContext);
+          return Dialog(
+            insetPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 12,
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: 600,
+                maxHeight: size.height * 0.9,
+              ),
+              child: CommentDialog(
+                isOverlayMode: true,
+                existingComment: subtitle.comment,
+                originalText: originalText ?? subtitle.text,
+                editedText: editedText,
+                subtitleIndex: subtitle.index,
+                onCancelled: closeDialog,
+                onCommentSaved: (comment) async {
+                  if (!mounted) return;
+                  if (!subtitle.marked && widget.onSubtitleMarked != null) {
+                    await _awaitCallbackResult(
+                      widget.onSubtitleMarked!(subtitle.index, true),
+                    );
+                  }
+                  if (mounted && widget.onSubtitleCommentUpdated != null) {
+                    await _awaitCallbackResult(
+                      widget.onSubtitleCommentUpdated!(subtitle.index, comment),
+                    );
+                  }
+                  closeDialog();
+                },
+                onCommentDeleted: () async {
+                  if (!mounted) return;
+                  if (widget.onSubtitleCommentUpdated != null) {
+                    await _awaitCallbackResult(
+                      widget.onSubtitleCommentUpdated!(subtitle.index, null),
+                    );
+                  }
+                  closeDialog();
+                },
+              ),
+            ),
+          );
+        },
+      );
+    } catch (error, stackTrace) {
+      debugPrint('Fullscreen comments: transition failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    } finally {
+      // Back/cancel/save/delete and exceptions converge on the same cleanup.
+      // Dismissing the modal must finish before reattaching the fullscreen
+      // Video widget, especially on Android during orientation changes.
+      if (mounted && _isCustomFullscreen && overlayDetached) {
+        try {
+          await WidgetsBinding.instance.endOfFrame;
+          if (Platform.isAndroid || Platform.isIOS) {
+            await SystemChrome.setPreferredOrientations(
+              fullscreenOrientations,
+            );
+            await WidgetsBinding.instance.endOfFrame;
+          }
+          if (mounted && _isCustomFullscreen && _fullscreenOverlay == null) {
+            final overlay = OverlayEntry(
+              builder: (overlayContext) => _buildCustomFullscreenWidget(),
+            );
+            _fullscreenOverlay = overlay;
+            Overlay.of(context).insert(overlay);
+          }
+          await SystemChrome.setEnabledSystemUIMode(
+            SystemUiMode.immersiveSticky,
+          );
+          debugPrint('Fullscreen comments: fullscreen video restored');
+        } catch (error) {
+          debugPrint('Fullscreen comments: restore failed: $error');
+          // Even if the platform orientation call failed, restore the player
+          // overlay so the user is not left on a noninteractive editor.
+          if (mounted && _isCustomFullscreen && _fullscreenOverlay == null) {
+            final overlay = OverlayEntry(
+              builder: (overlayContext) => _buildCustomFullscreenWidget(),
+            );
+            _fullscreenOverlay = overlay;
+            Overlay.of(context).insert(overlay);
+          }
+        }
+      }
+      _fullscreenCommentActive = false;
+      if (mounted && wasPlaying && _isCustomFullscreen) {
+        unawaited(_player.play());
+      }
+    }
+  }
+
   /// Exit custom fullscreen mode
   void _exitCustomFullscreen() {
-    if (!_isCustomFullscreen || !mounted) return;
+    if (!_isCustomFullscreen || !mounted || _fullscreenCommentActive) return;
     
     // Remove overlay safely
     _fullscreenOverlay?.remove();
