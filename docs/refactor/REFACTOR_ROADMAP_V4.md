@@ -1,5 +1,16 @@
 # SubtitleStudio Refactor Roadmap v4
 
+> **UX additions — October 16, 2026:** Four requested design workstreams have been added to the active roadmap:
+> **visual checkpoint history**, **plain-language history terminology**,
+> **a unified SubtitleStudio-specific color/design system**, and
+> **a compact, productive mobile Edit Line layout**.
+> See the dedicated implementation specification:
+> [SubtitleStudio UX roadmap (October 16, 2026)](SUBTITLESTUDIO_UX_ROADMAP_2026-10-16.md).
+> These are **planned features, not yet implemented**. Keep Checkpoint 85
+> Android verification and native waveform qualification ahead of risky UI
+> rewrites. Older sections below document earlier audit snapshots; their
+> Checkpoint 43/45 statuses are historical, not the current branch baseline.
+
 > **October 15, 2026 — Checkpoint 84 R1 verified.**
 > [Verified code commit](https://github.com/anzilr/SubtitleStudio/commit/135caea87db1b64eebdca1bb798461701b0f265b)
 > · [Successful GitHub Actions](https://github.com/anzilr/SubtitleStudio/actions/runs/38760499546):
@@ -430,3 +441,47 @@ Five-platform gate:
 13. Platform builds remain separate.
 14. Compatibility shims require a deletion condition.
 15. New persistence code must have Isar integration coverage.
+
+
+## 10. UX additions and execution order — October 16, 2026
+
+**New workstreams added to the roadmap:**
+
+1. **Real graphical edit history** (P1 UX). Build a lane-based version map and
+   readable timeline using the existing immutable graph/references and guarded
+   checkout commands; support mobile first and large histories, with distinct
+   current/saved/pinned/alternate states, node details and accessible list mode.
+2. **Nontechnical history language** (P1 UX). Default to *Current version*,
+   *Version*, *Editing path*, *Pin version* and
+   *Continue editing from this version*. Explain alternate paths and retention
+   honestly in confirmations. Keep `HEAD`, branch reference names and
+   checkpoint IDs only in internal state, developer/advanced details and
+   project exports. Never label history references as backup files.
+3. **SubtitleStudio design system** (P1 UX, required foundation for later UX).
+   Adopt a distinct frame/cue identity and semantic light/dark palette,
+   typography, spacing, standardized action buttons, sheets, forms, cards,
+   navigation and status components. Migrate screens incrementally with
+   snapshot, contrast, accessibility, RTL and multilingual regression checks;
+   respect saved theme/custom-font preferences.
+4. **Compact Edit Line screen** (P1 UX, after design tokens). Pilot a portrait-
+   first layout: short header/save, optional collapsible video, accessible
+   paired timing controls, source text, flexible editable target, keyboard-
+   aware formatting strip and Prev/Play/Next navigation. Keep mark/comment,
+   dictionaries, sync, shortcuts, translation/edit mode, save protection and
+   full-screen player behavior.
+
+**Proposed order:** CP85 mobile stability verification → UX baseline audit
+→ shared visual tokens/components → history copy → history graph GUI →
+opt-in mobile Edit Line pilot → migrate remaining screens → performance/
+accessibility gate → future desktop workspace. Continue native waveform and
+encoding validation in their own workstreams; do not combine large visual
+changes with native media rework in the same commit.
+
+**Definition of done:** each stage has analyzer and focused widget/unit/
+integration tests, screen reader/text-scale/keyboard checks, real Android
+smoke tests and history/data-integrity invariants where relevant.
+Do not run all five platform builds on routine changes.
+
+Detailed specs, proposed palette, user label mapping, mobile wireframe,
+component reuse boundaries, acceptance criteria and rollout gates:
+[SubtitleStudio UX roadmap (2026-10-16)](SUBTITLESTUDIO_UX_ROADMAP_2026-10-16.md).
