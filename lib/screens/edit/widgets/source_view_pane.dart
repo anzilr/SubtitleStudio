@@ -38,30 +38,40 @@ class SourceViewPane extends StatelessWidget {
                 ),
               ),
             ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.code,
-                  color: colorScheme.primary,
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Source View - ${entries.length} Subtitles',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: colorScheme.secondary,
-                    fontWeight: FontWeight.bold,
+            child: LayoutBuilder(
+              builder: (context, constraints) => Row(
+                children: [
+                  Icon(
+                    Icons.code,
+                    color: colorScheme.primary,
+                    size: 20,
                   ),
-                ),
-                const Spacer(),
-                Text(
-                  'Direct text editing mode',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurface.withValues(alpha: 0.6),
-                    fontStyle: FontStyle.italic,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Source View - ${entries.length} Subtitles',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colorScheme.secondary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                  // On narrow screens, reserve space for the source title
+                  // instead of overflowing with a second explanatory label.
+                  if (constraints.maxWidth >= 500) ...[
+                    const SizedBox(width: 12),
+                    Text(
+                      'Direct text editing mode',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurface.withValues(alpha: 0.6),
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
           Expanded(
