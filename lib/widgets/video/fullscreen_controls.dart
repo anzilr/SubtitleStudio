@@ -684,20 +684,18 @@ class _FullscreenControlsWidgetState extends State<_FullscreenControlsWidget> {
     debugPrint('_showCommentDialog: Opening comment dialog for subtitle ${subtitle.index} - "${subtitle.text.substring(0, subtitle.text.length.clamp(0, 30))}..."');
     _showControls(); // Keep controls visible during dialog
     
-    // Use original context if available, otherwise use current context
-    final dialogContext = widget.originalContext ?? context;
-    
-    // Since we're in _FullscreenControlsWidget, we're already in fullscreen mode
-    // So we always need to use the fullscreen comment dialog with orientation handling
-    _showFullscreenCommentDialog(subtitle, dialogContext, 
-      originalText: originalText, editedText: editedText);
+    // The persistent video-player state owns the portrait transition.
+    _showFullscreenCommentDialog(
+      subtitle,
+      originalText: originalText,
+      editedText: editedText,
+    );
   }
 
   // Delegate to the persistent video-player State. This control is disposed
   // when the fullscreen overlay is temporarily detached for portrait editing.
   void _showFullscreenCommentDialog(
-    Subtitle subtitle,
-    BuildContext dialogContext, {
+    Subtitle subtitle, {
     String? originalText,
     String? editedText,
   }) {
