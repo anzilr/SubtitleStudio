@@ -701,11 +701,11 @@ class _FullscreenControlsWidgetState extends State<_FullscreenControlsWidget> {
   }) {
     final videoState = widget.videoPlayerState;
     if (videoState == null || !videoState.mounted) return;
-    unawaited(videoState.showFullscreenCommentDialog(
+    videoState.showFullscreenCommentDialog(
       subtitle,
       originalText: originalText,
       editedText: editedText,
-    ));
+    );
   }
 
   /// Build audio track control button that cycles through tracks
