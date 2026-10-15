@@ -153,9 +153,10 @@ class CommentDialogState extends State<CommentDialog> {
     try {
       // Call the callback to delete the comment
       if (widget.onCommentDeleted != null) {
-        widget.onCommentDeleted!();
+        await Future.sync(() => widget.onCommentDeleted!());
       }
-      
+      if (!mounted) return;
+
       // Only call Navigator.pop() if not in overlay mode
       if (!widget.isOverlayMode) {
         Navigator.of(context).pop();
