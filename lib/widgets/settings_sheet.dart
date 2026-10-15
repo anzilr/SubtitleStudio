@@ -136,13 +136,15 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
     return SafeArea(
       child: FractionallySizedBox(
         heightFactor: 0.95, // 95% of screen height
-        child: Container(
-          padding: const EdgeInsets.all(16.0),
-          decoration: BoxDecoration(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(16.0)),
-          ),
-          child: Column(
+        // Material must paint above the sheet background so nested
+        // ExpansionTile/ListTile ink effects are not obscured.
+        child: Material(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(16.0)),
+          clipBehavior: Clip.antiAlias,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
@@ -548,6 +550,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                 ),
               ),
             ],
+          ),
           ),
         ),
       ),
