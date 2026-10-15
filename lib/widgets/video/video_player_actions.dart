@@ -390,12 +390,15 @@ extension VideoPlayerActions on VideoPlayerWidgetState {
     String? originalText,
     String? editedText,
   }) {
-    if (_isCustomFullscreen && _fullscreenControlsKey.currentState != null) {
-      debugPrint('showFullscreenCommentDialog: Triggering fullscreen comment dialog for subtitle ${subtitle.index}');
-      _fullscreenControlsKey.currentState!.showCommentDialogForSubtitle(subtitle, 
-        originalText: originalText, editedText: editedText);
-    } else if (_isCustomFullscreen) {
-      debugPrint('showFullscreenCommentDialog: Warning - fullscreen controls state is null');
+    if (_isCustomFullscreen) {
+      // Public API is shared by the editor, line editor and fullscreen
+      // controls. The actual transition is owned by the persistent video
+      // player, not the controls (which are unmounted during rotation).
+      unawaited(_presentFullscreenCommentDialog(
+        subtitle,
+        originalText: originalText,
+        editedText: editedText,
+      ));
     } else {
       debugPrint('showFullscreenCommentDialog: Not in fullscreen mode, falling back to regular comment dialog');
       showCommentDialog(subtitle, _originalContext ?? context);
