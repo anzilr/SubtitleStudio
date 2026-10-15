@@ -43,57 +43,26 @@ class CommentDialog extends StatefulWidget {
     int? subtitleIndex,
     Function(String)? onTextEdited,
   }) async {
-    // Store current orientation preferences before changing to portrait
-    List<DeviceOrientation>? originalOrientations;
-    
-    // Check if we're in fullscreen video mode by checking screen orientation
-    final orientation = MediaQuery.of(context).orientation;
-    final isLandscape = orientation == Orientation.landscape;
-    
-    // If in landscape (likely fullscreen), store current orientations and switch to portrait
-    if (isLandscape) {
-      // Store the current preferred orientations (we'll assume they were all orientations)
-      originalOrientations = [
-        DeviceOrientation.portraitUp,
-        DeviceOrientation.portraitDown,
-        DeviceOrientation.landscapeLeft,
-        DeviceOrientation.landscapeRight,
-      ];
-      
-      // Force portrait orientation for better comment input experience
-      await SystemChrome.setPreferredOrientations([
-        DeviceOrientation.portraitUp,
-        DeviceOrientation.portraitDown,
-      ]);
-      
-      // Wait for the first frame rendered with the new orientation.
-      await WidgetsBinding.instance.endOfFrame;
-    }
-    
-    try {
-      await showModalBottomSheet<void>(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        useSafeArea: true,
-        enableDrag: true,
-        isDismissible: true,
-        builder: (context) => CommentDialog(
-          existingComment: existingComment,
-          onCommentSaved: onCommentSaved,
-          onCommentDeleted: onCommentDeleted,
-          originalText: originalText,
-          editedText: editedText,
-          subtitleIndex: subtitleIndex,
-          onTextEdited: onTextEdited,
-        ),
-      );
-    } finally {
-      // Restore original orientation when dialog is dismissed
-      if (originalOrientations != null) {
-        await SystemChrome.setPreferredOrientations(originalOrientations);
-      }
-    }
+    // Dialogs should not own device orientation. In particular, rotating the
+    // Android Activity while a video fullscreen OverlayEntry is mounted can
+    // corrupt the Navigator overlay and its GlobalKeys.
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      useSafeArea: true,
+      enableDrag: true,
+      isDismissible: true,
+      builder: (context) => CommentDialog(
+        existingComment: existingComment,
+        onCommentSaved: onCommentSaved,
+        onCommentDeleted: onCommentDeleted,
+        originalText: originalText,
+        editedText: editedText,
+        subtitleIndex: subtitleIndex,
+        onTextEdited: onTextEdited,
+      ),
+    );
   }
 }
 
