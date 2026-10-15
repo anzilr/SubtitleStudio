@@ -11,9 +11,13 @@ import 'package:subtitle_studio/utils/platform_file_handler.dart';
 import 'package:subtitle_studio/utils/saf_path_converter.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/utils/subtitle_parser.dart';
+import 'package:subtitle_studio/services/subtitle_text_codec.dart';
+import 'package:subtitle_studio/services/subtitle_extended_encoding_service.dart';
+import 'package:subtitle_studio/widgets/project_settings/project_encoding_selector.dart';
 import 'package:subtitle_studio/widgets/marked_lines_sheet.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';
+import 'dart:async';
 part 'project_settings/parts/project_settings_sections.dart';
 part 'project_settings/parts/project_settings_path_helpers.dart';
 part 'project_settings/parts/project_settings_media_actions.dart';
@@ -54,13 +58,31 @@ class _ProjectSettingsSheetState extends ConsumerState<ProjectSettingsSheet> wit
   Map<String, dynamic>? _sessionInfo;
   List<SubtitleLine> _markedLines = [];
 
-  final List<String> _availableEncodings = [
-    'UTF-8',
-    'UTF-16',
-    'ISO-8859-1',
-    'Windows-1252',
-    'ASCII',
-  ];
+  List<String> _availableEncodings = SubtitleTextCodec.supportedEncodings;
+  bool _encodingsLoading = true;
+  bool _encodingSaveInProgress = false;
+
+  Future<void> _loadAvailableEncodings() async {
+    try {
+      final choices = await SubtitleExtendedEncodingService.standard
+          .availableEncodings();
+      if (!mounted) return;
+      _setProjectSettingsState(() {
+        _availableEncodings = choices;
+        _encodingsLoading = false;
+      });
+    } catch (error) {
+      if (kDebugMode) {
+        debugPrint('Project Settings encoding capability probe failed: $error');
+      }
+      if (!mounted) return;
+      _setProjectSettingsState(() {
+        // Portable codecs work even when a native conversion plugin is absent.
+        _availableEncodings = SubtitleTextCodec.supportedEncodings;
+        _encodingsLoading = false;
+      });
+    }
+  }
 
   void _setProjectSettingsState(VoidCallback update) {
     if (!mounted) return;
@@ -73,8 +95,18 @@ class _ProjectSettingsSheetState extends ConsumerState<ProjectSettingsSheet> wit
     WidgetsBinding.instance.addObserver(this);
     _projectNameController = TextEditingController(text: widget.session.fileName);
     _srtFileNameController = TextEditingController(text: widget.subtitleCollection.fileName);
-    _selectedEncoding = widget.subtitleCollection.encoding;
+    // Preserve the saved charset while recognizing legacy names such as
+    // UTF-16 and CP1252. Opening settings must not rewrite project metadata.
+    final savedEncoding = widget.subtitleCollection.encoding;
+    try {
+      _selectedEncoding = SubtitleExtendedEncodingService.canonical(
+        savedEncoding.isEmpty ? 'UTF-8' : savedEncoding,
+      );
+    } on UnsupportedError {
+      _selectedEncoding = savedEncoding;
+    }
     _loadProjectData();
+    unawaited(_loadAvailableEncodings());
 
   }
 
