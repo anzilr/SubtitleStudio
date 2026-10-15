@@ -109,8 +109,9 @@ extension _EditShortcuts on _EditScreenState {
   }
 
   void _handlePopScreenShortcut() {
-    // Navigate back to the previous screen
-    Navigator.of(context).pop();
+    // Keyboard navigation must obey the same pending-edits/cleanup rules as
+    // Android system Back and the AppBar Back button.
+    unawaited(_requestEditorExit());
   }
 
   // Navigation shortcut handlers for next/previous subtitle
