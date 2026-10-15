@@ -51,6 +51,13 @@ extension VideoFullscreenActions on VideoPlayerWidgetState {
     Overlay.of(context).insert(_fullscreenOverlay!);
   }
   
+  // A platform orientation request can be a no-op (already portrait).
+  // Scheduling a frame prevents awaiting endOfFrame indefinitely in that case.
+  Future<void> _finishOverlayTransitionFrame() async {
+    WidgetsBinding.instance.scheduleFrame();
+    await WidgetsBinding.instance.endOfFrame;
+  }
+
   /// Portrait comment editing over fullscreen video.
   ///
   /// The custom fullscreen player is a manually inserted OverlayEntry. A
@@ -93,7 +100,7 @@ extension VideoFullscreenActions on VideoPlayerWidgetState {
       oldOverlay?.remove();
       oldOverlay?.dispose();
       overlayDetached = true;
-      await WidgetsBinding.instance.endOfFrame;
+      await _finishOverlayTransitionFrame();
       if (!mounted || !_isCustomFullscreen) return;
 
       await SystemChrome.setEnabledSystemUIMode(
@@ -104,7 +111,7 @@ extension VideoFullscreenActions on VideoPlayerWidgetState {
         await SystemChrome.setPreferredOrientations(
           const [DeviceOrientation.portraitUp],
         );
-        await WidgetsBinding.instance.endOfFrame;
+        await _finishOverlayTransitionFrame();
       }
       if (!mounted || !_isCustomFullscreen) return;
 
@@ -183,12 +190,12 @@ extension VideoFullscreenActions on VideoPlayerWidgetState {
       // Video widget, especially on Android during orientation changes.
       if (mounted && _isCustomFullscreen && overlayDetached) {
         try {
-          await WidgetsBinding.instance.endOfFrame;
+          await _finishOverlayTransitionFrame();
           if (Platform.isAndroid || Platform.isIOS) {
             await SystemChrome.setPreferredOrientations(
               fullscreenOrientations,
             );
-            await WidgetsBinding.instance.endOfFrame;
+            await _finishOverlayTransitionFrame();
           }
           if (mounted && _isCustomFullscreen && _fullscreenOverlay == null) {
             final overlay = OverlayEntry(
