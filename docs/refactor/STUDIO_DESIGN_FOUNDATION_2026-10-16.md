@@ -1,4 +1,4 @@
-# SubtitleStudio UX-1 — shared design foundation (implementation pending verification)
+# SubtitleStudio UX-1 — shared design foundation (CI verified; native UX pending)
 
 Date: 2026-10-16
 Branch: `refactor/riverpod-architecture`
@@ -16,7 +16,7 @@ Scope: low-risk opt-in design foundations; no redesign of Editor, Edit Line, wav
 
 - Light: canvas `#F6F8FC`, surfaces white, primary action `#5268D9` (white foreground), text `#17223B`, muted `#66728D`, editing accent `#14796F` (white foreground).
 - Dark/Classic pilot: canvas `#111A2C`, surface `#19243A`, primary action `#A9B6FF` (dark foreground), text `#EEF2FA`, muted `#B5C0D8`, editing accent `#62DBCA`.
-- Semantic amber caution roles, alternate history path colors, and Material error palette for actionable error text.
+- Semantic amber caution roles, alternate history path colors, and a high-contrast danger-text token for error text.
 - Palette is a **pilot**; user screenshot review can refine visual feel before large-scale adoption.
 
 ## Tests added
@@ -33,7 +33,7 @@ Previous `test/project_settings_encoding_selector_test.dart` remains relevant fo
 
 - No Isar schema changes, persistence code modifications, video player ownership changes, history logic changes, new dependencies, desktop workspace or release/main branch modifications.
 - New tokens are registered across all themes but **do not** automatically recolor non-migrated legacy widgets; app-wide uniformity is an incremental roadmap goal.
-- No real Android or Windows widget-rendering evidence for this stage yet. The code was source-reviewed; a Flutter analyzer/test/device gate is required.
+- CI has verified Flutter analysis and all committed tests; real Android/Windows appearance and interaction remain unverified.
 - Do not trigger the five-platform build matrix for this change. Preserve deliberate analyzer/test CI cadence (every ~8–10 meaningful commits).
 
 ## Verify on local Flutter installation
@@ -56,3 +56,11 @@ On Android, open an SRT project, open Project Settings and inspect Character Enc
 3. UX-3: pure graph-lane geometry and history timeline/map renderer with lazy rows, accessibility and large-history tests.
 4. UX-4: compact portrait Edit Line pilot after tokens are validated; keep playback and data state owners unchanged.
 5. UX-5: migrate Home, Editor, tools, import/export and Source View to new components one screen at a time, with screenshot/golden tests.
+
+## Verified quality gate — October 16, 2026
+
+- [Successful GitHub Actions quality run 38809722745](https://github.com/anzilr/SubtitleStudio/actions/runs/38809722745).
+- Verified code commit: [`3cde3ea`](https://github.com/anzilr/SubtitleStudio/commit/3cde3ea44cc36e0f60a2b48b67bb7e2ea1d06def).
+- **Flutter analysis: passed. Full committed test suite: passed.**
+- Coverage includes the earlier CP85 Android compile/widget regression tests and the new UX-1 theme/pilot tests; a successful Linux CI job does **not** certify native Android or Windows UI.
+- No cross-platform native builds or automatic schema regeneration were triggered.
