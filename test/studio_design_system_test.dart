@@ -30,6 +30,8 @@ void main() {
           greaterThanOrEqualTo(4.5));
       expect(contrastRatio(colors.mutedText, colors.surface),
           greaterThanOrEqualTo(4.5));
+      expect(contrastRatio(colors.dangerText, colors.surface),
+          greaterThanOrEqualTo(4.5));
     }
   });
 
