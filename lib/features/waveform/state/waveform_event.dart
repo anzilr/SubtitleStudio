@@ -90,6 +90,17 @@ class ClearWaveform extends WaveformEvent {
   const ClearWaveform();
 }
 
+/// The player changed tracks, but stream metadata cannot be resolved.
+/// Clears any stale waveform and gives a visible, actionable error.
+class WaveformTrackSelectionFailed extends WaveformEvent {
+  final String message;
+  final String? filePath;
+  const WaveformTrackSelectionFailed(this.message, {this.filePath});
+
+  @override
+  List<Object?> get props => [message, filePath];
+}
+
 /// Update viewport width (when widget resizes)
 class UpdateViewportWidth extends WaveformEvent {
   final double width;

@@ -34,6 +34,8 @@ class WaveformReady extends WaveformState {
   final bool autoScroll;
   final double viewportWidth; // in pixels
   final String? sourceFilePath;
+  /// Identity used for this specific PCM/peak extraction.
+  final String? audioTrackId;
   final double verticalZoom; // 1.0 = 100%, 2.0 = 200% amplitude
   final int? subtitleCollectionId; // For saving zoom preferences
   
@@ -62,6 +64,7 @@ class WaveformReady extends WaveformState {
     this.autoScroll = true,
     this.viewportWidth = 800.0,
     this.sourceFilePath,
+    this.audioTrackId,
     this.verticalZoom = 1.7, // Default 170% for better visibility
     this.subtitleCollectionId,
     this.isEditMode = false,
@@ -129,6 +132,7 @@ class WaveformReady extends WaveformState {
     bool? autoScroll,
     double? viewportWidth,
     String? sourceFilePath,
+    String? audioTrackId,
     double? verticalZoom,
     int? subtitleCollectionId,
     bool? isEditMode,
@@ -154,6 +158,7 @@ class WaveformReady extends WaveformState {
       autoScroll: autoScroll ?? this.autoScroll,
       viewportWidth: viewportWidth ?? this.viewportWidth,
       sourceFilePath: sourceFilePath ?? this.sourceFilePath,
+      audioTrackId: audioTrackId ?? this.audioTrackId,
       verticalZoom: verticalZoom ?? this.verticalZoom,
       subtitleCollectionId: subtitleCollectionId ?? this.subtitleCollectionId,
       isEditMode: isEditMode ?? this.isEditMode,
@@ -177,6 +182,7 @@ class WaveformReady extends WaveformState {
         autoScroll,
         viewportWidth,
         sourceFilePath,
+        audioTrackId,
         verticalZoom,
         subtitleCollectionId,
         isEditMode,

@@ -105,6 +105,10 @@ class WaveformController extends Notifier<WaveformState> {
       _onClearWaveform(event);
       return;
     }
+    if (event is WaveformTrackSelectionFailed) {
+      _onTrackSelectionFailed(event);
+      return;
+    }
     if (event is UpdateViewportWidth) {
       _onUpdateViewportWidth(event);
       return;
@@ -225,6 +229,7 @@ class WaveformController extends Notifier<WaveformState> {
         autoScroll: true,
         viewportWidth: 800.0,
         sourceFilePath: event.filePath,
+        audioTrackId: audioTrackId,
         verticalZoom: defaultVerticalZoom,
         subtitleCollectionId: event.subtitleCollectionId,
       ));
@@ -396,6 +401,12 @@ class WaveformController extends Notifier<WaveformState> {
   }
 
   /// Clear waveform
+  void _onTrackSelectionFailed(WaveformTrackSelectionFailed event) {
+    _loadEpoch++;
+    _audioProcessor.cancelActive();
+    _setState(WaveformError(event.message, filePath: event.filePath));
+  }
+
   void _onClearWaveform(ClearWaveform event) {
     _loadEpoch++; // A cleared screen must not be repopulated by an old load.
     _audioProcessor.cancelActive();
