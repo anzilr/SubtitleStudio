@@ -47,6 +47,10 @@ extension _EditMediaActions on _EditScreenState {
 
     if (filePath != null) {
       _waveformTrackReload.cancel();
+      if (_EditScreenState._experimentalWaveformTrackSync) {
+        await ref.read(waveformControllerProvider.notifier)
+            .dispatch(const ClearWaveform());
+      }
       // Clear waveform cache and reset waveform state when loading new video
       await _controller.clearWaveformCache();
       ref.read(waveformControllerProvider.notifier).dispatch(const ClearWaveform());

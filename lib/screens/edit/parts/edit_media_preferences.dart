@@ -111,6 +111,10 @@ extension _EditMediaPreferences on _EditScreenState {
         await _reloadWaveformForSelectedTrack();
       } else {
         _waveformTrackReload.cancel();
+        // Hidden waveforms must not finish a previous decode in the
+        // background, especially if the player switches audio tracks.
+        await ref.read(waveformControllerProvider.notifier)
+            .dispatch(const ClearWaveform());
       }
       return;
     }
