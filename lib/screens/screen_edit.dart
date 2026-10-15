@@ -185,6 +185,7 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
     
     // Initialize stable callbacks once to prevent rebuild cascades
     _onActiveSubtitleChangedStable = (arrayIndex) {
+      if (!mounted) return;
       if (arrayIndex >= 0 && arrayIndex < subtitleLines.length) {
         _onSubtitleChange(arrayIndex);
       }
@@ -207,12 +208,15 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
     };
     
     _onSubtitleMarkedStable = (subtitleIndex, isMarked) async {
+      if (!mounted) return;
       await _handleVideoPlayerMarkToggle(subtitleIndex, isMarked);
     };
     
     _onSubtitleCommentUpdatedStable = (subtitleIndex, comment) async {
+      if (!mounted) return;
       try {
         final success = await _controller.updateComment(subtitleIndex, comment);
+        if (!mounted) return;
         if (!success) throw StateError('Comment update failed');
         if (subtitleIndex < subtitleLines.length) {
           _setEditorState(() {});
@@ -291,6 +295,10 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
   /// Creates initial checkpoint snapshot for accurate restoration
   @override
   void dispose() {
+    if (kDebugMode) {
+      debugPrint('EditScreen lifecycle: disposing session ${widget.sessionId}');
+    }
+    _itemPositionsListener.itemPositions.removeListener(_updateScrollbarPosition);
     _waveformTrackReload.dispose();
     _resizeRatioSaveTimer?.cancel(); // Cancel resize ratio save timer
     _mobileResizeRatioSaveTimer?.cancel(); // Cancel mobile resize ratio save timer
@@ -310,6 +318,7 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
     super.didChangeDependencies();
     // Ensure video player subtitles are updated when screen comes back into focus
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       if (_isVideoLoaded && _subtitles.isNotEmpty) {
         _updateVideoPlayerSubtitles();
       }
@@ -598,6 +607,11 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
     return PopScope(
         canPop: !_isSelectionMode && !_isRangeSelectionActive && !_sourceViewDirty,
         onPopInvokedWithResult: (bool didPop, Object? result) async {
+        if (kDebugMode) {
+          debugPrint('EditScreen lifecycle: pop didPop=$didPop, session=${widget.sessionId}, selection=$_isSelectionMode, range=$_isRangeSelectionActive, sourceDirty=$_sourceViewDirty');
+        }
+        // Once the route has popped, its child state must not be accessed.
+        if (!mounted || didPop) return;
         // Pause video when going back
         if (_videoPlayerKey.currentState != null &&
             _videoPlayerKey.currentState!.isInitialized()) {
