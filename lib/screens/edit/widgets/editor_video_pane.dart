@@ -26,6 +26,7 @@ class EditorVideoPane extends StatelessWidget {
   final int? highlightedSubtitleIndex;
   final ValueChanged<Duration>? onPositionChanged;
   final ValueChanged<int>? onActiveSubtitleChanged;
+  final ValueChanged<String>? onAudioTrackChanged;
   final VoidCallback? onSubtitlesUpdated;
   final VoidCallback? onFullscreenExited;
   final void Function(int, bool)? onSubtitleMarked;
@@ -54,6 +55,7 @@ class EditorVideoPane extends StatelessWidget {
     required this.highlightedSubtitleIndex,
     required this.onPositionChanged,
     required this.onActiveSubtitleChanged,
+    this.onAudioTrackChanged,
     required this.onSubtitlesUpdated,
     required this.onFullscreenExited,
     required this.onSubtitleMarked,
@@ -85,6 +87,7 @@ class EditorVideoPane extends StatelessWidget {
                     subtitleVersion: subtitleVersion,
                     onPositionChanged: onPositionChanged,
                     onActiveSubtitleChanged: onActiveSubtitleChanged,
+                    onAudioTrackChanged: onAudioTrackChanged,
                     onSubtitlesUpdated: onSubtitlesUpdated,
                     onFullscreenExited: onFullscreenExited,
                     onSubtitleMarked: onSubtitleMarked,
@@ -122,6 +125,7 @@ class EditorVideoPane extends StatelessWidget {
                 subtitleVersion: subtitleVersion,
                 onPositionChanged: onPositionChanged,
                 onActiveSubtitleChanged: onActiveSubtitleChanged,
+                onAudioTrackChanged: onAudioTrackChanged,
                 onSubtitlesUpdated: onSubtitlesUpdated,
                 onFullscreenExited: onFullscreenExited,
                 onSubtitleMarked: onSubtitleMarked,

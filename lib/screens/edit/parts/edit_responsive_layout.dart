@@ -94,6 +94,7 @@ extension _EditResponsiveLayout on _EditScreenState {
                           subtitles: _subtitles,
                           secondarySubtitles: _secondarySubtitles,
                           onPositionChanged: _onVideoPositionChanged,
+                          onAudioTrackChanged: _onWaveformAudioTrackChanged,
                           // onActiveSubtitleChanged: null, // Temporarily disable to test if this is causing interference
                           onActiveSubtitleChanged: (arrayIndex) {
                             debugPrint('onActiveSubtitleChanged called with arrayIndex: $arrayIndex, current _highlightedIndex: $_highlightedIndex');
@@ -252,6 +253,7 @@ extension _EditResponsiveLayout on _EditScreenState {
                   subtitles: _subtitles,
                   secondarySubtitles: _secondarySubtitles,
                   onPositionChanged: _onVideoPositionChanged,
+                  onAudioTrackChanged: _onWaveformAudioTrackChanged,
                   onActiveSubtitleChanged: (arrayIndex) {
                     if (arrayIndex >= 0 && arrayIndex < subtitleLines.length) {
                       _onSubtitleChange(arrayIndex);
@@ -369,6 +371,7 @@ extension _EditResponsiveLayout on _EditScreenState {
                         subtitles: _subtitles,
                         secondarySubtitles: _secondarySubtitles,
                         onPositionChanged: _onVideoPositionChanged,
+                        onAudioTrackChanged: _onWaveformAudioTrackChanged,
                         onActiveSubtitleChanged: (arrayIndex) {
                           if (arrayIndex >= 0 && arrayIndex < subtitleLines.length) {
                             _onSubtitleChange(arrayIndex);
@@ -539,6 +542,7 @@ extension _EditResponsiveLayout on _EditScreenState {
                     subtitles: _subtitles,
                     secondarySubtitles: _secondarySubtitles,
                     onPositionChanged: _onVideoPositionChanged,
+                    onAudioTrackChanged: _onWaveformAudioTrackChanged,
                     onActiveSubtitleChanged: (arrayIndex) {
                       if (arrayIndex >= 0 && arrayIndex < subtitleLines.length) {
                         _onSubtitleChange(arrayIndex);

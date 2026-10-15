@@ -20,6 +20,7 @@ class VideoPlayerSection extends StatefulWidget {
   final int subtitleVersion; // Version number to track subtitle updates
   final Function(Duration)? onPositionChanged;
   final Function(int)? onActiveSubtitleChanged;
+  final ValueChanged<String>? onAudioTrackChanged;
   final Function()? onSubtitlesUpdated;
   final Function()? onFullscreenExited;
   final Function(int, bool)? onSubtitleMarked;
@@ -35,6 +36,7 @@ class VideoPlayerSection extends StatefulWidget {
     required this.subtitleVersion,
     this.onPositionChanged,
     this.onActiveSubtitleChanged,
+    this.onAudioTrackChanged,
     this.onSubtitlesUpdated,
     this.onFullscreenExited,
     this.onSubtitleMarked,
@@ -78,6 +80,7 @@ class _VideoPlayerSectionState extends State<VideoPlayerSection>
           secondarySubtitles: widget.secondarySubtitles,
           onPositionChanged: widget.onPositionChanged,
           onActiveSubtitleChanged: widget.onActiveSubtitleChanged,
+          onAudioTrackChanged: widget.onAudioTrackChanged,
           onSubtitlesUpdated: widget.onSubtitlesUpdated,
           onFullscreenExited: widget.onFullscreenExited,
           onSubtitleMarked: widget.onSubtitleMarked,

@@ -153,6 +153,8 @@ class VideoPlayerWidget extends ConsumerStatefulWidget {
   /// Callback fired when video play/pause state changes
   /// Parameters: (isPlaying)
   final Function(bool)? onPlayStateChanged;
+  /// Selected libmpv audio track ID, not FFmpeg audio ordinal.
+  final ValueChanged<String>? onAudioTrackChanged;
 
   /// Callback fired when repeat mode is toggled
   /// Parameters: (isRepeatEnabled)
@@ -176,7 +178,8 @@ class VideoPlayerWidget extends ConsumerStatefulWidget {
     this.onSubtitleMarked,                        // Mark callback (optional)
     this.onSubtitleCommentUpdated,                // Comment callback (optional)
     this.onActiveSubtitleChanged,                 // Active subtitle callback (optional)
-    this.onPlayStateChanged,                      // Play state callback (optional)
+    this.onPlayStateChanged,
+    this.onAudioTrackChanged,                      // Play state callback (optional)
     this.onRepeatModeToggled,                     // Repeat mode callback (optional)
     this.isRepeatModeEnabled = false,             // Repeat mode state (optional)
     this.onFullscreenExited,                      // Fullscreen exit callback (optional)

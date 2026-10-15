@@ -95,6 +95,7 @@ extension _EditInterfaceBuilders on _EditScreenState {
       highlightedSubtitleIndex: _highlightedIndex,
       onPositionChanged: _onVideoPositionChanged,
       onActiveSubtitleChanged: _onActiveSubtitleChangedStable,
+      onAudioTrackChanged: _onWaveformAudioTrackChanged,
       onSubtitlesUpdated: _onSubtitlesUpdatedStable,
       onFullscreenExited: _onFullscreenExitedStable,
       onSubtitleMarked: _onSubtitleMarkedStable,

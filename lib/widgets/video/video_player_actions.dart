@@ -201,6 +201,9 @@ extension VideoPlayerActions on VideoPlayerWidgetState {
           _currentAudioTrack = track.audio;
           _currentSubtitleTrack = track.subtitle;
         });
+        if (track.audio.id != previousAudioTrack?.id) {
+          widget.onAudioTrackChanged?.call(track.audio.id);
+        }
         
         // Save audio track selection when it changes (user selection)
         // Skip saving during initialization to preserve saved preferences
