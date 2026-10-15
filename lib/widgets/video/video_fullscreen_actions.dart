@@ -4,6 +4,9 @@ extension VideoFullscreenActions on VideoPlayerWidgetState {
   void _enterCustomFullscreen() {
     if (_isCustomFullscreen) return;
     
+    // Capture the editor's orientation before fullscreen locks it.
+    _wasPortraitBeforeFullscreen =
+        MediaQuery.orientationOf(context) == Orientation.portrait;
     // Store original context for dialogs
     _originalContext = context;
     
@@ -59,16 +62,8 @@ extension VideoFullscreenActions on VideoPlayerWidgetState {
     // Clear original context
     _originalContext = null;
     
-    // Restore system UI
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: SystemUiOverlay.values);
-    
-    // Reset orientation to allow all orientations
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
+    // Restore the system UI and the editor's pre-fullscreen orientation.
+    _restoreSystemUiAfterFullscreen();
     
     // Update state only if widget is still mounted
     if (mounted) {
