@@ -286,6 +286,9 @@ class VideoPlayerWidgetState extends ConsumerState<VideoPlayerWidget> with Autom
   
   // Custom fullscreen management
   bool _isCustomFullscreen = false;
+  // Remember the editor's orientation so exiting widescreen playback cannot
+  // strand a portrait editing session in landscape.
+  bool _wasPortraitBeforeFullscreen = true;
   OverlayEntry? _fullscreenOverlay;
   BuildContext? _originalContext; // Store original context for dialogs
   final GlobalKey<_FullscreenControlsWidgetState> _fullscreenControlsKey = GlobalKey();
@@ -375,18 +378,31 @@ class VideoPlayerWidgetState extends ConsumerState<VideoPlayerWidget> with Autom
       _fullscreenOverlay = null;
       _isCustomFullscreen = false;
       
-      // Restore system UI
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: SystemUiOverlay.values);
-      SystemChrome.setPreferredOrientations([
-        DeviceOrientation.portraitUp,
-        DeviceOrientation.portraitDown,
-        DeviceOrientation.landscapeLeft,
-        DeviceOrientation.landscapeRight,
-      ]);
+      // Restore the orientation captured before entering fullscreen even if
+      // the editor route is disposed while fullscreen is still visible.
+      _restoreSystemUiAfterFullscreen();
     }
     
     _player.dispose();
     super.dispose();
+  }
+
+  /// Shared restoration for normal fullscreen exit and widget disposal.
+  void _restoreSystemUiAfterFullscreen() {
+    SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.manual,
+      overlays: SystemUiOverlay.values,
+    );
+    if ((Platform.isAndroid || Platform.isIOS) &&
+        _wasPortraitBeforeFullscreen) {
+      unawaited(SystemChrome.setPreferredOrientations(
+        [DeviceOrientation.portraitUp],
+      ));
+    } else {
+      unawaited(SystemChrome.setPreferredOrientations(
+        DeviceOrientation.values,
+      ));
+    }
   }
 
   // Custom fullscreen management methods
