@@ -124,6 +124,9 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
   final FocusNode _focusNode = FocusNode();
   final UndoHistoryController _undoHistoryController = UndoHistoryController();
   final List<Color> _colorHistory = []; // Maintain color history
+  // Cache persistence while the ConsumerState is mounted. Riverpod ref cannot
+  // be read during State.dispose(), even by an asynchronously called helper.
+  late final EditLineRepository _colorHistoryRepository;
   SubtitleLine? _subtitleLine; // To hold the fetched subtitle line
   SubtitleCollection? _subtitle; // To hold the fetched subtitle collection
   bool isEditingEnabled = false;
@@ -250,6 +253,7 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
   @override
   void initState() {
     super.initState();
+    _colorHistoryRepository = ref.read(editLineRepositoryProvider);
     _originalController = TextEditingController();
     _editedController = TextEditingController();
     _startTimeController = TextEditingController();
