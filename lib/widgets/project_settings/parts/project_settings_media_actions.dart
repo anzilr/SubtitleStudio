@@ -354,6 +354,16 @@ extension _ProjectSettingsMediaActions on _ProjectSettingsSheetState {
   }
 
   Future<void> _updateEncoding(String encoding) async {
+    // Persist first; do not falsely show a new selection if the database
+    // rejects the update. Never save an unverified native codec label.
+    if (_encodingSaveInProgress ||
+        _encodingsLoading ||
+        !_availableEncodings.contains(encoding) ||
+        encoding == _selectedEncoding) {
+      return;
+    }
+
+    _setProjectSettingsState(() => _encodingSaveInProgress = true);
     try {
       final updated = await ref
           .read(subtitleRepositoryProvider)
@@ -365,23 +375,29 @@ extension _ProjectSettingsMediaActions on _ProjectSettingsSheetState {
       if (!updated) {
         throw StateError('Encoding metadata could not be saved.');
       }
+
       widget.subtitleCollection.encoding = encoding;
       if (!mounted) return;
-
+      _setProjectSettingsState(() => _selectedEncoding = encoding);
       SnackbarHelper.showSnackBar(
         context,
         'Encoding updated to $encoding',
         backgroundColor: Colors.green,
       );
-    } catch (e) {
+    } catch (error) {
       if (kDebugMode) {
-        debugPrint('Project Settings failed to update encoding: $e');
+        debugPrint('Project Settings failed to update encoding: $error');
       }
+      if (!mounted) return;
       SnackbarHelper.showSnackBar(
         context,
         'Could not update the text encoding. Please try again.',
         backgroundColor: Colors.red,
       );
+    } finally {
+      if (mounted) {
+        _setProjectSettingsState(() => _encodingSaveInProgress = false);
+      }
     }
   }
 
