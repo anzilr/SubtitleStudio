@@ -66,7 +66,7 @@ extension VideoFullscreenActions on VideoPlayerWidgetState {
   /// detach that entry, finish its disposal frame, then present a modal-route
   /// overlay in portrait. On every exit path, restore video orientation and
   /// reinsert the fullscreen player above the editor.
-  Future<void> showFullscreenCommentDialog(
+  Future<void> _presentFullscreenCommentDialog(
     Subtitle subtitle, {
     String? originalText,
     String? editedText,
