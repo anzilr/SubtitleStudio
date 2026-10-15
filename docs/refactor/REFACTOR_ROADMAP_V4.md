@@ -1,5 +1,15 @@
 # SubtitleStudio Refactor Roadmap v4
 
+> **UX-1 foundation verified — October 16, 2026:** Studio semantic
+> light/dark/Classic tokens, shared Material components and the first
+> Project Settings encoding-selector visual pilot are committed.
+> [GitHub quality gate 38809722745](https://github.com/anzilr/SubtitleStudio/actions/runs/38809722745)
+> passed Flutter analysis and all committed tests. **Real Android/Windows
+> visual review is still pending.** See
+> [UX-1 implementation report](STUDIO_DESIGN_FOUNDATION_2026-10-16.md).
+> The next scheduled UX work is user-friendly history terminology, followed
+> by the graphical version map; keep native waveform qualification separate.
+
 > **UX additions — October 16, 2026:** Four requested design workstreams have been added to the active roadmap:
 > **visual checkpoint history**, **plain-language history terminology**,
 > **a unified SubtitleStudio-specific color/design system**, and
