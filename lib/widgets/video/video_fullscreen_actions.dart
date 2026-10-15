@@ -219,6 +219,11 @@ extension VideoFullscreenActions on VideoPlayerWidgetState {
             _fullscreenOverlay = overlay;
             Overlay.of(context).insert(overlay);
           }
+          if (mounted && _isCustomFullscreen) {
+            unawaited(SystemChrome.setEnabledSystemUIMode(
+              SystemUiMode.immersiveSticky,
+            ));
+          }
         }
       }
       _fullscreenCommentActive = false;
