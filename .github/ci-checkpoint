@@ -1,8 +1,7 @@
-SubtitleStudio Checkpoint 84 R1 | 2026-10-15
-flutter analyze; flutter test -j 1. Experimental
-MS_ONE_WAVEFORM_TRACK_SYNC=true only. Route player track changes
-through editor, resolve ff-index, invalidate old waveform on selection,
-prevent stale loads and mapping errors, explicit Auto ID, retain
-track identity on WaveformReady, cancel pending work on hide/source
-switch/disposal. Existing UI and default eager path unaffected.
-Nine new tests. No native platform builds or schema changes.
+SubtitleStudio CP85 Android fixes + UX-1 design foundation | 2026-10-16
+Gate: flutter analyze --no-fatal-infos --no-fatal-warnings;
+flutter test -j 1. Includes fullscreen comment route fixes,
+Help expansion Material safety, searchable project encoding registry,
+Edit Line dispose-time Riverpod safety, Studio semantic ThemeExtension,
+shared Studio components, and first Project Settings visual pilot.
+No native builds, Isar schema changes, upstream merges, or release tags.
