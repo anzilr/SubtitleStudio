@@ -593,6 +593,7 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
     }
 
     _isLeavingEditor = true;
+    var popIssued = false;
     try {
       if (!await _resolveSourceChangesBeforeLeaving() || !mounted) return;
 
@@ -608,8 +609,11 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
         debugPrint('EditScreen lifecycle: requesting Navigator.pop for session ${widget.sessionId}');
       }
       Navigator.of(context).pop(true);
+      popIssued = true;
     } finally {
-      _isLeavingEditor = false;
+      // Keep the guard set until dispose once a route pop was requested.
+      // Otherwise a rapid second Back gesture could pop the Home route.
+      if (!popIssued) _isLeavingEditor = false;
     }
   }
 
