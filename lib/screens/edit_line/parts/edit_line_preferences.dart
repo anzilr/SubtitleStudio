@@ -44,7 +44,9 @@ extension _EditLinePreferences on EditSubtitleScreenState {
   }
 
   Future<void> _saveColorHistory() async {
-    await _editLineController.saveColorHistory(
+    // May be invoked by State.dispose(): never access ref via the
+    // _editLineController getter while the ConsumerState is deactivating.
+    await _colorHistoryRepository.saveColorHistory(
       List<Color>.unmodifiable(_colorHistory),
     );
   }
