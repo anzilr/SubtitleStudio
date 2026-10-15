@@ -1,7 +1,8 @@
-SubtitleStudio Checkpoint 83 R1 | 2026-10-14
-CI flutter analyze and flutter test -j 1 only.
-Implement explicit MPV track-list ff-index resolver and global
-FFmpeg -map 0:N selector, expose via native Media Kit video widget;
-guard missing/duplicate metadata, preserve numeric compatibility;
-test interleaved tracks and optional FFmpeg-generated PTS gap fixture.
-No native platform build, Isar schema changes or upstream edits.
+SubtitleStudio Checkpoint 84 R1 | 2026-10-15
+flutter analyze; flutter test -j 1. Experimental
+MS_ONE_WAVEFORM_TRACK_SYNC=true only. Route player track changes
+through editor, resolve ff-index, invalidate old waveform on selection,
+prevent stale loads and mapping errors, explicit Auto ID, retain
+track identity on WaveformReady, cancel pending work on hide/source
+switch/disposal. Existing UI and default eager path unaffected.
+Nine new tests. No native platform builds or schema changes.
