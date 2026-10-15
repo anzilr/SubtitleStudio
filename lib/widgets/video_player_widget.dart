@@ -286,6 +286,9 @@ class VideoPlayerWidgetState extends ConsumerState<VideoPlayerWidget> with Autom
   
   // Custom fullscreen management
   bool _isCustomFullscreen = false;
+  // A fullscreen comment is managed by this parent state because the controls
+  // OverlayEntry must be detached during the portrait rotation.
+  bool _fullscreenCommentActive = false;
   // Remember the editor's orientation so exiting widescreen playback cannot
   // strand a portrait editing session in landscape.
   bool _wasPortraitBeforeFullscreen = true;
