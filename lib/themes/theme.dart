@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'studio_design_tokens.dart';
 
 class AppThemes {
   // Base Typography
@@ -60,6 +61,11 @@ class AppThemes {
 
   // Light Theme
   static final ThemeData lightTheme = ThemeData(
+    // Opt-in Studio widgets can adopt the new visual language without
+    // changing old screens or saved theme preferences in this checkpoint.
+    extensions: const <ThemeExtension<dynamic>>[
+      StudioDesignTokens.light,
+    ],
     primaryColor: const Color(0xFF355070),
     scaffoldBackgroundColor: Colors.white,
     textSelectionTheme: TextSelectionThemeData(
@@ -99,6 +105,11 @@ class AppThemes {
 
   // Dark Theme
   static final ThemeData darkTheme = ThemeData(
+    // Opt-in Studio widgets can adopt the new visual language without
+    // changing old screens or saved theme preferences in this checkpoint.
+    extensions: const <ThemeExtension<dynamic>>[
+      StudioDesignTokens.dark,
+    ],
     primaryColor: const Color(0xFF264653),
     scaffoldBackgroundColor: const Color(0xFF1E1E1E),
     textSelectionTheme: TextSelectionThemeData(
@@ -139,6 +150,11 @@ class AppThemes {
 
   // Classic Theme
   static final ThemeData classicTheme = ThemeData(
+    // Opt-in Studio widgets can adopt the new visual language without
+    // changing old screens or saved theme preferences in this checkpoint.
+    extensions: const <ThemeExtension<dynamic>>[
+      StudioDesignTokens.classic,
+    ],
     primaryColor: const Color(0xFF355070),
     scaffoldBackgroundColor: Colors.black,
     textSelectionTheme: TextSelectionThemeData(
