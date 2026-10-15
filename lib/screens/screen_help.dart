@@ -438,16 +438,20 @@ class _HelpScreenState extends State<HelpScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildSectionCard(HelpSection section, Color categoryColor) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      // ExpansionTile uses a ListTile whose ink must paint on a Material
+      // ancestor unobscured by background-colored DecoratedBoxes.
+      child: Material(
         color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(
+            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+          ),
         ),
-      ),
-      child: ExpansionTile(
+        clipBehavior: Clip.antiAlias,
+        child: ExpansionTile(
         tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         title: Text(
           section.title,
@@ -519,6 +523,7 @@ class _HelpScreenState extends State<HelpScreen> with TickerProviderStateMixin {
             ),
           ),
         ],
+        ),
       ),
     );
   }
