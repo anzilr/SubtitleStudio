@@ -121,9 +121,7 @@ class StudioStatusMessage extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = StudioDesignTokens.of(context);
     final warning = tone == StudioStatusTone.caution;
-    final color = warning
-        ? Theme.of(context).colorScheme.error
-        : tokens.mutedText;
+    final color = warning ? tokens.dangerText : tokens.mutedText;
 
     return Semantics(
       liveRegion: warning,
