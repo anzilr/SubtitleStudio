@@ -717,11 +717,11 @@ class _FullscreenControlsWidgetState extends State<_FullscreenControlsWidget> {
 
     final player = widget.player;
     final wasPlaying = player.state.playing;
-    if (wasPlaying) {
-      await player.pause();
-    }
 
     try {
+      if (wasPlaying) {
+        await player.pause();
+      }
       if (!mounted || !dialogContext.mounted) return;
 
       await showDialog<void>(
