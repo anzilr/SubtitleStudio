@@ -900,11 +900,12 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
     final isMobile = screenWidth < 600;
 
     return SafeArea(
-      child: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
+      // Give PopupMenuButton, ActionChip and other interactive history
+      // controls a real Material ancestor inside the bottom sheet.
+      child: Material(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        clipBehavior: Clip.antiAlias,
         child: Column(
           children: [
             // Header
