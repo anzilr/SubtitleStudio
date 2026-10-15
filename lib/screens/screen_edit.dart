@@ -607,11 +607,12 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
     return PopScope(
         canPop: !_isSelectionMode && !_isRangeSelectionActive && !_sourceViewDirty,
         onPopInvokedWithResult: (bool didPop, Object? result) async {
+        if (!mounted) return;
         if (kDebugMode) {
           debugPrint('EditScreen lifecycle: pop didPop=$didPop, session=${widget.sessionId}, selection=$_isSelectionMode, range=$_isRangeSelectionActive, sourceDirty=$_sourceViewDirty');
         }
         // Once the route has popped, its child state must not be accessed.
-        if (!mounted || didPop) return;
+        if (didPop) return;
         // Pause video when going back
         if (_videoPlayerKey.currentState != null &&
             _videoPlayerKey.currentState!.isInitialized()) {
