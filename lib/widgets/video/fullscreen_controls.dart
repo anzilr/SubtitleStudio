@@ -66,7 +66,6 @@ class _FullscreenControlsWidget extends StatefulWidget {
 class _FullscreenControlsWidgetState extends State<_FullscreenControlsWidget> {
   bool _controlsVisible = true;
   Timer? _hideTimer;
-  bool _isCommentDialogOpen = false; // Track if comment dialog is currently visible
   
   // Cache active subtitle to avoid expensive searches every frame
   Subtitle? _cachedActiveSubtitle;
@@ -670,10 +669,8 @@ class _FullscreenControlsWidgetState extends State<_FullscreenControlsWidget> {
     String? originalText,
     String? editedText,
   }) {
-    // Don't open a new dialog if one is already visible
-    if (_isCommentDialogOpen) {
-      return;
-    }
+    // Reentrancy is guarded by the persistent parent video player.
+    if (widget.videoPlayerState?._fullscreenCommentActive ?? false) return;
     
     debugPrint('showCommentDialogForSubtitle: Triggering fullscreen comment dialog for subtitle ${subtitle.index}');
     _showCommentDialog(subtitle, originalText: originalText, editedText: editedText);
@@ -696,92 +693,21 @@ class _FullscreenControlsWidgetState extends State<_FullscreenControlsWidget> {
       originalText: originalText, editedText: editedText);
   }
 
-  // The fullscreen video already occupies the Navigator's Overlay. Do not
-  // force portrait while it is mounted or create another manually-managed
-  // OverlayEntry: on Android that can reparent the Navigator's overlay keys
-  // during a rotation and leave the app's widget tree unusable.
-  //
-  // A normal dialog route sits above the fullscreen overlay. It remains in
-  // the existing orientation and automatically handles system Back, tapping
-  // outside, and the soft keyboard.
-  Future<void> _showFullscreenCommentDialog(
+  // Delegate to the persistent video-player State. This control is disposed
+  // when the fullscreen overlay is temporarily detached for portrait editing.
+  void _showFullscreenCommentDialog(
     Subtitle subtitle,
     BuildContext dialogContext, {
     String? originalText,
     String? editedText,
-  }) async {
-    if (!mounted || _isCommentDialogOpen) return;
-
-    _hideTimer?.cancel();
-    setState(() => _isCommentDialogOpen = true);
-
-    final player = widget.player;
-    final wasPlaying = player.state.playing;
-
-    try {
-      if (wasPlaying) {
-        await player.pause();
-      }
-      if (!mounted || !dialogContext.mounted) return;
-
-      await showDialog<void>(
-        context: dialogContext,
-        useRootNavigator: true,
-        barrierDismissible: true,
-        builder: (modalContext) {
-          final viewport = MediaQuery.sizeOf(modalContext);
-          return Dialog(
-            insetPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 12,
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: 600,
-                maxHeight: viewport.height * 0.9,
-              ),
-              child: CommentDialog(
-                existingComment: subtitle.comment,
-                originalText: originalText ?? subtitle.text,
-                editedText: editedText,
-                subtitleIndex: subtitle.index,
-                onCommentSaved: (comment) async {
-                  if (!mounted) return;
-                  if (!subtitle.marked && widget.onSubtitleMarked != null) {
-                    await _awaitCallbackResult(
-                      widget.onSubtitleMarked!(subtitle.index, true),
-                    );
-                  }
-                  if (mounted && widget.onSubtitleCommentUpdated != null) {
-                    await _awaitCallbackResult(
-                      widget.onSubtitleCommentUpdated!(subtitle.index, comment),
-                    );
-                  }
-                },
-                onCommentDeleted: () async {
-                  if (mounted && widget.onSubtitleCommentUpdated != null) {
-                    await _awaitCallbackResult(
-                      widget.onSubtitleCommentUpdated!(subtitle.index, null),
-                    );
-                  }
-                },
-              ),
-            ),
-          );
-        },
-      );
-    } catch (error) {
-      debugPrint('Fullscreen comment dialog error: $error');
-    } finally {
-      if (mounted) {
-        setState(() => _isCommentDialogOpen = false);
-        _resetHideTimer();
-        if (wasPlaying) {
-          unawaited(player.play());
-        }
-      }
-    }
+  }) {
+    final videoState = widget.videoPlayerState;
+    if (videoState == null || !videoState.mounted) return;
+    unawaited(videoState.showFullscreenCommentDialog(
+      subtitle,
+      originalText: originalText,
+      editedText: editedText,
+    ));
   }
 
   /// Build audio track control button that cycles through tracks
