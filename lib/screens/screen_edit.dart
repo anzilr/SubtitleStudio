@@ -61,6 +61,7 @@ import 'package:subtitle_studio/features/waveform/state/waveform_event.dart';
 import 'package:subtitle_studio/features/waveform/state/waveform_state.dart';
 import 'package:subtitle_studio/features/waveform/providers/waveform_controller.dart';
 import 'package:subtitle_studio/features/waveform/widgets/waveform_widget.dart';
+import 'package:subtitle_studio/features/waveform/services/waveform_track_reload_coordinator.dart';
 
 part 'edit/parts/edit_dialog_actions.dart';
 part 'edit/parts/edit_responsive_layout.dart';
@@ -170,6 +171,10 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
   
   // Waveform support
   bool _isWaveformVisible = false; // Track if waveform is visible
+  static const bool _experimentalWaveformTrackSync = bool.fromEnvironment(
+    'MS_ONE_WAVEFORM_TRACK_SYNC', defaultValue: false);
+  final WaveformTrackReloadCoordinator _waveformTrackReload =
+      WaveformTrackReloadCoordinator();
   
   // Hotkey registration guard - prevent repeated registration in didChangeDependencies
   bool _hotkeysRegistered = false;
@@ -286,6 +291,7 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
   /// Creates initial checkpoint snapshot for accurate restoration
   @override
   void dispose() {
+    _waveformTrackReload.dispose();
     _resizeRatioSaveTimer?.cancel(); // Cancel resize ratio save timer
     _mobileResizeRatioSaveTimer?.cancel(); // Cancel mobile resize ratio save timer
     _subtitleChangeDebouncer?.cancel(); // Cancel subtitle change debouncer

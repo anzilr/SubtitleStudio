@@ -46,6 +46,7 @@ extension _EditMediaActions on _EditScreenState {
     final filePath = await FilePickerConvenience.pickVideoFile(context: context);
 
     if (filePath != null) {
+      _waveformTrackReload.cancel();
       // Clear waveform cache and reset waveform state when loading new video
       await _controller.clearWaveformCache();
       ref.read(waveformControllerProvider.notifier).dispatch(const ClearWaveform());
@@ -61,6 +62,11 @@ extension _EditMediaActions on _EditScreenState {
     }
   }
   Future<void> _unloadVideo() async {
+    _waveformTrackReload.cancel();
+    if (_EditScreenState._experimentalWaveformTrackSync) {
+      await ref.read(waveformControllerProvider.notifier)
+          .dispatch(const ClearWaveform());
+    }
     // Riverpod migration - delegate to the Riverpod controller
     await _controller.unloadVideo();
     

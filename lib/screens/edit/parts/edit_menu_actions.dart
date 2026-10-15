@@ -49,10 +49,14 @@ extension _EditMenuActions on _EditScreenState {
           _setEditorState(() {
             _isWaveformVisible = true;
           });
-          ref.read(waveformControllerProvider.notifier).dispatch(LoadAudioFile(
-            _selectedVideoPath!,
-            subtitleCollectionId: widget.subtitleCollectionId,
-          ));
+          if (_EditScreenState._experimentalWaveformTrackSync) {
+            await _reloadWaveformForSelectedTrack();
+          } else {
+            ref.read(waveformControllerProvider.notifier).dispatch(LoadAudioFile(
+              _selectedVideoPath!,
+              subtitleCollectionId: widget.subtitleCollectionId,
+            ));
+          }
         }
         break;
       case 'save':

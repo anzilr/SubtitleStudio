@@ -46,6 +46,51 @@ extension _EditMediaPreferences on _EditScreenState {
     _controller.updateFloatingControls(value);
   }
 
+  /// Called for every actual audio-track change from the Media Kit player.
+  /// Kept off by default until real Windows/Android multitrack qualification.
+  void _onWaveformAudioTrackChanged(String mpvTrackId) {
+    if (!_EditScreenState._experimentalWaveformTrackSync ||
+        !mounted || !_isVideoLoaded || !_isWaveformVisible ||
+        _selectedVideoPath == null) return;
+    unawaited(_reloadWaveformForSelectedTrack(expectedMpvId: mpvTrackId));
+  }
+
+  Future<void> _reloadWaveformForSelectedTrack({String? expectedMpvId}) async {
+    if (!mounted || !_isVideoLoaded || _selectedVideoPath == null) return;
+    final source = _selectedVideoPath!;
+    final processor = ref.read(waveformControllerProvider.notifier);
+    await _waveformTrackReload.reload(
+      invalidate: () {
+        // Clear synchronously, including any ongoing FFmpeg extraction.
+        unawaited(processor.dispatch(const ClearWaveform()));
+      },
+      isCurrentSource: () =>
+          mounted && _isWaveformVisible && _selectedVideoPath == source &&
+          (expectedMpvId == null ||
+           _videoPlayerKey.currentState?.getCurrentAudioTrack()?.id ==
+               expectedMpvId),
+      resolveStream: () async {
+        final player = _videoPlayerKey.currentState;
+        if (player == null) {
+          throw StateError('Video player is not ready for audio selection.');
+        }
+        return player.resolveWaveformSelectedAudioStream();
+      },
+      load: (selection) => processor.dispatch(LoadAudioFile(
+        source,
+        subtitleCollectionId: widget.subtitleCollectionId,
+        audioTrackId: selection,
+      )),
+      fail: (_) {
+        unawaited(processor.dispatch(WaveformTrackSelectionFailed(
+          'Unable to identify the selected audio track. '
+          'Try Auto or reopen the video.',
+          filePath: source,
+        )));
+      },
+    );
+  }
+
   /// Toggle waveform visibility
   void _toggleWaveform() async {
     if (!_isVideoLoaded || _selectedVideoPath == null) {
@@ -61,7 +106,16 @@ extension _EditMediaPreferences on _EditScreenState {
       });
     }
 
-    // Only load audio if showing waveform and it's not already loaded for this video
+    if (_EditScreenState._experimentalWaveformTrackSync) {
+      if (_isWaveformVisible && mounted) {
+        await _reloadWaveformForSelectedTrack();
+      } else {
+        _waveformTrackReload.cancel();
+      }
+      return;
+    }
+
+    // Preserve original loading in normal builds.
     if (_isWaveformVisible && mounted) {
       final currentState = ref.read(waveformControllerProvider);
       final isAlreadyLoaded = currentState is WaveformReady && 
