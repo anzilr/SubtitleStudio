@@ -696,239 +696,91 @@ class _FullscreenControlsWidgetState extends State<_FullscreenControlsWidget> {
       originalText: originalText, editedText: editedText);
   }
 
-  // Method to show comment dialog specifically for fullscreen mode using custom overlay
-  void _showFullscreenCommentDialog(Subtitle subtitle, BuildContext dialogContext, {
+  // The fullscreen video already occupies the Navigator's Overlay. Do not
+  // force portrait while it is mounted or create another manually-managed
+  // OverlayEntry: on Android that can reparent the Navigator's overlay keys
+  // during a rotation and leave the app's widget tree unusable.
+  //
+  // A normal dialog route sits above the fullscreen overlay. It remains in
+  // the existing orientation and automatically handles system Back, tapping
+  // outside, and the soft keyboard.
+  Future<void> _showFullscreenCommentDialog(
+    Subtitle subtitle,
+    BuildContext dialogContext, {
     String? originalText,
     String? editedText,
   }) async {
-    // Mark dialog as open
+    if (!mounted || _isCommentDialogOpen) return;
+
+    _hideTimer?.cancel();
     setState(() => _isCommentDialogOpen = true);
-    
-    // Store the current playing state before showing dialog
-    final wasPlaying = widget.player.state.playing;
-    debugPrint('Fullscreen comment dialog opening - video was ${wasPlaying ? 'playing' : 'paused'}');
-    debugPrint('Comment dialog subtitle data:');
-    debugPrint('  - originalText: ${originalText ?? 'null'}');
-    debugPrint('  - editedText: ${editedText ?? 'null'}');
-    debugPrint('  - subtitle.text: ${subtitle.text}');
-    
-    // Pause video if it was playing when comment dialog opens
+
+    final player = widget.player;
+    final wasPlaying = player.state.playing;
     if (wasPlaying) {
-      widget.player.pause();
-      debugPrint('Paused video for fullscreen comment input');
-    }
-    
-    // Store current orientation preferences before changing to portrait for better comment input
-    List<DeviceOrientation>? originalOrientations;
-    
-    // Check if we're in landscape (likely fullscreen)
-    final orientation = MediaQuery.of(dialogContext).orientation;
-    final isLandscape = orientation == Orientation.landscape;
-    
-    // If in landscape, store current orientations and switch to portrait
-    if (isLandscape) {
-      originalOrientations = [
-        DeviceOrientation.landscapeLeft,
-        DeviceOrientation.landscapeRight,
-      ];
-      
-      debugPrint('Switching to portrait for comment dialog');
-      // Force portrait orientation for better comment input experience
-      await SystemChrome.setPreferredOrientations([
-        DeviceOrientation.portraitUp,
-        DeviceOrientation.portraitDown,
-      ]);
-      
-      // Wait for the first frame rendered with the new orientation.
-      await WidgetsBinding.instance.endOfFrame;
+      await player.pause();
     }
 
-    // Create overlay entry for the bottom modal sheet to ensure it appears above fullscreen
-    OverlayEntry? dialogOverlay;
-    
-    // Helper function to safely remove overlay and restore orientation
-    Future<void> safeRemoveOverlay() async {
-      try {
-        dialogOverlay?.remove();
-        dialogOverlay = null;
-        debugPrint('Removed dialog overlay');
-      } catch (e) {
-        // Ignore removal errors (overlay might already be removed)
-        debugPrint('Error removing dialog overlay: $e');
-      }
-      
-      // Mark dialog as closed
-      if (mounted) {
-        setState(() => _isCommentDialogOpen = false);
-      }
-      
-      // Resume video if it was playing before dialog opened
-      if (wasPlaying) {
-        widget.player.play();
-        debugPrint('Resumed video after fullscreen comment dialog closed');
-      }
-      
-      // Restore original orientation when dialog is dismissed.
-      // Capture the nullable value before the async gap so Dart can keep a
-      // non-nullable local reference across the await.
-      final orientationsToRestore = originalOrientations;
-      if (orientationsToRestore != null) {
-        try {
-          // Let overlay removal render before restoring the prior orientation.
-          await WidgetsBinding.instance.endOfFrame;
-          await SystemChrome.setPreferredOrientations(orientationsToRestore);
-          debugPrint('Restored original orientation after comment dialog');
-        } catch (e) {
-          debugPrint('Error restoring orientation: $e');
-        }
-      }
-    }
-    
-    dialogOverlay = OverlayEntry(
-      builder: (overlayContext) => Focus(
-        autofocus: true,
-        onKeyEvent: (node, event) {
-          // Handle escape key to close the comment dialog
-          if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
-            debugPrint('Escape key pressed - dismissing fullscreen comment dialog');
-            unawaited(safeRemoveOverlay());
-            return KeyEventResult.handled;
-          }
-          return KeyEventResult.ignored;
-        },
-        child: Material(
-          color: Colors.transparent,
-          child: GestureDetector(
-            onTap: () {
-              // Dismiss dialog when tapping outside
-              debugPrint('Dismissing comment dialog via background tap');
-              unawaited(safeRemoveOverlay());
-            },
-            child: Container(
-              color: Colors.black54, // Semi-transparent background
-              child: GestureDetector(
-                onTap: () {}, // Prevent tap from propagating to parent
-                child: Align(
-                  alignment: Alignment.bottomCenter,
-                  child: AnimatedPadding(
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeOut,
-                    padding: EdgeInsets.only(
-                      bottom: MediaQuery.of(overlayContext).viewInsets.bottom + 20, // Add extra space above keyboard
-                      left: 16,
-                      right: 16,
-                      top: MediaQuery.of(overlayContext).padding.top + 50, // Add top padding to prevent dialog from going offscreen
-                    ),
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxWidth: 600, // Restore normal width constraint
-                        maxHeight: MediaQuery.of(overlayContext).size.height * 0.8, // Limit height to 80% of screen
-                      ),
-                      child: CommentDialog(
-                      existingComment: subtitle.comment,
-                      isOverlayMode: true, // Indicate this is used in overlay mode
-                      originalText: originalText ?? subtitle.text, // Use passed originalText or fallback to subtitle.text
-                      editedText: editedText, // Use passed editedText if available
-                      subtitleIndex: subtitle.index, // Pass subtitle index
-                      onCommentSaved: (comment) async {
-                        debugPrint('═══════════════════════════════════');
-                        debugPrint('FULLSCREEN COMMENT SAVE CALLBACK TRACE:');
-                        debugPrint('  ► Original subtitle passed to dialog:');
-                        debugPrint('    - subtitle.index: ${subtitle.index}');
-                        debugPrint('    - subtitle.text: "${subtitle.text.substring(0, subtitle.text.length.clamp(0, 50))}..."');
-                        debugPrint('    - subtitle.marked: ${subtitle.marked}');
-                        debugPrint('    - subtitle object hashCode: ${subtitle.hashCode}');
-                        debugPrint('  ► Comment being saved: "$comment"');
-                        debugPrint('  ► Callback status:');
-                        debugPrint('    - onSubtitleCommentUpdated exists: ${widget.onSubtitleCommentUpdated != null}');
-                        debugPrint('    - Widget mounted: $mounted');
-                        debugPrint('  ► About to call parent callback...');
-                        
-                        // If the subtitle is not marked, mark it first
-                        if (mounted && !subtitle.marked && widget.onSubtitleMarked != null) {
-                          try {
-                            debugPrint('  ► Marking subtitle before saving comment');
-                            await _awaitCallbackResult(
-                              widget.onSubtitleMarked!(subtitle.index, true),
-                            );
-                          } catch (e) {
-                            debugPrint('  ► ERROR marking subtitle: $e');
-                          }
-                        }
-                        
-                        // Update subtitle comment immediately 
-                        if (mounted && widget.onSubtitleCommentUpdated != null) {
-                          try {
-                            debugPrint('  ► CALLING PARENT CALLBACK:');
-                            debugPrint('    - Index parameter: ${subtitle.index}');
-                            debugPrint('    - Comment parameter: "$comment"');
-                            
-                            await _awaitCallbackResult(
-                              widget.onSubtitleCommentUpdated!(
-                                subtitle.index,
-                                comment,
-                              ),
-                            );
+    try {
+      if (!mounted || !dialogContext.mounted) return;
 
-                            debugPrint('  ► Parent callback completed successfully');
-                          } catch (e) {
-                            debugPrint('  ► ERROR in parent callback: $e');
-                          }
-                        } else {
-                          debugPrint('  ► CALLBACK NOT CALLED - mounted=$mounted, callback exists=${widget.onSubtitleCommentUpdated != null}');
-                        }
-                        debugPrint('═══════════════════════════════════');
-                        
-                        debugPrint('Closing comment dialog overlay after save');
-                        await safeRemoveOverlay();
-                      },
-                      onCommentDeleted: () async {
-                        debugPrint(
-                          'Comment delete initiated: subtitleIndex=${subtitle.index}',
-                        );
-
-                        if (mounted && widget.onSubtitleCommentUpdated != null) {
-                          try {
-                            await _awaitCallbackResult(
-                              widget.onSubtitleCommentUpdated!(
-                                subtitle.index,
-                                null,
-                              ),
-                            );
-                            debugPrint(
-                              'Fullscreen comment deleted successfully from database',
-                            );
-                          } catch (e) {
-                            debugPrint('Error deleting subtitle comment: $e');
-                          }
-                        }
-
-                        debugPrint('Closing comment dialog overlay after delete');
-                        await safeRemoveOverlay();
-                      },
-                      onCancelled: () {
-                        debugPrint('Comment dialog cancelled by user');
-                        unawaited(safeRemoveOverlay());
-                      },
-                    ),
-                  ),
-                ),
+      await showDialog<void>(
+        context: dialogContext,
+        useRootNavigator: true,
+        barrierDismissible: true,
+        builder: (modalContext) {
+          final viewport = MediaQuery.sizeOf(modalContext);
+          return Dialog(
+            insetPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 12,
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: 600,
+                maxHeight: viewport.height * 0.9,
+              ),
+              child: CommentDialog(
+                existingComment: subtitle.comment,
+                originalText: originalText ?? subtitle.text,
+                editedText: editedText,
+                subtitleIndex: subtitle.index,
+                onCommentSaved: (comment) async {
+                  if (!mounted) return;
+                  if (!subtitle.marked && widget.onSubtitleMarked != null) {
+                    await _awaitCallbackResult(
+                      widget.onSubtitleMarked!(subtitle.index, true),
+                    );
+                  }
+                  if (mounted && widget.onSubtitleCommentUpdated != null) {
+                    await _awaitCallbackResult(
+                      widget.onSubtitleCommentUpdated!(subtitle.index, comment),
+                    );
+                  }
+                },
+                onCommentDeleted: () async {
+                  if (mounted && widget.onSubtitleCommentUpdated != null) {
+                    await _awaitCallbackResult(
+                      widget.onSubtitleCommentUpdated!(subtitle.index, null),
+                    );
+                  }
+                },
               ),
             ),
-          ),
-        ),
-      ),
-        )
-    );
-    
-    // Insert the dialog overlay above the fullscreen overlay
-    try {
-      if (dialogOverlay != null) {
-        Overlay.of(dialogContext, rootOverlay: true).insert(dialogOverlay!);
+          );
+        },
+      );
+    } catch (error) {
+      debugPrint('Fullscreen comment dialog error: $error');
+    } finally {
+      if (mounted) {
+        setState(() => _isCommentDialogOpen = false);
+        _resetHideTimer();
+        if (wasPlaying) {
+          unawaited(player.play());
+        }
       }
-    } catch (e) {
-      debugPrint('Error inserting dialog overlay: $e');
-      safeRemoveOverlay();
     }
   }
 
