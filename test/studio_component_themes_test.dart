@@ -132,15 +132,17 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Shared bottom sheet'), findsOneWidget);
       expect(tester.takeException(), isNull);
-      await tester.pageBack();
+      await tester.tapAt(const Offset(4, 4));
       await tester.pumpAndSettle();
 
+      expect(find.text('Shared bottom sheet'), findsNothing);
       await tester.tap(find.text('Open dialog'));
       await tester.pumpAndSettle();
       expect(find.text('Shared dialog'), findsOneWidget);
       expect(tester.takeException(), isNull);
-      await tester.pageBack();
+      await tester.tapAt(const Offset(4, 4));
       await tester.pumpAndSettle();
+      expect(find.text('Shared dialog'), findsNothing);
     }
   });
 }
