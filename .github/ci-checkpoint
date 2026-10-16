@@ -47,3 +47,5 @@ CP87 R2: optional missing secondary does not prevent primary editor loading, ext
 CP87 R3 contrast audit: Video Settings badges, Load Secondary Subtitle cards, Save File As, Project Settings marked lines, Subtitle Tracks, Import Subtitle, and AI explanation selected toggle use theme-matched glyph colors. Preserves intentional white media-overlay icons.
 
 CP87 R3B further popups: Import Project, merge/split confirmation, Locate SRT, session selection, subtitle effects, banner-progress colors use paired theme onColors, including light-primary Carbon Zero Dark/Classic.
+
+CP87 R4 MSone screen lifecycle: asynchronous file pick and submit callbacks guarded after navigation, network submit has 45s timeout, success dialog closes correct navigator contexts, system back PopScope breadcrumbs. Root cause of prior unlogged freeze not yet verified.

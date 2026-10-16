@@ -53,6 +53,9 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
   String? _msoneFilePath; // Path to .msone project file
   String? _msoneFileSafUri; // SAF URI for .msone file on Android
   bool _isSubmitting = false;
+  bool _routeWasPopped = false;
+
+  bool get _routeActive => mounted && !_routeWasPopped;
 
   @override
   void initState() {
@@ -145,6 +148,7 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
         allowedExtensions: ['.srt', '.vtt', '.ass', '.sub', '.txt'],
       );
       
+      if (!_routeActive) return;
       if (fileInfo != null) {
         final displayPath = fileInfo['displayPath'];
         final safUri = fileInfo['safUri'];
@@ -173,10 +177,8 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
         );
       }
     } catch (e) {
-      SnackbarHelper.showError(
-        context,
-        'Error selecting file: $e',
-      );
+      if (!_routeActive) return;
+      SnackbarHelper.showError(context, 'Error selecting file: $e');
     }
   }
 
@@ -189,6 +191,7 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
         allowedExtensions: ['.msone'],
       );
       
+      if (!_routeActive) return;
       if (fileInfo != null) {
         final displayPath = fileInfo['displayPath'];
         final safUri = fileInfo['safUri'];
@@ -211,10 +214,8 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
         );
       }
     } catch (e) {
-      SnackbarHelper.showError(
-        context,
-        'Error selecting Msone file: $e',
-      );
+      if (!_routeActive) return;
+      SnackbarHelper.showError(context, 'Error selecting Msone file: $e');
     }
   }
 
@@ -272,7 +273,8 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
     try {
       // Save translator data if checkbox is checked
       await _saveTranslatorData();
-      
+      if (!_routeActive) return;
+
       // Prepare files for submission as attachments
       final files = <Map<String, String>>[];
       
@@ -332,7 +334,10 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
         'attachments': files,
       };      // Debug print the data being sent
       
-      // Submit to API
+      // Don't send a request after the user left the submission screen.
+      if (!_routeActive) return;
+      // Submit to API with a bounded timeout so a stalled network cannot
+      // permanently pin the submit button.
       final response = await http.post(
         Uri.parse('https://malayalamsubtitles.org/wp-json/msone-app/v1/send-email'),
         headers: {
@@ -340,7 +345,8 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
           'Accept': 'application/json',
         },
         body: jsonEncode(submissionData),
-      );
+      ).timeout(const Duration(seconds: 45));
+      if (!_routeActive) return;
       
       // Debug print the response
 
@@ -352,7 +358,7 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
         // Show success dialog
         showDialog(
           context: context,
-          builder: (context) => AlertDialog(
+          builder: (dialogContext) => AlertDialog(
             backgroundColor: Theme.of(context).colorScheme.surface,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(StudioRadius.sheet),
@@ -412,8 +418,10 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
                     height: 50,
                     child: FilledButton(
                       onPressed: () {
-                        Navigator.of(context).pop(); // Close dialog
-                        Navigator.of(context).pop(); // Close submission screen
+                        Navigator.of(dialogContext).pop(); // Close dialog
+                        if (_routeActive) {
+                          Navigator.of(this.context).pop(); // Close submission route
+                        }
                       },
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -440,10 +448,11 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
         throw Exception('Server returned ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
+      if (!_routeActive) return;
       setState(() {
         _isSubmitting = false;
       });
-      
+
       SnackbarHelper.showError(
         context,
         'Submission failed: $e',
@@ -530,7 +539,12 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) _routeWasPopped = true;
+        debugPrint('MsoneSubmissionScreen route pop: didPop=$didPop');
+      },
+      child: Scaffold(
       appBar: AppBar(
         title: Text(
           'Submit to Msone - ${widget.submissionType == 'main' ? 'Existing Translator' : 'Fresher'}',
@@ -667,8 +681,8 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
           )
           ],
         ),
-      );
-    
+      ),
+    );
   }
 
   Widget _buildStepLabel(String label, int stepIndex) {
