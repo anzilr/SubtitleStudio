@@ -8,7 +8,7 @@ import 'package:subtitle_studio/utils/subtitle_parser.dart';
 /// Compatibility wrapper for [legacy.EditSubtitleScreen].
 ///
 /// This host scopes the single-line editor's Riverpod providers.
-class EditSubtitleScreenHost extends StatelessWidget {
+class EditSubtitleScreenHost extends StatefulWidget {
   final int subtitleId;
   final int index;
   final int sessionId;
@@ -33,32 +33,69 @@ class EditSubtitleScreenHost extends StatelessWidget {
   });
 
   @override
+  State<EditSubtitleScreenHost> createState() =>
+      _EditSubtitleScreenHostState();
+}
+
+class _EditSubtitleScreenHostState extends State<EditSubtitleScreenHost> {
+  // Do not recreate Riverpod configuration overrides when the app theme
+  // changes. An override update would tear down EditLineController and the
+  // inner editing screen, potentially dropping unsaved text and listeners.
+  late List<Override> _stableOverrides;
+
+  @override
+  void initState() {
+    super.initState();
+    _resetOverrides();
+  }
+
+  void _resetOverrides() {
+    _stableOverrides = [
+      editLineConfigurationProvider.overrideWithValue(
+        EditLineConfiguration(
+          subtitleCollectionId: widget.subtitleId,
+          lineIndex: widget.index,
+          sessionId: widget.sessionId,
+          isNewSubtitle: widget.isNewSubtitle,
+          isEditMode: widget.editMode,
+          videoPath: widget.videoPath,
+          isVideoLoaded: widget.isVideoLoaded,
+          secondarySubtitles: widget.secondarySubtitles,
+        ),
+      ),
+    ];
+  }
+
+  @override
+  void didUpdateWidget(covariant EditSubtitleScreenHost oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.subtitleId != widget.subtitleId ||
+        oldWidget.index != widget.index ||
+        oldWidget.sessionId != widget.sessionId ||
+        oldWidget.isNewSubtitle != widget.isNewSubtitle ||
+        oldWidget.editMode != widget.editMode ||
+        oldWidget.videoPath != widget.videoPath ||
+        oldWidget.isVideoLoaded != widget.isVideoLoaded ||
+        !identical(oldWidget.secondarySubtitles, widget.secondarySubtitles)) {
+      _resetOverrides();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return ProviderScope(
-      overrides: [
-        editLineConfigurationProvider.overrideWithValue(
-          EditLineConfiguration(
-            subtitleCollectionId: subtitleId,
-            lineIndex: index,
-            sessionId: sessionId,
-            isNewSubtitle: isNewSubtitle,
-            isEditMode: editMode,
-            videoPath: videoPath,
-            isVideoLoaded: isVideoLoaded,
-            secondarySubtitles: secondarySubtitles,
-          ),
-        ),
-      ],
+      key: ValueKey('edit-line-scope-${widget.sessionId}-${widget.subtitleId}-${widget.index}'),
+      overrides: _stableOverrides,
       child: _EditLineRiverpodHost(
-        subtitleId: subtitleId,
-        index: index,
-        sessionId: sessionId,
-        isNewSubtitle: isNewSubtitle,
-        editMode: editMode,
-        videoPath: videoPath,
-        isVideoLoaded: isVideoLoaded,
-        startVideoPosition: startVideoPosition,
-        secondarySubtitles: secondarySubtitles,
+        subtitleId: widget.subtitleId,
+        index: widget.index,
+        sessionId: widget.sessionId,
+        isNewSubtitle: widget.isNewSubtitle,
+        editMode: widget.editMode,
+        videoPath: widget.videoPath,
+        isVideoLoaded: widget.isVideoLoaded,
+        startVideoPosition: widget.startVideoPosition,
+        secondarySubtitles: widget.secondarySubtitles,
       ),
     );
   }
