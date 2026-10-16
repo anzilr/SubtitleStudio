@@ -1,8 +1,7 @@
-SubtitleStudio SKIN-2 R2 startup race and write-order quality gate | 2026-10-16
-Flutter analyze and full test suite: pinned Isar schema adds nullable namespaced
-Preferences.skinId; legacy mode/font data preserved. ThemeController stores
-StudioAppearance distinct from Flutter ThemeMode, protects startup edits,
-restores failed writes and serializes rapid skin/mode preference updates.
-New R2 tests cover explicit fallback choice before hydration and queued writes.
-Keep legacy UI renderer in MainApp until SKIN-4 input fields are migrated.
-No native platform builds or waveform/player modifications.
+SubtitleStudio SKIN-3 R1 Appearance Settings and gallery gate | 2026-10-16
+Analyze and run the full Flutter test suite. Appearance section in Settings
+shows 3 built-in skins x 3 themes, editable independent persistent selection,
+shared read-only swatches and scoped Editor preview. Future community skin
+catalog provider and absent-skin fallback. Toolbar cycles typed theme modes
+with accessible feedback. Legacy global palettes remain until SKIN-4.
+No native platform builds, Isar schema changes or media changes.
