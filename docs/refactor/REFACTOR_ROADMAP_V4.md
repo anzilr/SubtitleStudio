@@ -1,5 +1,21 @@
 # SubtitleStudio Refactor Roadmap v4
 
+> **SKIN-4 R3-B LIVE ACTIVATION VERIFIED — October 16, 2026:** Saved
+> skin ID and Light/Dark/Classic now drive the live MaterialApp through the
+> injectable skin catalog and the same StudioThemeFactory used by previews
+> and future community definitions. Source View (embedded and standalone),
+> MSone Submission, Screen Help, Edit Line confirmation sheets and waveform
+> toolbar received semantic component cleanup. Standalone Source View gained
+> stable route-owned Riverpod overrides to prevent reinitialization when the
+> appearance changes. [Final CI 38903429526](https://github.com/anzilr/SubtitleStudio/actions/runs/38903429526)
+> verified **440 Flutter tests passed, 0 analyzer issues** at code
+> `ff2b2f1`. [R3-B report](STUDIO_SKIN4_R3B_LIVE_ACTIVATION_2026-10-16.md).
+> **Next: Android/Windows native appearance acceptance** with the
+> [nine-mode testing checklist](STUDIO_SKIN4_R3B_NATIVE_ACCEPTANCE_2026-10-16.md).
+> This code gate is **not** real-device verification. Remaining SKIN-5
+> screenwide component clean-up, SKIN-6 accessibility, community importer/
+> website and independent CP86 waveform qualification remain open.
+
 > **SKIN-4 R3-B PART 1 VERIFIED — October 16, 2026:** Confirmation,
 > index-selection and selected-time shift sheets now use the unified
 > semantic component contract. Batch delete Enter handling is guarded;
