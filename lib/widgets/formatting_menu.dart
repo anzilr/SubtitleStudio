@@ -248,7 +248,7 @@ class FormattingMenu extends StatelessWidget {
                             children: [
                               Icon(
                                 Icons.cleaning_services_rounded,
-                                color: Colors.white,
+                                color: Theme.of(context).colorScheme.onError,
                                 size: 20,
                               ),
                               const SizedBox(width: 8),
