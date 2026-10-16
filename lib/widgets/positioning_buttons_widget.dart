@@ -356,7 +356,7 @@ class _PositioningButtonsWidgetState extends State<PositioningButtonsWidget> {
                       ),
                     ),
                     child: _isLoading
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(
