@@ -1,5 +1,21 @@
 # SubtitleStudio Refactor Roadmap v4
 
+> **Unified component design requirement — October 16, 2026:** All
+> modal bottom sheets, dialogs, dropdowns, popup/context menus, sliders,
+> primary/secondary/destructive buttons and selection controls must follow
+> a **single reusable design system** across Carbon & Jade, Copper Cinema,
+> Aster Violet (each Light/Dark/Classic) and future community skins.
+> [Component contract and source audit](STUDIO_COMPONENT_SYSTEM_2026-10-16.md).
+> DESIGN-0 inventory → DESIGN-1 shared component themes → DESIGN-2 migrate
+> one-off callers → DESIGN-3 visual/accessibility acceptance. Shared
+> `StudioComponentThemes.apply` now centralizes Material default styles for
+> both existing `AppThemes` and `StudioThemeFactory`, with a subtitle-action
+> sheet pilot. Legacy overrides still exist and **full rollout is NOT complete**.
+> Treat contrast-critical DESIGN-2 as a **SKIN-4 R3 prerequisite** before
+> enabling new skins throughout live Editor; complete app-wide consistency and
+> Android/Windows validation through SKIN-5/6. Preserve open-source skin file
+> constraint: skin authors change palette data, **not** widget geometry/code.
+
 > **SKIN-4 R2 PILOT COMPLETE — October 16, 2026:** Semantic, focus-aware
 > neutral cue fields now replace previously saturated primary-colored
 > Original/Edited boxes, with contrasting subtitle text, metadata and action
