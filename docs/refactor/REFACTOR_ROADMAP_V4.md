@@ -1,5 +1,30 @@
 # SubtitleStudio Refactor Roadmap v4
 
+> **CP87 R2–R4 ANDROID SESSION RECOVERY & CONTRAST AUDIT — October 16, 2026:**
+> A real CPH2381 relaunch log proved the original subtitle collection still
+> held **895 lines**, but an optional embedded secondary track pointed to a
+> missing Android `code_cache/extracted_subtitle_*.srt` file. `EditController`
+> treated this missing secondary file as fatal, showing an empty EditScreen.
+> This is a **loader failure, not evidence of deleted primary edits**.
+> [Recovery code `6f0bbdc`](https://github.com/anzilr/SubtitleStudio/commit/6f0bbdcd9b01291eebf95e0fd507265e4681b239)
+> now ignores unavailable optional secondary tracks and, for missing legacy
+> cache-owned extracts, clears the stale auxiliary preference. New extracts
+> are atomically written in durable app support storage; deletion is confined
+> to app-owned paths. [Isar integration coverage and scoped cleanup](https://github.com/anzilr/SubtitleStudio/commit/7c42f66a4d0ea0307ea0bacd5f470d665b4cdce8)
+> verify recovery without deleting user-picked files.
+> [Targeted modal contrast fixes](https://github.com/anzilr/SubtitleStudio/commit/912f7892c90d12616b6a804918d10d21a29e4f25)
+> and [wider audit](https://github.com/anzilr/SubtitleStudio/commit/14ab8bd37cdc8137a2be6b014f19cb5470365b4f)
+> replace white-on-light-primary icons/labels with paired theme `onPrimary`,
+> `onSecondary`, or `onTertiary` colors across Video Settings, Save File As,
+> Load Secondary Subtitle, Project Settings, Import, Merge/Split, Locate SRT,
+> session picker, banners and other sheets. Intentional media-overlay whites
+> remain unchanged. [MSone async/back-navigation safety patch](https://github.com/anzilr/SubtitleStudio/commit/526dcc451dcbfafa88e4398d680bfe03104789b9)
+> handles disposed-screen callbacks and adds diagnostic route pop breadcrumbs.
+> The **original unlogged MSone freeze has not been root-caused**.
+> Flutter verification is code-level only; CPH2381 and Windows native
+> acceptance, including prior `libmpv.so` restart crash, remain pending.
+> [Detailed R2–R4 report](CHECKPOINT87_R2R4_ANDROID_RECOVERY_AND_ICON_AUDIT_2026-10-16.md).
+>
 > **CP87 R1 FILE-ACCESS IDENTITY FOUNDATION — October 16, 2026:**
 > Technical Checkpoint 87 has begun *without declaring CP86 native acceptance*.
 > [Code `50bd1c0`](https://github.com/anzilr/SubtitleStudio/commit/50bd1c041ef0ada113937826d9975073cddc7020)
