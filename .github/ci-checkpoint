@@ -32,3 +32,11 @@ marked-lines modal with injected persisted preference: unchecked shows only
 marked cue; checking reveals unmarked comment-only cue; unchecking hides it;
 assert no Show label/filter-list icon. Re-run entire suite against that test
 and previously verified filter, themed floating play/pause, waveform toolbar.
+
+R8 final R2: run 38925474773 clean analyzer and 468 passed; real checkbox
+widget test failed only due 360dp marked sheet UI overflows (57dp resolved
+count Row and 111dp cue timestamp Row). Fix: make resolved summary flexible
+and wrapping, show start/end timestamps stacked inside remaining row width
+instead of demanding a long one-line range. Keep full start/end precision.
+Re-run full tests, including the real toggled checkbox assertions, without
+relaxing any overflow expectations.
