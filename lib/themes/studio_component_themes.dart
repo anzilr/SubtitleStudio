@@ -15,7 +15,6 @@ abstract final class StudioComponentThemes {
             ? StudioDesignTokens.dark
             : StudioDesignTokens.light);
     final text = theme.textTheme;
-    final scheme = theme.colorScheme;
 
     const modalRadius = BorderRadius.vertical(
       top: Radius.circular(StudioRadius.sheet),
