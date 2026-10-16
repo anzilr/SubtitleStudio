@@ -21,7 +21,7 @@ void main() {
           theme: StudioThemeFactory.resolve(skin, mode),
           home: Scaffold(
             body: StudioCueFieldSurface(
-              child: TextField(
+              child: Builder(builder: (context) => TextField(
                 key: const ValueKey('subtitle-cue'),
                 controller: ctrl,
                 expands: true,
@@ -29,11 +29,8 @@ void main() {
                 decoration: StudioCueFieldStyle.decoration(
                   padding: const EdgeInsets.all(8),
                 ),
-                style: StudioCueFieldStyle.text(
-                    // The current context above the MaterialApp is not a
-                    // descendant of its theme; Builder supplies the new one.
-                    tester.element(find.byType(Scaffold)) as BuildContext),
-              ),
+                style: StudioCueFieldStyle.text(context),
+              )),
             ),
           ),
         ));
