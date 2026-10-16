@@ -24,7 +24,7 @@ Future<bool?> showEditLineColorPickerSheet({
           centerTitle: true,
           leading: IconButton(
             onPressed: () => Navigator.of(sheetContext).pop(false),
-            icon: const Icon(Icons.close),
+            icon: Icon(Icons.close),
           ),
           elevation: 1,
         ),
@@ -54,8 +54,8 @@ Future<bool?> showEditLineColorPickerSheet({
               onApply();
               Navigator.of(sheetContext).pop(true);
             },
-            backgroundColor: const Color(0xFF4A90E2),
-            foregroundColor: Colors.white,
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            foregroundColor: Theme.of(context).colorScheme.onPrimary,
             elevation: 6,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
