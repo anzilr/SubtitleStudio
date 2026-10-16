@@ -166,12 +166,12 @@ extension _WaveformEditing on WaveformWidgetState {
     if (!state.isEditMode || state.editingSubtitleIndex == null) return;
     if (widget.subtitleCollectionId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
             'Cannot update: No subtitle collection ID',
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(color: Theme.of(context).colorScheme.onError),
           ),
-          backgroundColor: Color(0xFFD32F2F),
+          backgroundColor: Theme.of(context).colorScheme.error,
           duration: Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
         ),
@@ -191,12 +191,12 @@ extension _WaveformEditing on WaveformWidgetState {
     // Validate times
     if (newStartTime >= newEndTime) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
             'Start time must be before end time',
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(color: Theme.of(context).colorScheme.onError),
           ),
-          backgroundColor: Color(0xFFD32F2F),
+          backgroundColor: Theme.of(context).colorScheme.error,
           duration: Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
         ),
@@ -251,12 +251,12 @@ extension _WaveformEditing on WaveformWidgetState {
         
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
               'Time updated successfully',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: Theme.of(context).colorScheme.onError),
             ),
-            backgroundColor: Color(0xFF323232),
+            backgroundColor: Theme.of(context).colorScheme.primary,
             duration: Duration(seconds: 1),
             behavior: SnackBarBehavior.floating,
           ),
@@ -269,9 +269,9 @@ extension _WaveformEditing on WaveformWidgetState {
           SnackBar(
             content: Text(
               'Error updating time: $e',
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: Theme.of(context).colorScheme.onError),
             ),
-            backgroundColor: const Color(0xFFD32F2F),
+            backgroundColor: Theme.of(context).colorScheme.error,
             duration: const Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
           ),
@@ -285,12 +285,12 @@ extension _WaveformEditing on WaveformWidgetState {
     // Validate that both start and end times are set
     if (state.addLineStartTime == null || state.addLineEndTime == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
             'Please drag to select start and end times',
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(color: Theme.of(context).colorScheme.onError),
           ),
-          backgroundColor: Color(0xFFD32F2F),
+          backgroundColor: Theme.of(context).colorScheme.error,
           duration: Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
         ),
