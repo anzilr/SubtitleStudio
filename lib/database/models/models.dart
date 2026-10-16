@@ -19,6 +19,7 @@ class Preferences {
 
   late int? lastEditedSession; //ID of last edited session.
   late String? themeMode; // Theme mode preference
+  String? skinId; // Selected built-in or community skin (namespaced ID).
   bool autoSave; // Whether to automatically save the changes to the database.
   
   // MSone features
@@ -92,6 +93,7 @@ class Preferences {
     this.lastEditedSession,
     required this.autoSave,
     this.themeMode,
+    this.skinId,
     this.msoneEnabled = false,
     this.colorHistory = const [],
     this.floatingControlsEnabled = false,
