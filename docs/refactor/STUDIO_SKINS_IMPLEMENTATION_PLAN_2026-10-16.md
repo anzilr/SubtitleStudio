@@ -16,6 +16,13 @@ Related: [Refactor roadmap v4](REFACTOR_ROADMAP_V4.md), [UX roadmap](SUBTITLESTU
 
 ## Decision record — user-approved requirements
 
+**Component consistency milestone:** DESIGN-1 R4 is now [CI verified](https://github.com/anzilr/SubtitleStudio/actions/runs/38892274970)
+with **424 tests passed, zero analyzer issues**. Uniform Material
+defaults and tokens now span the current and new themes. A subtitle-action
+sheet pilot is migrated; many feature-local overrides remain for DESIGN-2.
+[See component contract](STUDIO_COMPONENT_SYSTEM_2026-10-16.md).
+Do not equate this with SKIN-4 R3 global palette activation.
+
 **New non-negotiable UX requirement (October 16, 2026):** Built-in
 and community skins must share uniform modal bottom sheets, dialog surfaces,
 popup/context menus, dropdown controls, slider geometry, button shapes/sizes
