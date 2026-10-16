@@ -737,7 +737,7 @@ class _OlamDictionaryWidgetState extends ConsumerState<OlamDictionaryWidget>
             ),
             IconButton(
               onPressed: () => Navigator.pop(context),
-              icon: const Icon(Icons.close),
+              icon: Icon(Icons.close),
             ),
           ],
         ),
@@ -749,7 +749,7 @@ class _OlamDictionaryWidgetState extends ConsumerState<OlamDictionaryWidget>
   Widget _buildSearchField(bool isDark, Color primaryColor, Color onSurfaceColor, Color borderColor) {
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+        color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: borderColor,
@@ -802,7 +802,7 @@ class _OlamDictionaryWidgetState extends ConsumerState<OlamDictionaryWidget>
         width: double.infinity,
         child: ElevatedButton.icon(
           onPressed: _performSearch,
-          icon: const Icon(Icons.search, color: Colors.white),
+          icon: Icon(Icons.search, color: Colors.white),
           label: const Text(
             'Search',
             style: TextStyle(
@@ -813,7 +813,7 @@ class _OlamDictionaryWidgetState extends ConsumerState<OlamDictionaryWidget>
           ),
           style: ElevatedButton.styleFrom(
             backgroundColor: primaryColor,
-            foregroundColor: Colors.white,
+            foregroundColor: Theme.of(context).colorScheme.onPrimary,
             padding: const EdgeInsets.symmetric(vertical: 16),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
@@ -902,7 +902,7 @@ class _OlamDictionaryWidgetState extends ConsumerState<OlamDictionaryWidget>
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: isDark ? onSurfaceColor.withValues(alpha: 0.08) : Colors.grey.shade100,
+        color: isDark ? onSurfaceColor.withValues(alpha: 0.08) : Theme.of(context).colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: borderColor.withValues(alpha: 0.5),
@@ -1002,7 +1002,7 @@ class _OlamDictionaryWidgetState extends ConsumerState<OlamDictionaryWidget>
         ? 'Updating... ${(_downloadProgress * 100).toInt()}%'
         : (_shouldShowUpdateNotification ? 'Update Available' : 'Update Dictionary');
     
-    final textColor = _shouldShowUpdateNotification ? Colors.orange.withValues(alpha: 0.5) : onSurfaceColor.withValues(alpha: 0.5);
+    final textColor = _shouldShowUpdateNotification ? Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.5) : onSurfaceColor.withValues(alpha: 0.5);
     
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -1109,7 +1109,7 @@ class _OlamDictionaryWidgetState extends ConsumerState<OlamDictionaryWidget>
         color: surfaceColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isDark ? onSurfaceColor.withValues(alpha: 0.1) : Colors.grey.shade200,
+          color: isDark ? onSurfaceColor.withValues(alpha: 0.1) : Theme.of(context).colorScheme.outlineVariant,
           width: 1,
         ),
       ),
