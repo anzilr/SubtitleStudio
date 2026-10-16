@@ -16,13 +16,12 @@ class _AppearanceStore implements ThemePreferencesStore {
     this.initialSkin,
     this.initialMode = 'dark',
     this.failSkinSave = false,
-    this.failModeSave = false,
   });
 
   final String? initialSkin;
   final String? initialMode;
   bool failSkinSave;
-  bool failModeSave;
+  bool failModeSave = false;
   String? savedSkin;
   String? savedMode;
 
