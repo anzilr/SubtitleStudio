@@ -1,6 +1,7 @@
 # CP87 R6 — Native Android hot-restart crash: confirmed independent of MSone route pop
 
 **Date:** 2026-10-17 00:24 Asia/Riyadh  
+**Flutter CI:** [38969567231](https://github.com/anzilr/SubtitleStudio/actions/runs/38969567231) — **SUCCESS: 534 Flutter tests, 0 analyzer issues** for code `082134e`. Native hot-restart bug NOT fixed.  
 **Device:** CPH2381 OnePlus Android 14, arm64  
 **Affected package versions:** media_kit 1.2.6, media_kit_video 2.0.1,
 media_kit_native_event_loop 1.0.9, media_kit_libs_video 1.0.7

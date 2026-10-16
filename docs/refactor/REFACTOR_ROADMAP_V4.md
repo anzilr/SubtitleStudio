@@ -1,6 +1,7 @@
 # SubtitleStudio Refactor Roadmap v4
 
 > **CP87 R6 — NATIVE CRASH ISOLATED (October 17, 2026):**
+> **Code gate green:** [38969567231](https://github.com/anzilr/SubtitleStudio/actions/runs/38969567231) — **534 tests passed and no analyzer issues**. Native Android hot-restart remains blocked.
 > Two complete CPH2381 logs confirm MSone system Back popped and disposed
 > its route at 00:23:41, then at 00:23:52 a separately invoked Flutter
 > hot restart recovered a stale media_kit native handle and triggered
