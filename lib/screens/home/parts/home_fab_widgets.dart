@@ -139,11 +139,11 @@ extension _HomeFabWidgets on _HomeScreenContentState {
         key: key,
         heroTag: "custom_$label",
         onPressed: onPressed,
-        icon: Icon(icon, color: Colors.white),
+        icon: Icon(icon, color: Theme.of(context).colorScheme.onPrimary),
         label: Text(
           label,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onPrimary,
             fontWeight: FontWeight.bold,
           ),
         ),
