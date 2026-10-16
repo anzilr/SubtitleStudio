@@ -152,7 +152,7 @@ void showGotToLineModal({
             bottom: MediaQuery.of(context).viewInsets.bottom,
           ),
           child: Padding(
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.all(12.0),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -271,7 +271,7 @@ void showGotToLineModal({
                     valueListenable: sliderValue,
                     builder: (context, value, child) {
                       return Container(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           color: StudioDesignTokens.of(context).fieldSurface,
                           borderRadius: BorderRadius.circular(12),
@@ -290,11 +290,15 @@ void showGotToLineModal({
                                   size: 20,
                                 ),
                                 const SizedBox(width: 8),
-                                Text(
+                                Flexible(
+                                  child: Text(
                                   'Quick Navigation',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                                     fontWeight: FontWeight.w600,
                                     color: primaryColor,
+                                  ),
                                   ),
                                 ),
                                 const Spacer(),
