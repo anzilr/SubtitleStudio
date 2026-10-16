@@ -510,9 +510,9 @@ extension _WaveformInteractions on WaveformWidgetState {
       SnackBar(
         content: Text(
           'Time copied: $timeString',
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),
         ),
-        backgroundColor: const Color(0xFF323232), // Dark gray background
+        backgroundColor: Theme.of(context).colorScheme.primary, // Dark gray background
         duration: const Duration(seconds: 1),
         behavior: SnackBarBehavior.floating,
         width: 250,
