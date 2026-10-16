@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:subtitle_studio/themes/studio_cue_field.dart';
-import 'package:subtitle_studio/themes/studio_design_tokens.dart';
 import 'package:subtitle_studio/themes/studio_palette.dart';
 import 'package:subtitle_studio/themes/studio_skin.dart';
 import 'package:subtitle_studio/themes/studio_theme_factory.dart';
@@ -18,6 +17,7 @@ void main() {
       for (final mode in StudioAppearance.values) {
         final palette = StudioPalette.resolve(skin, mode);
         await tester.pumpWidget(MaterialApp(
+          themeAnimationDuration: Duration.zero,
           theme: StudioThemeFactory.resolve(skin, mode),
           home: Scaffold(
             body: StudioCueFieldSurface(
@@ -34,7 +34,7 @@ void main() {
             ),
           ),
         ));
-        await tester.pump();
+        await tester.pumpAndSettle();
         final field = tester.widget<TextField>(
             find.byKey(const ValueKey('subtitle-cue')));
         expect(field.controller, same(ctrl));
@@ -87,6 +87,7 @@ void main() {
       for (final mode in StudioAppearance.values) {
         final palette = StudioPalette.resolve(skin, mode);
         await tester.pumpWidget(MaterialApp(
+          themeAnimationDuration: Duration.zero,
           theme: StudioThemeFactory.resolve(skin, mode),
           home: Scaffold(
             body: StudioTimeField(
@@ -98,7 +99,7 @@ void main() {
             ),
           ),
         ));
-        await tester.pump();
+        await tester.pumpAndSettle();
         final field = tester.widget<TextField>(find.byType(TextField));
         expect(field.controller, same(controller));
         expect(field.style?.color, palette.danger);
