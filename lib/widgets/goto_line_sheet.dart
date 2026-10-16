@@ -45,7 +45,7 @@ void showGotToLineModal({
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.red,
+              color: Theme.of(context).colorScheme.error,
               borderRadius: BorderRadius.circular(8),
               boxShadow: [
                 BoxShadow(
@@ -59,7 +59,7 @@ void showGotToLineModal({
               children: [
                 const Icon(
                   Icons.error,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onError,
                   size: 20,
                 ),
                 const SizedBox(width: 12),
@@ -203,7 +203,7 @@ void showGotToLineModal({
                     Expanded(
                       child: Container(
                         decoration: BoxDecoration(
-                          color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                          color: StudioDesignTokens.of(context).fieldSurface,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                             color: borderColor,
@@ -244,7 +244,7 @@ void showGotToLineModal({
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
                       decoration: BoxDecoration(
-                        color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                        color: StudioDesignTokens.of(context).fieldSurface,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: borderColor,
@@ -271,7 +271,7 @@ void showGotToLineModal({
                       return Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                          color: StudioDesignTokens.of(context).fieldSurface,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                             color: borderColor,
