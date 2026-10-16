@@ -260,7 +260,7 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
                               ),
                               child: Icon(
                                 Icons.keyboard,
-                                color: Colors.white,
+                                color: Theme.of(context).colorScheme.onPrimary,
                                 size: 20,
                               ),
                             ),

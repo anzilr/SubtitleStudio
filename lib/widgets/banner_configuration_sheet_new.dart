@@ -471,7 +471,7 @@ class _BannerConfigurationSheetState extends State<BannerConfigurationSheet> {
                           height: 16,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                           ),
                         )
                       : Icon(Icons.add_circle_outline, size: 20),

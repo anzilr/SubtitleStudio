@@ -469,7 +469,7 @@ class _SessionSelectionSheetState extends ConsumerState<SessionSelectionSheet> {
                   ),
                   child: Icon(
                     Icons.subtitles,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onPrimary,
                     size: 18,
                   ),
                 ),
@@ -743,7 +743,7 @@ class _SessionSelectionSheetState extends ConsumerState<SessionSelectionSheet> {
                                 Icon(
                                   Icons.add,
                                   size: 20,
-                                  color: Colors.white,
+                                  color: Theme.of(context).colorScheme.onPrimary,
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
@@ -751,7 +751,7 @@ class _SessionSelectionSheetState extends ConsumerState<SessionSelectionSheet> {
                                   style: TextStyle(
                                     fontWeight: FontWeight.w600,
                                     fontSize: 13,
-                                    color: Colors.white,
+                                    color: Theme.of(context).colorScheme.onPrimary,
                                   ),
                                 ),
                               ],

@@ -114,7 +114,7 @@ class MergeConfirmationSheet extends StatelessWidget {
                                   ),
                                   child: Icon(
                                     Icons.arrow_upward_rounded,
-                                    color: Colors.white,
+                                    color: Theme.of(context).colorScheme.onPrimary,
                                     size: 20,
                                   ),
                                 ),
@@ -184,7 +184,7 @@ class MergeConfirmationSheet extends StatelessWidget {
                                   ),
                                   child: Icon(
                                     Icons.arrow_downward_rounded,
-                                    color: Colors.white,
+                                    color: Theme.of(context).colorScheme.onTertiary,
                                     size: 20,
                                   ),
                                 ),

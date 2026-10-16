@@ -446,7 +446,7 @@ class _ImportProjectSheetState extends State<ImportProjectSheet> {
                     ),
                     child: Icon(
                       Icons.unarchive,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onPrimary,
                       size: 20,
                     ),
                   ),

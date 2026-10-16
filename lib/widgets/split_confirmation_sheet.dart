@@ -110,7 +110,7 @@ class SplitConfirmationSheet extends StatelessWidget {
                                   child: Text(
                                     "Part 1",
                                     style: TextStyle(
-                                      color: Colors.white,
+                                      color: Theme.of(context).colorScheme.onPrimary,
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -179,7 +179,7 @@ class SplitConfirmationSheet extends StatelessWidget {
                                   child: Text(
                                     "Part 2",
                                     style: TextStyle(
-                                      color: Colors.white,
+                                      color: Theme.of(context).colorScheme.onPrimary,
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
                                     ),

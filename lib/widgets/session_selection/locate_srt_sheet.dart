@@ -109,7 +109,7 @@ class _LocateSrtSheet extends StatelessWidget {
                         ),
                         child: Icon(
                           Icons.info_outline,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onTertiary,
                           size: 16,
                         ),
                       ),
@@ -226,7 +226,7 @@ class _LocateSrtSheet extends StatelessWidget {
                           ),
                           child: Icon(
                             Icons.folder_outlined,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                             size: 16,
                           ),
                         ),
@@ -313,7 +313,7 @@ class _LocateSrtSheet extends StatelessWidget {
                           ),
                           child: Icon(
                             Icons.folder_outlined,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                             size: 16,
                           ),
                         ),
