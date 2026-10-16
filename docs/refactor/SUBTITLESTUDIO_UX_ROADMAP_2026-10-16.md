@@ -1,5 +1,18 @@
 # SubtitleStudio UX roadmap — visual history, plain language, unified design, compact Edit Line
 
+> **SKIN-4 R2 Edit Line readability pilot complete (October 16, 2026):**
+> Original/Edited subtitle field surfaces, labels, character counters, editing
+> actions and start/end timing inputs use semantic colors and visible focus
+> states; no more full-primary filled text boxes or faded white metadata.
+> Typography respects custom font preferences, and user typing/undo/validation
+> callbacks are preserved. [CI 38889494374](https://github.com/anzilr/SubtitleStudio/actions/runs/38889494374)
+> verified **422 passing tests; analyzer clean**. [R2 report with fixed-color
+> risk audit](STUDIO_SKIN4_CUE_FIELD_PILOT_2026-10-16.md).
+> **Next SKIN-4 R3** is the remaining Editor/menu/nav button contrast audit,
+> gated application-wide theme factory activation and Android/Windows
+> acceptance. The SKIN-3 appearance picker still previews/saves a skin but
+> does not yet recolor live Editor routes.
+
 > **SKIN-3 R1 COMPLETE — October 16, 2026:** The existing Settings
 > sheet now includes independent Light/Dark/Classic and built-in skin
 > selectors, nine reusable previews, a locally scoped editor mockup,
