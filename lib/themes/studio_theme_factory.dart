@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'studio_design_tokens.dart';
 import 'studio_palette.dart';
+import 'studio_skin_catalog.dart';
 import 'studio_skin.dart';
 
 /// Builds one shared Material/Studio design system from the selected colors.
@@ -14,8 +15,28 @@ abstract final class StudioThemeFactory {
     StudioSkin skin,
     StudioAppearance appearance, {
     String? fontFamily,
+  }) => fromPalette(
+        StudioPalette.resolve(skin, appearance),
+        fontFamily: fontFamily,
+      );
+
+  /// Built-in and community skins share precisely the same renderer.
+  /// Neither an Isar record nor a downloaded file is executable theme code.
+  static ThemeData fromDefinition(
+    StudioSkinDefinition definition,
+    StudioAppearance appearance, {
+    String? fontFamily,
+  }) =>
+      fromPalette(
+        definition.paletteFor(appearance),
+        fontFamily: fontFamily,
+      );
+
+  /// Pure rendering boundary used by all future skin sources.
+  static ThemeData fromPalette(
+    StudioPalette palette, {
+    String? fontFamily,
   }) {
-    final palette = StudioPalette.resolve(skin, appearance);
     final tokens = palette.tokens;
     final scheme = (palette.isDark
             ? ColorScheme.dark(
