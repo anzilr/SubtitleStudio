@@ -540,7 +540,7 @@ class _SubtitleSyncSheetState extends State<SubtitleSyncSheet> {
                                 ),
                               ),
                               child: _isProcessing
-                                  ? const SizedBox(
+                                  ? SizedBox(
                                       width: 20,
                                       height: 20,
                                       child: CircularProgressIndicator(
@@ -824,7 +824,7 @@ class _SubtitleSyncSheetState extends State<SubtitleSyncSheet> {
                                 ),
                               ),
                               child: _isProcessing
-                                  ? const SizedBox(
+                                  ? SizedBox(
                                       width: 20,
                                       height: 20,
                                       child: CircularProgressIndicator(
