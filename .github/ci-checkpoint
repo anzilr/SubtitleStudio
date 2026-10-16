@@ -1,6 +1,7 @@
-SubtitleStudio SKIN-1 R2 nine-palette theme foundation gate | 2026-10-16
-Analyzer and full Flutter unit/widget suite. Nine semantic palettes, typed
-independent skin + appearance modes, distinct near-black Classic, contrast
-checks and preview gallery on narrow Android screen width. Preview is
-read-only and does not alter MainApp, Isar preferences, Editor routes or
-native media. No platform builds.
+SubtitleStudio SKIN-1 R3 open-source community skin foundation | 2026-10-16
+Run Flutter analyzer and all committed tests. Community skin identities no longer
+require an enum case; shared theme renderer supports validated skin definitions,
+immutable catalog with built-in conflict protection and colors-only v1 portable
+JSON codec with strict schema, contrast and payload validation. Existing three
+built-ins × three modes remain. Production MainApp/theme preferences and native
+media stay unchanged. No Isar schema changes or platform builds.
