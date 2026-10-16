@@ -28,6 +28,13 @@ abstract final class StudioSkinCodec {
       throw const FormatException('Invalid skin JSON');
     }
     final object = _map(root, 'skin file');
+    const allowedRoot = {
+      'format', 'schemaVersion', 'id', 'name', 'author',
+      'description', 'palettes',
+    };
+    if (object.keys.any((key) => !allowedRoot.contains(key))) {
+      throw const FormatException('Unsupported skin file property');
+    }
     if (object['format'] != format || object['schemaVersion'] != schemaVersion) {
       throw const FormatException('Unsupported skin file version');
     }
@@ -47,6 +54,15 @@ abstract final class StudioSkinCodec {
     final palettes = <StudioAppearance, StudioPalette>{};
     for (final mode in StudioAppearance.values) {
       final entry = _map(variants[mode.storageId], mode.label);
+      const roles = {
+        'canvas', 'surface', 'raisedSurface', 'fieldSurface',
+        'onSurface', 'mutedText', 'outline', 'fieldBorder',
+        'accent', 'onAccent', 'appBar', 'onAppBar',
+      };
+      if (entry.length != roles.length ||
+          entry.keys.any((key) => !roles.contains(key))) {
+        throw FormatException('${mode.label}: invalid or missing color role');
+      }
       Color color(String role) {
         final raw = _string(entry, role);
         if (!RegExp(r'^#[0-9a-fA-F]{6}$').hasMatch(raw)) {
