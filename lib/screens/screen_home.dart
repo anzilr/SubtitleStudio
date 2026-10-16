@@ -308,9 +308,8 @@ class _HomeScreenContentState extends ConsumerState<_HomeScreenContent> with Tic
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16.0)),
-      ),
+      showDragHandle: false,
+      shape: const RoundedRectangleBorder(),
       builder: (context) => SettingsSheet(
         onSettingsChanged: () {
           setState(() {});
@@ -524,9 +523,8 @@ class _HomeScreenContentState extends ConsumerState<_HomeScreenContent> with Tic
                   context: context,
                   isScrollControlled: true,
                   useSafeArea: true,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(16.0)),
-                  ),
+                  showDragHandle: false,
+                  shape: const RoundedRectangleBorder(),
                   builder: (context) => SettingsSheet(
                     onSettingsChanged: () {
                       setState(() {});
