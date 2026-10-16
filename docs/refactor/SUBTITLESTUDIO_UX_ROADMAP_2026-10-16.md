@@ -1,5 +1,20 @@
 # SubtitleStudio UX roadmap — visual history, plain language, unified design, compact Edit Line
 
+> **CURRENT STATUS — October 16, 2026:** Since the historical three-skin
+> proposal below, the shipped refactor code now includes **four built-in
+> skins × Light/Dark/Classic**, including Carbon Zero as the default;
+> SKIN-4 R3-B live activation and R4–R8 device-feedback fixes are in place.
+> The latest Flutter gate is [R8 / 469 tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/38926044286).
+> The R7 Riverpod waveform lifecycle crash is user-confirmed resolved; R8
+> Marked Lines, floating playback and narrow waveform toolbar still require
+> follow-up device observation. The pending UX milestones remain **DESIGN-2/3
+> component consistency, SKIN-5/6 cross-screen QA, UX-2/3 plain-language
+> visual history, UX-4 compact Edit Line, SKIN-EXT-2/3 community skin import
+> and the web creator, then desktop workspace**. See the [current refactor
+> roadmap](REFACTOR_ROADMAP_V4.md) and [R8 status report](STUDIO_R8_MARKED_LINES_FAB_WAVEFORM_UI_2026-10-16.md).
+> Older sections below document their original requirements and should not be
+> read as contradicting completed checkpoints.
+
 > **SKIN-4 R3-A / DESIGN-2 contrast migration CI verified:** Theme-aware
 > Editor cards, shared Edit Line/Editor popup rows, formatting menus and
 > confirmation, unsaved-changes actions, and Edit Line app bar/dictionary
