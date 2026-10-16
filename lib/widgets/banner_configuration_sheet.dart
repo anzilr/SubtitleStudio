@@ -656,7 +656,7 @@ class _BannerConfigurationSheetState extends State<BannerConfigurationSheet> {
                 ),
                 child: Icon(
                   icon,
-                  color: Colors.white,
+                  color: isEnabled ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface,
                   size: 20,
                 ),
               ),
