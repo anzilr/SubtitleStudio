@@ -34,21 +34,17 @@ void main() {
           ),
         ));
         await tester.pumpAndSettle();
-        final fields = find.byType(TextFormField);
-        expect(fields, findsNWidgets(4));
-        expect(tester.widget<EditableText>(find.descendant(
-          of: fields.at(0), matching: find.byType(EditableText),
-        )).style.color,
-            tokens.primaryAction);
-        expect(tester.widget<EditableText>(find.descendant(
-          of: fields.at(3), matching: find.byType(EditableText),
-        )).style.color,
-            tokens.onSurface);
+        final editor = find.byKey(const ValueKey('raw-srt-editor'));
+        expect(editor, findsOneWidget);
+        expect(find.byType(TextFormField), findsNothing,
+            reason: 'Raw source is not a GUI with per-cue fields');
+        expect(tester.widget<TextField>(editor).style?.color, tokens.onSurface);
         expect(tester.takeException(), isNull);
       }
     }
 
-    await tester.enterText(find.byType(TextFormField).at(3), 'പുതിയത് مرحبا');
+    await tester.enterText(find.byKey(const ValueKey('raw-srt-editor')),
+        '1\\n00:00:01,000 --> 00:00:04,000\\nപുതിയത് مرحبا');
     await tester.pump();
     expect(entry.text, 'പുതിയത് مرحبا');
     expect(changes, 1);
