@@ -19,3 +19,16 @@ then a parent update changing both subtitles and playback, and require
 Riverpod to remain consistent with final selected values.
 Run flutter analyze and full Flutter widget/integration tests. No native
 Android device testing in CI; user to validate with original large movie.
+
+WAVEFORM R7 R2: first verification run 38920947727: clean analyzer, 448
+tests passed, 4 failed. Fixes:
+- WaveformController playback had two provider writes, which let a delayed
+  stale scroll-only emission replace a newer playback position; now one
+  atomic WaveformReady update.
+- SchedulerBinding.instance unavailable in plain Riverpod ProviderContainer
+  tests; defensively detect absent binding and write state synchronously
+  outside a Flutter widget frame.
+- New ready-state widget fixture has just one zoom level, exposing old
+  division by zero to NaN/Infinity in the percent indicator. Treat a
+  single-level waveform as 100 percent without dividing by (1-1).
+Run analyzer/full tests including new build-phase lifecycle regression.
