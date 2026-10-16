@@ -41,7 +41,69 @@ enum StudioAppearance {
   }
 }
 
-/// Independent skin + mode selection, shared by Settings and the theme resolver.
+/// Stable identity for built-in or independently installed community skins.
+///
+/// Legacy built-in preference values remain readable. New persistent values
+/// are namespaced so installed skins never require adding an enum case.
+@immutable
+class StudioSkinId {
+  const StudioSkinId._(this.value);
+
+  final String value;
+
+  static const carbonJade = StudioSkinId._('builtin.carbonJade');
+  static const copperCinema = StudioSkinId._('builtin.copperCinema');
+  static const asterViolet = StudioSkinId._('builtin.asterViolet');
+
+  static StudioSkinId builtIn(StudioSkin skin) => switch (skin) {
+        StudioSkin.carbonJade => carbonJade,
+        StudioSkin.copperCinema => copperCinema,
+        StudioSkin.asterViolet => asterViolet,
+      };
+
+  /// Community IDs use a compact opaque key (e.g. a generated UUID).
+  /// They contain no paths, extensions, locale-dependent names or URLs.
+  static StudioSkinId community(String key) {
+    final result = parse('community.$key');
+    if (result == null) {
+      throw ArgumentError.value(key, 'key', 'Invalid community skin key');
+    }
+    return result;
+  }
+
+  static StudioSkinId? parse(String? raw) {
+    switch (raw) {
+      case 'carbonJade':
+      case 'builtin.carbonJade':
+        return carbonJade;
+      case 'copperCinema':
+      case 'builtin.copperCinema':
+        return copperCinema;
+      case 'asterViolet':
+      case 'builtin.asterViolet':
+        return asterViolet;
+    }
+    if (raw != null &&
+        RegExp(r'^community\.[a-z0-9][a-z0-9_-]{2,63}$').hasMatch(raw)) {
+      return StudioSkinId._(raw);
+    }
+    return null;
+  }
+
+  bool get isBuiltIn => value.startsWith('builtin.');
+
+  @override
+  bool operator ==(Object other) =>
+      other is StudioSkinId && other.value == value;
+
+  @override
+  int get hashCode => value.hashCode;
+
+  @override
+  String toString() => value;
+}
+
+/// Independent skin + mode selection for built-ins and future imported skins.
 @immutable
 class StudioAppearanceSelection {
   const StudioAppearanceSelection({
@@ -49,16 +111,16 @@ class StudioAppearanceSelection {
     required this.mode,
   });
 
-  final StudioSkin skin;
+  final StudioSkinId skin;
   final StudioAppearance mode;
 
   static const defaultSelection = StudioAppearanceSelection(
-    skin: StudioSkin.carbonJade,
+    skin: StudioSkinId.carbonJade,
     mode: StudioAppearance.dark,
   );
 
   StudioAppearanceSelection copyWith({
-    StudioSkin? skin,
+    StudioSkinId? skin,
     StudioAppearance? mode,
   }) =>
       StudioAppearanceSelection(
