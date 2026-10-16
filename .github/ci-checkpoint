@@ -1,10 +1,14 @@
-SubtitleStudio SKIN-4 R3-A / DESIGN-2 editor contrast migration gate | 2026-10-16
-Flutter analyze + full test suite. Use one semantic menu row in Editor and
-Edit Line popups; preserve all original popup values/selection callbacks.
-Replace fixed selection, highlight, timing and text colors in SubtitleCard
-with palette semantic roles for all nine appearances. Migrate formatting menu
-and clear-format sheet, unsaved-changes sheet, Edit Line app bar/dictionary
-icons to shared theme and semantic action states. Add nine-theme widget tests
-for cards, menus, callbacks and modal save/discard. Global ThemeState still
-uses legacy palettes until outstanding confirmation/dialog/action controls
-are audited; no native platform builds or media/Isar changes.
+SubtitleStudio SKIN-4 R3-B P1 / DESIGN-2 modal and selection gate | 2026-10-16
+Flutter analyze + full test suite only (no native platform builds).
+Migrate single-line and batch delete confirmation sheets, index range selection
+and selected-time shift sheets to shared StudioDesignTokens and component
+geometry. Project Settings modal header/surface uses the same tokens.
+Destructive actions use danger semantics; ordinary primary actions inherit
+the uniform FilledButton theme. Preserve index validation and zero-based
+range results, Navigator dismissal, async time-shift callback behavior and
+keyboard confirmation without repeated batch delete invocation.
+Exercise all nine built-in appearance modes and action callback regressions.
+Remain on refactor/riverpod-architecture only. Keep ThemeState live skin
+activation gated pending remaining toolbars, overlays and editing lifecycle
+audit, plus native Android/Windows visual acceptance. CP86 waveform stays
+separate.
