@@ -41,7 +41,20 @@ class _EditSubtitleScreenHostState extends State<EditSubtitleScreenHost> {
   // Do not recreate Riverpod configuration overrides when the app theme
   // changes. An override update would tear down EditLineController and the
   // inner editing screen, potentially dropping unsaved text and listeners.
-  late List<Override> _stableOverrides;
+  late var _stableOverrides = [
+    editLineConfigurationProvider.overrideWithValue(
+      EditLineConfiguration(
+        subtitleCollectionId: widget.subtitleId,
+        lineIndex: widget.index,
+        sessionId: widget.sessionId,
+        isNewSubtitle: widget.isNewSubtitle,
+        isEditMode: widget.editMode,
+        videoPath: widget.videoPath,
+        isVideoLoaded: widget.isVideoLoaded,
+        secondarySubtitles: widget.secondarySubtitles,
+      ),
+    ),
+  ];
 
   @override
   void initState() {
