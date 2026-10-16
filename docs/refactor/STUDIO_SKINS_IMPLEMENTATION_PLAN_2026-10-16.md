@@ -6,6 +6,7 @@ Decision status: **ARCHITECTURE APPROVED; SKIN-1 R2 COMPLETE (theme factory and 
 Verification: [successful SKIN-1 R2 CI](https://github.com/anzilr/SubtitleStudio/actions/runs/38867646977): **392 tests passed, zero analyzer issues**. Verified code: `fa6aa09c887af916104ec03930e85919bcf8d2b2`.
 Implementation report: [SKIN-1 report](STUDIO_SKIN1_THEME_FOUNDATION_2026-10-16.md).
 Community extension: **SKIN-EXT-1 verified** — [CI run 38868963345](https://github.com/anzilr/SubtitleStudio/actions/runs/38868963345), **400 tests passing, zero analyzer issues**. [Versioned portable JSON specification and future website/import plan](COMMUNITY_SKIN_FORMAT_V1.md).
+**SKIN-2 R2 completed:** [CI 38870812828](https://github.com/anzilr/SubtitleStudio/actions/runs/38870812828), **411 tests passing and analyzer clean**. The independent namespaced `skinId` / typed `StudioAppearance` preference migration is code-complete, with pinned generated Isar schema. [Implementation report](STUDIO_SKIN2_PERSISTENCE_2026-10-16.md). Production palette activation remains deferred until SKIN-4.
 Preferred first preview: **Carbon & Jade / Dark**
 Checkpoint 85 R6: **Android stability test complete (user-confirmed)**.
 Last CI-verified code gate: CP85 R5, run 38861456875, 386 tests passing, analyzer clean.
@@ -130,7 +131,7 @@ Implementation gate:
 |---|---|---|
 | SKIN-0 **approved** | Decision record, palette definitions, roadmap and source audit | This document and roadmap links committed; no production theme changes |
 | SKIN-1 **COMPLETE** | Typed enums, nine pure `StudioPalette` variants, factory, distinct Dark/Classic schemes, extended semantic tokens and read-only preview gallery | Successful CI R2, 392 passing tests, analyzer clean; all nine contrast and narrow gallery tests passing; factory not yet activated |
-| SKIN-2 | Independent skin/mode Isar persistence, migrated `ThemeController`, startup/loading concurrency and custom-font safety | Isar generated code verified; old DB compatibility; restart tests; old mode retained; no route/controller disposal |
+| SKIN-2 **COMPLETE (CI verified)** | Independent nullable namespaced `skinId` / `themeMode` in existing Isar Preferences; migrated typed `ThemeController`, guarded async startup, queued writes, font retention | Pinned generated schema; 411 tests / analyzer clean; old-shaped preferences row test. **Historical binary device DB upgrade still needs native acceptance**. Legacy palette renderer remains active until SKIN-4 |
 | SKIN-3 | Appearance Settings previews, mode cycle button, system bar/nav styling | Widget tests: select 3 skins × 3 modes, persist, switch/reopen, keyboard navigation, labels, font retention |
 | SKIN-4 | Semantic `StudioCueField`/`StudioTimeField` and targeted Edit Line pilot (source/edited and time fields) | Android physical testing all modes; unsaved text and cursor/IME/undo retain state; Malayalam, Arabic/RTL, large fonts |
 | SKIN-5 | Incremental migration: Home, Editor/toolbars, Project Settings, history, Source View, import/export, sheets, waveform visuals | Per-screen audit and tests; semantic warnings and graph lane distinction retained; dark/classic screenshots |
@@ -167,4 +168,4 @@ Do not advance SKIN-4 until SKIN-1–3 and Editor lifecycle tests are green. Kee
 - Waveform decode/native player modifications within skin commits.
 - Editing/project/checkpoint schema changes; skin persistence is global application preferences only.
 
-**Approved selection: all three skins. First preferred preview: Carbon & Jade / Dark. SKIN-1 foundational Dart code is now committed and CI verified, but the production `MainApp`, controller, saved preferences and Edit Line fields are still unchanged. Next implementation milestone: SKIN-2 persistence/controller migration.**
+**Approved selection: all three skins. First preferred preview: Carbon & Jade / Dark. SKIN-1 foundational Dart code is now committed and CI verified, but the production `MainApp`, controller, saved preferences and Edit Line fields are still unchanged. Next implementation milestone: SKIN-3 Appearance Settings UI (then SKIN-4 safe live palette activation).**
