@@ -123,21 +123,37 @@ class WaveformWidgetState extends riverpod.ConsumerState<WaveformWidget> {
     _currentSubtitles = List.from(widget.subtitles);
   }
 
+  // Synchronize external playback updates only after the current Flutter
+  // build completes. Riverpod forbids provider writes from didUpdateWidget.
+  // Coalesce repeated parent updates and always apply the latest position.
+  bool _playbackSyncScheduled = false;
+
+  void _schedulePlaybackSync() {
+    if (_playbackSyncScheduled) return;
+    _playbackSyncScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _playbackSyncScheduled = false;
+      if (!mounted) return;
+      final position = widget.playbackPosition;
+      if (position == null) return;
+      ref.read(waveformControllerProvider.notifier)
+          .dispatch(UpdatePlaybackPosition(position));
+    });
+  }
+
   @override
   void didUpdateWidget(WaveformWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    // Update playback position if changed
     if (widget.playbackPosition != oldWidget.playbackPosition &&
         widget.playbackPosition != null) {
-      ref.read(waveformControllerProvider.notifier).dispatch(
-            UpdatePlaybackPosition(widget.playbackPosition!),
-          );
+      _schedulePlaybackSync();
     }
-    
-    // Check if subtitles changed and update internal cache
+
+    // Flutter is *already* rebuilding this widget. Never set local state
+    // or write a Riverpod provider from this lifecycle callback.
     if (widget.subtitles != oldWidget.subtitles) {
-      _updateSubtitlesInternal(widget.subtitles);
+      _updateSubtitlesInternal(widget.subtitles, duringWidgetUpdate: true);
     }
   }
   
@@ -150,7 +166,10 @@ class WaveformWidgetState extends riverpod.ConsumerState<WaveformWidget> {
   }
   
   /// Internal method to update subtitles and trigger repaint
-  void _updateSubtitlesInternal(List<SubtitleLine> newSubtitles) {
+  void _updateSubtitlesInternal(
+    List<SubtitleLine> newSubtitles, {
+    bool duringWidgetUpdate = false,
+  }) {
     // Check if subtitles actually changed
     bool hasChanges = false;
     
@@ -175,12 +194,16 @@ class WaveformWidgetState extends riverpod.ConsumerState<WaveformWidget> {
     }
     
     if (hasChanges) {
-      setState(() {
+      // didUpdateWidget is itself a rebuild, so setState is unnecessary
+      // (and a synchronous provider dispatch here violates Riverpod's
+      // widget lifecycle rule). External updates still request a repaint.
+      if (duringWidgetUpdate) {
         _currentSubtitles = List.from(newSubtitles);
-      });
-      
-      // Force waveform repaint
-      ref.read(waveformControllerProvider.notifier).dispatch(const ForceRepaint());
+      } else {
+        setState(() {
+          _currentSubtitles = List.from(newSubtitles);
+        });
+      }
     }
   }
 
