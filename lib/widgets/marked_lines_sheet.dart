@@ -525,7 +525,6 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
   }
 
   Widget _buildMarkedLinesList(BuildContext context) {
-    print('DEBUG: _buildMarkedLinesList called, _displayedLines.length: ${_displayedLines.length}');
     
     // Ensure we have enough keys for all items
     // CRITICAL: Only add NEW keys if we don't have enough, don't recreate existing ones
@@ -534,17 +533,13 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
       final keysToAdd = keysNeeded - _cardKeys.length;
       for (int i = 0; i < keysToAdd; i++) {
         _cardKeys.add(GlobalKey());
-        print('DEBUG: Added NEW GlobalKey, _cardKeys.length now: ${_cardKeys.length}');
       }
     }
     // Remove excess keys if list shortened
     else if (_cardKeys.length > keysNeeded) {
-      print('DEBUG: Removing ${_cardKeys.length - keysNeeded} excess keys');
       _cardKeys.removeRange(keysNeeded, _cardKeys.length);
     }
     
-    print('DEBUG: Final _cardKeys.length: ${_cardKeys.length}');
-    print('DEBUG: Keys hash codes: ${_cardKeys.map((k) => k.hashCode).toList()}');
     
     return ListView.separated(
       controller: _scrollController,
