@@ -164,6 +164,8 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
   bool _isNavigating = false;
   // Android system Back and AppBar Back must use the same exit flow.
   bool _isLeavingEditor = false;
+  bool _inputProbeAfterMsone = false;
+  int _inputProbeCount = 0;
 
   // Source view support
   bool _isSourceView = false; // Track if we're in source view mode
@@ -439,9 +441,24 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
   /// still-mounted editor route pushes the submission page. Never push with
   /// the context of a bottom sheet after popping that sheet.
   void _showSubmitToMsoneModal() {
+    // The global cue-scroll loader is inserted in the Navigator Overlay, not
+    // into an editor-scoped subtree. Never carry it across a modal route.
+    if (IsolatedLoaderController.isVisible) {
+      debugPrint('EditScreen MSone: clearing stale blocking loader before push');
+      IsolatedLoaderController.hide();
+    }
     unawaited(showMsoneSubmissionFlow(
       context: context,
       subtitleCollectionId: widget.subtitleCollectionId,
+      onReturnToEditor: () {
+        if (!mounted) return;
+        final staleLoader = IsolatedLoaderController.isVisible;
+        if (staleLoader) IsolatedLoaderController.hide();
+        _inputProbeCount = 0;
+        _inputProbeAfterMsone = true;
+        debugPrint('EditScreen MSone: resumed editor; staleLoader=$staleLoader '
+            'session=${widget.sessionId}');
+      },
     ));
   }
 
@@ -534,7 +551,16 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
       });
     });
 
-    return PopScope(
+    return Listener(
+        behavior: HitTestBehavior.deferToChild,
+        onPointerDown: (_) {
+          if (!kDebugMode || !_inputProbeAfterMsone || !mounted) return;
+          if (_inputProbeCount++ < 5) {
+            debugPrint('EditScreen MSone: editor received pointer #$_inputProbeCount '
+                'session=${widget.sessionId}');
+          }
+        },
+        child: PopScope(
         // Android system Back must follow the same asynchronous exit path as
         // the AppBar instead of automatically popping this route.
         canPop: false,
@@ -713,6 +739,7 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
         ],
       ),
     ),
+  ),
   );
   }
 

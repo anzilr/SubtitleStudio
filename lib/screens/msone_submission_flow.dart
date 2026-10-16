@@ -8,6 +8,9 @@ import 'package:subtitle_studio/screens/msone_submission_screen.dart';
 Future<void> showMsoneSubmissionFlow({
   required BuildContext context,
   required int subtitleCollectionId,
+  /// Called after the submission route has left the navigator, before
+  /// accepting editor input again. Owned by the caller, not the form.
+  VoidCallback? onReturnToEditor,
   @visibleForTesting
   Widget Function(BuildContext, String)? destinationBuilder,
 }) async {
@@ -69,6 +72,7 @@ Future<void> showMsoneSubmissionFlow({
   // Navigator route, so its absence helps distinguish a native crash.
   debugPrint('MSone flow: returned to editor; mounted=${context.mounted}');
   if (context.mounted) {
+    onReturnToEditor?.call();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (context.mounted) {
         debugPrint('MSone flow: editor rendered a frame after Back');

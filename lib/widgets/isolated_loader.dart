@@ -143,7 +143,11 @@ class _IsolatedLoaderState extends State<IsolatedLoader>
 class IsolatedLoaderController {
   static OverlayEntry? _overlayEntry;
   static bool _isVisible = false;
-  
+
+  /// Root navigator overlay entries outlive pages. This detects a stale,
+  /// fully opaque input barrier that would block the editor on route return.
+  static bool get isVisible => _isVisible && _overlayEntry != null;
+
   /// Show the loader overlay
   static void show(BuildContext context) {
     if (_isVisible) return;
