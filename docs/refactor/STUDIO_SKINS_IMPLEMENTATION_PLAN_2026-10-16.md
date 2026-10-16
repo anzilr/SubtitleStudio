@@ -5,6 +5,7 @@ Branch: `refactor/riverpod-architecture`
 Decision status: **ARCHITECTURE APPROVED; SKIN-1 R2 COMPLETE (theme factory and gallery code, not yet activated in MainApp)**
 Verification: [successful SKIN-1 R2 CI](https://github.com/anzilr/SubtitleStudio/actions/runs/38867646977): **392 tests passed, zero analyzer issues**. Verified code: `fa6aa09c887af916104ec03930e85919bcf8d2b2`.
 Implementation report: [SKIN-1 report](STUDIO_SKIN1_THEME_FOUNDATION_2026-10-16.md).
+Community extension: **SKIN-EXT-1 verified** — [CI run 38868963345](https://github.com/anzilr/SubtitleStudio/actions/runs/38868963345), **400 tests passing, zero analyzer issues**. [Versioned portable JSON specification and future website/import plan](COMMUNITY_SKIN_FORMAT_V1.md).
 Preferred first preview: **Carbon & Jade / Dark**
 Checkpoint 85 R6: **Android stability test complete (user-confirmed)**.
 Last CI-verified code gate: CP85 R5, run 38861456875, 386 tests passing, analyzer clean.
@@ -157,7 +158,7 @@ Do not advance SKIN-4 until SKIN-1–3 and Editor lifecycle tests are green. Kee
 
 ## Community extensibility — required future milestones
 
-- **SKIN-EXT-1:** typed namespaced skin IDs, immutable definitions/catalog, shared data-only renderer, portable JSON v1 codec, validation and public schema. Code implementation precedes SKIN-2 so the database stores a generic string instead of an enum.\n- **SKIN-EXT-2:** local preview/import/export on Android/desktop, safe app-owned storage, duplicate-ID collision handling, missing-file fallback and accessibility tests.\n- **SKIN-EXT-3:** open-source, client-side web Skin Creator for editing the 12 semantic color roles across all three modes, live Editor preview, contrast help, schema validation and portable export. No account/backend required for v1.\n- **SKIN-EXT-4:** optional future advanced customizations subject to security, accessibility and user testing. Executable code or arbitrary CSS/HTML is not in v1.\n\nFull spec: [Community skin format and creator roadmap](COMMUNITY_SKIN_FORMAT_V1.md).\n\n## Out of scope
+- **SKIN-EXT-1 (COMPLETE, CI verified):** typed namespaced skin IDs, immutable definitions/catalog, shared data-only renderer, portable JSON v1 codec, validation, public schema, community unit/widget tests. Completed before SKIN-2 so the database can store a generic string instead of an enum.\n- **SKIN-EXT-2:** local preview/import/export on Android/desktop, safe app-owned storage, duplicate-ID collision handling, missing-file fallback and accessibility tests.\n- **SKIN-EXT-3:** open-source, client-side web Skin Creator for editing the 12 semantic color roles across all three modes, live Editor preview, contrast help, schema validation and portable export. No account/backend required for v1.\n- **SKIN-EXT-4:** optional future advanced customizations subject to security, accessibility and user testing. Executable code or arbitrary CSS/HTML is not in v1.\n\nFull spec: [Community skin format and creator roadmap](COMMUNITY_SKIN_FORMAT_V1.md).\n\n## Out of scope
 
 - A fourth **bundled** skin is not planned. Community-created skins and local imports **are supported architectural requirements**, implemented later in SKIN-EXT-2, while the v1 format supports custom semantic colors.
 - Automated skin changes based on time of day.
