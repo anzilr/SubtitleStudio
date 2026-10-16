@@ -426,7 +426,7 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                        color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: borderColor,
@@ -438,10 +438,10 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: Colors.green,
+                              color: Theme.of(context).colorScheme.primary,
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.folder_outlined,
                               color: Colors.white,
                               size: 20,
@@ -491,7 +491,7 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
               // File Name Input
               Container(
                 decoration: BoxDecoration(
-                  color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                  color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: borderColor,
@@ -519,7 +519,7 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
               // Custom Tag Input
               Container(
                 decoration: BoxDecoration(
-                  color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                  color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: borderColor,
@@ -550,7 +550,7 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
               OutlinedButton.icon(
                 key: const ValueKey('output-encoding-picker'),
                 onPressed: _chooseEncoding,
-                icon: const Icon(Icons.manage_search),
+                icon: Icon(Icons.manage_search),
                 label: Text(_availableEncodings.contains(_selectedEncoding)
                     ? 'Output encoding: ' + _selectedEncoding
                     : 'Unavailable on this device: ' + _selectedEncoding),
@@ -561,7 +561,7 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                  color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: borderColor,
@@ -579,7 +579,7 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
                             color: primaryColor,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.tune,
                             color: Colors.white,
                             size: 20,
@@ -633,8 +633,8 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
                       child: OutlinedButton(
                         onPressed: () => Navigator.pop(context),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.red,
-                          side: BorderSide(color: Colors.red.withValues(alpha: 0.5)),
+                          foregroundColor: Theme.of(context).colorScheme.error,
+                          side: BorderSide(color: Theme.of(context).colorScheme.error.withValues(alpha: 0.5)),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -658,7 +658,7 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
                         onPressed: _exportSrt,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primaryColor,
-                          foregroundColor: Colors.white,
+                          foregroundColor: Theme.of(context).colorScheme.onPrimary,
                           elevation: 0,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
