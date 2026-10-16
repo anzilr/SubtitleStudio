@@ -37,8 +37,9 @@ class DeleteConfirmationSheet extends StatelessWidget {
             ),
           ),
           padding: const EdgeInsets.all(StudioSpacing.lg),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
             children: [
               Row(
                 children: [
@@ -146,6 +147,7 @@ class DeleteConfirmationSheet extends StatelessWidget {
                 ],
               ),
             ],
+            ),
           ),
         ),
       ),
