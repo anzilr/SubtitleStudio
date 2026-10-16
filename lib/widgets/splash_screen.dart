@@ -72,7 +72,7 @@ class _SvgSplashScreenState extends State<SvgSplashScreen>
           height: 5,
           width: width,
           decoration: BoxDecoration(
-            color: isActive ? const Color(0xFF2196F3) : const Color(0xFFFFFFFF), // Use const colors
+            color: isActive ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurfaceVariant, // Use const colors
             borderRadius: BorderRadius.circular(8),
           ),
         );
