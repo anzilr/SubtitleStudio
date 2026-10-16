@@ -1,5 +1,12 @@
 # SubtitleStudio UX roadmap — visual history, plain language, unified design, compact Edit Line
 
+> **SKIN-EXT-1 COMPLETE, CI verified:** Community skin IDs, immutable
+> palette definitions/catalog, generic theme factory, import-file v1 JSON
+> validator, schema and tests are committed. [GitHub Actions 38868963345](https://github.com/anzilr/SubtitleStudio/actions/runs/38868963345):
+> **400 passing tests / zero analyzer issues**. This is **not** the website or
+> app importer. User-facing SKIN-EXT-2 import/export and SKIN-EXT-3 web creator
+> remain future UX stages; current production appearance remains unchanged.
+
 > **Community skins — future UX requirement:** SubtitleStudio is open source.
 > Users should eventually create, import, export, share and locally select their
 > own validated skins. The initial three built-in families remain Carbon & Jade,
