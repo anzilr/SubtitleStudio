@@ -134,7 +134,6 @@ void showGotToLineModal({
     isScrollControlled: true,
     builder: (context) {
       // Dynamic color variables for adaptive theming
-      final isDark = Theme.of(context).brightness == Brightness.dark;
       final primaryColor = Theme.of(context).primaryColor;
       final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
       final mutedColor = onSurfaceColor.withValues(alpha: 0.6);
