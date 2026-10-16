@@ -4,7 +4,6 @@ import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/screens/edit/widgets/edit_main_menu.dart';
 import 'package:subtitle_studio/screens/edit/widgets/subtitle_card.dart';
 import 'package:subtitle_studio/screens/edit_line/widgets/edit_line_menu.dart';
-import 'package:subtitle_studio/themes/studio_design_tokens.dart';
 import 'package:subtitle_studio/themes/studio_menu_item.dart';
 import 'package:subtitle_studio/themes/studio_palette.dart';
 import 'package:subtitle_studio/themes/studio_skin.dart';
