@@ -297,7 +297,7 @@ class _UrbanDictionaryWidgetState extends State<UrbanDictionaryWidget> {
           ),
           IconButton(
             onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.close),
+            icon: Icon(Icons.close),
           ),
         ],
       ),
@@ -308,7 +308,7 @@ class _UrbanDictionaryWidgetState extends State<UrbanDictionaryWidget> {
   Widget _buildSearchField(bool isDark, Color primaryColor, Color onSurfaceColor, Color borderColor) {
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+        color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: borderColor,
@@ -361,7 +361,7 @@ class _UrbanDictionaryWidgetState extends State<UrbanDictionaryWidget> {
         width: double.infinity,
         child: ElevatedButton.icon(
           onPressed: _performSearch,
-          icon: const Icon(Icons.search, color: Colors.white),
+          icon: Icon(Icons.search, color: Colors.white),
           label: const Text(
             'Search',
             style: TextStyle(
@@ -372,7 +372,7 @@ class _UrbanDictionaryWidgetState extends State<UrbanDictionaryWidget> {
           ),
           style: ElevatedButton.styleFrom(
             backgroundColor: primaryColor,
-            foregroundColor: Colors.white,
+            foregroundColor: Theme.of(context).colorScheme.onPrimary,
             padding: const EdgeInsets.symmetric(vertical: 16),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
@@ -480,7 +480,7 @@ class _UrbanDictionaryWidgetState extends State<UrbanDictionaryWidget> {
         color: surfaceColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isDark ? onSurfaceColor.withValues(alpha: 0.1) : Colors.grey.shade200,
+          color: isDark ? onSurfaceColor.withValues(alpha: 0.1) : Theme.of(context).colorScheme.outlineVariant,
           width: 1,
         ),
       ),
@@ -539,7 +539,7 @@ class _UrbanDictionaryWidgetState extends State<UrbanDictionaryWidget> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                  color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: onSurfaceColor.withValues(alpha: 0.1),
