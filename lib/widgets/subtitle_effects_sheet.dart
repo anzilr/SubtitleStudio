@@ -143,7 +143,7 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
                           Text(
                             "This is a beta feature. Use with caution.",
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Colors.red.withValues(alpha: 0.7),
+                              color: Theme.of(context).colorScheme.error.withValues(alpha: 0.7),
                             ),
                           ),
                         ],
@@ -170,7 +170,7 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
                         decoration: BoxDecoration(
                           color: _selectedEffect == 'karaoke' 
                               ? primaryColor.withValues(alpha: 0.1)
-                              : (isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50),
+                              : (isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                             color: _selectedEffect == 'karaoke' 
@@ -241,7 +241,7 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
                         decoration: BoxDecoration(
                           color: _selectedEffect == 'typewriter' 
                               ? primaryColor.withValues(alpha: 0.1)
-                              : (isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50),
+                              : (isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                             color: _selectedEffect == 'typewriter' 
@@ -255,7 +255,7 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: Colors.green,
+                                color: Theme.of(context).colorScheme.primary,
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Icon(
@@ -360,7 +360,7 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
                         onPressed: _isProcessing ? null : _applyEffect,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primaryColor,
-                          foregroundColor: Colors.white,
+                          foregroundColor: Theme.of(context).colorScheme.onPrimary,
                           elevation: 0,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -372,7 +372,7 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
                                 height: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.onPrimary),
                                 ),
                               )
                             : Row(
@@ -418,7 +418,7 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+              color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: borderColor,
@@ -510,13 +510,13 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.blue.withValues(alpha: 0.1),
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
                       "Effect will be applied to entire text",
                       style: TextStyle(
-                        color: Colors.blue,
+                        color: Theme.of(context).colorScheme.primary,
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                       ),
@@ -531,7 +531,7 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
         // Color Selection
         Container(
           decoration: BoxDecoration(
-            color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+            color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: borderColor,
@@ -575,7 +575,7 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+            color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: borderColor,
@@ -655,7 +655,7 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+            color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: borderColor,
@@ -727,7 +727,7 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
         // Color Selection
         Container(
           decoration: BoxDecoration(
-            color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+            color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: borderColor,
@@ -771,7 +771,7 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+            color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: borderColor,
@@ -908,7 +908,7 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
                       width: double.infinity,
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                        color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: onSurfaceColor.withValues(alpha: 0.12),
@@ -1118,7 +1118,7 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
                       width: double.infinity,
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                        color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: onSurfaceColor.withValues(alpha: 0.12),
@@ -1296,7 +1296,7 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
             width: double.infinity,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Theme.of(context).brightness == Brightness.dark ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.03) : Colors.grey.shade50,
+              color: Theme.of(context).brightness == Brightness.dark ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.03) : Theme.of(context).colorScheme.surfaceContainerLow,
               borderRadius: BorderRadius.circular(8),
             ),
             child: _selectedEffect == 'karaoke' ? _karaokePreview(text) : _typewriterPreview(text),
