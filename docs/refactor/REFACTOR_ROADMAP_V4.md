@@ -1,5 +1,21 @@
 # SubtitleStudio Refactor Roadmap v4
 
+> **SKIN-3 R1 COMPLETE — October 16, 2026:** An Appearance section
+> in Settings now offers independent saved skin and Light/Dark/Classic choices,
+> previews all three built-in skins (nine swatches), and supports injectable
+> community definitions in **My skins**. A scoped Edit Line preview shows
+> the selected combination without touching the parent Editor's route/theme.
+> Toolbar theme cycling uses typed appearances with a clear tooltip.
+> [Verified CI 38872349945](https://github.com/anzilr/SubtitleStudio/actions/runs/38872349945):
+> **418 tests passed; Flutter analyze succeeded**; tested code `06eb584`.
+> [SKIN-3 report](STUDIO_SKIN3_APPEARANCE_SETTINGS_2026-10-16.md).
+> Live Editor palettes are intentionally **still legacy**; saving a skin
+> currently changes its Settings preview only. SKIN-4 must migrate the
+> Original/Edited/Time fields to neutral, readable semantic components **before**
+> enabling the new palette factory globally, with Android/Windows acceptance.
+> Native old-database migration acceptance and CP86 waveform testing remain
+> independent release work.
+
 > **SKIN-2 R2 COMPLETE — October 16, 2026:** Separately persisted
 > namespaced `Preferences.skinId` and existing `themeMode` are now backed by
 > the pinned, regenerated Isar model and an injectable Riverpod theme controller.
