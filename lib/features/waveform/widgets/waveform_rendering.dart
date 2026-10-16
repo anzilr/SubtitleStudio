@@ -258,7 +258,7 @@ extension _WaveformRendering on WaveformWidgetState {
                         child: Text(
                           // Convert to percentage: 0% = most zoomed out, 100% = most zoomed in
                           // Since lower index = more detail, we reverse: (maxIndex - currentIndex) / maxIndex * 100
-                          '${(((state.buffer.zoomLevelCount - 1 - state.currentZoomIndex) / (state.buffer.zoomLevelCount - 1)) * 100).round()}%',
+                          '${state.buffer.zoomLevelCount > 1 ? (((state.buffer.zoomLevelCount - 1 - state.currentZoomIndex) / (state.buffer.zoomLevelCount - 1)) * 100).round() : 100}%',
                           style: TextStyle(
                             fontSize: isMobile ? 12 : 13,
                             fontWeight: FontWeight.w500,
