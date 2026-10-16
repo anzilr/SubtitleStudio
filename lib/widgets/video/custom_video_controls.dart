@@ -341,9 +341,9 @@ class CustomVideoControlsState extends State<CustomVideoControls> {
 
             return SliderTheme(
               data: SliderTheme.of(context).copyWith(
-                activeTrackColor: Colors.blue,
+                activeTrackColor: Theme.of(context).colorScheme.primary,
                 inactiveTrackColor: Colors.white.withValues(alpha: 0.3),
-                thumbColor: Colors.blue,
+                thumbColor: Theme.of(context).colorScheme.primary,
                 thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
                 overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
                 trackHeight: 4.0,
@@ -494,7 +494,7 @@ class _CenterControlButtonState extends State<_CenterControlButton> {
           ),
           child: Icon(
             widget.icon,
-            color: _isHovered ? Colors.blue.shade200 : Colors.white,
+            color: _isHovered ? Theme.of(context).colorScheme.primary : Colors.white,
             size: widget.size,
             shadows: widget.extraShadows ? [
               Shadow(
