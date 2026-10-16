@@ -7,7 +7,7 @@ import 'package:subtitle_studio/screens/screen_edit.dart' as legacy;
 /// Compatibility wrapper for [legacy.EditScreen].
 ///
 /// This host scopes the Editor's Riverpod providers for one editing session.
-class EditScreenHost extends StatelessWidget {
+class EditScreenHost extends StatefulWidget {
   final int subtitleCollectionId;
   final int? lastEditedIndex;
   final int sessionId;
@@ -20,20 +20,51 @@ class EditScreenHost extends StatelessWidget {
   });
 
   @override
+  State<EditScreenHost> createState() => _EditScreenHostState();
+}
+
+class _EditScreenHostState extends State<EditScreenHost> {
+  // Riverpod 3 updates scope overrides when ProviderScope is rebuilt.
+  // A theme change may rebuild the Navigator's route builder: recreating
+  // overrideWithValue(EditConfiguration(...)) would dispose the editor
+  // controller and cause another "Loading..." gate.
+  late List<Override> _stableOverrides;
+
+  @override
+  void initState() {
+    super.initState();
+    _resetOverrides();
+  }
+
+  void _resetOverrides() {
+    _stableOverrides = [
+      editConfigurationProvider.overrideWithValue(
+        EditConfiguration(
+          subtitleCollectionId: widget.subtitleCollectionId,
+          sessionId: widget.sessionId,
+        ),
+      ),
+    ];
+  }
+
+  @override
+  void didUpdateWidget(covariant EditScreenHost oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.subtitleCollectionId != widget.subtitleCollectionId ||
+        oldWidget.sessionId != widget.sessionId) {
+      _resetOverrides();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return ProviderScope(
-      overrides: [
-        editConfigurationProvider.overrideWithValue(
-          EditConfiguration(
-            subtitleCollectionId: subtitleCollectionId,
-            sessionId: sessionId,
-          ),
-        ),
-      ],
+      key: ValueKey('editor-scope-${widget.sessionId}-${widget.subtitleCollectionId}'),
+      overrides: _stableOverrides,
       child: _EditRiverpodHost(
-        subtitleCollectionId: subtitleCollectionId,
-        lastEditedIndex: lastEditedIndex,
-        sessionId: sessionId,
+        subtitleCollectionId: widget.subtitleCollectionId,
+        lastEditedIndex: widget.lastEditedIndex,
+        sessionId: widget.sessionId,
       ),
     );
   }
