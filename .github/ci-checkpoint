@@ -1,14 +1,15 @@
-SubtitleStudio SKIN-4 R3-B P2 R2 live skin activation gate | 2026-10-16
-Flutter analyze + all tests only, no native platform builds.
-Correct first pre-activation analyzer issues (Source View dynamic TextStyle,
-source/help widget assertion via EditableText, unused Edit Line variable).
-Connect MainApp MaterialApp theme to catalog-backed liveStudioThemeProvider,
-resolve saved skin ID and Light/Dark/Classic separately through the same
-StudioThemeFactory used by community skins and previews. Missing catalog skin
-must render Carbon & Jade without altering the persisted community ID.
-Preserve custom app fonts, editor text/undo/selection/focus and route/provider
-lifetime. Screen Help, embedded and standalone Source View, MSone Submission
-and Edit Line dialogs now use semantic component colors. Add nine-palette
-source and Help widget tests, live resolution and missing-ID regression tests.
-Physical Android/Windows acceptance is intentionally after CI success.
-Original CP86 native waveform qualification remains a separate workstream.
+SubtitleStudio SKIN-4 R3-B final activation and scope gate | 2026-10-16
+Flutter analyze and full tests only, no physical or native Actions builds.
+Activate live catalog/factory skin selection across MaterialApp with saved
+Light/Dark/Classic independent of skin ID. Preserve missing community ID,
+font family, navigation, text/undo/focus, and Editor/Edit Line provider state.
+Source View host now owns stable provider overrides to prevent reload on
+palette changes, matching existing Edit and Edit Line lifetime protections.
+Source View (two editing surfaces), MSone Submission wizard/buttons, Help
+categories/navigation, Edit Line dialogs and waveform toolbar use semantic
+design system; no changes to waveform decoder, encoding, Isar schema or API
+submission workflow. Verify all nine appearances, selection/focus, Help chips,
+live catalog fallback, Source View provider identity and other regressions.
+This run includes final MSone and waveform styling changes made after
+prior successful global activation run 38902744294 (439 tests, analyzer clean).
+Physical Android/Windows testing follows only when this gate passes.
