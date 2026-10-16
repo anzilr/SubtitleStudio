@@ -24,7 +24,7 @@ extension _ProjectSettingsSections on _ProjectSettingsSheetState {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle('Basic Information', Icons.info_outline, Colors.blue),
+        _buildSectionTitle('Basic Information', Icons.info_outline, Theme.of(context).colorScheme.primary),
         _buildEditableField(
           'Project Name',
           _projectNameController,
@@ -41,7 +41,7 @@ extension _ProjectSettingsSections on _ProjectSettingsSheetState {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle('File Management', Icons.folder_outlined, Colors.orange),
+        _buildSectionTitle('File Management', Icons.folder_outlined, Theme.of(context).colorScheme.primary),
         
         // SRT File Path
         _buildPathCard(
@@ -49,7 +49,7 @@ extension _ProjectSettingsSections on _ProjectSettingsSheetState {
           widget.subtitleCollection.filePath,
           'No SRT file path available',
           Icons.subtitles,
-          Colors.blue,
+          Theme.of(context).colorScheme.primary,
           onLocate: _locateSrtFile,
           onReplace: null, // SRT files are managed through other workflows
           onClear: null,   // SRT files shouldn't be cleared
@@ -64,7 +64,7 @@ extension _ProjectSettingsSections on _ProjectSettingsSheetState {
           _getDisplayProjectFilePath(),
           'No project file saved',
           Icons.description,
-          Colors.teal,
+          Theme.of(context).colorScheme.primary,
           onLocate: _locateProjectFile,
           onReplace: _saveProjectFile, // Save project when "Add" is pressed
           onClear: null,   // Project files shouldn't be cleared
@@ -78,7 +78,7 @@ extension _ProjectSettingsSections on _ProjectSettingsSheetState {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle('Media Paths', Icons.video_library_outlined, Colors.purple),
+        _buildSectionTitle('Media Paths', Icons.video_library_outlined, Theme.of(context).colorScheme.primary),
         
         // Video Path
         _buildPathCard(
@@ -86,7 +86,7 @@ extension _ProjectSettingsSections on _ProjectSettingsSheetState {
           _getDisplayVideoFilePath(),
           'No video file loaded',
           Icons.video_file,
-          Colors.purple,
+          Theme.of(context).colorScheme.primary,
           onLocate: _locateVideoFile,
           onReplace: _replaceVideoFile,
           onClear: _clearVideoFile,
@@ -102,7 +102,7 @@ extension _ProjectSettingsSections on _ProjectSettingsSheetState {
             : _getDisplaySecondarySubtitlePath(),
           'No secondary subtitle loaded',
           Icons.subtitles,
-          Colors.green,
+          Theme.of(context).colorScheme.primary,
           onLocate: _isSecondaryFromOriginal ? null : _locateSecondarySubtitle,
           onReplace: _replaceSecondarySubtitle,
           onClear: _clearSecondarySubtitle,
@@ -119,7 +119,7 @@ extension _ProjectSettingsSections on _ProjectSettingsSheetState {
         _buildSectionTitle(
           'Text Encoding',
           Icons.text_format,
-          Colors.indigo,
+          Theme.of(context).colorScheme.primary,
         ),
         ProjectEncodingSelector(
           selected: _selectedEncoding,
@@ -142,12 +142,12 @@ extension _ProjectSettingsSections on _ProjectSettingsSheetState {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle('Project Statistics', Icons.analytics_outlined, Colors.teal),
+        _buildSectionTitle('Project Statistics', Icons.analytics_outlined, Theme.of(context).colorScheme.primary),
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
-            border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.3)),
+            border: Border.all(color: Theme.of(context).colorScheme.outline),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -169,7 +169,7 @@ extension _ProjectSettingsSections on _ProjectSettingsSheetState {
                         '${(progress * 100).toStringAsFixed(1)}%',
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: Colors.teal,
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
                     ],
@@ -178,7 +178,7 @@ extension _ProjectSettingsSections on _ProjectSettingsSheetState {
                   LinearProgressIndicator(
                     value: progress,
                     backgroundColor: Theme.of(context).dividerColor.withValues(alpha: 0.3),
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.teal),
+                    valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
                   ),
                 ],
               ),
@@ -193,7 +193,7 @@ extension _ProjectSettingsSections on _ProjectSettingsSheetState {
                       Icons.format_list_numbered,
                       'Total Lines',
                       '$totalLines',
-                      Colors.blue,
+                      Theme.of(context).colorScheme.primary,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -202,7 +202,7 @@ extension _ProjectSettingsSections on _ProjectSettingsSheetState {
                       Icons.edit_note,
                       'Edited Lines',
                       '${stats['editedLines'] ?? 0}',
-                      Colors.green,
+                      Theme.of(context).colorScheme.primary,
                     ),
                   ),
                 ],
@@ -217,7 +217,7 @@ extension _ProjectSettingsSections on _ProjectSettingsSheetState {
                       widget.session.lastEditedIndex != null 
                         ? '#${widget.session.lastEditedIndex! + 1}'
                         : 'None',
-                      Colors.orange,
+                      Theme.of(context).colorScheme.primary,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -226,7 +226,7 @@ extension _ProjectSettingsSections on _ProjectSettingsSheetState {
                       Icons.language,
                       'Language',
                       _detectLanguage(),
-                      Colors.purple,
+                      Theme.of(context).colorScheme.primary,
                     ),
                   ),
                 ],
@@ -243,9 +243,9 @@ extension _ProjectSettingsSections on _ProjectSettingsSheetState {
       padding: const EdgeInsets.all(12),
       height: 65, // Fixed height to keep all stat cards the same size
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        border: Border.all(color: Theme.of(context).colorScheme.outline),
       ),
       child: Row(
         children: [
@@ -283,7 +283,7 @@ extension _ProjectSettingsSections on _ProjectSettingsSheetState {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle('Marked Lines', Icons.bookmark_added, Colors.red),
+        _buildSectionTitle('Marked Lines', Icons.bookmark_added, Theme.of(context).colorScheme.primary),
         Material(
           color: Colors.transparent,
           child: InkWell(
@@ -293,7 +293,7 @@ extension _ProjectSettingsSections on _ProjectSettingsSheetState {
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.3)),
+                border: Border.all(color: Theme.of(context).colorScheme.outline),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -301,7 +301,7 @@ extension _ProjectSettingsSections on _ProjectSettingsSheetState {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.red,
+                      color: Theme.of(context).colorScheme.primary,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Icon(
@@ -422,7 +422,6 @@ extension _ProjectSettingsSections on _ProjectSettingsSheetState {
     Widget? suffixIcon,
     Function(String)? onChanged,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
     final borderColor = onSurfaceColor.withValues(alpha: 0.12);
     
@@ -438,7 +437,7 @@ extension _ProjectSettingsSections on _ProjectSettingsSheetState {
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
-            color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+            color: Theme.of(context).colorScheme.surfaceContainerLow,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: borderColor,
@@ -477,7 +476,7 @@ extension _ProjectSettingsSections on _ProjectSettingsSheetState {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.3)),
+        border: Border.all(color: Theme.of(context).colorScheme.outline),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -516,7 +515,7 @@ extension _ProjectSettingsSections on _ProjectSettingsSheetState {
                     label: const Text('Locate'),
                     style: TextButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      foregroundColor: Colors.indigo,
+                      foregroundColor: Theme.of(context).colorScheme.primary,
                     ),
                   ),
                 if (showReplaceButton && onReplace != null)
@@ -526,7 +525,7 @@ extension _ProjectSettingsSections on _ProjectSettingsSheetState {
                     label: const Text('Replace'),
                     style: TextButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      foregroundColor: Colors.orange,
+                      foregroundColor: Theme.of(context).colorScheme.primary,
                     ),
                   ),
                 if (onClear != null)
@@ -536,7 +535,7 @@ extension _ProjectSettingsSections on _ProjectSettingsSheetState {
                     label: const Text('Clear'),
                     style: TextButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      foregroundColor: Colors.red,
+                      foregroundColor: Theme.of(context).colorScheme.error,
                     ),
                   ),
               ],
@@ -549,7 +548,7 @@ extension _ProjectSettingsSections on _ProjectSettingsSheetState {
               label: const Text('Add'),
               style: TextButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                foregroundColor: Colors.green,
+                foregroundColor: Theme.of(context).colorScheme.primary,
               ),
             ),
           ],
