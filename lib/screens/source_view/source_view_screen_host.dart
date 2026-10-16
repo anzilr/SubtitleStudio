@@ -20,17 +20,11 @@ import 'package:subtitle_studio/utils/unicode_text_input_formatter.dart';
 /// - Error handling with user-friendly messages
 /// - Save operation feedback
 /// - Performance optimizations with proper widget rebuilding
-class SourceViewScreenHost extends StatelessWidget {
-  /// Path to the SRT file to be displayed and edited
+class SourceViewScreenHost extends StatefulWidget {
+  /// Path to the SRT file to be displayed and edited.
   final String filePath;
-  
-  /// Optional display name for the file (used in app bar title)
   final String? displayName;
-  
-  /// SAF URI for Android file operations (required for SAF files)
   final String? safUri;
-  
-  /// Optional pre-loaded file content (used when file is already read via SAF)
   final String? fileContent;
 
   const SourceViewScreenHost({
@@ -42,18 +36,58 @@ class SourceViewScreenHost extends StatelessWidget {
   });
 
   @override
+  State<SourceViewScreenHost> createState() => _SourceViewScreenHostState();
+}
+
+class _SourceViewScreenHostState extends State<SourceViewScreenHost> {
+  // Riverpod 3 can update scope overrides when an inherited Theme rebuilds.
+  // Do not replace the route-owned config while it is editing unsaved SRT.
+  late var _stableOverrides = [
+    sourceViewConfigProvider.overrideWithValue(
+      SourceViewConfig(
+        filePath: widget.filePath,
+        displayName: widget.displayName,
+        safUri: widget.safUri,
+        fileContent: widget.fileContent,
+      ),
+    ),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _resetOverrides();
+  }
+
+  void _resetOverrides() {
+    _stableOverrides = [
+      sourceViewConfigProvider.overrideWithValue(
+        SourceViewConfig(
+          filePath: widget.filePath,
+          displayName: widget.displayName,
+          safUri: widget.safUri,
+          fileContent: widget.fileContent,
+        ),
+      ),
+    ];
+  }
+
+  @override
+  void didUpdateWidget(covariant SourceViewScreenHost oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.filePath != widget.filePath ||
+        oldWidget.displayName != widget.displayName ||
+        oldWidget.safUri != widget.safUri ||
+        oldWidget.fileContent != widget.fileContent) {
+      _resetOverrides();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return ProviderScope(
-      overrides: [
-        sourceViewConfigProvider.overrideWithValue(
-          SourceViewConfig(
-            filePath: filePath,
-            displayName: displayName,
-            safUri: safUri,
-            fileContent: fileContent,
-          ),
-        ),
-      ],
+      key: ValueKey('source-view-scope-${widget.filePath}-${widget.safUri ?? ''}'),
+      overrides: _stableOverrides,
       child: const _SourceViewRiverpodHost(),
     );
   }
