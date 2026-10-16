@@ -104,7 +104,7 @@ Future<void> _tapMode(WidgetTester tester, StudioAppearance mode) async {
 }
 
 void main() {
-  testWidgets('shows nine built-in swatches and an live appearance notice',
+  testWidgets('shows twelve built-in swatches and an live appearance notice',
       (tester) async {
     final store = _AppearanceStore();
     await _pumpSettings(tester, store, width: 320);
@@ -112,7 +112,7 @@ void main() {
     expect(find.text('Appearance'), findsOneWidget);
     expect(find.text('Built-in skins'), findsOneWidget);
     expect(find.text('My skins'), findsOneWidget);
-    expect(find.byType(StudioSkinDefinitionPreviewTile), findsNWidgets(9));
+    expect(find.byType(StudioSkinDefinitionPreviewTile), findsNWidgets(12));
     expect(find.byKey(const ValueKey('studio-community-skins-empty')),
         findsOneWidget);
     expect(find.byKey(const ValueKey('studio-editor-preview')),
@@ -174,7 +174,7 @@ void main() {
       store,
       catalog: StudioSkinCatalog(communitySkins: [community]),
     );
-    expect(find.byType(StudioSkinDefinitionPreviewTile), findsNWidgets(12));
+    expect(find.byType(StudioSkinDefinitionPreviewTile), findsNWidgets(15));
     expect(find.byKey(const ValueKey('studio-community-skins-empty')),
         findsNothing);
 
@@ -194,7 +194,7 @@ void main() {
         findsOneWidget);
     expect(store.savedSkin, isNull,
         reason: 'The UI must not erase an absent community skin ID');
-    expect(find.textContaining('Carbon & Jade · Dark'), findsOneWidget);
+    expect(find.textContaining('Carbon Zero · Dark'), findsOneWidget);
   });
 
   testWidgets('failed skin write reports error and rolls back selection',
@@ -208,7 +208,7 @@ void main() {
 
     final card = tester.widget<Semantics>(
         find.ancestor(
-          of: find.byKey(const ValueKey('studio-skin-builtin.carbonJade')),
+          of: find.byKey(const ValueKey('studio-skin-builtin.carbonZero')),
           matching: find.byType(Semantics),
         ).first);
     expect(card.properties.selected, true);
