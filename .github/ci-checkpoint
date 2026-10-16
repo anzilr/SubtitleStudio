@@ -1,7 +1,8 @@
-SubtitleStudio SKIN-3 R1 Appearance Settings and gallery gate | 2026-10-16
-Analyze and run the full Flutter test suite. Appearance section in Settings
-shows 3 built-in skins x 3 themes, editable independent persistent selection,
-shared read-only swatches and scoped Editor preview. Future community skin
-catalog provider and absent-skin fallback. Toolbar cycles typed theme modes
-with accessible feedback. Legacy global palettes remain until SKIN-4.
-No native platform builds, Isar schema changes or media changes.
+SubtitleStudio SKIN-4 R1 neutral cue/time field visual pilot | 2026-10-16
+Analyze and test all Flutter widgets/features. Introduce StudioCueFieldSurface,
+StudioCueFieldStyle and StudioTimeField, replace Edit Line white-on-primary
+Original/Edited and time fields with semantic surface, foreground, focus and
+validation colors. Keep text/undo/focus controllers and media routes unchanged.
+Preview-only SKIN-3 selector remains; StudioThemeFactory is NOT yet activated
+app-wide pending Android/Windows visual and broader hard-coded color audit.
+No native platform builds or Isar/schema/media changes.
