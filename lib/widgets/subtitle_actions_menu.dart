@@ -54,9 +54,7 @@ class SubtitleActionsMenu extends StatelessWidget {
       icon: Icon(
         Icons.movie_edit,
         size: 32,
-        color: Theme.of(context).brightness == Brightness.light
-            ? const Color.fromARGB(255, 0, 45, 54)
-            : const Color.fromARGB(255, 233, 216, 166),
+        color: Theme.of(context).colorScheme.onSurface,
       ),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
