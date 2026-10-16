@@ -5,9 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/screens/source_view/source_view_controller.dart';
 import 'package:subtitle_studio/screens/source_view/source_view_state.dart';
-import 'package:subtitle_studio/models/subtitle_entry.dart';
+import 'package:subtitle_studio/screens/edit/widgets/source_view_pane.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
-import 'package:subtitle_studio/utils/unicode_text_input_formatter.dart';
 
 /// Riverpod-enabled compatibility wrapper for SourceViewScreen
 /// 
@@ -330,9 +329,9 @@ class _SourceViewWidget extends StatelessWidget {
     // Main content with optimized ListView
     return Container(
       color: Theme.of(context).colorScheme.surface,
-      child: _OptimizedSubtitleList(
-        subtitleEntries: state.subtitleEntries,
-        controller: controller,
+      child: RawSrtEditor(
+        initialText: controller.rawSourceText ?? state.toSrtContent(),
+        onChanged: controller.updateRawSourceText,
       ),
     );
   }
@@ -431,193 +430,3 @@ class _SaveIntent extends Intent {
   const _SaveIntent();
 }
 
-/// Optimized subtitle list with performance improvements (matching EditScreen performance)
-class _OptimizedSubtitleList extends StatefulWidget {
-  final List<SubtitleEntry> subtitleEntries;
-  final SourceViewController controller;
-  
-  const _OptimizedSubtitleList({
-    required this.subtitleEntries,
-    required this.controller,
-  });
-
-  @override
-  State<_OptimizedSubtitleList> createState() => _OptimizedSubtitleListState();
-}
-
-class _OptimizedSubtitleListState extends State<_OptimizedSubtitleList> {
-  late ScrollController _scrollController;
-
-  @override
-  void initState() {
-    super.initState();
-    _scrollController = ScrollController();
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scrollbar(
-      controller: _scrollController,
-      thumbVisibility: true,
-      trackVisibility: true,
-      interactive: true,
-      thickness: 12.0, // Increased thumb width for better usability
-      radius: const Radius.circular(6.0), // Rounded scrollbar for modern look
-      child: ListView.builder(
-        controller: _scrollController,
-        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 16.0),
-        itemCount: widget.subtitleEntries.length,
-        // Simple ListView.builder like EditScreen - no complex optimizations
-        itemBuilder: (context, index) {
-          return _SimpleSubtitleTile(
-            entry: widget.subtitleEntries[index],
-            index: index,
-            controller: widget.controller,
-          );
-        },
-      ),
-    );
-  }
-}
-
-/// Simple subtitle tile widget for editing (matching EditScreen performance)
-/// 
-/// This widget represents a single subtitle entry with editable fields
-/// for index, timecodes, and text. Uses direct object mutation for best performance
-/// like EditScreen, avoiding complex Riverpod updates on every keystroke.
-class _SimpleSubtitleTile extends StatelessWidget {
-  final SubtitleEntry entry;
-  final int index;
-  final SourceViewController controller;
-  
-  const _SimpleSubtitleTile({
-    required this.entry,
-    required this.index,
-    required this.controller,
-  });
-
-  /// Notify controller that content has changed (called only when needed)
-  void _onSourceViewContentChanged(BuildContext context) {
-    controller.markContentChanged();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = StudioDesignTokens.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 8.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Index number (editable)
-          SizedBox(
-            width: 100,
-            child: TextFormField(
-              initialValue: entry.index,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: tokens.primaryAction,
-                fontFamily: 'monospace',
-              ),
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                isDense: true,
-                contentPadding: EdgeInsets.zero,
-              ),
-              onChanged: (value) {
-                entry.index = value;
-                _onSourceViewContentChanged(context);
-              },
-            ),
-          ),
-          const SizedBox(height: 4),
-          // Timecode line (editable)
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Start time
-              IntrinsicWidth(
-                child: TextFormField(
-                  initialValue: entry.startTime,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: tokens.primaryAction,
-                    fontFamily: 'monospace',
-                  ),
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  onChanged: (value) {
-                    entry.startTime = value;
-                    _onSourceViewContentChanged(context);
-                  },
-                ),
-              ),
-              Text(
-                ' --> ',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: tokens.mutedText,
-                  fontFamily: 'monospace',
-                ),
-              ),
-              // End time
-              IntrinsicWidth(
-                child: TextFormField(
-                  initialValue: entry.endTime,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: tokens.primaryAction,
-                    fontFamily: 'monospace',
-                  ),
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  onChanged: (value) {
-                    entry.endTime = value;
-                    _onSourceViewContentChanged(context);
-                  },
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          // Subtitle text (editable, multiline)
-          TextFormField(
-            initialValue: entry.text,
-            maxLines: null,
-            inputFormatters: [
-              UnicodeTextInputFormatter(),
-            ],
-            style: TextStyle(
-              fontSize: 14,
-              color: tokens.onSurface,
-              height: 1.4,
-            ),
-            decoration: const InputDecoration(
-              border: InputBorder.none,
-              isDense: true,
-              contentPadding: EdgeInsets.zero,
-            ),
-            onChanged: (value) {
-              entry.text = value;
-              _onSourceViewContentChanged(context);
-            },
-          ),
-          const SizedBox(height: 16), // Space between entries like in SRT format
-        ],
-      ),
-    );
-  }
-}
