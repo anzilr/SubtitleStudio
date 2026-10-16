@@ -64,13 +64,20 @@ class WaveformController extends Notifier<WaveformState> {
   void _setState(WaveformState nextState) {
     if (_disposed) return;
     final writeGeneration = ++_stateWriteGeneration;
-    if (SchedulerBinding.instance.schedulerPhase ==
-        SchedulerPhase.persistentCallbacks) {
+    // ProviderContainer is also used in non-widget tests and services,
+    // where the Flutter scheduler binding may not exist at all.
+    SchedulerBinding? scheduler;
+    try {
+      scheduler = SchedulerBinding.instance;
+    } catch (_) {
+      scheduler = null;
+    }
+    if (scheduler?.schedulerPhase == SchedulerPhase.persistentCallbacks) {
       // A native audio callback or widget lifecycle hook can arrive while
       // Flutter is building. Riverpod forbids modifying providers here.
       // Retain only the latest state; ClearWaveform/new loads invalidate older
       // queued writes, and provider disposal invalidates the callback.
-      SchedulerBinding.instance.addPostFrameCallback((_) {
+      scheduler!.addPostFrameCallback((_) {
         if (!_disposed && writeGeneration == _stateWriteGeneration) {
           state = nextState;
         }
@@ -345,34 +352,34 @@ class WaveformController extends Notifier<WaveformState> {
   void _onUpdatePlaybackPosition(
     UpdatePlaybackPosition event,
   ) {
-    if (state is WaveformReady) {
-      final currentState = state as WaveformReady;
-      _setState(currentState.copyWith(playbackPosition: event.position));
+    if (state is! WaveformReady) return;
+    final currentState = state as WaveformReady;
+    var nextScroll = currentState.scrollPosition;
 
-      // Auto-scroll if enabled - smart scrolling behavior
-      if (currentState.autoScroll) {
-        final playbackPixel = currentState.timeToPixel(event.position);
-        final centerPosition = currentState.viewportWidth / 2;
-        final maxScroll = (currentState.totalWidth - currentState.viewportWidth).clamp(0.0, double.infinity);
-        
-        // Smart scrolling:
-        // - Before center: indicator moves from left to center (no scroll)
-        // - After center to near end: indicator fixed at center, waveform scrolls
-        // - Near end: indicator moves from center to right edge (no scroll)
-        
-        if (playbackPixel <= centerPosition) {
-          // Beginning: indicator moves from left, no scroll
-          _onUpdateScrollPosition(UpdateScrollPosition(0.0));
-        } else if (playbackPixel >= currentState.totalWidth - centerPosition) {
-          // Near end: indicator moves to right, scroll to max
-          _onUpdateScrollPosition(UpdateScrollPosition(maxScroll));
-        } else {
-          // Middle: keep indicator centered, scroll waveform
-          final newScroll = playbackPixel - centerPosition;
-          _onUpdateScrollPosition(UpdateScrollPosition(newScroll.clamp(0.0, maxScroll)));
-        }
+    if (currentState.autoScroll) {
+      final playbackPixel = currentState.timeToPixel(event.position);
+      final centerPosition = currentState.viewportWidth / 2;
+      final maxScroll = (currentState.totalWidth - currentState.viewportWidth)
+          .clamp(0.0, double.infinity);
+
+      if (playbackPixel <= centerPosition) {
+        nextScroll = 0.0;
+      } else if (playbackPixel >=
+          currentState.totalWidth - centerPosition) {
+        nextScroll = maxScroll;
+      } else {
+        nextScroll = (playbackPixel - centerPosition)
+            .clamp(0.0, maxScroll);
       }
     }
+
+    // The playhead and auto-scroll belong to the *same* logical update.
+    // Previously a second _setState could read the old state during a
+    // build-phase deferral and silently overwrite the new playback time.
+    _setState(currentState.copyWith(
+      playbackPosition: event.position,
+      scrollPosition: nextScroll,
+    ));
   }
 
   /// Seek to specific time
