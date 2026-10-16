@@ -20,7 +20,7 @@ The OnePlus CPH2381 Android 14 debug log at ~18:19 records successful compact pe
 ## Automated verification
 
 - First gate: [CI 38925010484](https://github.com/anzilr/SubtitleStudio/actions/runs/38925010484) — **468 tests passed, 0 analyzer issues**.
-- Final gate with real Marked Lines checkbox widget test: **pending** when this document was authored. See latest branch Actions before treating this as released.
+- Final gate with real Marked Lines checkbox widget test and 360dp overflow protections: [CI 38926044286](https://github.com/anzilr/SubtitleStudio/actions/runs/38926044286) — **469 Flutter tests passed, 0 analyzer issues** at code commit `b25faf4a7742cd1dcd842dd3814e6915495ff110`.
 
 ## Native/manual acceptance checklist
 
@@ -47,3 +47,9 @@ The OnePlus CPH2381 Android 14 debug log at ~18:19 records successful compact pe
 **Desktop:** specialized workspace layout is deferred until Editor reuse/interfaces and design system stabilize. Upstream five-platform integration gate remains a separate final stage.
 
 No Isar schema or subtitle parsing modifications were made in this R8 patch.
+
+## Test-discovered usability repair
+
+The initial end-to-end checkbox gate [38925474773](https://github.com/anzilr/SubtitleStudio/actions/runs/38925474773) caught two independent overflow assertions at Android 360dp: the header's resolved/total summary overflowed 57 logical pixels and the one-line start→end timestamp chip overflowed 111 pixels. The header now uses flexible wrapping; each cue card stacks full start and end times inside a bounded row. This was fixed in code, not silenced in tests. [Final gate 38926044286](https://github.com/anzilr/SubtitleStudio/actions/runs/38926044286) passed all 469 tests.
+
+R7 Riverpod provider-during-build exception was reported **resolved by the user** after Android testing. This does not imply comprehensive CP86 native waveform or platform acceptance.
