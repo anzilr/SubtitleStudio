@@ -253,6 +253,9 @@ class ResizableSplitView extends StatefulWidget {
   final bool vertical;
   final Color? dividerColor;
   final double dividerThickness;
+  /// Minimum leading-pane height in logical pixels for vertical layouts.
+  /// The effective ratio is recomputed from live constraints on every build.
+  final double? minFirstPaneExtent;
   final void Function(double ratio)? onRatioChanged;
   
   const ResizableSplitView({
@@ -265,6 +268,7 @@ class ResizableSplitView extends StatefulWidget {
     this.vertical = false,
     this.dividerColor,
     this.dividerThickness = 4.0,
+    this.minFirstPaneExtent,
     this.onRatioChanged,
   });
 
@@ -302,9 +306,22 @@ class _ResizableSplitViewState extends State<ResizableSplitView> {
       final delta = widget.vertical 
           ? details.delta.dy / constraints.maxHeight
           : details.delta.dx / constraints.maxWidth;
-      _ratio = (_ratio + delta).clamp(widget.minRatio, widget.maxRatio);
+      final minimum = _minimumRatio(constraints);
+      // Apply the same bound during gestures and paint. A previously saved
+      // small ratio must not leave the waveform larger than its parent.
+      final current = _ratio.clamp(minimum, widget.maxRatio);
+      _ratio = (current + delta).clamp(minimum, widget.maxRatio);
     });
     widget.onRatioChanged?.call(_ratio);
+  }
+
+  double _minimumRatio(BoxConstraints constraints) {
+    if (!widget.vertical || widget.minFirstPaneExtent == null ||
+        !constraints.maxHeight.isFinite || constraints.maxHeight <= 0) {
+      return widget.minRatio;
+    }
+    final requested = widget.minFirstPaneExtent! / constraints.maxHeight;
+    return requested.clamp(widget.minRatio, widget.maxRatio);
   }
 
   @override
@@ -315,10 +332,16 @@ class _ResizableSplitViewState extends State<ResizableSplitView> {
             Theme.of(context).colorScheme.outline.withValues(alpha: 0.2);
             
         if (widget.vertical) {
+          final minimum = _minimumRatio(constraints);
+          final effectiveRatio = _ratio.clamp(minimum, widget.maxRatio);
+          // Leave enough room for the divider on extremely short windows.
+          final firstExtent = (constraints.maxHeight * effectiveRatio)
+              .clamp(0.0, (constraints.maxHeight - widget.dividerThickness)
+                  .clamp(0.0, double.infinity));
           return Column(
             children: [
               SizedBox(
-                height: constraints.maxHeight * _ratio,
+                height: firstExtent,
                 child: widget.leftChild,
               ),
               GestureDetector(
