@@ -9,7 +9,7 @@ void main() {
   for (final mode in StudioAppearance.values) {
     testWidgets('Go To Line slider uses Carbon Zero ${mode.label} foreground',
         (tester) async {
-      tester.view.physicalSize = const Size(390, 900);
+      tester.view.physicalSize = const Size(360, 900);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
