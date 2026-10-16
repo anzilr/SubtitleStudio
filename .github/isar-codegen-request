@@ -1,8 +1,8 @@
-checkpoint: 69
-purpose: regenerate lib/database/models/models.g.dart for additive HistoryRef collection
-method: pinned Flutter 3.47.5 and committed isar_community_generator
+checkpoint: SKIN-2
+purpose: add nullable Preferences.skinId string for built-in/community appearance settings
+method: pinned Flutter 3.47.5 and isar_community_generator
 constraints:
-- run build_runner only
-- commit generated models.g.dart only
-- do not touch main, upstream or release tags
-- no native builds
+- run build_runner only to update lib/database/models/models.g.dart
+- preserve all other collection schemas including HistoryRef
+- no modifications to main/development/upstream or tags
+- no native platform builds
