@@ -27,7 +27,7 @@ extension _EditLineLayout on EditSubtitleScreenState {
               return Scaffold(
                 appBar: AppBar(
                   leading: IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    icon: const Icon(Icons.arrow_back),
                     onPressed: () async {
                       // Check for unsaved changes
                       if (_hasUnsavedChanges()) {
@@ -47,17 +47,17 @@ extension _EditLineLayout on EditSubtitleScreenState {
                             _subtitle != null
                                 ? ScrollingTitleWidget(
                                   title: _subtitle!.fileName,
-                                  style: const TextStyle(
-                                    color: Colors.white,
+                                  style: TextStyle(
+                                    color: Theme.of(context).appBarTheme.foregroundColor,
                                     fontSize: 16,
                                   ),
                                   maxWidth:
                                       MediaQuery.of(context).size.width * 0.4,
                                 )
-                                : const Text(
+                                : Text(
                                   "Subtitle Studio",
                                   style: TextStyle(
-                                    color: Colors.white,
+                                    color: Theme.of(context).appBarTheme.foregroundColor,
                                     fontSize: 16,
                                   ),
                                 ),
@@ -83,18 +83,15 @@ extension _EditLineLayout on EditSubtitleScreenState {
                                 // Optional: quick toggle mark status on tap
                                 _toggleMarkLine();
                               },
-                              child: const Icon(
+                              child: Icon(
                                 Icons.bookmark_added,
-                                color: Colors.red,
+                                color: Theme.of(context).appBarTheme.foregroundColor,
                                 size: 20,
                               ),
                             ),
                           ),
                         ),
                     ],
-                  ),
-                  iconTheme: const IconThemeData(
-                    color: Color.fromARGB(255, 255, 255, 255),
                   ),
                   actions: [
                     const ThemeSwitcherButton(),
@@ -298,19 +295,7 @@ extension _EditLineLayout on EditSubtitleScreenState {
                                                             Icons.skip_previous,
                                                             size: buttonSize,
                                                             color:
-                                                                Theme.of(context).brightness == Brightness.light
-                                                                    ? const Color.fromARGB(
-                                                                      255,
-                                                                      0,
-                                                                      45,
-                                                                      54,
-                                                                    )
-                                                                    : const Color.fromARGB(
-                                                                      255,
-                                                                      233,
-                                                                      216,
-                                                                      166,
-                                                                    ),
+                                                                StudioDesignTokens.of(context).primaryAction,
                                                           ),
                                                         ),
                                                       ),
@@ -323,27 +308,8 @@ extension _EditLineLayout on EditSubtitleScreenState {
                                                             Icons.book,
                                                             size: buttonSize,
                                                             color:
-                                                                Theme.of(context).brightness == Brightness.light
-                                                                    ? const Color.fromARGB(
-                                                                      255,
-                                                                      0,
-                                                                      45,
-                                                                      54,
-                                                                    )
-                                                                    : const Color.fromARGB(
-                                                                      255,
-                                                                      233,
-                                                                      216,
-                                                                      166,
-                                                                    ),
+                                                                StudioDesignTokens.of(context).primaryAction,
                                                           ),
-                                                          shape: RoundedRectangleBorder(
-                                                            borderRadius:
-                                                                BorderRadius.circular(
-                                                                  16,
-                                                                ),
-                                                          ),
-                                                          elevation: 8,
                                                           offset: const Offset(
                                                             0,
                                                             8,
@@ -391,12 +357,10 @@ extension _EditLineLayout on EditSubtitleScreenState {
                                                                                 20,
                                                                             width:
                                                                                 20,
-                                                                            colorFilter: const ColorFilter.mode(
-                                                                              Color(
-                                                                                0xFF3A86FF,
-                                                                              ),
-                                                                              BlendMode.srcIn,
-                                                                            ),
+                                                                            colorFilter: ColorFilter.mode(
+                                                                               StudioDesignTokens.of(context).primaryAction,
+                                                                               BlendMode.srcIn,
+                                                                             ),
                                                                           ),
                                                                           const SizedBox(
                                                                             width:
@@ -430,9 +394,7 @@ extension _EditLineLayout on EditSubtitleScreenState {
                                                                           Icon(
                                                                             Icons
                                                                                 .book,
-                                                                            color: Color(
-                                                                              0xFF9C27B0,
-                                                                            ), // Purple color for Olam
+                                                                            color: StudioDesignTokens.of(context).primaryAction, // Purple color for Olam
                                                                             size:
                                                                                 24,
                                                                           ),
@@ -467,9 +429,7 @@ extension _EditLineLayout on EditSubtitleScreenState {
                                                                         Icon(
                                                                           Icons
                                                                               .forum,
-                                                                          color: Color(
-                                                                            0xFF4CAF50,
-                                                                          ), // Green color for Urban Dictionary
+                                                                          color: StudioDesignTokens.of(context).primaryAction, // Green color for Urban Dictionary
                                                                           size:
                                                                               24,
                                                                         ),
@@ -504,9 +464,7 @@ extension _EditLineLayout on EditSubtitleScreenState {
                                                                         Icon(
                                                                           Icons
                                                                               .auto_awesome,
-                                                                          color: Color(
-                                                                            0xFF9C27B0,
-                                                                          ), // Purple color for AI
+                                                                          color: StudioDesignTokens.of(context).primaryAction, // Purple color for AI
                                                                           size:
                                                                               24,
                                                                         ),
@@ -595,19 +553,7 @@ extension _EditLineLayout on EditSubtitleScreenState {
                                                             Icons.save,
                                                             size: buttonSize,
                                                             color:
-                                                                Theme.of(context).brightness == Brightness.light
-                                                                    ? const Color.fromARGB(
-                                                                      255,
-                                                                      0,
-                                                                      45,
-                                                                      54,
-                                                                    )
-                                                                    : const Color.fromARGB(
-                                                                      255,
-                                                                      233,
-                                                                      216,
-                                                                      166,
-                                                                    ),
+                                                                StudioDesignTokens.of(context).primaryAction,
                                                           ),
                                                           onPressed: () async {
                                                             // Show loading state briefly for better UX
@@ -647,19 +593,7 @@ extension _EditLineLayout on EditSubtitleScreenState {
                                                                       .play_arrow,
                                                               size: buttonSize,
                                                               color:
-                                                                  Theme.of(context).brightness == Brightness.light
-                                                                      ? const Color.fromARGB(
-                                                                        255,
-                                                                        0,
-                                                                        45,
-                                                                        54,
-                                                                      )
-                                                                      : const Color.fromARGB(
-                                                                        255,
-                                                                        233,
-                                                                        216,
-                                                                        166,
-                                                                      ),
+                                                                  StudioDesignTokens.of(context).primaryAction,
                                                             ),
                                                             onPressed: () {
                                                               if (_videoPlayerKey
@@ -706,19 +640,7 @@ extension _EditLineLayout on EditSubtitleScreenState {
                                                             Icons.skip_next,
                                                             size: buttonSize,
                                                             color:
-                                                                Theme.of(context).brightness == Brightness.light
-                                                                    ? const Color.fromARGB(
-                                                                      255,
-                                                                      0,
-                                                                      45,
-                                                                      54,
-                                                                    )
-                                                                    : const Color.fromARGB(
-                                                                      255,
-                                                                      233,
-                                                                      216,
-                                                                      166,
-                                                                    ),
+                                                                StudioDesignTokens.of(context).primaryAction,
                                                           ),
                                                         ),
                                                       ),
