@@ -119,9 +119,9 @@ class _PositioningButtonsWidgetState extends State<PositioningButtonsWidget> {
         ),
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-          left: 24,
-          right: 24,
-          top: 24,
+          left: 8,
+          right: 8,
+          top: 16,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -256,7 +256,7 @@ class _PositioningButtonsWidgetState extends State<PositioningButtonsWidget> {
                     ),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(8),
                     child: Column(
                       children: [
                         // Top row (7, 8, 9)
