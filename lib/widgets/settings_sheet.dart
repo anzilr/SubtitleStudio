@@ -136,12 +136,11 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
   Widget build(BuildContext context) {
     return SafeArea(
       child: FractionallySizedBox(
-        heightFactor: 0.95, // 95% of screen height
+        heightFactor: 1.0, // Full available height, including keyboard-safe resizing
         // Material must paint above the sheet background so nested
         // ExpansionTile/ListTile ink effects are not obscured.
         child: Material(
           color: Theme.of(context).scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(16.0)),
           clipBehavior: Clip.antiAlias,
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -156,7 +155,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                     style: Theme.of(context).textTheme.headlineMedium,
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close, color: Colors.red),
+                    icon: const Icon(Icons.close),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
@@ -170,11 +169,18 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Appearance has independent persisted skin and
-                      // Light/Dark/Classic choices. Palette previews are
-                      // scoped until SKIN-4 safely migrates Edit Line.
-                      const StudioAppearanceSettings(),
-                      const SizedBox(height: 20),
+                      // Keep Appearance folded by default. Opening it
+                      // exposes the full live skin/mode picker as before.
+                      const ExpansionTile(
+                        key: ValueKey('settings-appearance-expansion'),
+                        initiallyExpanded: false,
+                        leading: Icon(Icons.palette_outlined),
+                        title: Text('Appearance'),
+                        childrenPadding: EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8,
+                        ),
+                        children: [StudioAppearanceSettings()],
+                      ),
                       const Divider(),
                       const SizedBox(height: 8),
 
