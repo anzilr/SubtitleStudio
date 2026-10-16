@@ -577,7 +577,7 @@ class _CreateSubtitleSheetState extends ConsumerState<CreateSubtitleSheet> {
                       : const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.add, size: 20, color: Colors.white),
+                            Icon(Icons.add, size: 20, color: Theme.of(context).colorScheme.onPrimary),
                             SizedBox(width: 8),
                             Text(
                               'Create Subtitle',
