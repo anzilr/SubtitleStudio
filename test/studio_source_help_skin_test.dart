@@ -36,9 +36,13 @@ void main() {
         await tester.pumpAndSettle();
         final fields = find.byType(TextFormField);
         expect(fields, findsNWidgets(4));
-        expect(tester.widget<TextFormField>(fields.at(0)).style?.color,
+        expect(tester.widget<EditableText>(find.descendant(
+          of: fields.at(0), matching: find.byType(EditableText),
+        )).style.color,
             tokens.primaryAction);
-        expect(tester.widget<TextFormField>(fields.at(3)).style?.color,
+        expect(tester.widget<EditableText>(find.descendant(
+          of: fields.at(3), matching: find.byType(EditableText),
+        )).style.color,
             tokens.onSurface);
         expect(tester.takeException(), isNull);
       }
