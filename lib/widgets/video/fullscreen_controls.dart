@@ -422,9 +422,9 @@ class _FullscreenControlsWidgetState extends State<_FullscreenControlsWidget> {
                             Expanded(
                               child: SliderTheme(
                                 data: SliderTheme.of(context).copyWith(
-                                  activeTrackColor: Colors.blue,
+                                  activeTrackColor: Theme.of(context).colorScheme.primary,
                                   inactiveTrackColor: Colors.white.withValues(alpha: 0.3),
-                                  thumbColor: Colors.blue,
+                                  thumbColor: Theme.of(context).colorScheme.primary,
                                   thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
                                   overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
                                 ),
@@ -635,7 +635,7 @@ class _FullscreenControlsWidgetState extends State<_FullscreenControlsWidget> {
             child: Icon(
               isMarked ? Icons.bookmark_added : Icons.bookmark_add_outlined,
               color: activeSubtitle != null 
-                ? (isMarked ? Colors.red : Colors.white) 
+                ? (isMarked ? Theme.of(context).colorScheme.error : Colors.white) 
                 : Colors.grey,
               size: 24,
             ),
@@ -868,7 +868,7 @@ class _RepeatButtonState extends State<_RepeatButton> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: _isLongPressing 
-                  ? Colors.orange.withValues(alpha: 0.3) 
+                  ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.3) 
                   : _isHovered 
                     ? Colors.white.withValues(alpha: 0.2) 
                     : Colors.transparent,
@@ -880,7 +880,7 @@ class _RepeatButtonState extends State<_RepeatButton> {
                 color: isRepeatEnabled 
                   ? Colors.orange 
                   : _isHovered 
-                    ? Colors.blue.shade200 
+                    ? Theme.of(context).colorScheme.primary 
                     : Colors.white,
               ),
             ),
