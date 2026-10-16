@@ -1,5 +1,18 @@
 # SubtitleStudio Refactor Roadmap v4
 
+> **DESIGN-1 R4 VERIFIED — October 16, 2026:** Uniform theme defaults
+> for modal sheets, dialogs, popup/context menus, dropdown menus, sliders,
+> segmented buttons and filled/elevated/outlined/text/icon buttons now share
+> one `StudioComponentThemes` implementation in both legacy `AppThemes` and
+> all nine skin combinations. Initial subtitle action bottom-sheet pilot uses
+> semantic colors. [GitHub Actions 38892274970](https://github.com/anzilr/SubtitleStudio/actions/runs/38892274970):
+> **424 tests passed; zero analyzer issues** (verified code `1b850a6`).
+> [Canonical component specification](STUDIO_COMPONENT_SYSTEM_2026-10-16.md).
+> **Not yet migrated:** numerous feature-local sheet/dialog/popup overrides.
+> DESIGN-2 screen migration and DESIGN-3 real-device visual/a11y review must
+> precede a claim of app-wide consistency; contrast-critical controls gate
+> SKIN-4 R3 palette activation. CP86 waveform work is unchanged.
+
 > **Unified component design requirement — October 16, 2026:** All
 > modal bottom sheets, dialogs, dropdowns, popup/context menus, sliders,
 > primary/secondary/destructive buttons and selection controls must follow
