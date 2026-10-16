@@ -1,5 +1,18 @@
 # SubtitleStudio UX roadmap — visual history, plain language, unified design, compact Edit Line
 
+> **SKIN-3 R1 COMPLETE — October 16, 2026:** The existing Settings
+> sheet now includes independent Light/Dark/Classic and built-in skin
+> selectors, nine reusable previews, a locally scoped editor mockup,
+> future **My skins** section, missing-skin safeguards and persistence errors.
+> Toolbar theme switching keeps the chosen skin and uses typed appearances.
+> [CI run 38872349945](https://github.com/anzilr/SubtitleStudio/actions/runs/38872349945)
+> passed **418 tests** and Flutter analysis. [SKIN-3 report](STUDIO_SKIN3_APPEARANCE_SETTINGS_2026-10-16.md).
+> Skin selections are **saved but preview-only** until SKIN-4 replaces
+> hard-coded Editor/Edit Line field styling; existing mode changes still use
+> legacy live themes. The app-side importer and web Skin Creator remain future
+> SKIN-EXT-2/3 milestones. Next visual work: **SKIN-4** neutral edit fields,
+> real-device IME/unsaved text checks, and controlled palette activation.
+
 > **SKIN-2 R2 complete (October 16, 2026):** Built-in and future
 > community skin IDs can now be stored as independent namespaced values
 > alongside `light/dark/classic` in one Isar Preferences row; real Isar
