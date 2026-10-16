@@ -73,6 +73,29 @@ void main() {
     expect(prefs.savedMode, 'light');
   });
 
+  test('explicit fallback choice wins over a stale startup preference', () async {
+    final prefs = _FakeThemeStore();
+    final container = ProviderContainer(overrides: [
+      themePreferencesRepositoryProvider.overrideWithValue(prefs),
+    ]);
+    addTearDown(container.dispose);
+    final notifier = container.read(themeControllerProvider.notifier);
+    // These choices intentionally equal the startup fallback values.
+    await notifier.setSkin(StudioSkinId.carbonJade);
+    await notifier.setAppearance(StudioAppearance.classic);
+    prefs.initial.complete(const ThemePreferenceSnapshot(
+      exists: true,
+      skinId: 'builtin.asterViolet',
+      themeMode: 'light',
+    ));
+    await _flush();
+    final selected = container.read(themeControllerProvider);
+    expect(selected.skinId, StudioSkinId.carbonJade);
+    expect(selected.appearance, StudioAppearance.classic);
+    expect(prefs.savedSkin, StudioSkinId.carbonJade.value);
+    expect(prefs.savedMode, 'classic');
+  });
+
   test('legacy modes remain exact and a missing skin becomes Carbon & Jade',
       () async {
     for (final mode in ['light', 'dark', 'classic']) {
