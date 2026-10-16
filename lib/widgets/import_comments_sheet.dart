@@ -122,7 +122,7 @@ class ImportCommentsSheetState extends ConsumerState<ImportCommentsSheet> {
                         decoration: BoxDecoration(
                           color: isDark 
                               ? onSurfaceColor.withValues(alpha: 0.05) 
-                              : Colors.grey.shade50,
+                              : Theme.of(context).colorScheme.surfaceContainerLow,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                             color: onSurfaceColor.withValues(alpha: 0.12),
@@ -134,12 +134,12 @@ class ImportCommentsSheetState extends ConsumerState<ImportCommentsSheet> {
                             Container(
                               padding: const EdgeInsets.all(4),
                               decoration: BoxDecoration(
-                                color: Colors.orange.withValues(alpha: 0.1),
+                                color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(6),
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.folder_open,
-                                color: Colors.orange,
+                                color: Theme.of(context).colorScheme.tertiary,
                                 size: 20,
                               ),
                             ),
@@ -185,10 +185,10 @@ class ImportCommentsSheetState extends ConsumerState<ImportCommentsSheet> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.green.withValues(alpha: 0.05),
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: Colors.green.withValues(alpha: 0.2),
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
                           width: 1,
                         ),
                       ),
@@ -200,12 +200,12 @@ class ImportCommentsSheetState extends ConsumerState<ImportCommentsSheet> {
                               Container(
                                 padding: const EdgeInsets.all(4),
                                 decoration: BoxDecoration(
-                                  color: Colors.green.withValues(alpha: 0.1),
+                                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
-                                child: const Icon(
+                                child: Icon(
                                   Icons.check_circle_outline,
-                                  color: Colors.green,
+                                  color: Theme.of(context).colorScheme.primary,
                                   size: 16,
                                 ),
                               ),
@@ -214,7 +214,7 @@ class ImportCommentsSheetState extends ConsumerState<ImportCommentsSheet> {
                                 'Project File Loaded',
                                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
                                   fontWeight: FontWeight.w600,
-                                  color: Colors.green,
+                                  color: Theme.of(context).colorScheme.primary,
                                 ),
                               ),
                             ],
@@ -237,7 +237,7 @@ class ImportCommentsSheetState extends ConsumerState<ImportCommentsSheet> {
                             Text(
                               'This project file does not contain any comments to import.',
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Colors.orange,
+                                color: Theme.of(context).colorScheme.tertiary,
                               ),
                             ),
                           ],
@@ -296,7 +296,7 @@ class ImportCommentsSheetState extends ConsumerState<ImportCommentsSheet> {
                                 : null,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: primaryColor,
-                              foregroundColor: Colors.white,
+                              foregroundColor: Theme.of(context).colorScheme.onPrimary,
                               elevation: 0,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -308,7 +308,7 @@ class ImportCommentsSheetState extends ConsumerState<ImportCommentsSheet> {
                                     width: 20,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                      valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.onPrimary),
                                     ),
                                   )
                                 : const Text(
