@@ -11,3 +11,5 @@ Analyze and full regression; further batches and audit exception inventory
 will follow before freeze gate.
 
 Second theme audit batch: multiple utility dialogs, comment/dictionary, search-replace, feedback/logging, history and import/export, sync etc. First CI analyzer found widget-const and contextual builder access, fixed. Run analyzer/tests before final media-overlay and large-surface pass.
+
+Batch 3: expanded UI semantic pass through utility sheets, import/export, subtitle effects, navigation, dictionaries. Previous analyzer errors were from dynamic Theme.of(context) under const wrappers and helper context not passed; fixes applied. Re-gate now.
