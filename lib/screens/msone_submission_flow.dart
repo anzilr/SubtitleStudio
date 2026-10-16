@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:subtitle_studio/screens/msone_submission_screen.dart';
 
 /// The choice sheet and submission page are *two different routes*. Await the
-/// bottom sheet's pop animation before pushing the submission route from the
+/// bottom sheet's selection result before pushing the submission route from the
 /// caller's still-mounted context. Using the just-popped sheet BuildContext
 /// could pick up an unmounted Navigator or race two route transitions.
 Future<void> showMsoneSubmissionFlow({

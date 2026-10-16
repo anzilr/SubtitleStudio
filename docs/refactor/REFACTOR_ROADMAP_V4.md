@@ -1,5 +1,32 @@
 # SubtitleStudio Refactor Roadmap v4
 
+> **CP87 R5 — MSone navigation and confirmed hot-restart crash (October 17, 2026):**
+> The CPH2381 full log confirms `MsoneSubmissionScreen route pop: didPop=true`
+> *before* the operator triggered `Performing hot restart...`. Then
+> `media_kit: NativeReferenceHolder: Disposing` immediately preceded a
+> genuine native Android **SIGSEGV in `libmpv.so`**. The log **does not show a
+> SIGSEGV caused by the MSone back gesture itself**. This is consistent with
+> upstream media_kit hot-restart failures and must be tested separately from
+> normal Back navigation on a cold launch.
+> The editor caller *did* have an unsafe route transition: it called
+> `Navigator.pop(sheetContext)` and immediately called
+> `Navigator.push(sheetContext)` on that same outgoing sheet context.
+> [CP87 R5 `cc0f30b`](https://github.com/anzilr/SubtitleStudio/commit/cc0f30b83fb07087e598ab55368a68d71ebb5d7e)
+> now awaits a typed MSone choice result, then pushes from the mounted editor
+> context. It adds back/reentry widget tests for both submission modes and
+> picker cancellation. The same log showed eight repeated Flutter
+> `ListTile background color or ink splashes may be invisible` assertions.
+> The two decorated `CheckboxListTile` processing options in the subtitle
+> extraction sheet now have actual `Material` backgrounds and ink surfaces,
+> with regression coverage.
+> The user-confirmed recovered session also successfully initialized with
+> **895 subtitle lines**, despite a missing old optional secondary track.
+> Do not use **hot restart (`R`)** as a test of MSone Back until the
+> native plugin hot-restart failure is resolved; use a fresh app process for
+> baseline tests. The earlier libmpv hot-restart incident remains an
+> **open native blocker**, not an asserted resolution.
+> [CP87 R5 detailed report](CHECKPOINT87_R5_MSOne_NAVIGATION_AND_NATIVE_CRASH_2026-10-17.md).
+>
 > **CP87 R2–R4 ANDROID SESSION RECOVERY & CONTRAST AUDIT — October 16, 2026:**
 > **Flutter CI passed:** [38965180956](https://github.com/anzilr/SubtitleStudio/actions/runs/38965180956) — **527 tests passed, 0 analyzer issues**, verified at code `7ed20ab`. The latest fix ensures all secondary-selection flows commit the new reference before deleting the previous app-owned file.
 > A real CPH2381 relaunch log proved the original subtitle collection still

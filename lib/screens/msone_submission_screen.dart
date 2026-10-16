@@ -65,6 +65,8 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
 
   @override
   void dispose() {
+    // Confirms the route has been torn down after Android system Back.
+    debugPrint('MsoneSubmissionScreen disposed after route pop');
     _pageController.dispose();
     _nameController.dispose();
     _emailController.dispose();
