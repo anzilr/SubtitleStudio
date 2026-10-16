@@ -37,3 +37,5 @@ CP86 R3 2026-10-16: restore original role-coded waveform controllers, correct di
 CP86 R3 import-contrast follow-up: Import Subtitle raised primary action previously forced white download icon; use onPrimary for Carbon Zero Dark/Classic. Re-run complete analyze/test before accepting this reported issue.
 
 CP86 R4 2026-10-16: retain blue waveform, separate orange subtitle overlays/edit handles and teal add-line overlays/handles; update painter layered color invalidation. Analyze/test gate. Native libmpv SIGSEGV on hot restart remains an independent blocker.
+
+CP87 R0 2026-10-16: selected Olam language tabs (EN-ML / ML-EN / ML-ML) use dark high-contrast selection in achromatic Dark/Classic palettes; 12 built-in combinations checked. Appearance freeze maintained.

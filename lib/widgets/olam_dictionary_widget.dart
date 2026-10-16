@@ -26,6 +26,7 @@ import 'dart:io';
 import 'dart:convert'; // For utf8 and latin1 encoding/decoding
 import 'package:flutter/material.dart';
 import 'package:subtitle_studio/widgets/dictionary_search_action.dart';
+import 'package:subtitle_studio/widgets/dictionary_language_tab_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart'; // For Clipboard
 import 'package:dio/dio.dart';
@@ -668,7 +669,7 @@ class _OlamDictionaryWidgetState extends ConsumerState<OlamDictionaryWidget>
                       ),
                   
                   // Tab segments
-                  _buildTabBar(isDark, primaryColor, onSurfaceColor, borderColor),
+                  _buildTabBar(isDark, onSurfaceColor, borderColor),
                 ],
               ),
             ),
@@ -873,7 +874,7 @@ class _OlamDictionaryWidgetState extends ConsumerState<OlamDictionaryWidget>
   }
 
   /// Build the tab bar for dictionary types
-  Widget _buildTabBar(bool isDark, Color primaryColor, Color onSurfaceColor, Color borderColor) {
+  Widget _buildTabBar(bool isDark, Color onSurfaceColor, Color borderColor) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(4),
@@ -895,13 +896,13 @@ class _OlamDictionaryWidgetState extends ConsumerState<OlamDictionaryWidget>
       child: Row(
         children: [
           Expanded(
-            child: _buildTabItem('EN-ML', 0, 'English → Malayalam', primaryColor, onSurfaceColor),
+            child: _buildTabItem('EN-ML', 0, 'English → Malayalam', onSurfaceColor),
           ),
           Expanded(
-            child: _buildTabItem('ML-EN', 1, 'Malayalam → English', primaryColor, onSurfaceColor),
+            child: _buildTabItem('ML-EN', 1, 'Malayalam → English', onSurfaceColor),
           ),
           Expanded(
-            child: _buildTabItem('ML-ML', 2, 'Malayalam → Malayalam', primaryColor, onSurfaceColor),
+            child: _buildTabItem('ML-ML', 2, 'Malayalam → Malayalam', onSurfaceColor),
           ),
         ],
       ),
@@ -909,9 +910,10 @@ class _OlamDictionaryWidgetState extends ConsumerState<OlamDictionaryWidget>
   }
 
   /// Build individual tab item with animation
-  Widget _buildTabItem(String tabKey, int index, String tooltip, Color primaryColor, Color onSurfaceColor) {
+  Widget _buildTabItem(String tabKey, int index, String tooltip, Color onSurfaceColor) {
     final isSelected = _selectedTab == tabKey;
-    
+    final tabColors = DictionaryLanguageTabColors.of(Theme.of(context));
+
     return GestureDetector(
       onTap: () {
         if (_tabController.index != index) {
@@ -933,13 +935,16 @@ class _OlamDictionaryWidgetState extends ConsumerState<OlamDictionaryWidget>
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
           margin: const EdgeInsets.all(2),
           decoration: BoxDecoration(
-            color: isSelected 
-                ? primaryColor
+            color: isSelected
+                ? tabColors.selectedBackground
                 : Colors.transparent,
+            border: isSelected && tabColors.neutralSelection
+                ? Border.all(color: Theme.of(context).colorScheme.outline)
+                : null,
             borderRadius: BorderRadius.circular(12),
             boxShadow: isSelected ? [
               BoxShadow(
-                color: primaryColor.withValues(alpha: 0.3),
+                color: tabColors.selectedBackground.withValues(alpha: 0.3),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -951,8 +956,8 @@ class _OlamDictionaryWidgetState extends ConsumerState<OlamDictionaryWidget>
             style: TextStyle(
               fontSize: 14,
               fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-              color: isSelected 
-                  ? Colors.white
+              color: isSelected
+                  ? tabColors.selectedForeground
                   : onSurfaceColor.withValues(alpha: 0.7),
               letterSpacing: isSelected ? 0.5 : 0,
             ),
