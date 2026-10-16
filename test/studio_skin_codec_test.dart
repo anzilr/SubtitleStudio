@@ -61,7 +61,7 @@ void main() {
     expect(imported.author, definition.author);
 
     final catalog = StudioSkinCatalog().install(imported);
-    expect(catalog.skins.length, 4);
+    expect(catalog.skins.length, 5);
     expect(catalog.find(imported.id), isNotNull);
     for (final appearance in StudioAppearance.values) {
       final result =
@@ -88,7 +88,7 @@ void main() {
     );
     expect(
       catalog.resolveOrDefault(StudioSkinId.community('unknown-skin')),
-      catalog.find(StudioSkinId.carbonJade),
+      catalog.find(StudioSkinId.carbonZero),
     );
   });
 
