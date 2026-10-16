@@ -4,6 +4,7 @@ import 'package:subtitle_studio/themes/studio_design_tokens.dart';
 import 'package:subtitle_studio/themes/studio_palette.dart';
 import 'package:subtitle_studio/themes/studio_skin_preview.dart';
 import 'package:subtitle_studio/themes/studio_skin.dart';
+import 'package:subtitle_studio/themes/studio_status_colors.dart';
 import 'package:subtitle_studio/themes/studio_theme_factory.dart';
 
 double _contrast(Color a, Color b) {
@@ -105,7 +106,7 @@ void main() {
     expect(ids, hasLength(12));
   });
 
-  test('Carbon Zero uses grayscale only, with true black and white', () {
+  test('Carbon Zero decoration is grayscale, with common red/amber safety roles', () {
     for (final mode in StudioAppearance.values) {
       final palette = StudioPalette.resolve(StudioSkin.carbonZero, mode);
       final colors = <Color>[
@@ -113,13 +114,21 @@ void main() {
         palette.fieldSurface, palette.onSurface, palette.mutedText,
         palette.outline, palette.fieldBorder, palette.accent,
         palette.onAccent, palette.appBar, palette.onAppBar,
-        palette.caution, palette.danger, palette.success,
+        palette.success,
       ];
       for (final color in colors) {
         expect((color.r * 255).round(), (color.g * 255).round());
         expect((color.g * 255).round(), (color.b * 255).round());
       }
       expect(_contrast(palette.onAccent, palette.accent),
+          greaterThanOrEqualTo(4.5));
+      expect(palette.danger, StudioStatusColors.danger(palette.brightness));
+      expect(palette.onDanger, StudioStatusColors.onDanger(palette.brightness));
+      expect(palette.caution, StudioStatusColors.warning(palette.brightness));
+      expect(palette.onCaution, StudioStatusColors.onWarning(palette.brightness));
+      expect(_contrast(palette.danger, palette.surface),
+          greaterThanOrEqualTo(4.5));
+      expect(_contrast(palette.caution, palette.surface),
           greaterThanOrEqualTo(4.5));
     }
     expect(
