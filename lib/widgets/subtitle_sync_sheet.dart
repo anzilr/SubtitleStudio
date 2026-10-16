@@ -167,7 +167,7 @@ class _SubtitleSyncSheetState extends State<SubtitleSyncSheet> {
                           ),
                           child: Icon(
                             Icons.timer,
-                            color: Colors.white,
+                             color: Theme.of(context).colorScheme.onPrimary,
                             size: 20,
                           ),
                         ),
@@ -241,7 +241,7 @@ class _SubtitleSyncSheetState extends State<SubtitleSyncSheet> {
                           ),
                           child: Icon(
                             Icons.speed,
-                            color: Colors.white,
+                             color: widget.isVideoLoaded ? Theme.of(context).colorScheme.onTertiary : Theme.of(context).colorScheme.onSurface,
                             size: 20,
                           ),
                         ),
