@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'studio_design_tokens.dart';
 import 'studio_skin.dart';
+import 'studio_status_colors.dart';
 
 /// Data-only theme colors. Widgets must use the resolved semantic tokens,
 /// never reach into these named palettes for ad-hoc decorative colors.
@@ -42,15 +43,12 @@ class StudioPalette {
   bool get isDark => appearance != StudioAppearance.light;
   Brightness get brightness => isDark ? Brightness.dark : Brightness.light;
 
-  // Functional colors are shared across skins, not decorative palette accents.
-  Color get caution => monochrome ? accent :
-      isDark ? const Color(0xFFF2B85B) : const Color(0xFF93601E);
-  Color get onCaution => monochrome ? onAccent :
-      isDark ? const Color(0xFF111A2C) : Colors.white;
-  Color get danger => monochrome ? accent :
-      isDark ? const Color(0xFFFF8A9A) : const Color(0xFFA33A39);
-  Color get onDanger => monochrome ? onAccent :
-      isDark ? const Color(0xFF111A2C) : Colors.white;
+  // Safety states are shared across *all* skins. Carbon Zero's decorative
+  // colors remain achromatic, with intentional red/amber for risky actions.
+  Color get caution => StudioStatusColors.warning(brightness);
+  Color get onCaution => StudioStatusColors.onWarning(brightness);
+  Color get danger => StudioStatusColors.danger(brightness);
+  Color get onDanger => StudioStatusColors.onDanger(brightness);
   Color get success => accent;
   Color get onSuccess => onAccent;
 
@@ -98,8 +96,8 @@ class StudioPalette {
   }
 
   // Carbon Zero is SubtitleStudio's signature achromatic family. Every
-  // semantic role (including caution and danger) is on the black-white axis;
-  // warning/error icons and labels, not hue, communicate their meaning.
+  // non-status decorative colors stay on the black-white axis;
+  // shared red/amber safety colors are intentional functional exceptions.
   static const _zeroLight = StudioPalette(
     appearance: StudioAppearance.light,
     monochrome: true,
