@@ -40,7 +40,7 @@ extension _EditLineTimeSection on EditSubtitleScreenState {
                                                     label: Text(
                                                       "Edit Time",
                                                       style: TextStyle(
-                                                        color: Color(0xFFCA6702),
+                                                        color: StudioDesignTokens.of(context).primaryAction,
                                                         fontSize: 16,
                                                       ),
                                                     ),
@@ -50,7 +50,7 @@ extension _EditLineTimeSection on EditSubtitleScreenState {
                                                               .keyboard_arrow_down
                                                           : Icons.chevron_right,
                                                       size: 32,
-                                                      color: Color(0xFFCA6702),
+                                                      color: StudioDesignTokens.of(context).primaryAction,
                                                     ),
                                                   ),
                                                 ],
