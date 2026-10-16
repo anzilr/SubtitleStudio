@@ -74,7 +74,9 @@ void main() {
 
     for (var i = 0; i < 3; i++) {
       await tester.tap(find.byKey(const ValueKey('change-test-theme')));
-      await tester.pumpAndSettle();
+      // The fake keeps the loading spinner active intentionally; waiting for
+      // all animations to settle would never finish.
+      await tester.pump(const Duration(milliseconds: 150));
       expect(_TrackingEditController.builds, 1,
           reason: 'Switching themes must not replace the Editor provider');
       expect(tester.takeException(), isNull);
@@ -115,7 +117,9 @@ void main() {
 
     for (var i = 0; i < 3; i++) {
       await tester.tap(find.byKey(const ValueKey('change-line-theme')));
-      await tester.pumpAndSettle();
+      // The fake keeps the loading spinner active intentionally; waiting for
+      // all animations to settle would never finish.
+      await tester.pump(const Duration(milliseconds: 150));
       expect(_TrackingEditLineController.builds, 1,
           reason: 'Theme changes must not reset a line-editing session');
       expect(tester.takeException(), isNull);
