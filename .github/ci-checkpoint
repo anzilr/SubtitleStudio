@@ -15,3 +15,11 @@ Flutter analyze + complete widget and integration tests, native device not in CI
 Manual Android check: 360dp phone, Carbon Zero Light/Dark/Classic, modal
 pop without closing underlying Project Settings, slider contrast, 5 FAB
 actions, delete/cancel actions, source/project editing and waveform toggle.
+
+R5 final gate: previous run 38913706270 passed analyzer and all 444 tests.
+Newly added test/studio_status_colors_test.dart verifies shared functional
+red/amber contrasts across all twelve variants; new
+test/carbon_zero_goto_slider_test.dart exercises the actual Go To Line
+route's slider track/thumb colors in Carbon Zero Light/Dark/Classic.
+Re-run full analyzer/test suite for those additions. Do not run native
+builds in CI. Real Android sign-off remains separate.
