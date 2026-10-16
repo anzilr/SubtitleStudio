@@ -1,22 +1,21 @@
-SubtitleStudio SKIN-4 R6 Android waveform crash containment | 2026-10-16
-
-Device evidence: Android 14 OnePlus CPH2381 (360dp), video pane height
-177.2dp with a fixed 180dp waveform plus divider; Flutter reported 3.8dp
-bottom RenderFlex overflow at edit_responsive_layout.dart:363 (twice).
-Then large legacy PCM cache 330,198,104 samples (~660MB PCM) was read and
-25 eager zoom levels generated, followed by device connection loss. The log
-does not establish an AndroidRuntime native exception or definite OOM.
-Correct both bounded layout and high-memory loading paths.
-
-- Vertical ResizableSplitView accepts minimum first-pane logical extent;
-  clamps persisted 0.25 ratio for waveform visibility in live constraints
-  and during drag without overwriting saved ratio on mere appearance.
-- AdaptiveWaveformPane keeps >=120dp video, caps 180dp waveform, and
-  suppresses non-fitting waveform rendering in very short viewports.
-- Android AudioProcessor defaults to compact tiled waveform pipeline; other
-  platforms retain legacy default and explicit useTiledZoom overrides.
-- Upgrade existing same-source PCM cache by streaming WaveformPeakCache.build
-  to .pk1 without readAsBytes 660MB and without an FFmpeg second decode.
-- Test previous exact 177.2dp layout, .25486577 persisted ratio, short
-  viewport and existing waveform peak/tiling parity; flutter analyze and
-  full suite. No native phone test in CI; Android acceptance separately.
+SubtitleStudio WAVEFORM R7 / Riverpod lifecycle crash | 2026-10-16
+User reports FlutterError: Tried to modify a provider while widget tree
+was building, thrown by WaveformController._setState -> state = nextState.
+Their Android debug log confirms compact metadata audio processing succeeds
+with 20,637,381 reduced samples and 25 virtual zoom levels, showing earlier
+OOM mitigation works; the log itself does not include provider stack frame.
+Source audit locates unsafe dispatches in WaveformWidget.didUpdateWidget:
+UpdatePlaybackPosition directly mutates provider; also local subtitle change
+handler called by didUpdateWidget setState and dispatches ForceRepaint.
+Now playback state updates are coalesced post-frame and conditional on
+mounted; lifecycle subtitle copies skip redundant setState and redundant
+provider ForceRepaint. Outside lifecycle, setState still updates widget.
+WaveformController now also coalesces state updates received during
+SchedulerPhase.persistentCallbacks onto post-frame, skipping stale queued
+emissions after newer updates/disposal. Synchronous UI gestures and ordinary
+asynchronous progress retain immediate Riverpod semantics.
+New widget tests intentionally exercise a build-phase provider update,
+then a parent update changing both subtitles and playback, and require
+Riverpod to remain consistent with final selected values.
+Run flutter analyze and full Flutter widget/integration tests. No native
+Android device testing in CI; user to validate with original large movie.
