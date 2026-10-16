@@ -1,27 +1,17 @@
-SubtitleStudio SKIN-4 R4 R6 device candidate | 2026-10-16
-Analyze plus full Flutter test suite only. No Android/iOS/desktop native Actions.
-Finish full-screen Settings entry points on Home, Editor, Edit Line.
-Appearance is collapsed on first open, with no duplicated nested heading.
-Carbon Zero Light/Dark/Classic is the built-in signature grayscale default
-for unset preferences; all explicit preferences and custom skins preserved.
-Migrate Settings icons and destructive warnings onto the selected palette.
-Embedded and standalone Source View are plain raw SRT multiline editors;
-embedded raw text is validated at save, never silently replaced by stale cues;
-standalone keeps actual raw whitespace and existing file encoding/SAF writes.
-Android log: guard positioning modal against keyboard-size RenderFlex overflow;
-screen materials should retain visible interactive ink surfaces.
-Test raw source, all 12 appearances, old persisted skin choices and modal
-keyboard constraints. Previous R2 exposed invalid const wrapper usages in
-Settings, now corrected. Only user-operated Android/Windows acceptance after CI.
-
-R4: 443 tests passed / one test failed in run 38908851588 due to
-41px horizontal overflow in narrow positioning sheet. Reduce horizontal
-padding for 360px portrait screen while retaining vertical scrolling.
-
-R5: 443 tests passed / one 8.7px right overflow remained on 360dp
-positioning dialog at run 38909487358; shave remaining layout insets
-and rerun complete analyzer/test gate before device testing.
-
-R6: run 38910251362 confirmed all 443 other tests and clean analyze;
-only a 0.7px right overflow persisted in constrained positioning test.
-The remaining horizontal edge insets were removed for safe viewport fit.
+SubtitleStudio SKIN-4 R5 Android visual consistency | 2026-10-16
+Flutter analyze + complete widget and integration tests, native device not in CI.
+1. Editor appbar waveform toggle uses appbar foreground with visible disabled fade.
+2. Home expanding FAB action text/icon uses onPrimary against selected primary.
+3. Marked-lines sheet removes fixed blue/green/red for ordinary status; uses
+   semantic primary, surface, muted/outline, safety error for comment delete.
+   Remove repeated DEBUG prints during marked-lines list rebuild.
+4. Project Settings opens Marked Lines in full-height modal (not .7 sheet).
+5. Go-to-line slider uses StudioDesignTokens action/outline/value text; no
+   separate blue light/dark override.
+6. Shared danger/warning colors across Carbon Zero and the other skins through
+   StudioStatusColors (functional red and amber exceptions to grayscale
+   decoration). Session delete/clear, line/batch delete, reset/app-data clear
+   and marked comment deletion derive from theme's error/onError roles.
+Manual Android check: 360dp phone, Carbon Zero Light/Dark/Classic, modal
+pop without closing underlying Project Settings, slider contrast, 5 FAB
+actions, delete/cancel actions, source/project editing and waveform toggle.
