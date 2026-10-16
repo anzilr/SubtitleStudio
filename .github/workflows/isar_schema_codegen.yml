@@ -1,4 +1,4 @@
-name: Isar reference schema generation
+name: Isar schema generation (requested)
 
 on:
   push:
@@ -34,11 +34,12 @@ jobs:
         run: flutter pub get
       - name: Generate Isar models
         run: dart run build_runner build --delete-conflicting-outputs
-      - name: Verify generated HistoryRef collection
+      - name: Verify generated collections and skin field
         shell: bash
         run: |
           test -s lib/database/models/models.g.dart
           grep -q 'HistoryRefSchema' lib/database/models/models.g.dart
+          grep -q "r'skinId'" lib/database/models/models.g.dart
           git diff --stat -- lib/database/models/models.g.dart
       - name: Commit generated Isar code only
         shell: bash
@@ -49,6 +50,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "Generated model unchanged."
           else
-            git commit -m "build(isar): generate HistoryRef Isar collection schema"
+            git commit -m "build(isar): regenerate Isar schema for skin preference"
             git push origin HEAD:refactor/riverpod-architecture
           fi
