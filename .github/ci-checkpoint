@@ -1,15 +1,16 @@
-SubtitleStudio SKIN-4 R3-B final activation and scope gate | 2026-10-16
-Flutter analyze and full tests only, no physical or native Actions builds.
-Activate live catalog/factory skin selection across MaterialApp with saved
-Light/Dark/Classic independent of skin ID. Preserve missing community ID,
-font family, navigation, text/undo/focus, and Editor/Edit Line provider state.
-Source View host now owns stable provider overrides to prevent reload on
-palette changes, matching existing Edit and Edit Line lifetime protections.
-Source View (two editing surfaces), MSone Submission wizard/buttons, Help
-categories/navigation, Edit Line dialogs and waveform toolbar use semantic
-design system; no changes to waveform decoder, encoding, Isar schema or API
-submission workflow. Verify all nine appearances, selection/focus, Help chips,
-live catalog fallback, Source View provider identity and other regressions.
-This run includes final MSone and waveform styling changes made after
-prior successful global activation run 38902744294 (439 tests, analyzer clean).
-Physical Android/Windows testing follows only when this gate passes.
+SubtitleStudio SKIN-4 R4 / CARBON ZERO + RAW SOURCE + FULLSCREEN SETTINGS | 2026-10-16
+Flutter analyze and full widget/regression suite only; no native platform builds.
+Restore embedded and standalone Source View as single raw SRT multiline text
+editors (no per-cue GUI controls). Embedded editor keeps raw unsaved buffer
+across theme changes; parses/validates only at Save, failing closed for
+invalid/incomplete cue blocks. Standalone raw text keeps original whitespace
+and saves raw text using existing encoding/SAF behavior.
+Introduce signature Carbon Zero achromatic palette (black, white and grays)
+in Light/Dark/Classic, as default for absent/unset skins while preserving
+explicit older preferences, missing community skin IDs and all existing
+Carbon & Jade, Copper Cinema and Aster Violet skins. Expect four skins and
+12 variants. Make Home Settings fullscreen, square-corner, with Appearance
+initially collapsed and user-expandable. Keep Live Theme factory.
+Include field/encoder persistence tests, missing-skin fallback, contrast,
+raw SRT roundtrip and Android keyboard-constrained positioning modal.
+Record any failures; no user device testing until green.
