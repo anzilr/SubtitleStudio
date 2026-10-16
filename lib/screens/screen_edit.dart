@@ -52,6 +52,7 @@ import 'package:subtitle_studio/screens/edit/models/subtitle_entry.dart';
 import 'package:subtitle_studio/screens/edit/widgets/source_view_pane.dart';
 import 'package:subtitle_studio/screens/edit/services/raw_srt_document.dart';
 import 'package:subtitle_studio/screens/edit/widgets/edit_main_menu.dart';
+import 'package:subtitle_studio/screens/edit/widgets/editor_floating_play_pause_button.dart';
 import 'package:subtitle_studio/screens/edit/widgets/edit_placeholders.dart';
 import 'package:subtitle_studio/screens/edit/widgets/subtitle_card.dart';
 import 'package:subtitle_studio/screens/edit/widgets/edit_selection_dialogs.dart';
@@ -813,27 +814,14 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
             Positioned(
               right: 20,
               bottom: 20,
-              child: FloatingActionButton(
-                heroTag: 'floatingPlayPause',
+              child: EditorFloatingPlayPauseButton(
+                playing: _videoPlayerKey.currentState!.player.stream.playing,
+                initiallyPlaying: _videoPlayerKey.currentState!.player.state.playing,
                 onPressed: () {
                   if (_videoPlayerKey.currentState!.isInitialized()) {
                     _videoPlayerKey.currentState!.playOrPause();
                   }
                 },
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                 foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                 tooltip: 'Play or pause video',
-                child: StreamBuilder<bool>(
-                  stream: _videoPlayerKey.currentState!.player.stream.playing,
-                  builder: (context, snapshot) {
-                    // Use the player's current state as the fallback value
-                    final isPlaying = snapshot.data ?? _videoPlayerKey.currentState!.player.state.playing;
-                    return Icon(
-                      isPlaying ? Icons.pause : Icons.play_arrow,
-                      color: Theme.of(context).colorScheme.onPrimary,
-                    );
-                  },
-                ),
               ),
             ),
             
