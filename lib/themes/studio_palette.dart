@@ -21,6 +21,7 @@ class StudioPalette {
     required this.onAccent,
     required this.appBar,
     required this.onAppBar,
+    this.monochrome = false,
   });
 
   final StudioAppearance appearance;
@@ -36,18 +37,19 @@ class StudioPalette {
   final Color onAccent;
   final Color appBar;
   final Color onAppBar;
+  final bool monochrome;
 
   bool get isDark => appearance != StudioAppearance.light;
   Brightness get brightness => isDark ? Brightness.dark : Brightness.light;
 
   // Functional colors are shared across skins, not decorative palette accents.
-  Color get caution =>
+  Color get caution => monochrome ? accent :
       isDark ? const Color(0xFFF2B85B) : const Color(0xFF93601E);
-  Color get onCaution =>
+  Color get onCaution => monochrome ? onAccent :
       isDark ? const Color(0xFF111A2C) : Colors.white;
-  Color get danger =>
+  Color get danger => monochrome ? accent :
       isDark ? const Color(0xFFFF8A9A) : const Color(0xFFA33A39);
-  Color get onDanger =>
+  Color get onDanger => monochrome ? onAccent :
       isDark ? const Color(0xFF111A2C) : Colors.white;
   Color get success => accent;
   Color get onSuccess => onAccent;
@@ -80,6 +82,9 @@ class StudioPalette {
     StudioAppearance appearance,
   ) {
     return switch ((skin, appearance)) {
+      (StudioSkin.carbonZero, StudioAppearance.light) => _zeroLight,
+      (StudioSkin.carbonZero, StudioAppearance.dark) => _zeroDark,
+      (StudioSkin.carbonZero, StudioAppearance.classic) => _zeroClassic,
       (StudioSkin.carbonJade, StudioAppearance.light) => _jadeLight,
       (StudioSkin.carbonJade, StudioAppearance.dark) => _jadeDark,
       (StudioSkin.carbonJade, StudioAppearance.classic) => _jadeClassic,
@@ -91,6 +96,60 @@ class StudioPalette {
       (StudioSkin.asterViolet, StudioAppearance.classic) => _asterClassic,
     };
   }
+
+  // Carbon Zero is SubtitleStudio's signature achromatic family. Every
+  // semantic role (including caution and danger) is on the black-white axis;
+  // warning/error icons and labels, not hue, communicate their meaning.
+  static const _zeroLight = StudioPalette(
+    appearance: StudioAppearance.light,
+    monochrome: true,
+    canvas: Color(0xFFFFFFFF),
+    surface: Color(0xFFF4F4F4),
+    raisedSurface: Color(0xFFFFFFFF),
+    fieldSurface: Color(0xFFEAEAEA),
+    onSurface: Color(0xFF111111),
+    mutedText: Color(0xFF555555),
+    outline: Color(0xFFB0B0B0),
+    fieldBorder: Color(0xFF767676),
+    accent: Color(0xFF181818),
+    onAccent: Color(0xFFFFFFFF),
+    appBar: Color(0xFFFFFFFF),
+    onAppBar: Color(0xFF000000),
+  );
+
+  static const _zeroDark = StudioPalette(
+    appearance: StudioAppearance.dark,
+    monochrome: true,
+    canvas: Color(0xFF111111),
+    surface: Color(0xFF1D1D1D),
+    raisedSurface: Color(0xFF303030),
+    fieldSurface: Color(0xFF262626),
+    onSurface: Color(0xFFF0F0F0),
+    mutedText: Color(0xFFC5C5C5),
+    outline: Color(0xFF666666),
+    fieldBorder: Color(0xFF858585),
+    accent: Color(0xFFE3E3E3),
+    onAccent: Color(0xFF111111),
+    appBar: Color(0xFF191919),
+    onAppBar: Color(0xFFF5F5F5),
+  );
+
+  static const _zeroClassic = StudioPalette(
+    appearance: StudioAppearance.classic,
+    monochrome: true,
+    canvas: Color(0xFF000000),
+    surface: Color(0xFF090909),
+    raisedSurface: Color(0xFF202020),
+    fieldSurface: Color(0xFF171717),
+    onSurface: Color(0xFFFFFFFF),
+    mutedText: Color(0xFFCCCCCC),
+    outline: Color(0xFF5E5E5E),
+    fieldBorder: Color(0xFF939393),
+    accent: Color(0xFFFFFFFF),
+    onAccent: Color(0xFF000000),
+    appBar: Color(0xFF000000),
+    onAppBar: Color(0xFFFFFFFF),
+  );
 
   static const _jadeLight = StudioPalette(
     appearance: StudioAppearance.light,
