@@ -1,34 +1,26 @@
-SubtitleStudio WAVEFORM R7 / Riverpod lifecycle crash | 2026-10-16
-User reports FlutterError: Tried to modify a provider while widget tree
-was building, thrown by WaveformController._setState -> state = nextState.
-Their Android debug log confirms compact metadata audio processing succeeds
-with 20,637,381 reduced samples and 25 virtual zoom levels, showing earlier
-OOM mitigation works; the log itself does not include provider stack frame.
-Source audit locates unsafe dispatches in WaveformWidget.didUpdateWidget:
-UpdatePlaybackPosition directly mutates provider; also local subtitle change
-handler called by didUpdateWidget setState and dispatches ForceRepaint.
-Now playback state updates are coalesced post-frame and conditional on
-mounted; lifecycle subtitle copies skip redundant setState and redundant
-provider ForceRepaint. Outside lifecycle, setState still updates widget.
-WaveformController now also coalesces state updates received during
-SchedulerPhase.persistentCallbacks onto post-frame, skipping stale queued
-emissions after newer updates/disposal. Synchronous UI gestures and ordinary
-asynchronous progress retain immediate Riverpod semantics.
-New widget tests intentionally exercise a build-phase provider update,
-then a parent update changing both subtitles and playback, and require
-Riverpod to remain consistent with final selected values.
-Run flutter analyze and full Flutter widget/integration tests. No native
-Android device testing in CI; user to validate with original large movie.
+SubtitleStudio R8: Marked Lines filter / themed editor FAB / narrow waveform toolbar — 2026-10-16
 
-WAVEFORM R7 R2: first verification run 38920947727: clean analyzer, 448
-tests passed, 4 failed. Fixes:
-- WaveformController playback had two provider writes, which let a delayed
-  stale scroll-only emission replace a newer playback position; now one
-  atomic WaveformReady update.
-- SchedulerBinding.instance unavailable in plain Riverpod ProviderContainer
-  tests; defensively detect absent binding and write state synchronously
-  outside a Flutter widget frame.
-- New ready-state widget fixture has just one zoom level, exposing old
-  division by zero to NaN/Infinity in the percent indicator. Treat a
-  single-level waveform as 100 percent without dividing by (1-1).
-Run analyzer/full tests including new build-phase lifecycle regression.
+Device: OnePlus CPH2381, Android 14, 360dp. User confirms R7 Riverpod
+provider lifecycle exception resolved; latest log shows successful compact
+waveform generation, navigation/playback, and RenderFlex overflowed by 23px
+on the right in waveform_rendering.dart toolbar at 304dp width.
+
+Changes:
+- MarkedLinesFilter pure predicate: unchecked always only .marked==true;
+  checked additionally includes unique nonblank commented cues even if
+  unmarked; ignore stale duplicate source rows, preserve marked row, sort.
+  One canonical list drives visible rows and total/resolved counts.
+- Async persisted showAllComments preference cannot overwrite a user checkbox
+  tap after modal opens. Remove redundant "Show:" text and filter icon,
+  preserve resolved/unresolved chips, scrolling and comment CRUD.
+- Editor floating play/pause extracted into theme-aware widget using
+  colorScheme.primary/onPrimary for all four skins in Light/Dark/Classic;
+  retain existing video play/pause callback and stream UI.
+- Waveform toolbar on 360dp horizontally scrollable rather than overflowing,
+  with action colors from ColorScheme instead of orange/blue/teal/red.
+- Regression tests: comment-only vs marked filtering, deduplication and
+  resolved count; all 12 skin/mode floating play/pause contrast, toggles and
+  callback; 360dp ready-waveform toolbar scroll and overflow.
+
+Run flutter analyze and complete flutter test -j 1. Native Android and
+Windows acceptance remain manual. Update roadmap after CI.
