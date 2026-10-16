@@ -21,15 +21,15 @@ extension _SettingsDestructiveSection on _SettingsSheetState {
                         onPressed: () => Navigator.pop(context, false),
                         child: const Text(
                           'Cancel',
-                          style: TextStyle(color: Colors.red),
+                          style: TextStyle(color: Theme.of(context).colorScheme.error),
                         ),
                       ),
                       ElevatedButton(
                         onPressed: () => Navigator.pop(context, true),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
+                          backgroundColor: Theme.of(context).colorScheme.error,
                         ),
-                        child: const Text('Reset', style: TextStyle(color: Colors.white)),
+                        child: Text('Reset', style: TextStyle(color: Theme.of(context).colorScheme.onError)),
                       ),
                     ],
                   ),
@@ -48,8 +48,8 @@ extension _SettingsDestructiveSection on _SettingsSheetState {
                 }
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red[700],
-                foregroundColor: Colors.white,
+                backgroundColor: Theme.of(context).colorScheme.error,
+                foregroundColor: Theme.of(context).colorScheme.onError,
               ),
               child: const Text('Reset All Settings'),
             ),
@@ -76,7 +76,7 @@ extension _SettingsDestructiveSection on _SettingsSheetState {
                           children: [
                             Row(
                               children: [
-                                Icon(Icons.delete_forever, color: Colors.red[700], size: 32),
+                                Icon(Icons.delete_forever, color: Theme.of(context).colorScheme.error, size: 32),
                                 const SizedBox(width: 12),
                                 const Expanded(
                                   child: Text(
@@ -93,23 +93,23 @@ extension _SettingsDestructiveSection on _SettingsSheetState {
                             Container(
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                color: Colors.red.withValues(alpha: 0.1),
+                                color: Theme.of(context).colorScheme.error.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.red.withValues(alpha: 0.3), width: 2),
+                                border: Border.all(color: Theme.of(context).colorScheme.error.withValues(alpha: 0.3), width: 2),
                               ),
                               child: const Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
                                     children: [
-                                      Icon(Icons.warning_amber, color: Colors.red, size: 24),
+                                      Icon(Icons.warning_amber, color: Theme.of(context).colorScheme.error, size: 24),
                                       SizedBox(width: 8),
                                       Text(
                                         'WARNING',
                                         style: TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.bold,
-                                          color: Colors.red,
+                                          color: Theme.of(context).colorScheme.error,
                                         ),
                                       ),
                                     ],
@@ -139,7 +139,7 @@ extension _SettingsDestructiveSection on _SettingsSheetState {
                                     'This action cannot be undone!',
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
-                                      color: Colors.red,
+                                      color: Theme.of(context).colorScheme.error,
                                     ),
                                   ),
                                 ],
@@ -161,8 +161,8 @@ extension _SettingsDestructiveSection on _SettingsSheetState {
                                   onPressed: () => Navigator.pop(context, true),
                                   style: ElevatedButton.styleFrom(
                                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                                    backgroundColor: Colors.red[700],
-                                    foregroundColor: Colors.white,
+                                    backgroundColor: Theme.of(context).colorScheme.error,
+                                    foregroundColor: Theme.of(context).colorScheme.onError,
                                   ),
                                   child: const Text('Clear All Data'),
                                 ),
@@ -214,7 +214,7 @@ extension _SettingsDestructiveSection on _SettingsSheetState {
                     scaffoldMessenger.showSnackBar(
                       const SnackBar(
                         content: Text('All data cleared successfully!'),
-                        backgroundColor: Colors.green,
+                        backgroundColor: Theme.of(context).colorScheme.primary,
                       ),
                     );
                     
@@ -246,15 +246,15 @@ extension _SettingsDestructiveSection on _SettingsSheetState {
                         content: Text(
                           'Could not clear all application data. Please try again.',
                         ),
-                        backgroundColor: Colors.red,
+                        backgroundColor: Theme.of(context).colorScheme.error,
                       ),
                     );
                   }
                 }
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red[900],
-                foregroundColor: Colors.white,
+                backgroundColor: Theme.of(context).colorScheme.error,
+                foregroundColor: Theme.of(context).colorScheme.onError,
               ),
               icon: const Icon(Icons.delete_forever),
               label: const Text('Clear All Data'),
