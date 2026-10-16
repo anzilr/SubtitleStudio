@@ -57,7 +57,7 @@ void showGotToLineModal({
             ),
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.error,
                   color: Theme.of(context).colorScheme.onError,
                   size: 20,
@@ -66,8 +66,8 @@ void showGotToLineModal({
                 Expanded(
                   child: Text(
                     message,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onError,
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
