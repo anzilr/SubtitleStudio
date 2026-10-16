@@ -303,7 +303,7 @@ class ImportCommentsSheetState extends ConsumerState<ImportCommentsSheet> {
                               ),
                             ),
                             child: _isLoading
-                                ? const SizedBox(
+                                ? SizedBox(
                                     height: 20,
                                     width: 20,
                                     child: CircularProgressIndicator(
