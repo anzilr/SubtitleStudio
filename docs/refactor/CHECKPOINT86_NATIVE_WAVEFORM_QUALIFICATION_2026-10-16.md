@@ -5,7 +5,7 @@
 **Branch:** `refactor/riverpod-architecture`  
 **Starting HEAD:** `c49cbe7`  
 **CP86 R1 code:** [`18ea029`](https://github.com/anzilr/SubtitleStudio/commit/18ea02927ed792df3150e4415a8fc34cc64044e6)  
-**Flutter CI:** [Run 38937320025](https://github.com/anzilr/SubtitleStudio/actions/runs/38937320025) (launched; check run for completion)  
+**Flutter CI:** [Run 38937320025](https://github.com/anzilr/SubtitleStudio/actions/runs/38937320025) — **SUCCESS**, 474 tests passed, 0 analyzer issues at code `18ea029`  
 **Last green baseline:** 470 tests, 0 analyzer issues, [38933989670](https://github.com/anzilr/SubtitleStudio/actions/runs/38933989670)  
 **Native qualification:** NOT YET APPROVED. No physical Android or Windows tests were performed in CI.
 
@@ -118,6 +118,9 @@ stderr and selection IDs, especially for `ffmpeg:stream:N`.
   mpv stream resolution, track reload races, timeline parity, and compact
   waveform tiling.
 - New R1 regression tests cover gaps above without changing visual surfaces.
+  The [R1 CI run](https://github.com/anzilr/SubtitleStudio/actions/runs/38937320025)
+  completed successfully with 474 tests and `flutter analyze` reporting
+  `No issues found!` (previous baseline: 470 tests).
 - GitHub Actions Linux Flutter analysis/unit tests **do not** establish that
   native FFmpegKit has SAF access, that mpv emits `ff-index` on Android or
   Windows, or that native peak-RSS/frames remain within an acceptable bound.

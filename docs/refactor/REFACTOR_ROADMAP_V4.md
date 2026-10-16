@@ -7,7 +7,8 @@
 > SAF peak caches even after cancellation/failure. Targeted regression tests
 > cover revoked/missing SAF grants, Auto/explicit global stream selection,
 > and interrupted peak-cache writes. [Full Flutter CI gate](https://github.com/anzilr/SubtitleStudio/actions/runs/38937320025)
-> launched; do not treat CI as Android/Windows native acceptance.
+> **passed: 474 Flutter tests, 0 analyzer issues** at code `18ea029`; do not
+> treat CI as Android/Windows native acceptance.
 > [CP86 qualification matrix and commands](CHECKPOINT86_NATIVE_WAVEFORM_QUALIFICATION_2026-10-16.md).
 > **APPEARANCE REMAINS FROZEN**; upcoming CP86 device checks are CPH2381
 > Android 14 and Windows, followed by typed file/SAF identity and persistence
