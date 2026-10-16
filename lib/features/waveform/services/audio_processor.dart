@@ -20,7 +20,9 @@ import 'package:subtitle_studio/features/waveform/repositories/waveform_preferen
 /// Service for processing audio files into waveform data
 class AudioProcessor {
   final WaveformPreferencesRepository _preferences;
-  /// Build-time experiment switch; production defaults to eager zoom buffers.
+  /// Android defaults to bounded peak/tile processing to avoid loading
+  /// hundreds of megabytes of PCM into the Flutter process. Other platforms
+  /// retain the existing eager path; explicit overrides remain available.
   final bool useTiledZoom;
   WaveformProcessingMetrics? lastProcessingMetrics;
   int _requestEpoch = 0;
@@ -41,9 +43,11 @@ class AudioProcessor {
 
   AudioProcessor(
     this._preferences, {
-    this.useTiledZoom = const bool.fromEnvironment(
-      'MS_ONE_TILED_WAVEFORM', defaultValue: false),
-  });
+    bool? useTiledZoom,
+  }) : useTiledZoom = useTiledZoom ??
+           (Platform.isAndroid ||
+               const bool.fromEnvironment(
+                 'MS_ONE_TILED_WAVEFORM', defaultValue: false));
 
   /// Process audio file and generate waveform with zoom levels
   /// If subtitleCollectionId is provided, will check for cached data and save new data
@@ -272,6 +276,37 @@ class AudioProcessor {
         }
         checkActive();
         if (await cacheFile.exists()) await cacheFile.delete();
+      }
+
+      // Existing projects may have a very large legacy PCM cache (the
+      // reported Android device held ~660 MB). Reduce that file *as a stream*
+      // instead of readAsBytes(), and avoid decoding the same movie again.
+      if (subtitleCollectionId != null) {
+        final legacy = await _preferences.getWaveformCache(subtitleCollectionId);
+        checkActive();
+        if (legacy != null &&
+            legacy.pcmPath == key &&
+            legacy.channels == 1 &&
+            legacy.sampleRate == WaveformPeakCache.inputRate &&
+            legacy.totalSamples > 0) {
+          final pcm = File(legacy.pcmPath);
+          if (await pcm.exists() &&
+              await pcm.length() == legacy.totalSamples * 2) {
+            checkActive();
+            onProgress?.call(0.1);
+            final reduced = await WaveformPeakCache.build(
+              pcmFile: pcm,
+              cacheFile: cacheFile,
+              isCancelled: () => requestEpoch != _requestEpoch,
+            );
+            checkActive();
+            onProgress?.call(0.2);
+            if (!persistent && await cacheFile.exists()) {
+              await cacheFile.delete();
+            }
+            return reduced;
+          }
+        }
       }
 
       checkActive();
