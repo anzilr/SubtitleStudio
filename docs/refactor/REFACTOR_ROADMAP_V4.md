@@ -1,5 +1,18 @@
 # SubtitleStudio Refactor Roadmap v4
 
+> **CP86 R1 NATIVE WAVEFORM QUALIFICATION IN PROGRESS — October 16, 2026:**
+> Code [18ea029](https://github.com/anzilr/SubtitleStudio/commit/18ea02927ed792df3150e4415a8fc34cc64044e6) adds Windows/Linux global FFmpeg stream-map-safe diagnostics,
+> fail-closed Android SAF document read-handle resolution, skips potentially
+> stale legacy PCM cache reuse for `content://` inputs, and removes transient
+> SAF peak caches even after cancellation/failure. Targeted regression tests
+> cover revoked/missing SAF grants, Auto/explicit global stream selection,
+> and interrupted peak-cache writes. [Full Flutter CI gate](https://github.com/anzilr/SubtitleStudio/actions/runs/38937320025)
+> launched; do not treat CI as Android/Windows native acceptance.
+> [CP86 qualification matrix and commands](CHECKPOINT86_NATIVE_WAVEFORM_QUALIFICATION_2026-10-16.md).
+> **APPEARANCE REMAINS FROZEN**; upcoming CP86 device checks are CPH2381
+> Android 14 and Windows, followed by typed file/SAF identity and persistence
+> ownership only after waveform native behavior is qualified.
+
 > **SKIN-5 FINAL UI COLOR AUDIT / APPEARANCE FREEZE — October 16, 2026:**
 > Reviewed ~203 UI-facing Dart files; migrated fixed decorative, primary,
 > success, caution and error colors in more than 50 UI source files to the
