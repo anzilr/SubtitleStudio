@@ -19,8 +19,8 @@ extension _SettingsDestructiveSection on _SettingsSheetState {
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(context, false),
-                        child: const Text(
-                          'Cancel',
+                        child: Text(
+                           'Cancel',
                           style: TextStyle(color: Theme.of(context).colorScheme.error),
                         ),
                       ),
@@ -97,7 +97,7 @@ extension _SettingsDestructiveSection on _SettingsSheetState {
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(color: Theme.of(context).colorScheme.error.withValues(alpha: 0.3), width: 2),
                               ),
-                              child: const Column(
+                              child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
@@ -212,7 +212,7 @@ extension _SettingsDestructiveSection on _SettingsSheetState {
                     
                     // Show success message
                     scaffoldMessenger.showSnackBar(
-                      const SnackBar(
+                      SnackBar(
                         content: Text('All data cleared successfully!'),
                         backgroundColor: Theme.of(context).colorScheme.primary,
                       ),
@@ -242,7 +242,7 @@ extension _SettingsDestructiveSection on _SettingsSheetState {
                     
                     // Show error message
                     scaffoldMessenger.showSnackBar(
-                      const SnackBar(
+                      SnackBar(
                         content: Text(
                           'Could not clear all application data. Please try again.',
                         ),
