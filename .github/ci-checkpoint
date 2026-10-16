@@ -1,10 +1,14 @@
-SubtitleStudio SKIN-4 R3-B P2 screen contrast pre-activation gate | 2026-10-16
-Flutter analyze + full tests only.
-Audit Source View (standalone and Editor embedded), Help documentation and
-MSone submission form surfaces/actions, while retaining source SRT editing,
-MSone workflow/data/form validators and Help navigation/expansion semantics.
-Migrate Edit Line unsaved/original-warning dialogs to semantic action roles.
-Verify nine-skin Help chip foreground and Source View multilingual edit stability.
-Current production theme remains legacy during this pre-activation gate.
-Next gate: globally apply catalog-resolved skin ThemeData with retained widget,
-edit focus, media and route state; physical device validation only afterwards.
+SubtitleStudio SKIN-4 R3-B P2 R2 live skin activation gate | 2026-10-16
+Flutter analyze + all tests only, no native platform builds.
+Correct first pre-activation analyzer issues (Source View dynamic TextStyle,
+source/help widget assertion via EditableText, unused Edit Line variable).
+Connect MainApp MaterialApp theme to catalog-backed liveStudioThemeProvider,
+resolve saved skin ID and Light/Dark/Classic separately through the same
+StudioThemeFactory used by community skins and previews. Missing catalog skin
+must render Carbon & Jade without altering the persisted community ID.
+Preserve custom app fonts, editor text/undo/selection/focus and route/provider
+lifetime. Screen Help, embedded and standalone Source View, MSone Submission
+and Edit Line dialogs now use semantic component colors. Add nine-palette
+source and Help widget tests, live resolution and missing-ID regression tests.
+Physical Android/Windows acceptance is intentionally after CI success.
+Original CP86 native waveform qualification remains a separate workstream.
