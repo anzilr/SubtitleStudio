@@ -15,12 +15,12 @@ extension _SettingsWaveformSection on _SettingsSheetState {
           children: [
             // Warning Card
             Card(
-              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+              color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.1),
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Row(
                   children: [
-                    Icon(Icons.warning, color: Theme.of(context).colorScheme.primary, size: 20),
+                    Icon(Icons.warning, color: Theme.of(context).colorScheme.tertiary, size: 20),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
