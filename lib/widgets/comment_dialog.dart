@@ -303,7 +303,7 @@ class CommentDialogState extends State<CommentDialog> {
                                   SnackBar(
                                     content: Row(
                                       children: [
-                                        Icon(Icons.check_circle, color: Colors.white, size: 20),
+                                        Icon(Icons.check_circle, color: Theme.of(context).colorScheme.onPrimary, size: 20),
                                         const SizedBox(width: 8),
                                         Text('Subtitle text copied to clipboard'),
                                       ],
