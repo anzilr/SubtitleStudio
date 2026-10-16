@@ -150,7 +150,7 @@ class _SubtitleSyncSheetState extends State<SubtitleSyncSheet> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                      color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: borderColor,
@@ -219,8 +219,8 @@ class _SubtitleSyncSheetState extends State<SubtitleSyncSheet> {
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: widget.isVideoLoaded
-                          ? (isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50)
-                          : (isDark ? onSurfaceColor.withValues(alpha: 0.02) : Colors.grey.shade100),
+                          ? (isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow)
+                          : (isDark ? onSurfaceColor.withValues(alpha: 0.02) : Theme.of(context).colorScheme.surfaceContainerLow),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: widget.isVideoLoaded
@@ -235,8 +235,8 @@ class _SubtitleSyncSheetState extends State<SubtitleSyncSheet> {
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
                             color: widget.isVideoLoaded
-                                ? Colors.orange
-                                : Colors.grey.withValues(alpha: 0.5),
+                                ? Theme.of(context).colorScheme.tertiary
+                                : Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Icon(
@@ -391,7 +391,7 @@ class _SubtitleSyncSheetState extends State<SubtitleSyncSheet> {
                         const SizedBox(height: 8),
                         Container(
                           decoration: BoxDecoration(
-                            color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                            color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: borderColor,
@@ -429,7 +429,7 @@ class _SubtitleSyncSheetState extends State<SubtitleSyncSheet> {
                         const SizedBox(height: 8),
                         Container(
                           decoration: BoxDecoration(
-                            color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                            color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: borderColor,
@@ -533,7 +533,7 @@ class _SubtitleSyncSheetState extends State<SubtitleSyncSheet> {
                                     },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: primaryColor,
-                                foregroundColor: Colors.white,
+                                foregroundColor: Theme.of(context).colorScheme.onPrimary,
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
@@ -545,7 +545,7 @@ class _SubtitleSyncSheetState extends State<SubtitleSyncSheet> {
                                       height: 20,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
-                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                        valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.onPrimary),
                                       ),
                                     )
                                   : Row(
@@ -614,12 +614,12 @@ class _SubtitleSyncSheetState extends State<SubtitleSyncSheet> {
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: Colors.orange.withValues(alpha: 0.1),
+                              color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Icon(
                               Icons.speed,
-                              color: Colors.orange,
+                              color: Theme.of(context).colorScheme.tertiary,
                               size: 28,
                             ),
                           ),
@@ -673,7 +673,7 @@ class _SubtitleSyncSheetState extends State<SubtitleSyncSheet> {
                         const SizedBox(height: 8),
                         Container(
                           decoration: BoxDecoration(
-                            color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                            color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: borderColor,
@@ -712,7 +712,7 @@ class _SubtitleSyncSheetState extends State<SubtitleSyncSheet> {
                         const SizedBox(height: 8),
                         Container(
                           decoration: BoxDecoration(
-                            color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                            color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: borderColor,
@@ -816,8 +816,8 @@ class _SubtitleSyncSheetState extends State<SubtitleSyncSheet> {
                                       }
                                     },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.orange,
-                                foregroundColor: Colors.white,
+                                backgroundColor: Theme.of(context).colorScheme.tertiary,
+                                foregroundColor: Theme.of(context).colorScheme.onPrimary,
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
@@ -829,7 +829,7 @@ class _SubtitleSyncSheetState extends State<SubtitleSyncSheet> {
                                       height: 20,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
-                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                        valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.onPrimary),
                                       ),
                                     )
                                   : Row(
@@ -877,12 +877,12 @@ class _SubtitleSyncSheetState extends State<SubtitleSyncSheet> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.1),
+                  color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
                   Icons.video_file,
-                  color: Colors.orange,
+                  color: Theme.of(context).colorScheme.tertiary,
                   size: 24,
                 ),
               ),
@@ -908,7 +908,7 @@ class _SubtitleSyncSheetState extends State<SubtitleSyncSheet> {
                 onPressed: () => Navigator.pop(context),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: primaryColor,
-                  foregroundColor: Colors.white,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
