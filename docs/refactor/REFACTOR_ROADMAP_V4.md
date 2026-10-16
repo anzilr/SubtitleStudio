@@ -1,5 +1,21 @@
 # SubtitleStudio Refactor Roadmap v4
 
+> **SKIN-2 R2 COMPLETE — October 16, 2026:** Separately persisted
+> namespaced `Preferences.skinId` and existing `themeMode` are now backed by
+> the pinned, regenerated Isar model and an injectable Riverpod theme controller.
+> Independent choices survive changes to custom app fonts and late startup
+> hydration. Rapid mode/skin writes are serialized; legacy saved
+> `light/dark/classic` records remain compatible. [GitHub quality gate
+> 38870812828](https://github.com/anzilr/SubtitleStudio/actions/runs/38870812828):
+> **411 tests passing; zero analyzer issues**, code `86a4166`.
+> [SKIN-2 report](STUDIO_SKIN2_PERSISTENCE_2026-10-16.md).
+> **Important:** `ThemeState.themeData` deliberately still renders old
+> AppThemes for now; selected new palettes are **not yet activated** in Editor
+> until SKIN-4 repairs white-on-primary Edit Line fields. SKIN-3 adds Appearance
+> Settings and independent controls. Physical testing of upgraded legacy
+> on-disk Isar files and actual Android/Windows editing remains pending.
+> CP86 waveform qualification remains a separate original technical milestone.
+
 > **SKIN-EXT-1 COMPLETE — October 16, 2026:** The open-source community
 > skin foundation is implemented and verified: namespaced skin IDs, a registry
 > for built-in and user-defined palettes, a shared `ThemeData` factory,
