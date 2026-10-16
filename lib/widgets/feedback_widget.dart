@@ -144,7 +144,7 @@ class _FeedbackWidgetState extends State<FeedbackWidget> {
 
         _showSnackBar(
           'Added ${newScreenshots.length} screenshot(s). Total: ${_attachedScreenshots.length}',
-          Colors.green,
+          Theme.of(context).colorScheme.primary,
         );
 
         await AppLogger.instance.info(
@@ -161,7 +161,7 @@ class _FeedbackWidgetState extends State<FeedbackWidget> {
       if (mounted) {
         _showSnackBar(
           'Could not add screenshots. Please try again.',
-          Colors.red,
+          Theme.of(context).colorScheme.error,
         );
       }
     }
@@ -173,7 +173,7 @@ class _FeedbackWidgetState extends State<FeedbackWidget> {
       final removedFile = _attachedScreenshots.removeAt(index);
       _showSnackBar(
         'Screenshot removed: ${removedFile.path.split('/').last}',
-        Colors.orange,
+        Theme.of(context).colorScheme.tertiary,
       );
     });
   }
@@ -265,7 +265,7 @@ class _FeedbackWidgetState extends State<FeedbackWidget> {
     }
     
     if (_feedbackController.text.trim().isEmpty) {
-      _showSnackBar('Please enter your feedback', Colors.red);
+      _showSnackBar('Please enter your feedback', Theme.of(context).colorScheme.error);
       return;
     }
     
@@ -308,7 +308,7 @@ class _FeedbackWidgetState extends State<FeedbackWidget> {
         if (mounted) {
           _showSnackBar(
             'Could not send feedback. Please try again.',
-            Colors.red,
+            Theme.of(context).colorScheme.error,
           );
         }
       }
@@ -355,7 +355,7 @@ class _FeedbackWidgetState extends State<FeedbackWidget> {
         // Show detailed success message
         _showSnackBar(
           'Email opened successfully!',
-          Colors.green,
+          Theme.of(context).colorScheme.primary,
           duration: 5,
         );
         _clearForm();
@@ -408,7 +408,7 @@ $emailBody''';
         
         _showSnackBar(
           'Feedback shared with ${files.length} attachment(s)!',
-          Colors.green,
+          Theme.of(context).colorScheme.primary,
           duration: 6,
         );
       } else {
@@ -419,7 +419,7 @@ $emailBody''';
           ),
         );
         
-        _showSnackBar('Feedback shared successfully!', Colors.green);
+        _showSnackBar('Feedback shared successfully!', Theme.of(context).colorScheme.primary);
       }
       
       _clearForm();
@@ -431,7 +431,7 @@ $emailBody''';
       );
       _showSnackBar(
         'Could not share feedback. Please try again.',
-        Colors.red,
+        Theme.of(context).colorScheme.error,
       );
     }
   }
@@ -477,19 +477,19 @@ $emailBody''';
             child: Row(
               children: [
                 Icon(
-                  backgroundColor == Colors.red ? Icons.error : 
-                  backgroundColor == Colors.green ? Icons.check_circle :
-                  backgroundColor == Colors.orange ? Icons.warning :
+                  backgroundColor == Theme.of(context).colorScheme.error ? Icons.error : 
+                  backgroundColor == Theme.of(context).colorScheme.primary ? Icons.check_circle :
+                  backgroundColor == Theme.of(context).colorScheme.tertiary ? Icons.warning :
                   Icons.info,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onPrimary,
                   size: 20,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     message,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onPrimary,
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
@@ -531,7 +531,7 @@ $emailBody''';
             Text(
               'Help us improve Subtitle Studio by sharing your feedback, reporting bugs, or suggesting new features.',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.grey[600],
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 16),
@@ -558,7 +558,7 @@ $emailBody''';
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey[300]!),
+                  border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: DropdownButtonHideUnderline(
@@ -613,7 +613,7 @@ $emailBody''';
                     ? 'Enter your name (required for bug reports)'
                     : 'Enter your name (optional)',
                   border: const OutlineInputBorder(),
-                  prefixIcon: const Icon(Icons.person),
+                  prefixIcon: Icon(Icons.person),
                 ),
                 textInputAction: TextInputAction.next,
                 validator: _isUserInfoMandatory() ? (value) {
@@ -634,7 +634,7 @@ $emailBody''';
                     ? 'Enter your email (required for bug reports)'
                     : 'Enter your email (optional)',
                   border: const OutlineInputBorder(),
-                  prefixIcon: const Icon(Icons.email),
+                  prefixIcon: Icon(Icons.email),
                 ),
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
@@ -666,7 +666,7 @@ $emailBody''';
                 controller: _feedbackController,
                 decoration: InputDecoration(
                   hintText: _getFeedbackHint(),
-                  hintStyle: TextStyle(color: Colors.grey[600]),
+                  hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                   border: const OutlineInputBorder(),
                   alignLabelWithHint: true,
                 ),
@@ -688,9 +688,9 @@ $emailBody''';
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.05),
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
+                  border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2)),
                 ),
                 child: Row(
                   children: [
@@ -714,7 +714,7 @@ $emailBody''';
                             'Include app logs to help developers diagnose issues (recommended for bug reports)',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey[600],
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ],
@@ -736,9 +736,9 @@ $emailBody''';
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.05),
+                  color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.orange.withValues(alpha: 0.2)),
+                  border: Border.all(color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.2)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -750,17 +750,17 @@ $emailBody''';
                             'Add screenshots to help explain the issue or show what you\'re referring to',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey[600],
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ),
                         const SizedBox(width: 8),
                         TextButton.icon(
                           onPressed: _pickScreenshots,
-                          icon: const Icon(Icons.add_a_photo, size: 18),
+                          icon: Icon(Icons.add_a_photo, size: 18),
                           label: const Text('Add Screenshots'),
                           style: TextButton.styleFrom(
-                            foregroundColor: Colors.orange[700],
+                            foregroundColor: Theme.of(context).colorScheme.tertiary,
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           ),
                         ),
@@ -771,7 +771,7 @@ $emailBody''';
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Colors.orange.withValues(alpha: 0.1),
+                          color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Column(
@@ -779,7 +779,7 @@ $emailBody''';
                           children: [
                             Text(
                               'Attached Screenshots (${_attachedScreenshots.length}):',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 13,
                               ),
@@ -792,21 +792,21 @@ $emailBody''';
                                 padding: const EdgeInsets.only(bottom: 4),
                                 child: Row(
                                   children: [
-                                    const Icon(Icons.image, size: 16, color: Colors.orange),
+                                    Icon(Icons.image, size: 16, color: Theme.of(context).colorScheme.tertiary),
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
                                         fileName,
-                                        style: const TextStyle(fontSize: 12),
+                                        style: TextStyle(fontSize: 12),
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                     IconButton(
                                       onPressed: () => _removeScreenshot(index),
-                                      icon: const Icon(Icons.remove_circle_outline, size: 16),
+                                      icon: Icon(Icons.remove_circle_outline, size: 16),
                                       constraints: const BoxConstraints(),
                                       padding: EdgeInsets.zero,
-                                      color: Colors.red[600],
+                                      color: Theme.of(context).colorScheme.error,
                                       tooltip: 'Remove screenshot',
                                     ),
                                   ],
@@ -826,13 +826,13 @@ $emailBody''';
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.08),
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+                  border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.email, color: Colors.blue[700], size: 20),
+                    Icon(Icons.email, color: Theme.of(context).colorScheme.primary, size: 20),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Column(
@@ -842,7 +842,7 @@ $emailBody''';
                             'Send feedback to:',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.blue[700],
+                              color: Theme.of(context).colorScheme.primary,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -851,7 +851,7 @@ $emailBody''';
                             _developerEmail,
                             style: TextStyle(
                               fontSize: 14,
-                              color: Colors.blue[800],
+                              color: Theme.of(context).colorScheme.primary,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -862,12 +862,12 @@ $emailBody''';
                       onPressed: () async {
                         try {
                           await Clipboard.setData(ClipboardData(text: _developerEmail));
-                          _showSnackBar('Email copied to clipboard!', Colors.green);
+                          _showSnackBar('Email copied to clipboard!', Theme.of(context).colorScheme.primary);
                         } catch (e) {
-                          _showSnackBar('Failed to copy email', Colors.red);
+                          _showSnackBar('Failed to copy email', Theme.of(context).colorScheme.error);
                         }
                       },
-                      icon: Icon(Icons.copy, color: Colors.blue[700], size: 18),
+                      icon: Icon(Icons.copy, color: Theme.of(context).colorScheme.primary, size: 18),
                       tooltip: 'Copy email address',
                       constraints: const BoxConstraints(),
                       padding: const EdgeInsets.all(8),
@@ -882,13 +882,13 @@ $emailBody''';
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: _sendFeedback,
-                  icon: const Icon(Icons.email),
+                  icon: Icon(Icons.email),
                   label: const Text('Email'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    textStyle: const TextStyle(
+                    textStyle: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -901,20 +901,20 @@ $emailBody''';
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.green.withValues(alpha: 0.05),
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.green.withValues(alpha: 0.2)),
+                  border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2)),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline, color: Colors.green[700], size: 20),
+                    Icon(Icons.info_outline, color: Theme.of(context).colorScheme.primary, size: 20),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'Use "Email" to share feedback through your email app. You can copy the developer email address above if needed.',
                         style: TextStyle(
                           fontSize: 12,
-                          color: Colors.green[700],
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
                     ),
@@ -952,19 +952,19 @@ $emailBody''';
   Color _getCategoryColor(String category) {
     switch (category) {
       case 'Bug Report':
-        return Colors.red;
+        return Theme.of(context).colorScheme.error;
       case 'Feature Request':
-        return Colors.green;
+        return Theme.of(context).colorScheme.primary;
       case 'General Feedback':
-        return Colors.blue;
+        return Theme.of(context).colorScheme.primary;
       case 'Performance Issue':
-        return Colors.orange;
+        return Theme.of(context).colorScheme.tertiary;
       case 'UI/UX Feedback':
-        return Colors.purple;
+        return Theme.of(context).colorScheme.secondary;
       case 'Crash Report':
-        return Colors.red[800]!;
+        return Theme.of(context).colorScheme.error;
       default:
-        return Colors.grey;
+        return Theme.of(context).colorScheme.onSurfaceVariant;
     }
   }
 
