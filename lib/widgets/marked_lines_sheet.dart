@@ -7,6 +7,7 @@ import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/utils/time_parser.dart';
 import 'package:subtitle_studio/utils/responsive_layout.dart';
 import 'package:subtitle_studio/widgets/comment_dialog.dart';
+import 'package:subtitle_studio/widgets/marked_lines_filter.dart';
 
 class _HoverableButton extends StatefulWidget {
   final VoidCallback onTap;
