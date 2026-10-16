@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 /// The visual family. A skin does not imply a particular brightness.
 enum StudioSkin {
+  carbonZero('carbonZero', 'Carbon Zero'),
   carbonJade('carbonJade', 'Carbon & Jade'),
   copperCinema('copperCinema', 'Copper Cinema'),
   asterViolet('asterViolet', 'Aster Violet');
@@ -51,11 +52,13 @@ class StudioSkinId {
 
   final String value;
 
+  static const carbonZero = StudioSkinId._('builtin.carbonZero');
   static const carbonJade = StudioSkinId._('builtin.carbonJade');
   static const copperCinema = StudioSkinId._('builtin.copperCinema');
   static const asterViolet = StudioSkinId._('builtin.asterViolet');
 
   static StudioSkinId builtIn(StudioSkin skin) => switch (skin) {
+        StudioSkin.carbonZero => carbonZero,
         StudioSkin.carbonJade => carbonJade,
         StudioSkin.copperCinema => copperCinema,
         StudioSkin.asterViolet => asterViolet,
@@ -73,6 +76,9 @@ class StudioSkinId {
 
   static StudioSkinId? parse(String? raw) {
     switch (raw) {
+      case 'carbonZero':
+      case 'builtin.carbonZero':
+        return carbonZero;
       case 'carbonJade':
       case 'builtin.carbonJade':
         return carbonJade;
@@ -115,7 +121,7 @@ class StudioAppearanceSelection {
   final StudioAppearance mode;
 
   static const defaultSelection = StudioAppearanceSelection(
-    skin: StudioSkinId.carbonJade,
+    skin: StudioSkinId.carbonZero,
     mode: StudioAppearance.dark,
   );
 
