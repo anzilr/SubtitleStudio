@@ -1439,7 +1439,7 @@ class _SubtitleExtractOptionsSheetState
                   ),
                   child:
                       _isLoading
-                          ? const SizedBox(
+                          ? SizedBox(
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(
@@ -1453,7 +1453,7 @@ class _SubtitleExtractOptionsSheetState
                               Icon(
                                 Icons.play_arrow,
                                 size: 20,
-                                color: Theme.of(context).colorScheme.onSurface,
+                                color: Theme.of(context).colorScheme.onPrimary,
                               ),
                               SizedBox(width: 8),
                               Text(
