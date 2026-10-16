@@ -5,7 +5,7 @@ extension _WaveformRendering on WaveformWidgetState {
     return Container(
       height: widget.height,
       decoration: BoxDecoration(
-        color: Colors.grey[900],
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Center(
@@ -15,13 +15,13 @@ extension _WaveformRendering on WaveformWidgetState {
             Icon(
               Icons.graphic_eq,
               size: 48,
-              color: Colors.grey[600],
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
             const SizedBox(height: 16),
             Text(
               'No waveform loaded',
               style: TextStyle(
-                color: Colors.grey[400],
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 14,
               ),
             ),
@@ -32,11 +32,7 @@ extension _WaveformRendering on WaveformWidgetState {
   }
 
   Widget _buildLoadingState(WaveformLoading state) {
-    final brightness = Theme.of(context).brightness;
-
-    final loaderColor = brightness == Brightness.dark
-        ? Colors.white
-        : Theme.of(context).colorScheme.primary;
+    final loaderColor = Theme.of(context).colorScheme.primary;
     
     return Container(
       height: widget.height,
@@ -87,7 +83,7 @@ extension _WaveformRendering on WaveformWidgetState {
     return Container(
       height: widget.height,
       decoration: BoxDecoration(
-        color: Colors.grey[900],
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Center(
@@ -98,13 +94,13 @@ extension _WaveformRendering on WaveformWidgetState {
               Icon(
                 Icons.error_outline,
                 size: 48,
-                color: Colors.red[400],
+                color: Theme.of(context).colorScheme.error,
               ),
               const SizedBox(height: 16),
               Text(
                 'Error loading waveform',
                 style: TextStyle(
-                  color: Colors.red[400],
+                  color: Theme.of(context).colorScheme.error,
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                 ),
@@ -121,7 +117,7 @@ extension _WaveformRendering on WaveformWidgetState {
                       state.message,
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: Colors.grey[400],
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         fontSize: 12,
                       ),
                     ),
@@ -403,7 +399,7 @@ extension _WaveformRendering on WaveformWidgetState {
                             Icon(
                               state.autoScroll ? Icons.sync : Icons.sync_disabled,
                               size: 20,
-                              color: state.autoScroll ? Colors.blue : Colors.grey,
+                              color: state.autoScroll ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurfaceVariant,
                             ),
                             const SizedBox(width: 12),
                             Text(state.autoScroll ? 'Disable Auto-Scroll' : 'Enable Auto-Scroll'),
@@ -482,7 +478,7 @@ extension _WaveformRendering on WaveformWidgetState {
                                   verticalZoom: state.verticalZoom,
                                   waveformColor: _getWaveformColor(context),
                                   subtitleColor: Theme.of(context).colorScheme.primary,
-                                  playbackColor: Colors.red,
+                                  playbackColor: Theme.of(context).colorScheme.error,
                                   backgroundColor: Theme.of(context).colorScheme.surface,
                                   showSubtitlesOnly: false,
                                   showWaveformOnly: true,
@@ -543,7 +539,7 @@ extension _WaveformRendering on WaveformWidgetState {
                                   verticalZoom: state.verticalZoom,
                                   waveformColor: _getWaveformColor(context),
                                   subtitleColor: Theme.of(context).colorScheme.primary,
-                                  playbackColor: Colors.red,
+                                  playbackColor: Theme.of(context).colorScheme.error,
                                   backgroundColor: Colors.transparent,
                                   showSubtitlesOnly: true,
                                   showWaveformOnly: false,
@@ -576,7 +572,7 @@ extension _WaveformRendering on WaveformWidgetState {
                               child: Text(
                                 _formatDisplayTime(state),
                                 style: TextStyle(
-                                  color: Color(0x99EE9B00),
+                                  color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.55),
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
                                   letterSpacing: 1.0,
@@ -653,7 +649,7 @@ extension _WaveformRendering on WaveformWidgetState {
     final brightness = Theme.of(context).brightness;
 
     if (brightness == Brightness.dark) {
-      return Colors.blue.shade400;
+      return Theme.of(context).colorScheme.primary;
     }
     
     // For light mode, use theme secondary color
@@ -666,10 +662,10 @@ extension _WaveformRendering on WaveformWidgetState {
     
     // Use a more vibrant contrasting color
     if (brightness == Brightness.dark) {
-      return Colors.amber.shade600.withValues(alpha: 0.4);
+      return Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.4);
     }
     
-    return Colors.orange.shade400.withValues(alpha: 0.45);
+    return Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.45);
   }
 }
 
