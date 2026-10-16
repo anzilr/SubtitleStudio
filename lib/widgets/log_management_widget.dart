@@ -118,7 +118,7 @@ class _LogManagementWidgetState extends State<LogManagementWidget> {
       if (mounted) {
         _showSnackBar(
           'Could not load log information. Please try again.',
-          Colors.red,
+          Theme.of(context).colorScheme.error,
         );
       }
     }
@@ -143,7 +143,7 @@ class _LogManagementWidgetState extends State<LogManagementWidget> {
       if (mounted) {
         _showSnackBar(
           'Logs exported successfully!\nPath: $exportPath',
-          Colors.green,
+          Theme.of(context).colorScheme.primary,
           duration: 5,
         );
       }
@@ -155,7 +155,7 @@ class _LogManagementWidgetState extends State<LogManagementWidget> {
       await AppLogger.instance.error('Failed to export logs: $e', stackTrace: stackTrace, context: 'LogManagementWidget._exportLogs');
       
       if (mounted) {
-        _showSnackBar('Could not export logs. Please try again.', Colors.red, duration: 5);
+        _showSnackBar('Could not export logs. Please try again.', Theme.of(context).colorScheme.error, duration: 5);
       }
     }
   }
@@ -177,7 +177,7 @@ class _LogManagementWidgetState extends State<LogManagementWidget> {
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
             child: const Text('Clear'),
           ),
         ],
@@ -236,7 +236,7 @@ class _LogManagementWidgetState extends State<LogManagementWidget> {
         await _loadLogStats();
         
         if (mounted) {
-          _showSnackBar('All log files cleared successfully', Colors.green);
+          _showSnackBar('All log files cleared successfully', Theme.of(context).colorScheme.primary);
         }
       } catch (e, stackTrace) {
         setState(() {
@@ -246,7 +246,7 @@ class _LogManagementWidgetState extends State<LogManagementWidget> {
         await AppLogger.instance.error('Failed to clear logs: $e', stackTrace: stackTrace, context: 'LogManagementWidget._clearLogs');
         
         if (mounted) {
-          _showSnackBar('Could not clear logs. Please try again.', Colors.red);
+          _showSnackBar('Could not clear logs. Please try again.', Theme.of(context).colorScheme.error);
         }
       }
     }
@@ -259,20 +259,20 @@ class _LogManagementWidgetState extends State<LogManagementWidget> {
         await Clipboard.setData(ClipboardData(text: logDirPath));
         
         if (mounted) {
-          _showSnackBar('Path copied: $logDirPath', Colors.green, duration: 3);
+          _showSnackBar('Path copied: $logDirPath', Theme.of(context).colorScheme.primary, duration: 3);
         }
       } else {
         const message = 'No log files found';
         
         if (mounted) {
-          _showSnackBar(message, Colors.orange);
+          _showSnackBar(message, Theme.of(context).colorScheme.tertiary);
         }
       }
     } catch (e, stackTrace) {
       await AppLogger.instance.error('Failed to copy log path: $e', stackTrace: stackTrace, context: 'LogManagementWidget._copyLogPath');
       
       if (mounted) {
-        _showSnackBar('Could not copy the log path.', Colors.red);
+        _showSnackBar('Could not copy the log path.', Theme.of(context).colorScheme.error);
       }
     }
   }
@@ -306,19 +306,19 @@ class _LogManagementWidgetState extends State<LogManagementWidget> {
             child: Row(
               children: [
                 Icon(
-                  backgroundColor == Colors.red ? Icons.error : 
-                  backgroundColor == Colors.green ? Icons.check_circle :
-                  backgroundColor == Colors.orange ? Icons.warning :
+                  backgroundColor == Theme.of(context).colorScheme.error ? Icons.error : 
+                  backgroundColor == Theme.of(context).colorScheme.primary ? Icons.check_circle :
+                  backgroundColor == Theme.of(context).colorScheme.tertiary ? Icons.warning :
                   Icons.info,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onPrimary,
                   size: 20,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     message,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onPrimary,
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
@@ -367,7 +367,7 @@ class _LogManagementWidgetState extends State<LogManagementWidget> {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.refresh, size: 20),
+                  icon: Icon(Icons.refresh, size: 20),
                   tooltip: 'Refresh Statistics',
                   onPressed: _loadLogStats,
                   padding: EdgeInsets.zero,
@@ -400,11 +400,11 @@ class _LogManagementWidgetState extends State<LogManagementWidget> {
                   debugPrint('Export button pressed - calling _exportLogs');
                   await _exportLogs();
                 },
-                icon: const Icon(Icons.file_download),
+                icon: Icon(Icons.file_download),
                 label: const Text('Export Logs'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
@@ -416,11 +416,11 @@ class _LogManagementWidgetState extends State<LogManagementWidget> {
             //   width: double.infinity,
             //   child: ElevatedButton.icon(
             //     onPressed: _shareLogFile,
-            //     icon: const Icon(Icons.share),
+            //     icon: Icon(Icons.share),
             //     label: const Text('Share Log File'),
             //     style: ElevatedButton.styleFrom(
-            //       backgroundColor: Colors.green,
-            //       foregroundColor: Colors.white,
+            //       backgroundColor: Theme.of(context).colorScheme.primary,
+            //       foregroundColor: Theme.of(context).colorScheme.onPrimary,
             //       padding: const EdgeInsets.symmetric(vertical: 12),
             //     ),
             //   ),
@@ -432,11 +432,11 @@ class _LogManagementWidgetState extends State<LogManagementWidget> {
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: _copyLogPath,
-                    icon: const Icon(Icons.copy),
+                    icon: Icon(Icons.copy),
                     label: const Text('Copy Path'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.grey[600],
-                      foregroundColor: Colors.white,
+                      backgroundColor: Theme.of(context).colorScheme.onSurfaceVariant,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
@@ -445,11 +445,11 @@ class _LogManagementWidgetState extends State<LogManagementWidget> {
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: _clearLogs,
-                    icon: const Icon(Icons.delete_forever),
+                    icon: Icon(Icons.delete_forever),
                     label: const Text('Clear All'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
@@ -464,7 +464,7 @@ class _LogManagementWidgetState extends State<LogManagementWidget> {
             'Logs help developers troubleshoot issues. Use "Export Logs" to create a '
             'comprehensive report, or "Send" to report bugs directly to the developer.',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Colors.grey[600],
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
           
@@ -474,9 +474,9 @@ class _LogManagementWidgetState extends State<LogManagementWidget> {
           // Container(
           //   padding: const EdgeInsets.all(12),
           //   decoration: BoxDecoration(
-          //     color: Colors.blue.withOpacity(0.05),
+          //     color: Theme.of(context).colorScheme.primary.withOpacity(0.05),
           //     borderRadius: BorderRadius.circular(8),
-          //     border: Border.all(color: Colors.blue.withOpacity(0.2), width: 1.5),
+          //     border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.2), width: 1.5),
           //   ),
           //   child: Column(
           //     crossAxisAlignment: CrossAxisAlignment.start,
@@ -492,7 +492,7 @@ class _LogManagementWidgetState extends State<LogManagementWidget> {
           //       // Email
           //       Row(
           //         children: [
-          //           Icon(Icons.email, color: Colors.grey[600], size: 16),
+          //           Icon(Icons.email, color: Theme.of(context).colorScheme.onSurfaceVariant, size: 16),
           //           const SizedBox(width: 8),
           //           const Text('Email: '),
           //           Expanded(
@@ -501,9 +501,9 @@ class _LogManagementWidgetState extends State<LogManagementWidget> {
           //               child: Container(
           //                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           //                 decoration: BoxDecoration(
-          //                   color: Colors.blue.withOpacity(0.1),
+          //                   color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
           //                   borderRadius: BorderRadius.circular(4),
-          //                   border: Border.all(color: Colors.blue.withOpacity(0.3), width: 1.5),
+          //                   border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.3), width: 1.5),
           //                 ),
           //                 child: Row(
           //                   mainAxisSize: MainAxisSize.min,
@@ -511,12 +511,12 @@ class _LogManagementWidgetState extends State<LogManagementWidget> {
           //                     const Text(
           //                       'quadbitlab@gmail.com',
           //                       style: TextStyle(
-          //                         color: Colors.blue,
+          //                         color: Theme.of(context).colorScheme.primary,
           //                         fontWeight: FontWeight.w500,
           //                       ),
           //                     ),
           //                     const SizedBox(width: 4),
-          //                     Icon(Icons.copy, size: 14, color: Colors.blue[600]),
+          //                     Icon(Icons.copy, size: 14, color: Theme.of(context).colorScheme.primary),
           //                   ],
           //                 ),
           //               ),
@@ -529,7 +529,7 @@ class _LogManagementWidgetState extends State<LogManagementWidget> {
           //       // Telegram
           //       Row(
           //         children: [
-          //           Icon(Icons.telegram, color: Colors.grey[600], size: 16),
+          //           Icon(Icons.telegram, color: Theme.of(context).colorScheme.onSurfaceVariant, size: 16),
           //           const SizedBox(width: 8),
           //           const Text('Telegram: '),
           //           Expanded(
@@ -538,9 +538,9 @@ class _LogManagementWidgetState extends State<LogManagementWidget> {
           //               child: Container(
           //                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           //                 decoration: BoxDecoration(
-          //                   color: Colors.blue.withOpacity(0.1),
+          //                   color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
           //                   borderRadius: BorderRadius.circular(4),
-          //                   border: Border.all(color: Colors.blue.withOpacity(0.3), width: 1.5),
+          //                   border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.3), width: 1.5),
           //                 ),
           //                 child: Row(
           //                   mainAxisSize: MainAxisSize.min,
@@ -548,12 +548,12 @@ class _LogManagementWidgetState extends State<LogManagementWidget> {
           //                     const Text(
           //                       '@anzilr',
           //                       style: TextStyle(
-          //                         color: Colors.blue,
+          //                         color: Theme.of(context).colorScheme.primary,
           //                         fontWeight: FontWeight.w500,
           //                       ),
           //                     ),
           //                     const SizedBox(width: 4),
-          //                     Icon(Icons.copy, size: 14, color: Colors.blue[600]),
+          //                     Icon(Icons.copy, size: 14, color: Theme.of(context).colorScheme.primary),
           //                   ],
           //                 ),
           //               ),
@@ -566,7 +566,7 @@ class _LogManagementWidgetState extends State<LogManagementWidget> {
           //       Text(
           //         'Tap on the contact information above to copy to clipboard.',
           //         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          //           color: Colors.grey[500],
+          //           color: Theme.of(context).colorScheme.onSurfaceVariant[500],
           //           fontSize: 11,
           //         ),
           //       ),
@@ -587,13 +587,13 @@ class _LogManagementWidgetState extends State<LogManagementWidget> {
             width: 100,
             child: Text(
               '$label:',
-              style: const TextStyle(fontWeight: FontWeight.w500),
+              style: TextStyle(fontWeight: FontWeight.w500),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(fontFamily: 'monospace'),
+              style: TextStyle(fontFamily: 'monospace'),
             ),
           ),
         ],
