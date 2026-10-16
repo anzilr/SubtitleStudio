@@ -1,5 +1,28 @@
 # SubtitleStudio Refactor Roadmap v4
 
+> **R8 MARKED-LINES + EDITOR FLOATING CONTROL + WAVEFORM TOOLBAR VERIFIED — October 16, 2026:**
+> User confirmed the R7 Riverpod build-phase waveform exception is resolved
+> on Android. The next 360dp device log showed successful compact waveform
+> loading/playback but a separate 23px toolbar overflow. The toolbar's action
+> group is now horizontally scrollable and uses skin colors. Marked Lines'
+> Show All Comments checkbox now strictly distinguishes marked cues from
+> unmarked commented cues, composes with resolved-state filters and survives
+> an async preference-load race. Redundant Show label/filter icon removed.
+> Marked Lines summary and timestamp headers were made responsive after the
+> real 360dp widget test exposed two additional overflows. The Editor floating
+> play/pause uses primary/onPrimary in all twelve skin/mode variants, retaining
+> the original player callback. [Successful CI 38926044286](https://github.com/anzilr/SubtitleStudio/actions/runs/38926044286):
+> **469 Flutter tests passed, zero analyzer issues** at code `b25faf4`.
+> [R8 report and current prioritized roadmap](STUDIO_R8_MARKED_LINES_FAB_WAVEFORM_UI_2026-10-16.md).
+> **NEXT:** real Android R8 checkbox/theme/toolbar smoke verification, native
+> CP86 waveform track/SAF/cancellation/performance qualification, Windows and
+> historical Isar migration QA. Then finish SKIN-5/DESIGN-2 screen audits,
+> UX history language/version map and compact Edit Line; SKIN-6/DESIGN-3
+> accessibility, community imports/creator and later desktop workspace remain.
+> Legacy numbered phases and older three-skin or CP85 notes below are retained
+> as historical plans; current built-in catalogue is **four skins × three
+> modes**, and R7's specific Android crash is user-confirmed resolved.
+
 > **WAVEFORM R7 RIVERPOD LIFECYCLE VERIFIED — October 16, 2026:**
 > Android reported `Tried to modify a provider while the widget tree was
 > building` at `WaveformController._setState`, after R6 compact waveform
