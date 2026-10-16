@@ -10,7 +10,7 @@ extension _SettingsSupportSection on _SettingsSheetState {
             dividerColor: Colors.transparent, // Remove internal dividers
           ),
           child: ExpansionTile(
-            leading: const Icon(Icons.feedback, color: Colors.blue),
+            leading: Icon(Icons.feedback, color: Theme.of(context).colorScheme.primary),
             title: const Text('Send Feedback'),
             subtitle: const Text('Report bugs, suggest features, or share your thoughts'),
             tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -27,7 +27,7 @@ extension _SettingsSupportSection on _SettingsSheetState {
             dividerColor: Colors.transparent, // Remove internal dividers
           ),
           child: ExpansionTile(
-            leading: const Icon(Icons.bug_report, color: Colors.orange),
+            leading: Icon(Icons.bug_report, color: Theme.of(context).colorScheme.primary),
             title: const Text('Logging'),
             subtitle: const Text('Manage app logs and debugging information'),
             tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -42,7 +42,7 @@ extension _SettingsSupportSection on _SettingsSheetState {
         
         // Check for Updates
         ListTile(
-          leading: const Icon(Icons.system_update, color: Colors.green),
+          leading: Icon(Icons.system_update, color: Theme.of(context).colorScheme.primary),
           title: const Text('Check for Updates'),
           subtitle: const Text('Check for new app versions'),
           trailing: const Icon(Icons.arrow_forward_ios, size: 16),
@@ -51,7 +51,7 @@ extension _SettingsSupportSection on _SettingsSheetState {
         
         // Help & Documentation
         ListTile(
-          leading: const Icon(Icons.help_outline, color: Colors.teal),
+          leading: Icon(Icons.help_outline, color: Theme.of(context).colorScheme.primary),
           title: const Text('Help & Documentation'),
           subtitle: const Text('Learn how to use Subtitle Studio'),
           trailing: const Icon(Icons.arrow_forward_ios, size: 16),
