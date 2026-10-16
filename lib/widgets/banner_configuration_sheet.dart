@@ -570,7 +570,7 @@ class _BannerConfigurationSheetState extends State<BannerConfigurationSheet> {
                           ),
                         ),
                         child: _isProcessing
-                            ? const SizedBox(
+                            ? SizedBox(
                                 width: 20,
                                 height: 20,
                                 child: CircularProgressIndicator(
