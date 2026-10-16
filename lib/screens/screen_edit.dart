@@ -62,6 +62,7 @@ import 'package:subtitle_studio/features/waveform/state/waveform_event.dart';
 import 'package:subtitle_studio/features/waveform/state/waveform_state.dart';
 import 'package:subtitle_studio/features/waveform/providers/waveform_controller.dart';
 import 'package:subtitle_studio/features/waveform/widgets/waveform_widget.dart';
+import 'package:subtitle_studio/widgets/adaptive_waveform_pane.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_track_reload_coordinator.dart';
 
 part 'edit/parts/edit_dialog_actions.dart';
