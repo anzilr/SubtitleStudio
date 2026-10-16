@@ -1,5 +1,18 @@
 # SubtitleStudio Refactor Roadmap v4
 
+> **SKIN-4 R3-A COMPLETE — October 16, 2026:** Editor/Editing popup menus
+> use one semantic `StudioMenuItemContent` (preserving original action
+> values); subtitle cards now inherit readable semantic text, selection and
+> highlight colors. Formatting popup/confirmation, unsaved changes sheet and
+> Edit Line app bar/dictionary foregrounds have migrated to shared appearance
+> roles. [Successful CI run 38894453717](https://github.com/anzilr/SubtitleStudio/actions/runs/38894453717):
+> **429 tests passed, 0 analyzer issues** against code `a4ab417`.
+> [R3-A report](STUDIO_SKIN4_R3A_EDITOR_CONTRAST_2026-10-16.md).
+> **Still gated:** app-wide `StudioThemeFactory` activation requires
+> remaining confirmation sheet/toolbar/control contrast audits and Editor
+> lifetime tests (R3-B). Live skin selection still previews/saves only; native
+> Android/Windows acceptance and CP86 waveform work remain separate.
+
 > **DESIGN-1 R4 VERIFIED — October 16, 2026:** Uniform theme defaults
 > for modal sheets, dialogs, popup/context menus, dropdown menus, sliders,
 > segmented buttons and filled/elevated/outlined/text/icon buttons now share
