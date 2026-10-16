@@ -1,8 +1,7 @@
-SubtitleStudio SKIN-4 R1 neutral cue/time field visual pilot | 2026-10-16
-Analyze and test all Flutter widgets/features. Introduce StudioCueFieldSurface,
-StudioCueFieldStyle and StudioTimeField, replace Edit Line white-on-primary
-Original/Edited and time fields with semantic surface, foreground, focus and
-validation colors. Keep text/undo/focus controllers and media routes unchanged.
-Preview-only SKIN-3 selector remains; StudioThemeFactory is NOT yet activated
-app-wide pending Android/Windows visual and broader hard-coded color audit.
-No native platform builds or Isar/schema/media changes.
+SubtitleStudio SKIN-4 R2 cue/time field pilot rerun | 2026-10-16
+Flutter analyzer and all unit/widget/integration tests. Previous R1 test-only
+failures arose from asserting colors during animated ThemeData transitions;
+R2 settles zero-duration palette transitions and clears analyzer warnings.
+Semantic cue typography now inherits selected custom app font. Live palette
+factory remains gated; existing editor routes, media and preference schemas
+are unchanged. No native platform builds.
