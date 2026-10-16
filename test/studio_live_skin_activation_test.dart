@@ -7,7 +7,7 @@ import 'package:subtitle_studio/themes/studio_skin_catalog.dart';
 import 'package:subtitle_studio/themes/theme_controller.dart';
 
 void main() {
-  test('live ThemeState resolves all nine palettes through shared catalog', () {
+  test('live ThemeState resolves all twelve palettes through shared catalog', () {
     final catalog = StudioSkinCatalog();
     for (final skin in StudioSkin.values) {
       for (final mode in StudioAppearance.values) {
@@ -31,7 +31,7 @@ void main() {
     final state = ThemeState(skinId: saved, appearance: appearance);
     final before = state.themeDataFor(StudioSkinCatalog());
     expect(before.colorScheme.primary,
-        StudioPalette.resolve(StudioSkin.carbonJade, appearance).accent);
+        StudioPalette.resolve(StudioSkin.carbonZero, appearance).accent);
 
     final definition = StudioSkinDefinition(
       id: saved,
