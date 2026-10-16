@@ -56,6 +56,13 @@ final sourceViewControllerProvider =
 
 class SourceViewController extends Notifier<SourceViewState> {
   late File _file;
+  String? _rawSourceText;
+  String? get rawSourceText => _rawSourceText;
+
+  void updateRawSourceText(String text) {
+    _rawSourceText = text;
+    markContentChanged();
+  }
   bool _disposed = false;
 
   @override
@@ -226,6 +233,8 @@ class SourceViewController extends Notifier<SourceViewState> {
         }
       }
       
+      // Keep the source's actual whitespace and line endings for raw editing.
+      _rawSourceText = content;
       // Parse SRT content into subtitle entries
       await AppLogger.instance.info('Parsing SRT content: ${content.length} chars');
       final entries = _parseSrtContent(content);
@@ -334,7 +343,7 @@ class SourceViewController extends Notifier<SourceViewState> {
     try {
       _setState(state.toSaving());
       
-      final content = state.toSrtContent();
+      final content = _rawSourceText ?? state.toSrtContent();
       
       // Encode using the detected encoding
       final bytes = state.fileEncoding.encode(content);
