@@ -260,7 +260,7 @@ class _ImportProjectSheetState extends State<ImportProjectSheet> {
             decoration: BoxDecoration(
               border: Border.all(color: borderColor),
               borderRadius: BorderRadius.circular(12),
-              color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+              color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
             ),
             child: Row(
               children: [
@@ -339,7 +339,7 @@ class _ImportProjectSheetState extends State<ImportProjectSheet> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+        color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -398,7 +398,7 @@ class _ImportProjectSheetState extends State<ImportProjectSheet> {
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.w500,
                 fontSize: 14,
               ),
@@ -444,7 +444,7 @@ class _ImportProjectSheetState extends State<ImportProjectSheet> {
                       color: Theme.of(context).primaryColor,
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.unarchive,
                       color: Colors.white,
                       size: 20,
@@ -495,29 +495,29 @@ class _ImportProjectSheetState extends State<ImportProjectSheet> {
                 onPressed: (_isImporting || _projectDocument == null) ? null : _importProject,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).primaryColor,
-                  foregroundColor: Colors.white,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                   elevation: 0,
                 ),
                 child: _isImporting
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.onPrimary),
                         ),
                       )
                     : Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.unarchive, size: 18),
+                          Icon(Icons.unarchive, size: 18),
                           const SizedBox(width: 8),
                           Text(
                             'Import Project',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontWeight: FontWeight.w600,
                               fontSize: 15,
                             ),
