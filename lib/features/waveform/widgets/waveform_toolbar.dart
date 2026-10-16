@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:subtitle_studio/themes/studio_design_tokens.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/features/waveform/state/waveform_event.dart';
 import 'package:subtitle_studio/features/waveform/state/waveform_state.dart';
@@ -16,17 +17,15 @@ class WaveformToolbar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(waveformControllerProvider);
+    final tokens = StudioDesignTokens.of(context);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: tokens.surface,
         border: Border(
           bottom: BorderSide(
-            color: Theme.of(context)
-                .colorScheme
-                .outline
-                .withValues(alpha: 0.2),
+            color: tokens.outline,
           ),
         ),
       ),
@@ -63,9 +62,7 @@ class WaveformToolbar extends ConsumerWidget {
         isLoading ? 'Loading...' : 'Load Audio',
         style: const TextStyle(fontSize: 13),
       ),
-      style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      ),
+
     );
   }
 
@@ -95,8 +92,8 @@ class WaveformToolbar extends ConsumerWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(4),
+            color: StudioDesignTokens.of(context).raisedSurface,
+            borderRadius: BorderRadius.circular(StudioRadius.input),
           ),
           child: Text(
             '${state.currentZoomIndex + 1}/${state.buffer.zoomLevelCount}',
@@ -154,8 +151,8 @@ class WaveformToolbar extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(4),
+        color: StudioDesignTokens.of(context).raisedSurface,
+        borderRadius: BorderRadius.circular(StudioRadius.input),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -163,13 +160,13 @@ class WaveformToolbar extends ConsumerWidget {
           Icon(
             Icons.info_outline,
             size: 16,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            color: StudioDesignTokens.of(context).mutedText,
           ),
           const SizedBox(width: 6),
           Text(
             '$durationText • $samplesPerPixel samp/px',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  color: StudioDesignTokens.of(context).mutedText,
                 ),
           ),
         ],
