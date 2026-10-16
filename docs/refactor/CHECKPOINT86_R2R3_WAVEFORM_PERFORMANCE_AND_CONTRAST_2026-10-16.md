@@ -4,7 +4,7 @@
 **Branch:** `refactor/riverpod-architecture`  
 **Code under test:** `061bae99` (R2 performance `85c8f910`, R3 colors/search `7aaf7c38`, import contrast follow-up `061bae99`).  
 **Baseline CI:** [R2 38944366683](https://github.com/anzilr/SubtitleStudio/actions/runs/38944366683) — 478 passing Flutter tests, zero analyzer issues.  
-**Combined UI CI:** [38945025518](https://github.com/anzilr/SubtitleStudio/actions/runs/38945025518) (follow run for final result).  
+**Combined UI CI:** [38945025518](https://github.com/anzilr/SubtitleStudio/actions/runs/38945025518) — **SUCCESS**, 491 Flutter tests passed, 0 analyzer issues at code `061bae99`.  
 **Native approval:** PENDING Android 14 and Windows; no Kotlin/FFmpegKit binary build or physical device run in Linux Flutter CI. No appearance redesign; only reproduced accessibility/functional color regressions.
 
 ## Diagnostic evidence from Android debug log
@@ -68,3 +68,7 @@ Capture debug timings for first cold run and cache reopen; peak cache size, memo
 ## Acceptance state / next technical step
 
 Flutter CI validates only Dart/analyzer/widget/service regressions on its Linux runner. CP86 is not complete until actual Android/Windows builds and native timing, URI revision behavior, cache reload, track correctness, cancellation and UI assertions are checked. If a **cold** decoding run remains excessively slow after low-rate extraction, investigate bounded progressive/visible-range waveform decoding in a later isolated CP86 patch rather than allocating full legacy PCM or reducing cache safety. Then return to typed file identity/persistence ownership and other technical roadmap work.
+
+## Verified CP86 R3/R4 Flutter quality gate
+
+On 2026-10-16, [GitHub Actions 38945025518](https://github.com/anzilr/SubtitleStudio/actions/runs/38945025518) completed **success** against code `061bae99`. The runner reported `No issues found!` for Flutter analysis and `491 tests passed.` New coverage includes the reduced peak V2 cache/SAF revision logic and twelve theme combinations for the dictionary primary action. This confirms code-level correctness only: the Android Kotlin document-revision method, performance, actual render contrast, and absence of real-device ListTile assertions still require physical acceptance.

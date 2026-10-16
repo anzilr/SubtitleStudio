@@ -19,7 +19,8 @@
 > text/icons on Carbon Zero white-primary buttons; Dictionary CheckboxListTiles
 > use a Material header instead of a colored DecoratedBox; Import Subtitle
 > button icon uses `onPrimary`. R3/R4 UI CI gate:
-> [38945025518](https://github.com/anzilr/SubtitleStudio/actions/runs/38945025518).
+> [38945025518](https://github.com/anzilr/SubtitleStudio/actions/runs/38945025518):
+> **491 Flutter tests passed, 0 analyzer issues** at code `061bae99`.
 > [Targeted regression and Android retest report](CHECKPOINT86_R2R3_WAVEFORM_PERFORMANCE_AND_CONTRAST_2026-10-16.md).
 > **Appearance remains otherwise paused.** Android/Windows native cache
 > freshness, waveform fidelity/PTS, performance, Dictionary exception removal
