@@ -1,5 +1,26 @@
 # SubtitleStudio Refactor Roadmap v4
 
+> **CP86 R4 USER-REPORTED SUBTITLE CONTROL COLLISION — October 16, 2026:**
+> In waveform view the existing subtitle overlays, selected edit region and
+> adjustment handles were all blue like audio. Targeted fix
+> [3f0346f](https://github.com/anzilr/SubtitleStudio/commit/3f0346f83cf7dcdd5839bdf022de820bfa775744)
+> restores **orange** for existing subtitle overlays/edit handles, preserves
+> blue for audio, uses **teal** for new-line selection/handles and keeps the
+> red playhead. Both overlay and combined painter passes now invalidate on
+> color changes; appearance factory and skins remain frozen.
+> [Flutter CI](https://github.com/anzilr/SubtitleStudio/actions/runs/38954079893)
+> checks color-role and layered repaint regressions.
+>
+> **NEW ANDROID NATIVE QUALIFICATION EVIDENCE:** CPH2381 Android 14 debug
+> release from `703529b` measured cold load **145,942 ms** and warm
+> `.pk1` cache loads **1,879 / 1,865 / 1,845 ms**. This is verified cache
+> reuse, not an equivalent improvement in cold decode. The same run recorded
+> **SIGSEGV (signal 11) in libmpv.so** in Thread-14 immediately following
+> Flutter hot restart/native Media Kit reference disposal at 22:13:26 +03:00.
+> Native acceptance is **BLOCKED** pending reproduction/callstack diagnosis.
+> This is a true Android native crash, not an inferred out-of-memory error
+> or the old ListTile Flutter assertion. See the updated CP86 report.
+>
 > **CP86 R2/R3 ANDROID FEEDBACK — October 16, 2026:**
 > Physical CPH2381 debug log exposed **183,327 ms waveform load** for a
 > long Android SAF MKV: source acquisition **183,294 ms**, zoom metadata only

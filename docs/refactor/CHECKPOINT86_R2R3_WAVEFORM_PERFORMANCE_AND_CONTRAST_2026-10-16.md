@@ -72,3 +72,66 @@ Flutter CI validates only Dart/analyzer/widget/service regressions on its Linux 
 ## Verified CP86 R3/R4 Flutter quality gate
 
 On 2026-10-16, [GitHub Actions 38945025518](https://github.com/anzilr/SubtitleStudio/actions/runs/38945025518) completed **success** against code `061bae99`. The runner reported `No issues found!` for Flutter analysis and `491 tests passed.` New coverage includes the reduced peak V2 cache/SAF revision logic and twelve theme combinations for the dictionary primary action. This confirms code-level correctness only: the Android Kotlin document-revision method, performance, actual render contrast, and absence of real-device ListTile assertions still require physical acceptance.
+
+## CP86 R4 — Overlay color separation and second Android run
+
+**Code:** [`3f0346f`](https://github.com/anzilr/SubtitleStudio/commit/3f0346f83cf7dcdd5839bdf022de820bfa775744).  
+**Verification:** [Flutter CI 38954079893](https://github.com/anzilr/SubtitleStudio/actions/runs/38954079893) (verify completion on that run).  
+**Appearance policy:** Only user-reproduced functional role colors changed; the global theme/skin factory is not reopened.
+
+The waveform line remains blue. Existing subtitle duration boxes and their
+selected timing region, start/end drag bars and handles now use orange
+(`#FF9800`); adding a *new* subtitle uses teal (`#00695C`) for the selection
+overlay and both drag handles, matching the already-restored Add Line control.
+The playback position remains red. The implementation uses
+`WaveformControlColors` and explicit `subtitleColor`/`addLineColor` painter
+inputs. Edit selection paints no longer borrow `waveformColor`. The combined
+and overlay-only rendering paths correctly consider color changes when deciding
+whether to repaint. No subtitle text content colors were changed.
+
+### CPH2381 Android 14 measurements from user's subsequent debug run
+
+| Check | Result | Meaning |
+|---|---:|---|
+| Debug Android APK | Assembled and installed successfully | Android build at the prior code checkpoint worked |
+| First wave load, `-ar 2756` | **145,942 ms** | Cold extraction remains expensive |
+| Subsequent loads | **1,879 / 1,865 / 1,845 ms** | Versioned SAF peak cache works; no FFmpeg extraction on cached paths |
+| Earlier pre-R2 debug first load | **183,327 ms** | Roughly 20% lower cold-load duration in this sample; not controlled benchmarking |
+| Dictionary ListTile warning | Not present in this log | Encouraging but not exhaustive UI acceptance |
+| Flutter hot restart | **Native SIGSEGV** | Not approved for release |
+
+At **2026-10-16 22:13:26 (+03:00)**, after
+`Performing hot restart... Restarted application in 2,966ms`, the log records
+native Media Kit reference disposal then:
+
+```text
+F/libc: Fatal signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), tid 25858
+backtrace: #01-#09 libmpv.so; #00 unknown
+Lost connection to device.
+```
+
+The evidence establishes an Android **native memory fault** in or near mpv's
+thread during hot restart/teardown. The exact defective caller and timing
+cannot be established from these unsymbolicated frames; **do not assert**
+that the waveform algorithm caused the segfault, nor classify it as OOM.
+A separate `PlayCore ERROR_APP_NOT_OWNED (-10)` also appears because the
+debug-installed APK is not Play-owned; it is unrelated to the mpv signal.
+
+**Recommended next native crash isolation:**
+
+1. Save the user's work and capture crash buffers before resetting logcat:
+   `adb -s CPH2381 logcat -b crash -d -v threadtime > cp86_mpv_hot_restart_crash.txt`.
+2. Use the same MKV in a clean relaunch via terminating and starting a fresh
+   debug process, not a hot restart. Open/close video and waveform, and
+   compare with hot restart while video is loaded versus after leaving Editor.
+3. Track `MediaKit` player ownership/disposal and native references on
+   Flutter restart; do not add duplicate dispose or force unload operations
+   without finding the specific lifetime race. Keep upstream dependency
+   upgrades in a separate gated change.
+4. Recheck with profile APK. Keep the current closed-source
+   `libmpv.so` symbols/build provenance recorded, and obtain a symbolized
+   native backtrace if possible before claiming a root cause.
+
+**Native acceptance remains blocked** until this crash is isolated and the
+physical overlay colors, waveform stream timing, cache lifetime and repeated
+navigation pass on Android/Windows.
