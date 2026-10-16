@@ -254,7 +254,7 @@ class _SettingsButtonState extends State<_SettingsButton> {
                                   ),
                                   child: Icon(
                                     Icons.audiotrack,
-                                    color: Colors.white,
+                                     color: Theme.of(context).colorScheme.onPrimary,
                                     size: 18,
                                   ),
                                 ),
