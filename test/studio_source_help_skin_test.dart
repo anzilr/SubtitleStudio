@@ -45,7 +45,7 @@ void main() {
     }
 
     await tester.enterText(find.byKey(const ValueKey('raw-srt-editor')),
-        '1\\n00:00:01,000 --> 00:00:04,000\\nപുതിയത് مرحبا');
+        '1\n00:00:01,000 --> 00:00:04,000\nപുതിയത് مرحبا');
     await tester.pump();
     expect(entries.single.text, 'പുതിയത് مرحبا');
     expect(changes, 1);
