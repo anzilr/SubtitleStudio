@@ -410,19 +410,11 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
                   Container(
                     width: double.infinity,
                     height: 50,
-                    child: ElevatedButton(
+                    child: FilledButton(
                       onPressed: () {
                         Navigator.of(context).pop(); // Close dialog
                         Navigator.of(context).pop(); // Close submission screen
                       },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).primaryColor,
-                        foregroundColor: StudioDesignTokens.of(context).onPrimaryAction,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(StudioRadius.input),
-                        ),
-                      ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
