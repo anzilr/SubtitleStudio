@@ -37,7 +37,7 @@ class LoadingOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: Colors.black54,
+      backgroundColor: Theme.of(context).colorScheme.surface.withValues(alpha: 0.93),
       elevation: 0,
       insetPadding: EdgeInsets.zero,
       child: Container(
@@ -52,7 +52,7 @@ class LoadingOverlay extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF2A2A2A),
+                  color: Theme.of(context).colorScheme.surfaceContainerHigh,
                   borderRadius: BorderRadius.circular(10.0),
                 ),
                 child: Column(
@@ -62,7 +62,7 @@ class LoadingOverlay extends StatelessWidget {
                       width: 40,
                       height: 40,
                       child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFF4A261)),
+                        valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
                         strokeWidth: 3,
                       ),
                     ),
