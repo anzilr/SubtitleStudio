@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:subtitle_studio/themes/studio_design_tokens.dart';
 
 class BottomModalSheet extends StatelessWidget {
   final VoidCallback onEdit;
@@ -29,8 +30,8 @@ class BottomModalSheet extends StatelessWidget {
     return SafeArea(
       child: Container(
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          color: StudioDesignTokens.of(context).surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(StudioRadius.sheet)),
         ),
         child: Padding(
           padding: const EdgeInsets.only(
@@ -49,7 +50,7 @@ class BottomModalSheet extends StatelessWidget {
               icon: Icons.edit,
               title: "Edit",
               description: "Modify subtitle text and timing",
-              themeColor: Colors.blue,
+              themeColor: StudioDesignTokens.of(context).primaryAction,
               onTap: onEdit,
             ),
             const SizedBox(height: 8),
@@ -59,7 +60,7 @@ class BottomModalSheet extends StatelessWidget {
               icon: Icons.add,
               title: "Add Line",
               description: "Insert a new subtitle after this one",
-              themeColor: Colors.green,
+              themeColor: StudioDesignTokens.of(context).primaryAction,
               onTap: onAddLine,
             ),
             const SizedBox(height: 8),
@@ -69,7 +70,7 @@ class BottomModalSheet extends StatelessWidget {
               icon: Icons.select_all,
               title: "Select",
               description: "Add to current selection",
-              themeColor: Colors.orange,
+              themeColor: StudioDesignTokens.of(context).primaryAction,
               onTap: onSelect,
             ),
             const SizedBox(height: 8),
@@ -79,7 +80,7 @@ class BottomModalSheet extends StatelessWidget {
               icon: Icons.copy,
               title: "Copy",
               description: "Copy subtitle to clipboard",
-              themeColor: Colors.purple,
+              themeColor: StudioDesignTokens.of(context).primaryAction,
               onTap: onCopy,
             ),
             const SizedBox(height: 8),
@@ -89,7 +90,9 @@ class BottomModalSheet extends StatelessWidget {
               icon: isMarked ? Icons.bookmark_remove : Icons.bookmark_add,
               title: isMarked ? "Unmark" : "Mark Line",
               description: isMarked ? "Remove bookmark from this line" : "Bookmark this line for easy access",
-              themeColor: isMarked ? Colors.grey : Colors.red,
+              themeColor: isMarked
+                  ? StudioDesignTokens.of(context).mutedText
+                  : StudioDesignTokens.of(context).primaryAction,
               onTap: onMark,
             ),
             const SizedBox(height: 8),
@@ -101,7 +104,7 @@ class BottomModalSheet extends StatelessWidget {
                 icon: Icons.bookmark_border,
                 title: "Show in Marked Lines",
                 description: "Open marked lines sheet and highlight this line",
-                themeColor: Colors.red,
+                themeColor: StudioDesignTokens.of(context).primaryAction,
                 onTap: onShowInMarkedLines!,
               ),
             if (isMarked && onShowInMarkedLines != null) const SizedBox(height: 8),
@@ -112,7 +115,7 @@ class BottomModalSheet extends StatelessWidget {
                 icon: Icons.auto_awesome,
                 title: "Add Effects (Beta)",
                 description: "Apply typewriter or karaoke effects",
-                themeColor: Colors.deepPurple,
+                themeColor: StudioDesignTokens.of(context).primaryAction,
                 onTap: onEffects!,
               ),
             if (onEffects != null) const SizedBox(height: 8),
@@ -122,7 +125,7 @@ class BottomModalSheet extends StatelessWidget {
               icon: Icons.delete,
               title: "Delete",
               description: "Remove this subtitle permanently",
-              themeColor: Colors.red,
+              themeColor: StudioDesignTokens.of(context).dangerText,
               onTap: onDelete,
             ),
             
@@ -143,11 +146,12 @@ class BottomModalSheet extends StatelessWidget {
     required Color themeColor,
     required VoidCallback onTap,
   }) {
+    final tokens = StudioDesignTokens.of(context);
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(StudioRadius.card),
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
@@ -159,12 +163,12 @@ class BottomModalSheet extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  color: themeColor,
-                  borderRadius: BorderRadius.circular(4),
+                  color: tokens.fieldSurface,
+                  borderRadius: BorderRadius.circular(StudioRadius.input),
                 ),
                 child: Icon(
                   icon,
-                  color: Colors.white,
+                  color: themeColor,
                   size: 18,
                 ),
               ),
@@ -182,7 +186,7 @@ class BottomModalSheet extends StatelessWidget {
                     Text(
                       description,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.6),
+                        color: tokens.mutedText,
                         fontWeight: FontWeight.w400,
                       ),
                     ),
@@ -191,7 +195,7 @@ class BottomModalSheet extends StatelessWidget {
               ),
               Icon(
                 Icons.chevron_right_rounded,
-                color: Theme.of(context).iconTheme.color?.withValues(alpha: 0.3),
+                color: tokens.mutedText,
                 size: 18,
               ),
             ],
