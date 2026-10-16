@@ -16,7 +16,6 @@ Future<bool> showUnsavedChangesSheet({
         builder: (sheetContext) {
           final tokens = StudioDesignTokens.of(sheetContext);
           final primaryColor = tokens.primaryAction;
-          final onSurfaceColor = tokens.onSurface;
           final mutedColor = tokens.mutedText;
 
           return Container(
