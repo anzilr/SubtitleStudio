@@ -1,20 +1,15 @@
-SubtitleStudio SKIN-4 R4 R2 / CARBON ZERO + RAW SOURCE + FULLSCREEN SETTINGS | 2026-10-16
-Flutter analyze and full widget/regression suite only; no native platform builds.
-Restore embedded and standalone Source View as single raw SRT multiline text
-editors (no per-cue GUI controls). Embedded editor keeps raw unsaved buffer
-across theme changes; parses/validates only at Save, failing closed for
-invalid/incomplete cue blocks. Standalone raw text keeps original whitespace
-and saves raw text using existing encoding/SAF behavior.
-Introduce signature Carbon Zero achromatic palette (black, white and grays)
-in Light/Dark/Classic, as default for absent/unset skins while preserving
-explicit older preferences, missing community skin IDs and all existing
-Carbon & Jade, Copper Cinema and Aster Violet skins. Expect four skins and
-12 variants. Make Home Settings fullscreen, square-corner, with Appearance
-initially collapsed and user-expandable. Keep Live Theme factory.
-Include field/encoder persistence tests, missing-skin fallback, contrast,
-raw SRT roundtrip and Android keyboard-constrained positioning modal.
-Record any failures; no user device testing until green.
-
-R2: fix invalid const in constrained positioning sheet; migrate remaining Settings
-section icons, status colors, destructive actions and text onto semantic palette
-roles so Carbon Zero stays achromatic outside its preview. Recheck analyzer.
+SubtitleStudio SKIN-4 R4 R3 device candidate | 2026-10-16
+Analyze plus full Flutter test suite only. No Android/iOS/desktop native Actions.
+Finish full-screen Settings entry points on Home, Editor, Edit Line.
+Appearance is collapsed on first open, with no duplicated nested heading.
+Carbon Zero Light/Dark/Classic is the built-in signature grayscale default
+for unset preferences; all explicit preferences and custom skins preserved.
+Migrate Settings icons and destructive warnings onto the selected palette.
+Embedded and standalone Source View are plain raw SRT multiline editors;
+embedded raw text is validated at save, never silently replaced by stale cues;
+standalone keeps actual raw whitespace and existing file encoding/SAF writes.
+Android log: guard positioning modal against keyboard-size RenderFlex overflow;
+screen materials should retain visible interactive ink surfaces.
+Test raw source, all 12 appearances, old persisted skin choices and modal
+keyboard constraints. Previous R2 exposed invalid const wrapper usages in
+Settings, now corrected. Only user-operated Android/Windows acceptance after CI.
