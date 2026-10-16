@@ -38,6 +38,7 @@ import 'package:subtitle_studio/widgets/splash_screen.dart'; // Initial splash s
 import 'screens/screen_home.dart';                        // Main home screen
 import 'screens/screen_source_view.dart';                 // Source view screen
 import 'database/models/models.dart';                     // Database models
+import 'themes/studio_skin.dart';
 import 'themes/theme_controller.dart';                    // Riverpod theme management
 import 'package:media_kit/media_kit.dart';               // Video playback support
 
@@ -220,7 +221,7 @@ class MainApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final themeState = ref.watch(themeControllerProvider);
 
-    final isDark = themeState.themeMode == ThemeMode.dark;
+    final isDark = themeState.appearance != StudioAppearance.light;
     SystemChrome.setSystemUIOverlayStyle(
       SystemUiOverlayStyle(
         systemNavigationBarColor: Colors.transparent,
