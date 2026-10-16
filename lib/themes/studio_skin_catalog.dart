@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import 'studio_palette.dart';
 import 'studio_skin.dart';
+import 'studio_skin_validator.dart';
 
 /// Immutable skin definition shared by built-ins, future import, and a web
 /// editor. All modes are required, so a user never receives an unrelated
@@ -79,6 +80,12 @@ class StudioSkinCatalog {
           'Cannot override a built-in skin or install a duplicate ID',
         );
       }
+      StudioSkinValidator.validate(
+        id: definition.id,
+        palettes: definition.palettes,
+        author: definition.author,
+        description: definition.description,
+      );
       result[definition.id] = definition;
     }
     return UnmodifiableMapView(result);
