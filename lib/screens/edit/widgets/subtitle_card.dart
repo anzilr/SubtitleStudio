@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/widgets/custom_text_render.dart';
+import 'package:subtitle_studio/themes/studio_design_tokens.dart';
 
 class SubtitleCard extends StatelessWidget {
   final SubtitleLine line;
@@ -52,6 +53,7 @@ class SubtitleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = StudioDesignTokens.of(context);
     return Dismissible(
       key: ValueKey('subtitle_${line.index}_$index'),
       direction: DismissDirection.horizontal,
@@ -60,12 +62,12 @@ class SubtitleCard extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20),
         margin: const EdgeInsets.only(bottom: 8),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(5),
-          color: Colors.green,
+          borderRadius: BorderRadius.circular(StudioRadius.card),
+          color: tokens.primaryAction,
         ),
-        child: const Icon(
+        child: Icon(
           Icons.edit,
-          color: Colors.white,
+          color: tokens.onPrimaryAction,
           size: 30,
         ),
       ),
@@ -74,12 +76,12 @@ class SubtitleCard extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20),
         margin: const EdgeInsets.only(bottom: 8),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(5),
-          color: Colors.blue,
+          borderRadius: BorderRadius.circular(StudioRadius.card),
+          color: tokens.editingAccent,
         ),
-        child: const Icon(
+        child: Icon(
           Icons.select_all,
-          color: Colors.white,
+          color: tokens.onEditingAccent,
           size: 30,
         ),
       ),
@@ -94,19 +96,17 @@ class SubtitleCard extends StatelessWidget {
       },
       child: Card(
         color: isSelected
-            ? const Color(0xFF2A9D8F).withAlpha(77)
-            : (isCardHighlighted
-                ? (isLightTheme
-                    ? const Color(0xFF6C757D)
-                    : const Color(0xFF005F73))
-                : null),
+            ? tokens.primaryAction.withValues(alpha: 0.14)
+            : isCardHighlighted
+                ? tokens.raisedSurface
+                : tokens.surface,
         margin: const EdgeInsets.only(
           left: 8,
           right: 8,
           bottom: 8,
         ),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(5),
+          borderRadius: BorderRadius.circular(StudioRadius.card),
         ),
         child: Listener(
           onPointerDown: (event) {
@@ -158,26 +158,9 @@ class SubtitleCard extends StatelessWidget {
                           Text(
                             '$formattedStart -> $formattedEnd',
                             style: TextStyle(
-                              color: isLightTheme
-                                  ? (isCueHighlighted
-                                      ? const Color.fromARGB(
-                                          200,
-                                          244,
-                                          163,
-                                          97,
-                                        )
-                                      : const Color.fromARGB(
-                                          158,
-                                          0,
-                                          45,
-                                          54,
-                                        ))
-                                  : const Color.fromARGB(
-                                      158,
-                                      244,
-                                      163,
-                                      97,
-                                    ),
+                              color: isCueHighlighted
+                                  ? tokens.primaryAction
+                                  : tokens.mutedText,
                               fontSize: 13,
                               fontWeight: FontWeight.bold,
                               fontFamily:
@@ -201,14 +184,14 @@ class SubtitleCard extends StatelessWidget {
                                   child: GestureDetector(
                                     onLongPress: onComment,
                                     onTap: onToggleMark,
-                                    child: const Padding(
-                                      padding: EdgeInsets.only(
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(
                                         left: 8,
                                         right: 4,
                                       ),
                                       child: Icon(
                                         Icons.bookmark_added,
-                                        color: Colors.red,
+                                        color: tokens.primaryAction,
                                         size: 16,
                                       ),
                                     ),
@@ -219,26 +202,9 @@ class SubtitleCard extends StatelessWidget {
                               Text(
                                 '${line.index}',
                                 style: TextStyle(
-                                  color: isLightTheme
-                                      ? (isCueHighlighted
-                                          ? const Color.fromARGB(
-                                              200,
-                                              244,
-                                              163,
-                                              97,
-                                            )
-                                          : const Color.fromARGB(
-                                              158,
-                                              0,
-                                              45,
-                                              54,
-                                            ))
-                                      : const Color.fromARGB(
-                                          158,
-                                          244,
-                                          163,
-                                          97,
-                                        ),
+                                  color: isCueHighlighted
+                                      ? tokens.primaryAction
+                                      : tokens.mutedText,
                                   fontSize: 13,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -257,16 +223,7 @@ class SubtitleCard extends StatelessWidget {
                               htmlContent:
                                   textContent.replaceAll('\n', '<br>'),
                               defaultStyle: TextStyle(
-                                color: isLightTheme
-                                    ? (isCueHighlighted
-                                        ? Colors.white
-                                        : const Color.fromARGB(
-                                            158,
-                                            0,
-                                            45,
-                                            54,
-                                          ))
-                                    : Colors.white,
+                                color: tokens.onSurface,
                                 fontSize: 14,
                               ),
                               textAlign: TextAlign.start,
@@ -278,12 +235,12 @@ class SubtitleCard extends StatelessWidget {
                     ],
                   ),
                   if (isSelected)
-                    const Positioned(
+                    Positioned(
                       right: 8,
                       bottom: 8,
                       child: Icon(
                         Icons.check_circle,
-                        color: Color(0xFF3A86FF),
+                        color: tokens.primaryAction,
                         size: 24,
                       ),
                     ),
