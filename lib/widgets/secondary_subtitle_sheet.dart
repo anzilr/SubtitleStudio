@@ -102,7 +102,7 @@ class SecondarySubtitleSheet extends ConsumerWidget {
                 title: 'Use Original Text',
                 description: 'Display original text from current subtitles as secondary track',
                 onTap: () => _useOriginalText(context, ref),
-                themeColor: Colors.orange,
+                themeColor: Theme.of(context).colorScheme.tertiary,
               ),
               // Only show video subtitle track option if video player is available and has subtitle tracks
               if (videoPlayerState != null && _hasAvailableSubtitleTracks()) ...[
@@ -113,7 +113,7 @@ class SecondarySubtitleSheet extends ConsumerWidget {
                   title: 'Use Video Subtitle Track',
                   description: 'Select from subtitle tracks embedded in the video file',
                   onTap: () => _showVideoSubtitleTrackDialog(context, ref),
-                  themeColor: Colors.purple,
+                  themeColor: Theme.of(context).colorScheme.secondary,
                 ),
               ],
               const SizedBox(height: 24),
@@ -175,7 +175,7 @@ class SecondarySubtitleSheet extends ConsumerWidget {
           width: double.infinity,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+            color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: borderColor,
@@ -245,7 +245,7 @@ class SecondarySubtitleSheet extends ConsumerWidget {
         SnackbarHelper.showSnackBar(
           context,
           'Storage permission is required to select subtitle files. Please grant permission in app settings.',
-          backgroundColor: Colors.red,
+          backgroundColor: Theme.of(context).colorScheme.error,
           action: SnackBarAction(
             label: 'Settings',
             textColor: Colors.white,
@@ -479,7 +479,7 @@ class SecondarySubtitleSheet extends ConsumerWidget {
           SnackbarHelper.showSnackBar(
             context,
             'No subtitle tracks found in the video file',
-            backgroundColor: Colors.orange,
+            backgroundColor: Theme.of(context).colorScheme.tertiary,
           );
         }
         return;
