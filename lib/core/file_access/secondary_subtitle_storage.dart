@@ -5,14 +5,23 @@ import 'dart:io';
 abstract final class SecondarySubtitleStorage {
   static bool isLegacyEphemeralExtraction(String path) {
     final normalized = path.replaceAll('\\', '/');
-    return normalized.contains('/code_cache/extracted_subtitle_') ||
-        normalized.contains('/cache/extracted_subtitle_');
+    // Only an Android private app directory is an app-owned legacy source.
+    return RegExp(
+      r'^/data/(?:user/[0-9]+|data)/[a-zA-Z0-9_.]+/(?:code_cache|cache)/extracted_subtitle_',
+    ).hasMatch(normalized);
   }
 
-  static bool isOwnedExtraction(String path) {
+  static bool isOwnedExtraction(
+    String path, {
+    Directory? supportDirectory,
+  }) {
+    if (isLegacyEphemeralExtraction(path)) return true;
+    if (supportDirectory == null) return false;
     final normalized = path.replaceAll('\\', '/');
-    return normalized.contains('/secondary_subtitles/extracted_subtitle_') ||
-        isLegacyEphemeralExtraction(path);
+    final root = supportDirectory.path.replaceAll('\\', '/');
+    return normalized.startsWith(
+      '$root/secondary_subtitles/extracted_subtitle_',
+    );
   }
 
   static Future<String> persist({
@@ -42,8 +51,14 @@ abstract final class SecondarySubtitleStorage {
     }
   }
 
-  static Future<void> deleteOwnedFileIfPresent(String? path) async {
-    if (path == null || !isOwnedExtraction(path)) return;
+  static Future<void> deleteOwnedFileIfPresent(
+    String? path, {
+    Directory? supportDirectory,
+  }) async {
+    if (path == null ||
+        !isOwnedExtraction(path, supportDirectory: supportDirectory)) {
+      return;
+    }
     final file = File(path);
     if (await file.exists()) await file.delete();
   }

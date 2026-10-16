@@ -12,7 +12,10 @@ void main() {
     expect(SecondarySubtitleStorage.isOwnedExtraction(
         '/home/user/extracted_subtitle_1_Untitled.srt'), isFalse);
     expect(SecondarySubtitleStorage.isOwnedExtraction(
-        '/data/user/0/app/files/secondary_subtitles/extracted_subtitle_1_99.srt'), isTrue);
+        '/data/user/0/app/files/secondary_subtitles/extracted_subtitle_1_99.srt'),
+        isFalse);
+    expect(SecondarySubtitleStorage.isLegacyEphemeralExtraction(
+        '/home/user/code_cache/extracted_subtitle_1_Untitled.srt'), isFalse);
   });
 
   test('persistent extraction atomically writes and guards user files', () async {
@@ -25,12 +28,15 @@ void main() {
     );
     expect(saved, contains('secondary_subtitles'));
     expect(await File(saved).readAsString(), contains('Example'));
+    expect(SecondarySubtitleStorage.isOwnedExtraction(
+        saved, supportDirectory: root), isTrue);
     expect(await File('$saved.writing').exists(), isFalse);
     final userFile = File('${root.path}/extracted_subtitle_1_user.srt');
     await userFile.writeAsString('preserve');
     await SecondarySubtitleStorage.deleteOwnedFileIfPresent(userFile.path);
     expect(await userFile.readAsString(), 'preserve');
-    await SecondarySubtitleStorage.deleteOwnedFileIfPresent(saved);
+    await SecondarySubtitleStorage.deleteOwnedFileIfPresent(
+      saved, supportDirectory: root);
     expect(await File(saved).exists(), isFalse);
   });
 

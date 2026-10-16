@@ -329,7 +329,8 @@ class SecondarySubtitleSheet extends ConsumerWidget {
         try {
           final existingPath = await ref.read(editorPreferencesRepositoryProvider).getSecondarySubtitlePath(subtitleCollectionId);
           if (existingPath != null && existingPath.isNotEmpty) {
-            await SecondarySubtitleStorage.deleteOwnedFileIfPresent(existingPath);
+            await SecondarySubtitleStorage.deleteOwnedFileIfPresent(
+              existingPath, supportDirectory: await getApplicationSupportDirectory());
           }
         } catch (e) {
           print('Warning: Failed to delete previous extracted subtitle file: $e');
@@ -384,7 +385,8 @@ class SecondarySubtitleSheet extends ConsumerWidget {
       try {
         final existingPath = await ref.read(editorPreferencesRepositoryProvider).getSecondarySubtitlePath(subtitleCollectionId);
         if (existingPath != null && existingPath.isNotEmpty) {
-          await SecondarySubtitleStorage.deleteOwnedFileIfPresent(existingPath);
+          await SecondarySubtitleStorage.deleteOwnedFileIfPresent(
+              existingPath, supportDirectory: await getApplicationSupportDirectory());
         }
       } catch (e) {
         print('Warning: Failed to delete previous extracted subtitle file: $e');
@@ -710,7 +712,8 @@ class SecondarySubtitleSheet extends ConsumerWidget {
         await preferences.saveSecondarySubtitlePath(subtitleCollectionId, persistedPath);
         try {
           if (previousPath != persistedPath) {
-            await SecondarySubtitleStorage.deleteOwnedFileIfPresent(previousPath);
+            await SecondarySubtitleStorage.deleteOwnedFileIfPresent(
+              previousPath, supportDirectory: await getApplicationSupportDirectory());
           }
         } catch (_) {
           // Cleanup is optional; keep the new successfully persisted source.

@@ -49,3 +49,5 @@ CP87 R3 contrast audit: Video Settings badges, Load Secondary Subtitle cards, Sa
 CP87 R3B further popups: Import Project, merge/split confirmation, Locate SRT, session selection, subtitle effects, banner-progress colors use paired theme onColors, including light-primary Carbon Zero Dark/Classic.
 
 CP87 R4 MSone screen lifecycle: asynchronous file pick and submit callbacks guarded after navigation, network submit has 45s timeout, success dialog closes correct navigator contexts, system back PopScope breadcrumbs. Root cause of prior unlogged freeze not yet verified.
+
+CP87 R4B Isar integration: lost legacy code_cache reference is safely cleared while primary editor can continue; non-ephemeral missing user-picked path retained for re-pick; durable secondary file parses. Owned secondary cleanup now requires app support root (plus strictly private Android cache location).
