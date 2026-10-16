@@ -82,7 +82,7 @@ class _FirstTimeInstructionsState
                   children: [
                     Icon(
                       Icons.lightbulb_outline,
-                      color: Colors.amber,
+                      color: Theme.of(context).colorScheme.tertiary,
                       size: 28,
                     ),
                     const SizedBox(width: 12),
