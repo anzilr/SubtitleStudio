@@ -1,7 +1,10 @@
-SubtitleStudio DESIGN-1 R4 uniform component theme final regression gate | 2026-10-16
-Flutter analyzer and all tests. Shared modal/dialog/menu/dropdown/slider/button
-defaults cover both old themes and 9 built-in skin/mode palettes. Existing
-subtitle action sheet semantic pilot and future skin restrictions remain.
-R3 had 423 passing tests with one new test failure: tester.pageBack expected
-an absent back button; corrected to dismiss modal routes via scrim tapping.
-No native build, app-wide skin palette activation or media/Isar changes.
+SubtitleStudio SKIN-4 R3-A / DESIGN-2 editor contrast migration gate | 2026-10-16
+Flutter analyze + full test suite. Use one semantic menu row in Editor and
+Edit Line popups; preserve all original popup values/selection callbacks.
+Replace fixed selection, highlight, timing and text colors in SubtitleCard
+with palette semantic roles for all nine appearances. Migrate formatting menu
+and clear-format sheet, unsaved-changes sheet, Edit Line app bar/dictionary
+icons to shared theme and semantic action states. Add nine-theme widget tests
+for cards, menus, callbacks and modal save/discard. Global ThemeState still
+uses legacy palettes until outstanding confirmation/dialog/action controls
+are audited; no native platform builds or media/Isar changes.
