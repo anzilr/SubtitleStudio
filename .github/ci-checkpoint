@@ -55,3 +55,5 @@ CP87 R4B Isar integration: lost legacy code_cache reference is safely cleared wh
 CP87 R4 consolidated regression gate 2026-10-16: native Android session recovery, persistent embedded secondary, high-contrast popup icons, MSone route lifecycle checks and Isar integration tests. Flutter analyze/tests. Native acceptance pending.
 
 CP87 R4C source replacement order: all three secondary-selection flows now save new preference before deleting previously managed extracted subtitles; avoiding stale preference on failed write/route interruption.
+
+CP87 R5: fix submission modal transition using two-stage choice-result navigation (parent context only); add Android Back widget regressions. Fix two checkbox ListTiles in extraction options with Material instead of opaque decorated Container, per real CPH2381 assertion. Native mpv hot restart SIGSEGV remains vendor/plugin-level blocker.

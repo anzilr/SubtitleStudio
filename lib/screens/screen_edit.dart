@@ -45,7 +45,7 @@ import 'package:subtitle_studio/widgets/import_comments_sheet.dart';
 import 'package:subtitle_studio/operations/subtitle_effect_operations.dart';
 import 'package:subtitle_studio/utils/macos_bookmark_manager.dart';
 import 'package:subtitle_studio/utils/msone_hotkey_manager.dart' as hotkey;
-import 'msone_submission_screen.dart';
+import 'msone_submission_flow.dart';
 import 'package:subtitle_studio/screens/edit/edit_controller.dart';
 import 'package:subtitle_studio/screens/edit/edit_state.dart';
 import 'package:subtitle_studio/screens/edit/models/subtitle_entry.dart';
@@ -435,134 +435,14 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
     );
   }
 
+  /// Stage the route transition: the sheet returns a selection, then the
+  /// still-mounted editor route pushes the submission page. Never push with
+  /// the context of a bottom sheet after popping that sheet.
   void _showSubmitToMsoneModal() {
-    showModalBottomSheet(
+    unawaited(showMsoneSubmissionFlow(
       context: context,
-      isScrollControlled: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(15.0)),
-      ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Submit to Msone',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 24),
-            _buildSubmitButton(
-              context: context,
-              title: 'Existing Translator',
-              subtitle: 'For translators with existing accounts',
-              icon: Icons.person,
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => MsoneSubmissionScreen(
-                      submissionType: 'main',
-                      subtitleCollectionId: widget.subtitleCollectionId,
-                    ),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 16),
-            _buildSubmitButton(
-              context: context,
-              title: 'Fresher',
-              subtitle: 'For new translators',
-              icon: Icons.person_add,
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => MsoneSubmissionScreen(
-                      submissionType: 'fresher',
-                      subtitleCollectionId: widget.subtitleCollectionId,
-                    ),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSubmitButton({
-    required BuildContext context,
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return SizedBox(
-      width: double.infinity,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
-            ),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  icon,
-                  color: Theme.of(context).primaryColor,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).textTheme.bodyMedium?.color,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(
-                Icons.arrow_forward_ios,
-                size: 16,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+      subtitleCollectionId: widget.subtitleCollectionId,
+    ));
   }
 
     void _toggleSelection(int index) {

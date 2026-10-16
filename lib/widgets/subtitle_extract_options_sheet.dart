@@ -1340,15 +1340,15 @@ class _SubtitleExtractOptionsSheetState
               const SizedBox(height: 16),
 
               // Remove Hearing Impaired Option
-              Container(
-                decoration: BoxDecoration(
-                  color:
-                      isDark
-                          ? onSurfaceColor.withValues(alpha: 0.05)
-                          : Theme.of(context).colorScheme.surfaceContainerLow,
+              Material(
+                color: isDark
+                    ? onSurfaceColor.withValues(alpha: 0.05)
+                    : Theme.of(context).colorScheme.surfaceContainerLow,
+                shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: borderColor, width: 1),
+                  side: BorderSide(color: borderColor, width: 1),
                 ),
+                clipBehavior: Clip.antiAlias,
                 child: CheckboxListTile(
                   title: Text(
                     'Remove Hearing Impaired Lines',
@@ -1380,15 +1380,15 @@ class _SubtitleExtractOptionsSheetState
               const SizedBox(height: 12),
 
               // Merge Overlapping Option
-              Container(
-                decoration: BoxDecoration(
-                  color:
-                      isDark
-                          ? onSurfaceColor.withValues(alpha: 0.05)
-                          : Theme.of(context).colorScheme.surfaceContainerLow,
+              Material(
+                color: isDark
+                    ? onSurfaceColor.withValues(alpha: 0.05)
+                    : Theme.of(context).colorScheme.surfaceContainerLow,
+                shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: borderColor, width: 1),
+                  side: BorderSide(color: borderColor, width: 1),
                 ),
+                clipBehavior: Clip.antiAlias,
                 child: CheckboxListTile(
                   title: Text(
                     'Merge Overlapping Subtitles',
