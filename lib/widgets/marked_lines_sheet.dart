@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:subtitle_studio/themes/studio_design_tokens.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:flutter/services.dart';
@@ -247,7 +248,7 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
         child: Container(
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(StudioRadius.sheet)),
           ),
           child: Column(
         children: [
@@ -283,14 +284,14 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
                             children: [
                               Icon(
                                 Icons.check_circle,
-                                color: Colors.green,
+                                color: Theme.of(context).colorScheme.primary,
                                 size: 14,
                               ),
                               const SizedBox(width: 4),
                               Text(
                                 '$_resolvedCount resolved of $_totalCount total',
                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: Colors.green,
+                                  color: Theme.of(context).colorScheme.primary,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -303,7 +304,7 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
                       margin: const EdgeInsets.only(right: 8),
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.red.withValues(alpha: 0.1),
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Row(
@@ -311,14 +312,14 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
                         children: [
                           Icon(
                             _showAllComments ? Icons.comment : Icons.bookmark_added,
-                            color: Colors.red,
+                            color: Theme.of(context).colorScheme.error,
                             size: 16,
                           ),
                           const SizedBox(width: 4),
                           Text(
                             '${_displayedLines.length}',
-                            style: const TextStyle(
-                              color: Colors.red,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.primary,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -403,14 +404,14 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
                             label: 'Resolved',
                             value: 'resolved',
                             icon: Icons.check_circle,
-                            color: Colors.green,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                           _buildFilterChip(
                             context,
                             label: 'Unresolved',
                             value: 'unresolved',
                             icon: Icons.radio_button_unchecked,
-                            color: Colors.orange,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                         ],
                       ),
@@ -499,13 +500,13 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
           Icon(
             _showAllComments ? Icons.comment_outlined : Icons.bookmark_border,
             size: 64,
-            color: Colors.grey.withValues(alpha: 0.5),
+            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
           ),
           const SizedBox(height: 24),
           Text(
             _showAllComments ? 'No lines with comments' : 'No marked lines',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              color: Colors.grey.withValues(alpha: 0.7),
+              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
             ),
           ),
           const SizedBox(height: 12),
@@ -514,7 +515,7 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
                 ? 'Add comments to subtitle lines to see them here'
                 : 'Long press on a subtitle line and select "Mark Line" to bookmark it',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.grey.withValues(alpha: 0.5),
+              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
             ),
             textAlign: TextAlign.center,
           ),
@@ -597,15 +598,13 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
-                          color: line.marked 
-                              ? Colors.red.withValues(alpha: 0.1)
-                              : Colors.blue.withValues(alpha: 0.1),
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.10),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
                           '#${line.index}',
                           style: TextStyle(
-                            color: line.marked ? Colors.red : Colors.blue,
+                            color: Theme.of(context).colorScheme.primary,
                             fontWeight: FontWeight.bold,
                             fontSize: 13,
                           ),
@@ -614,7 +613,7 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
                       const SizedBox(width: 8),
                       Icon(
                         line.marked ? Icons.bookmark_added : Icons.comment,
-                        color: line.marked ? Colors.red : Colors.blue,
+                        color: line.marked ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.primary,
                         size: 18,
                       ),
                       const Spacer(),
@@ -647,13 +646,13 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: line.resolved 
-                            ? Colors.green.withValues(alpha: 0.1)
-                            : Colors.blue.withValues(alpha: 0.1),
+                            ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
+                            : Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                           color: line.resolved 
-                              ? Colors.green.withValues(alpha: 0.2)
-                              : Colors.blue.withValues(alpha: 0.2),
+                              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.2)
+                              : Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
                         ),
                       ),
                       child: Column(
@@ -663,14 +662,14 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
                             children: [
                               Icon(
                                 line.resolved ? Icons.check_circle : Icons.comment,
-                                color: line.resolved ? Colors.green : Colors.blue,
+                                color: line.resolved ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.primary,
                                 size: 16,
                               ),
                               const SizedBox(width: 4),
                               Text(
                                 line.resolved ? 'Resolved Comment' : 'Comment',
                                 style: TextStyle(
-                                  color: line.resolved ? Colors.green : Colors.blue,
+                                  color: line.resolved ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.primary,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 12,
                                 ),
@@ -683,13 +682,13 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
                                     _buildHoverableButton(
                                       onTap: () => _showCommentDialog(context, line),
                                       icon: Icons.edit,
-                                      color: line.resolved ? Colors.green : Colors.blue,
+                                      color: line.resolved ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.primary,
                                     ),
                                     const SizedBox(width: 16),
                                     _buildHoverableButton(
                                       onTap: () => _showDeleteConfirmation(context, line),
                                       icon: Icons.delete,
-                                      color: Colors.red,
+                                      color: Theme.of(context).colorScheme.error,
                                     ),
                                   ],
                                 ),
@@ -699,7 +698,7 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
                           Text(
                             line.comment!,
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: line.resolved ? Colors.green.shade700 : Colors.blue.shade700,
+                              color: line.resolved ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurfaceVariant,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -722,7 +721,7 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
                                 child: Text(
                                   'Resolved',
                                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: line.resolved ? Colors.green.shade600 : Colors.grey.shade600,
+                                    color: line.resolved ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurfaceVariant,
                                   ),
                                 ),
                               ),
@@ -739,10 +738,10 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.grey.withValues(alpha: 0.1),
+                          color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: Colors.grey.withValues(alpha: 0.3),
+                            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
                             style: BorderStyle.solid,
                           ),
                         ),
@@ -750,14 +749,14 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
                           children: [
                             Icon(
                               Icons.add_comment_outlined,
-                              color: Colors.grey.shade600,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
                               size: 16,
                             ),
                             const SizedBox(width: 8),
                             Text(
                               'Add comment',
                               style: TextStyle(
-                                color: Colors.grey.shade600,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
                                 fontSize: 12,
                               ),
                             ),
@@ -792,7 +791,7 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: isEditing 
-              ? Colors.blue 
+              ? Theme.of(context).colorScheme.primary 
               : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
           width: isEditing ? 2 : 1,
         ),
@@ -844,13 +843,13 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
               Icon(
                 hasEditedText ? Icons.edit : Icons.text_fields,
                 size: 14,
-                color: hasEditedText ? Colors.blue : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                color: hasEditedText ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
               const SizedBox(width: 4),
               Text(
                 hasEditedText ? 'Edited' : 'Text',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: hasEditedText ? Colors.blue : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  color: hasEditedText ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -868,12 +867,12 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
                           SnackBar(
                             content: Row(
                               children: [
-                                Icon(Icons.check_circle, color: Colors.white, size: 16),
+                                Icon(Icons.check_circle, color: Theme.of(context).colorScheme.onPrimary, size: 16),
                                 const SizedBox(width: 8),
                                 Text('Text copied'),
                               ],
                             ),
-                            backgroundColor: Colors.green,
+                            backgroundColor: Theme.of(context).colorScheme.primary,
                             duration: const Duration(seconds: 2),
                             behavior: SnackBarBehavior.floating,
                           ),
@@ -888,14 +887,14 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
                         children: [
                           Icon(
                             Icons.copy,
-                            color: Colors.green,
+                            color: Theme.of(context).colorScheme.primary,
                             size: 12,
                           ),
                           const SizedBox(width: 3),
                           Text(
                             'Copy',
                             style: TextStyle(
-                              color: Colors.green,
+                              color: Theme.of(context).colorScheme.primary,
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
                             ),
@@ -928,14 +927,14 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
                           children: [
                             Icon(
                               Icons.close,
-                              color: Colors.red,
+                              color: Theme.of(context).colorScheme.error,
                               size: 14,
                             ),
                             const SizedBox(width: 4),
                             Text(
                               'Cancel',
                               style: TextStyle(
-                                color: Colors.red,
+                                color: Theme.of(context).colorScheme.error,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -955,7 +954,7 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.green.withValues(alpha: 0.1),
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Row(
@@ -963,14 +962,14 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
                           children: [
                             Icon(
                               Icons.check,
-                              color: Colors.green,
+                              color: Theme.of(context).colorScheme.primary,
                               size: 14,
                             ),
                             const SizedBox(width: 4),
                             Text(
                               'Save',
                               style: TextStyle(
-                                color: Colors.green,
+                                color: Theme.of(context).colorScheme.primary,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -999,14 +998,14 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
                           children: [
                             Icon(
                               Icons.edit,
-                              color: Colors.blue,
+                              color: Theme.of(context).colorScheme.primary,
                               size: 14,
                             ),
                             const SizedBox(width: 4),
                             Text(
                               'Edit',
                               style: TextStyle(
-                                color: Colors.blue,
+                                color: Theme.of(context).colorScheme.primary,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -1026,7 +1025,7 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: hasEditedText 
-                  ? Colors.blue.withValues(alpha: 0.05)
+                  ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.05)
                   : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(6),
             ),
@@ -1349,7 +1348,7 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
                 },
                 child: const Text('Delete'),
                 style: TextButton.styleFrom(
-                  foregroundColor: Colors.red,
+                  foregroundColor: Theme.of(context).colorScheme.error,
                 ),
               ),
             ],
