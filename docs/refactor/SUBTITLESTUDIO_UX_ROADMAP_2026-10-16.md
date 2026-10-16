@@ -1,5 +1,17 @@
 # SubtitleStudio UX roadmap — visual history, plain language, unified design, compact Edit Line
 
+> **Community skins — future UX requirement:** SubtitleStudio is open source.
+> Users should eventually create, import, export, share and locally select their
+> own validated skins. The initial three built-in families remain Carbon & Jade,
+> Copper Cinema and Aster Violet, but the underlying factory must support any
+> installed **colors-only data skin** with Light/Dark/Classic. Future Settings
+> should distinguish **Built-in** and **My skins**, offer preview-before-import,
+> accessible contrast guidance, attribution, delete/replace confirmations and
+> recovery from missing skins. A client-side web Skin Creator can export
+> `.sskin.json` using [portable v1 rules](COMMUNITY_SKIN_FORMAT_V1.md) and a
+> [published machine-readable schema](../../schemas/subtitlestudio-skin-v1.schema.json).
+> **Importer and website are planned only**, not part of the current UI.
+
 > **SKIN-1 R2 COMPLETE (October 16, 2026):** The shared nine-theme
 > palette resolver, semantic field/caret/focus/selection tokens, and read-only
 > nine-preview gallery are implemented and [CI-verified with 392 passing
