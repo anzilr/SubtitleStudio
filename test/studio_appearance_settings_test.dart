@@ -6,7 +6,7 @@ import 'package:subtitle_studio/themes/studio_palette.dart';
 import 'package:subtitle_studio/themes/studio_skin.dart';
 import 'package:subtitle_studio/themes/studio_skin_catalog.dart';
 import 'package:subtitle_studio/themes/studio_skin_catalog_provider.dart';
-import 'package:subtitle_studio/themes/studio_theme_factory.dart';
+import 'package:subtitle_studio/themes/studio_skin_preview.dart';
 import 'package:subtitle_studio/themes/theme_controller.dart';
 import 'package:subtitle_studio/themes/theme_preferences_repository.dart';
 import 'package:subtitle_studio/themes/theme_switcher_button.dart';
