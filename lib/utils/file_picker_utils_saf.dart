@@ -6,7 +6,7 @@ import 'package:subtitle_studio/utils/platform_file_handler.dart';
 import 'package:subtitle_studio/utils/saf_file_handler.dart';
 import 'package:subtitle_studio/utils/saf_path_converter.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
-import 'package:subtitle_studio/database/models/preferences_model.dart';
+import 'package:subtitle_studio/services/file_picker_preferences_repository.dart';
 
 /// Platform-specific file picker utilities using SAF on Android
 /// 
@@ -16,12 +16,34 @@ import 'package:subtitle_studio/database/models/preferences_model.dart';
 /// - iOS: Uses file_picker for native iOS file access
 class FilePickerSAF {
   static String? _lastUsedDirectory;
+  static FilePickerPreferencesRepository? _preferencesRepository;
 
-  // Add this initialization method
+  /// Inject persistence after Isar initialization.
+  ///
+  /// The picker API stays static during the file-access refactor, while its
+  /// database dependency is explicit and replaceable.
+  static void configurePreferences(
+    FilePickerPreferencesRepository repository,
+  ) {
+    _preferencesRepository = repository;
+    _lastUsedDirectory = null;
+  }
+
+  @visibleForTesting
+  static void resetPreferencesForTesting() {
+    _preferencesRepository = null;
+    _lastUsedDirectory = null;
+  }
+
   static Future<void> _initLastUsedDirectory() async {
     if (_lastUsedDirectory == null) {
-      _lastUsedDirectory = await PreferencesModel.getLastUsedDirectory();
+      _lastUsedDirectory =
+          await _preferencesRepository?.getLastUsedDirectory();
     }
+  }
+
+  static Future<void> _persistLastUsedDirectory() async {
+    await _preferencesRepository?.setLastUsedDirectory(_lastUsedDirectory);
   }
   
   /// Pick a single file with platform-specific implementation
@@ -130,7 +152,7 @@ class FilePickerSAF {
   /// [allowedExtensions] - List of allowed file extensions (e.g., ['.srt', '.vtt'])
   /// 
   /// Returns a Map with 'displayPath' and 'safUri' keys, or null if cancelled
-  static Future<Map<String, String?>?> pickFileWithInfo({
+  static Future<Map<String, dynamic>?> pickFileWithInfo({
     required BuildContext context,
     required String title,
     List<String>? allowedExtensions,
@@ -151,7 +173,7 @@ class FilePickerSAF {
           return {
             'displayPath': correctedPath, // Use corrected path
             'safUri': fileInfo.safUri,
-            'content': fileInfo.contentAsString, // Include the content to avoid double reading
+            'bytes': fileInfo.content, // Decode only after user chooses encoding
           };
         }
         return null;
@@ -171,11 +193,11 @@ class FilePickerSAF {
         // Read content for desktop
         try {
           final file = File(path);
-          final content = await file.readAsString();
+          final bytes = await file.readAsBytes();
           return {
             'displayPath': path,
-            'safUri': null, // No SAF URI on desktop
-            'content': content,
+            'safUri': null,
+            'bytes': bytes,
           };
         } catch (e) {
           if (context.mounted) {
@@ -267,8 +289,7 @@ class FilePickerSAF {
       if (result != null && result.files.single.path != null) {
         final filePath = result.files.single.path!;
         _lastUsedDirectory = File(filePath).parent.path;
-        // Save to shared preferences
-        await PreferencesModel.setLastUsedDirectory(_lastUsedDirectory);
+        await _persistLastUsedDirectory();
         return filePath;
       }
       return null;
@@ -291,9 +312,8 @@ class FilePickerSAF {
       );
 
       _lastUsedDirectory = selectedDirectory;
-      // Save to shared preferences
-      await PreferencesModel.setLastUsedDirectory(_lastUsedDirectory);
-          return selectedDirectory;
+      await _persistLastUsedDirectory();
+      return selectedDirectory;
     } catch (e) {
       debugPrint('Error picking folder on desktop: $e');
       return null;
@@ -371,7 +391,7 @@ class FilePickerConvenience {
 
   /// Pick a subtitle file with both display path and SAF URI information
   /// Returns a Map with 'displayPath' and 'safUri' keys, or null if cancelled
-  static Future<Map<String, String?>?> pickSubtitleFileWithInfo({
+  static Future<Map<String, dynamic>?> pickSubtitleFileWithInfo({
     required BuildContext context,
   }) async {
     return FilePickerSAF.pickFileWithInfo(
@@ -452,7 +472,8 @@ class FilePickerConvenience {
   /// Save a file using platform-appropriate method
   static Future<String?> saveFile({
     required BuildContext context,
-    required String content,
+    String? content,
+    Uint8List? bytes,
     required String fileName,
     String mimeType = 'text/plain',
     String? existingFilePath,
@@ -462,6 +483,7 @@ class FilePickerConvenience {
       try {
         final fileInfo = await PlatformFileHandler.saveNewFile(
           content: content,
+          bytes: bytes,
           fileName: fileName,
           mimeType: mimeType,
         );

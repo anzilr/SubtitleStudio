@@ -6,8 +6,6 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import '../utils/app_logger.dart';
 
 /// A comprehensive feedback widget for user feedback and bug reports
@@ -18,7 +16,7 @@ import '../utils/app_logger.dart';
 /// - Optional log file attachment
 /// - Automatic system information collection
 /// - Email composition using mailto
-/// - In-app feedback submission without leaving the app
+/// - Feedback sharing through the user's email/share workflow
 class FeedbackWidget extends StatefulWidget {
   const FeedbackWidget({super.key});
 
@@ -42,10 +40,6 @@ class _FeedbackWidgetState extends State<FeedbackWidget> {
   
   // Email configuration
   static const String _developerEmail = 'quadbitlab@gmail.com';
-  
-  // Telegram Bot Configuration
-  static const String _telegramBotToken = '8465375001:AAGHKG7HzG3UYipW19utNPiHUYdwIIXXKb0';
-  static const String _telegramChannelId = '-1002618985489';
   
   // Categories
   final List<String> _categories = [
@@ -150,7 +144,7 @@ class _FeedbackWidgetState extends State<FeedbackWidget> {
 
         _showSnackBar(
           'Added ${newScreenshots.length} screenshot(s). Total: ${_attachedScreenshots.length}',
-          Colors.green,
+          Theme.of(context).colorScheme.primary,
         );
 
         await AppLogger.instance.info(
@@ -164,7 +158,12 @@ class _FeedbackWidgetState extends State<FeedbackWidget> {
         stackTrace: stackTrace,
         context: 'FeedbackWidget._pickScreenshots'
       );
-      _showSnackBar('Failed to pick screenshots: $e', Colors.red);
+      if (mounted) {
+        _showSnackBar(
+          'Could not add screenshots. Please try again.',
+          Theme.of(context).colorScheme.error,
+        );
+      }
     }
   }
 
@@ -174,7 +173,7 @@ class _FeedbackWidgetState extends State<FeedbackWidget> {
       final removedFile = _attachedScreenshots.removeAt(index);
       _showSnackBar(
         'Screenshot removed: ${removedFile.path.split('/').last}',
-        Colors.orange,
+        Theme.of(context).colorScheme.tertiary,
       );
     });
   }
@@ -266,7 +265,7 @@ class _FeedbackWidgetState extends State<FeedbackWidget> {
     }
     
     if (_feedbackController.text.trim().isEmpty) {
-      _showSnackBar('Please enter your feedback', Colors.red);
+      _showSnackBar('Please enter your feedback', Theme.of(context).colorScheme.error);
       return;
     }
     
@@ -300,214 +299,25 @@ class _FeedbackWidgetState extends State<FeedbackWidget> {
       try {
         final emailBody = await _composeEmailBody();
         await _shareWithAttachments(emailBody);
-      } catch (shareError) {
-        _showSnackBar('Failed to send feedback: $e', Colors.red);
+      } catch (shareError, shareStackTrace) {
+        await AppLogger.instance.error(
+          'Feedback fallback sharing failed: $shareError',
+          stackTrace: shareStackTrace,
+          context: 'FeedbackWidget._sendFeedback',
+        );
+        if (mounted) {
+          _showSnackBar(
+            'Could not send feedback. Please try again.',
+            Theme.of(context).colorScheme.error,
+          );
+        }
       }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
-  /// Send feedback directly to Telegram channel
-  Future<void> _sendToTelegram() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-    
-    if (_feedbackController.text.trim().isEmpty) {
-      _showSnackBar('Please enter your feedback', Colors.red);
-      return;
-    }
-    
-    try {
-      setState(() {
-        _isLoading = true;
-      });
-      
-      // Prepare logs if needed
-      if (_includeLogs) {
-        await _prepareLogs();
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
       }
-      
-      // Collect system information
-      final systemInfo = await _collectSystemInfo();
-      final timestamp = DateTime.now().toLocal();
-      
-      // Create stylized message
-      final message = await _createTelegramMessage(systemInfo, timestamp);
-      
-      // Prepare files for upload
-      final files = <File>[];
-      if (_includeLogs && _exportedLogPath != null) {
-        files.add(File(_exportedLogPath!));
-      }
-      files.addAll(_attachedScreenshots);
-      
-      if (files.isNotEmpty) {
-        // Send with attachments
-        await _sendTelegramWithFiles(message, files);
-      } else {
-        // Send text only
-        await _sendTelegramMessage(message);
-      }
-      
-      _showSnackBar('Feedback sent to developer successfully!', Colors.green, duration: 5);
-      _clearForm();
-      
-    } catch (e, stackTrace) {
-      await AppLogger.instance.error('Failed to send feedback to Telegram: $e', stackTrace: stackTrace, context: 'FeedbackWidget._sendToTelegram');
-      _showSnackBar('Failed to send feedback: $e', Colors.red, duration: 5);
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
-  /// Create stylized Telegram message
-  Future<String> _createTelegramMessage(Map<String, String> systemInfo, DateTime timestamp) async {
-    final categoryEmoji = _getCategoryEmoji(_selectedCategory);
-    final buffer = StringBuffer();
-    
-    // Header with emoji and category
-    buffer.writeln('$categoryEmoji <b>Subtitle Studio - $_selectedCategory</b>');
-    buffer.writeln();
-    
-    // Timestamp
-    buffer.writeln('📅 <b>Submitted:</b> ${timestamp.toString().split('.').first}');
-    buffer.writeln();
-    
-    // User Information (if provided)
-    if (_nameController.text.isNotEmpty || _emailController.text.isNotEmpty) {
-      buffer.writeln('👤 <b>User Information:</b>');
-      if (_nameController.text.isNotEmpty) {
-        buffer.writeln('  • Name: ${_nameController.text}');
-      }
-      if (_emailController.text.isNotEmpty) {
-        buffer.writeln('  • Email: ${_emailController.text}');
-      }
-      buffer.writeln();
-    }
-    
-    // Feedback Content
-    buffer.writeln('💬 <b>Feedback:</b>');
-    buffer.writeln(_feedbackController.text);
-    buffer.writeln();
-    
-    // System Information
-    buffer.writeln('📱 <b>System Information:</b>');
-    buffer.writeln('  • App: ${systemInfo['App Name']} v${systemInfo['Version']}');
-    buffer.writeln('  • Platform: ${systemInfo['Platform']} ${systemInfo['Platform Version']}');
-    if (systemInfo['Device'] != null) {
-      buffer.writeln('  • Device: ${systemInfo['Device']}');
-    }
-    if (systemInfo['Android Version'] != null) {
-      buffer.writeln('  • OS: ${systemInfo['Android Version']}');
-    } else if (systemInfo['iOS Version'] != null) {
-      buffer.writeln('  • OS: ${systemInfo['iOS Version']}');
-    }
-    buffer.writeln();
-    
-    // Attachments info
-    if (_includeLogs || _attachedScreenshots.isNotEmpty) {
-      buffer.writeln('📎 <b>Attachments:</b>');
-      if (_includeLogs && _exportedLogPath != null) {
-        buffer.writeln('  • Log file: ${_exportedLogPath!.split('/').last}');
-      }
-      if (_attachedScreenshots.isNotEmpty) {
-        buffer.writeln('  • Screenshots: ${_attachedScreenshots.length} file(s)');
-      }
-      buffer.writeln();
-    }
-    
-    // Hashtags for categorization
-    buffer.writeln('#${_selectedCategory.replaceAll(' ', '')} #MSoneSubEditor #Feedback');
-    
-    return buffer.toString();
-  }
-
-  /// Get emoji for feedback category
-  String _getCategoryEmoji(String category) {
-    switch (category) {
-      case 'Bug Report':
-        return '🐛';
-      case 'Feature Request':
-        return '💡';
-      case 'General Feedback':
-        return '💬';
-      case 'Performance Issue':
-        return '⚡';
-      case 'UI/UX Feedback':
-        return '🎨';
-      case 'Crash Report':
-        return '💥';
-      default:
-        return '📝';
-    }
-  }
-
-  /// Send text-only message to Telegram
-  Future<void> _sendTelegramMessage(String message) async {
-    final uri = Uri.parse('https://api.telegram.org/bot$_telegramBotToken/sendMessage');
-    
-    final response = await http.post(
-      uri,
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({
-        'chat_id': _telegramChannelId,
-        'text': message,
-        'parse_mode': 'HTML',
-      }),
-    );
-
-    if (response.statusCode != 200) {
-      final responseData = json.decode(response.body);
-      throw Exception('Telegram API error: ${responseData['description'] ?? 'Unknown error'}');
-    }
-  }
-
-  /// Send message with files to Telegram
-  Future<void> _sendTelegramWithFiles(String message, List<File> files) async {
-    if (files.length == 1) {
-      // Send single file with caption
-      await _sendSingleFileToTelegram(message, files.first);
-    } else {
-      // Send message first, then files
-      await _sendTelegramMessage(message);
-      
-      // Send each file separately
-      for (int i = 0; i < files.length; i++) {
-        final file = files[i];
-        final fileName = file.path.split('/').last;
-        final caption = 'Attachment ${i + 1}/${files.length}: $fileName';
-        await _sendSingleFileToTelegram(caption, file);
-      }
-    }
-  }
-
-  /// Send single file to Telegram
-  Future<void> _sendSingleFileToTelegram(String caption, File file) async {
-    final uri = Uri.parse('https://api.telegram.org/bot$_telegramBotToken/sendDocument');
-    
-    final request = http.MultipartRequest('POST', uri);
-    request.fields['chat_id'] = _telegramChannelId;
-    request.fields['caption'] = caption;
-    request.fields['parse_mode'] = 'HTML';
-    
-    request.files.add(await http.MultipartFile.fromPath(
-      'document',
-      file.path,
-      filename: file.path.split('/').last,
-    ));
-
-    final response = await request.send();
-    
-    if (response.statusCode != 200) {
-      final responseBody = await response.stream.bytesToString();
-      final responseData = json.decode(responseBody);
-      throw Exception('Telegram API error: ${responseData['description'] ?? 'Unknown error'}');
     }
   }
 
@@ -545,7 +355,7 @@ class _FeedbackWidgetState extends State<FeedbackWidget> {
         // Show detailed success message
         _showSnackBar(
           'Email opened successfully!',
-          Colors.green,
+          Theme.of(context).colorScheme.primary,
           duration: 5,
         );
         _clearForm();
@@ -582,10 +392,12 @@ $emailBody''';
       
       // Share with files if available, otherwise just text
       if (files.isNotEmpty) {
-        await Share.shareXFiles(
-          files,
-          text: emailContent,
-          subject: 'Subtitle Studio - $_selectedCategory',
+        await SharePlus.instance.share(
+          ShareParams(
+            files: files,
+            text: emailContent,
+            subject: 'Subtitle Studio - $_selectedCategory',
+          ),
         );
         
         // Log the feedback submission
@@ -596,21 +408,31 @@ $emailBody''';
         
         _showSnackBar(
           'Feedback shared with ${files.length} attachment(s)!',
-          Colors.green,
+          Theme.of(context).colorScheme.primary,
           duration: 6,
         );
       } else {
-        await Share.share(
-          emailContent,
-          subject: 'Subtitle Studio - $_selectedCategory',
+        await SharePlus.instance.share(
+          ShareParams(
+            text: emailContent,
+            subject: 'Subtitle Studio - $_selectedCategory',
+          ),
         );
         
-        _showSnackBar('Feedback shared successfully!', Colors.green);
+        _showSnackBar('Feedback shared successfully!', Theme.of(context).colorScheme.primary);
       }
       
       _clearForm();
-    } catch (e) {
-      _showSnackBar('Failed to share feedback: $e', Colors.red);
+    } catch (e, stackTrace) {
+      await AppLogger.instance.error(
+        'Failed to share feedback: $e',
+        stackTrace: stackTrace,
+        context: 'FeedbackWidget._shareWithAttachments',
+      );
+      _showSnackBar(
+        'Could not share feedback. Please try again.',
+        Theme.of(context).colorScheme.error,
+      );
     }
   }
 
@@ -655,19 +477,19 @@ $emailBody''';
             child: Row(
               children: [
                 Icon(
-                  backgroundColor == Colors.red ? Icons.error : 
-                  backgroundColor == Colors.green ? Icons.check_circle :
-                  backgroundColor == Colors.orange ? Icons.warning :
+                  backgroundColor == Theme.of(context).colorScheme.error ? Icons.error : 
+                  backgroundColor == Theme.of(context).colorScheme.primary ? Icons.check_circle :
+                  backgroundColor == Theme.of(context).colorScheme.tertiary ? Icons.warning :
                   Icons.info,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onPrimary,
                   size: 20,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     message,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onPrimary,
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
@@ -709,7 +531,7 @@ $emailBody''';
             Text(
               'Help us improve Subtitle Studio by sharing your feedback, reporting bugs, or suggesting new features.',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.grey[600],
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 16),
@@ -736,7 +558,7 @@ $emailBody''';
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey[300]!),
+                  border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: DropdownButtonHideUnderline(
@@ -791,7 +613,7 @@ $emailBody''';
                     ? 'Enter your name (required for bug reports)'
                     : 'Enter your name (optional)',
                   border: const OutlineInputBorder(),
-                  prefixIcon: const Icon(Icons.person),
+                  prefixIcon: Icon(Icons.person),
                 ),
                 textInputAction: TextInputAction.next,
                 validator: _isUserInfoMandatory() ? (value) {
@@ -812,7 +634,7 @@ $emailBody''';
                     ? 'Enter your email (required for bug reports)'
                     : 'Enter your email (optional)',
                   border: const OutlineInputBorder(),
-                  prefixIcon: const Icon(Icons.email),
+                  prefixIcon: Icon(Icons.email),
                 ),
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
@@ -844,7 +666,7 @@ $emailBody''';
                 controller: _feedbackController,
                 decoration: InputDecoration(
                   hintText: _getFeedbackHint(),
-                  hintStyle: TextStyle(color: Colors.grey[600]),
+                  hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                   border: const OutlineInputBorder(),
                   alignLabelWithHint: true,
                 ),
@@ -866,9 +688,9 @@ $emailBody''';
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.05),
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
+                  border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2)),
                 ),
                 child: Row(
                   children: [
@@ -892,7 +714,7 @@ $emailBody''';
                             'Include app logs to help developers diagnose issues (recommended for bug reports)',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey[600],
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ],
@@ -914,9 +736,9 @@ $emailBody''';
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.05),
+                  color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.orange.withValues(alpha: 0.2)),
+                  border: Border.all(color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.2)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -928,17 +750,17 @@ $emailBody''';
                             'Add screenshots to help explain the issue or show what you\'re referring to',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey[600],
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ),
                         const SizedBox(width: 8),
                         TextButton.icon(
                           onPressed: _pickScreenshots,
-                          icon: const Icon(Icons.add_a_photo, size: 18),
+                          icon: Icon(Icons.add_a_photo, size: 18),
                           label: const Text('Add Screenshots'),
                           style: TextButton.styleFrom(
-                            foregroundColor: Colors.orange[700],
+                            foregroundColor: Theme.of(context).colorScheme.tertiary,
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           ),
                         ),
@@ -949,7 +771,7 @@ $emailBody''';
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Colors.orange.withValues(alpha: 0.1),
+                          color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Column(
@@ -957,7 +779,7 @@ $emailBody''';
                           children: [
                             Text(
                               'Attached Screenshots (${_attachedScreenshots.length}):',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 13,
                               ),
@@ -970,21 +792,21 @@ $emailBody''';
                                 padding: const EdgeInsets.only(bottom: 4),
                                 child: Row(
                                   children: [
-                                    const Icon(Icons.image, size: 16, color: Colors.orange),
+                                    Icon(Icons.image, size: 16, color: Theme.of(context).colorScheme.tertiary),
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
                                         fileName,
-                                        style: const TextStyle(fontSize: 12),
+                                        style: TextStyle(fontSize: 12),
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                     IconButton(
                                       onPressed: () => _removeScreenshot(index),
-                                      icon: const Icon(Icons.remove_circle_outline, size: 16),
+                                      icon: Icon(Icons.remove_circle_outline, size: 16),
                                       constraints: const BoxConstraints(),
                                       padding: EdgeInsets.zero,
-                                      color: Colors.red[600],
+                                      color: Theme.of(context).colorScheme.error,
                                       tooltip: 'Remove screenshot',
                                     ),
                                   ],
@@ -1004,13 +826,13 @@ $emailBody''';
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.08),
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+                  border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.email, color: Colors.blue[700], size: 20),
+                    Icon(Icons.email, color: Theme.of(context).colorScheme.primary, size: 20),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Column(
@@ -1020,7 +842,7 @@ $emailBody''';
                             'Send feedback to:',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.blue[700],
+                              color: Theme.of(context).colorScheme.primary,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -1029,7 +851,7 @@ $emailBody''';
                             _developerEmail,
                             style: TextStyle(
                               fontSize: 14,
-                              color: Colors.blue[800],
+                              color: Theme.of(context).colorScheme.primary,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -1040,12 +862,12 @@ $emailBody''';
                       onPressed: () async {
                         try {
                           await Clipboard.setData(ClipboardData(text: _developerEmail));
-                          _showSnackBar('Email copied to clipboard!', Colors.green);
+                          _showSnackBar('Email copied to clipboard!', Theme.of(context).colorScheme.primary);
                         } catch (e) {
-                          _showSnackBar('Failed to copy email', Colors.red);
+                          _showSnackBar('Failed to copy email', Theme.of(context).colorScheme.error);
                         }
                       },
-                      icon: Icon(Icons.copy, color: Colors.blue[700], size: 18),
+                      icon: Icon(Icons.copy, color: Theme.of(context).colorScheme.primary, size: 18),
                       tooltip: 'Copy email address',
                       constraints: const BoxConstraints(),
                       padding: const EdgeInsets.all(8),
@@ -1055,38 +877,18 @@ $emailBody''';
               ),
               const SizedBox(height: 16),
               
-              // Send to Telegram button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _sendToTelegram,
-                  icon: const Icon(Icons.telegram),
-                  label: const Text('Send'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue[600],
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    textStyle: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              
               // Email button
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: _sendFeedback,
-                  icon: const Icon(Icons.email),
+                  icon: Icon(Icons.email),
                   label: const Text('Email'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    textStyle: const TextStyle(
+                    textStyle: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -1099,20 +901,20 @@ $emailBody''';
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.green.withValues(alpha: 0.05),
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.green.withValues(alpha: 0.2)),
+                  border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2)),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline, color: Colors.green[700], size: 20),
+                    Icon(Icons.info_outline, color: Theme.of(context).colorScheme.primary, size: 20),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Use "Send" to report directly to the developer via Telegram. Use "Email" to share via your email app. You can copy the email address above if needed.',
+                        'Use "Email" to share feedback through your email app. You can copy the developer email address above if needed.',
                         style: TextStyle(
                           fontSize: 12,
-                          color: Colors.green[700],
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
                     ),
@@ -1150,19 +952,19 @@ $emailBody''';
   Color _getCategoryColor(String category) {
     switch (category) {
       case 'Bug Report':
-        return Colors.red;
+        return Theme.of(context).colorScheme.error;
       case 'Feature Request':
-        return Colors.green;
+        return Theme.of(context).colorScheme.primary;
       case 'General Feedback':
-        return Colors.blue;
+        return Theme.of(context).colorScheme.primary;
       case 'Performance Issue':
-        return Colors.orange;
+        return Theme.of(context).colorScheme.tertiary;
       case 'UI/UX Feedback':
-        return Colors.purple;
+        return Theme.of(context).colorScheme.secondary;
       case 'Crash Report':
-        return Colors.red[800]!;
+        return Theme.of(context).colorScheme.error;
       default:
-        return Colors.grey;
+        return Theme.of(context).colorScheme.onSurfaceVariant;
     }
   }
 

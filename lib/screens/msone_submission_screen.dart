@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:subtitle_studio/themes/studio_design_tokens.dart';
 import 'package:flutter/services.dart';
 import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
-import 'package:subtitle_studio/database/models/preferences_model.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'dart:io';
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
 
-class MsoneSubmissionScreen extends StatefulWidget {
+class MsoneSubmissionScreen extends ConsumerStatefulWidget {
   final String submissionType; // 'main' or 'fresher'
   final int subtitleCollectionId;
 
@@ -20,10 +21,10 @@ class MsoneSubmissionScreen extends StatefulWidget {
   });
 
   @override
-  State<MsoneSubmissionScreen> createState() => _MsoneSubmissionScreenState();
+  ConsumerState<MsoneSubmissionScreen> createState() => _MsoneSubmissionScreenState();
 }
 
-class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
+class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
   final PageController _pageController = PageController();
   int _currentStep = 0;
   
@@ -52,6 +53,9 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
   String? _msoneFilePath; // Path to .msone project file
   String? _msoneFileSafUri; // SAF URI for .msone file on Android
   bool _isSubmitting = false;
+  bool _routeWasPopped = false;
+
+  bool get _routeActive => mounted && !_routeWasPopped;
 
   @override
   void initState() {
@@ -61,6 +65,8 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
 
   @override
   void dispose() {
+    // Confirms the route has been torn down after Android system Back.
+    debugPrint('MsoneSubmissionScreen disposed after route pop');
     _pageController.dispose();
     _nameController.dispose();
     _emailController.dispose();
@@ -74,25 +80,27 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
   }
 
   Future<void> _loadSavedData() async {
-    final name = await PreferencesModel.getTranslatorName();
-    final email = await PreferencesModel.getTranslatorEmail();
-    final contactId = await PreferencesModel.getTranslatorContactId();
-    
-    if (mounted) {
-      setState(() {
-        _nameController.text = name ?? '';
-        _emailController.text = email ?? '';
-        _contactIdController.text = contactId ?? '';
-      });
-    }
+    final profile = await ref
+        .read(appPreferencesRepositoryProvider)
+        .loadTranslatorProfile();
+
+    if (!mounted) return;
+
+    setState(() {
+      _nameController.text = profile.name ?? '';
+      _emailController.text = profile.email ?? '';
+      _contactIdController.text = profile.contactId ?? '';
+    });
   }
 
   Future<void> _saveTranslatorData() async {
-    if (_saveForFuture) {
-      await PreferencesModel.setTranslatorName(_nameController.text);
-      await PreferencesModel.setTranslatorEmail(_emailController.text);
-      await PreferencesModel.setTranslatorContactId(_contactIdController.text);
-    }
+    if (!_saveForFuture) return;
+
+    await ref.read(appPreferencesRepositoryProvider).saveTranslatorProfile(
+      name: _nameController.text,
+      email: _emailController.text,
+      contactId: _contactIdController.text,
+    );
   }
 
   String? _validateEmail(String? value) {
@@ -142,6 +150,7 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
         allowedExtensions: ['.srt', '.vtt', '.ass', '.sub', '.txt'],
       );
       
+      if (!_routeActive) return;
       if (fileInfo != null) {
         final displayPath = fileInfo['displayPath'];
         final safUri = fileInfo['safUri'];
@@ -170,10 +179,8 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
         );
       }
     } catch (e) {
-      SnackbarHelper.showError(
-        context,
-        'Error selecting file: $e',
-      );
+      if (!_routeActive) return;
+      SnackbarHelper.showError(context, 'Error selecting file: $e');
     }
   }
 
@@ -186,6 +193,7 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
         allowedExtensions: ['.msone'],
       );
       
+      if (!_routeActive) return;
       if (fileInfo != null) {
         final displayPath = fileInfo['displayPath'];
         final safUri = fileInfo['safUri'];
@@ -208,10 +216,8 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
         );
       }
     } catch (e) {
-      SnackbarHelper.showError(
-        context,
-        'Error selecting Msone file: $e',
-      );
+      if (!_routeActive) return;
+      SnackbarHelper.showError(context, 'Error selecting Msone file: $e');
     }
   }
 
@@ -269,7 +275,8 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
     try {
       // Save translator data if checkbox is checked
       await _saveTranslatorData();
-      
+      if (!_routeActive) return;
+
       // Prepare files for submission as attachments
       final files = <Map<String, String>>[];
       
@@ -329,7 +336,10 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
         'attachments': files,
       };      // Debug print the data being sent
       
-      // Submit to API
+      // Don't send a request after the user left the submission screen.
+      if (!_routeActive) return;
+      // Submit to API with a bounded timeout so a stalled network cannot
+      // permanently pin the submit button.
       final response = await http.post(
         Uri.parse('https://malayalamsubtitles.org/wp-json/msone-app/v1/send-email'),
         headers: {
@@ -337,7 +347,8 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
           'Accept': 'application/json',
         },
         body: jsonEncode(submissionData),
-      );
+      ).timeout(const Duration(seconds: 45));
+      if (!_routeActive) return;
       
       // Debug print the response
 
@@ -349,10 +360,10 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
         // Show success dialog
         showDialog(
           context: context,
-          builder: (context) => AlertDialog(
+          builder: (dialogContext) => AlertDialog(
             backgroundColor: Theme.of(context).colorScheme.surface,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(StudioRadius.sheet),
             ),
             content: Padding(
               padding: const EdgeInsets.all(8.0),
@@ -367,12 +378,12 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.green.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
+                            color: StudioDesignTokens.of(context).editingAccent.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(StudioRadius.input),
                           ),
                           child: Icon(
                             Icons.check_circle_outline,
-                            color: Colors.green,
+                            color: StudioDesignTokens.of(context).editingAccent,
                             size: 28,
                           ),
                         ),
@@ -407,19 +418,13 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
                   Container(
                     width: double.infinity,
                     height: 50,
-                    child: ElevatedButton(
+                    child: FilledButton(
                       onPressed: () {
-                        Navigator.of(context).pop(); // Close dialog
-                        Navigator.of(context).pop(); // Close submission screen
+                        Navigator.of(dialogContext).pop(); // Close dialog
+                        if (_routeActive) {
+                          Navigator.of(this.context).pop(); // Close submission route
+                        }
                       },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).primaryColor,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -445,10 +450,11 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
         throw Exception('Server returned ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
+      if (!_routeActive) return;
       setState(() {
         _isSubmitting = false;
       });
-      
+
       SnackbarHelper.showError(
         context,
         'Submission failed: $e',
@@ -535,16 +541,16 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) _routeWasPopped = true;
+        debugPrint('MsoneSubmissionScreen route pop: didPop=$didPop');
+      },
+      child: Scaffold(
       appBar: AppBar(
         title: Text(
           'Submit to Msone - ${widget.submissionType == 'main' ? 'Existing Translator' : 'Fresher'}',
-          style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.red, fontSize: 16),
         ),
-        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-        elevation: 2,
-        shadowColor: Theme.of(context).shadowColor.withValues(alpha: 0.1),
-        foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,
       ),
       backgroundColor: Theme.of(context).colorScheme.surface,
       body: Column(
@@ -638,130 +644,37 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
                 children: [
                   if (_currentStep > 0)
                     Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
-                            width: 1.5,
-                          ),
-                        ),
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: _isSubmitting ? null : _previousStep,
-                            borderRadius: BorderRadius.circular(12),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.arrow_back_ios,
-                                    size: 18,
-                                    color: _isSubmitting 
-                                      ? Theme.of(context).disabledColor
-                                      : Theme.of(context).primaryColor,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Previous',
-                                    style: TextStyle(
-                                      color: _isSubmitting 
-                                        ? Theme.of(context).disabledColor
-                                        : Theme.of(context).primaryColor,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
+                      child: OutlinedButton.icon(
+                        onPressed: _isSubmitting ? null : _previousStep,
+                        icon: const Icon(Icons.arrow_back_ios, size: 18),
+                        label: const Text('Previous'),
                       ),
                     ),
-                  if (_currentStep > 0) const SizedBox(width: 16),
+                  if (_currentStep > 0)
+                    const SizedBox(width: StudioSpacing.md),
                   Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        gradient: LinearGradient(
-                          colors: _isSubmitting 
-                            ? [
-                                Theme.of(context).disabledColor,
-                                Theme.of(context).disabledColor,
-                              ]
-                            : [
-                                Theme.of(context).primaryColor,
-                                Theme.of(context).primaryColor.withValues(alpha: 0.8),
-                              ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        boxShadow: !_isSubmitting ? [
-                          BoxShadow(
-                            color: Theme.of(context).primaryColor.withValues(alpha: 0.4),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
-                          ),
-                        ] : null,
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: _isSubmitting 
-                            ? null 
-                            : _currentStep < 2 
-                              ? _nextStep 
-                              : _submitToMsone,
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                if (_isSubmitting)
-                                  const SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                    ),
-                                  )
-                                else ...[
-                                  Text(
-                                    _currentStep < 2 ? 'Next' : 'Submit',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Icon(
-                                    _currentStep < 2 ? Icons.arrow_forward_ios : Icons.send,
-                                    size: 18,
-                                    color: Colors.white,
-                                  ),
-                                ],
-                                if (_isSubmitting) ...[
-                                  const SizedBox(width: 12),
-                                  Text(
-                                    _currentStep < 2 ? 'Processing...' : 'Submitting...',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w500,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ],
-                              ],
+                    child: FilledButton.icon(
+                      onPressed: _isSubmitting
+                          ? null
+                          : _currentStep < 2 ? _nextStep : _submitToMsone,
+                      icon: _isSubmitting
+                          ? SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: StudioDesignTokens.of(context).onPrimaryAction,
+                              ),
+                            )
+                          : Icon(
+                              _currentStep < 2
+                                  ? Icons.arrow_forward_ios
+                                  : Icons.send,
+                              size: 18,
                             ),
-                          ),
-                        ),
-                      ),
+                      label: Text(_isSubmitting
+                          ? (_currentStep < 2 ? 'Processing...' : 'Submitting...')
+                          : (_currentStep < 2 ? 'Next' : 'Submit')),
                     ),
                   ),
                 ],
@@ -770,8 +683,8 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
           )
           ],
         ),
-      );
-    
+      ),
+    );
   }
 
   Widget _buildStepLabel(String label, int stepIndex) {
@@ -804,15 +717,15 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    Colors.blue.withValues(alpha: 0.1),
-                    Colors.blue.withValues(alpha: 0.05),
+                    StudioDesignTokens.of(context).primaryAction.withValues(alpha: 0.1),
+                    StudioDesignTokens.of(context).primaryAction.withValues(alpha: 0.05),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(StudioRadius.card),
                 border: Border.all(
-                  color: Colors.blue.withValues(alpha: 0.2),
+                  color: StudioDesignTokens.of(context).primaryAction.withValues(alpha: 0.2),
                 ),
               ),
               child: Row(
@@ -820,12 +733,12 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.blue.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(12),
+                      color: StudioDesignTokens.of(context).primaryAction.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(StudioRadius.input),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.person_outline,
-                      color: Colors.blue,
+                      color: StudioDesignTokens.of(context).primaryAction,
                       size: 24,
                     ),
                   ),
@@ -838,14 +751,14 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
                           'Translator Information',
                           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                             fontWeight: FontWeight.bold,
-                            color: Colors.blue.shade700,
+                            color: StudioDesignTokens.of(context).onSurface,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           'Tell us about yourself',
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Colors.blue.shade600,
+                            color: StudioDesignTokens.of(context).mutedText,
                           ),
                         ),
                       ],
@@ -864,7 +777,7 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
               icon: Icons.person,
               isRequired: true,
               validator: (value) => _validateRequired(value, 'Name'),
-              color: Colors.green,
+              color: StudioDesignTokens.of(context).editingAccent,
             ),
             const SizedBox(height: 20),
             
@@ -876,7 +789,7 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
               isRequired: true,
               keyboardType: TextInputType.emailAddress,
               validator: _validateEmail,
-              color: Colors.deepOrange,
+              color: StudioDesignTokens.of(context).primaryAction,
             ),
             const SizedBox(height: 20),
             
@@ -887,7 +800,7 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
               icon: Icons.contact_phone,
               isRequired: true,
               validator: (value) => _validateRequired(value, 'Contact ID'),
-              color: Colors.purple,
+              color: StudioDesignTokens.of(context).primaryAction,
             ),
             const SizedBox(height: 32),
             
@@ -896,7 +809,7 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(StudioRadius.input),
                 border: Border.all(
                   color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
                 ),
@@ -991,15 +904,15 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    Colors.purple.withValues(alpha: 0.1),
-                    Colors.purple.withValues(alpha: 0.05),
+                    StudioDesignTokens.of(context).primaryAction.withValues(alpha: 0.1),
+                    StudioDesignTokens.of(context).primaryAction.withValues(alpha: 0.05),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(StudioRadius.card),
                 border: Border.all(
-                  color: Colors.purple.withValues(alpha: 0.2),
+                  color: StudioDesignTokens.of(context).primaryAction.withValues(alpha: 0.2),
                 ),
               ),
               child: Row(
@@ -1007,12 +920,12 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.purple.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(12),
+                      color: StudioDesignTokens.of(context).primaryAction.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(StudioRadius.input),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.movie_outlined,
-                      color: Colors.purple,
+                      color: StudioDesignTokens.of(context).primaryAction,
                       size: 24,
                     ),
                   ),
@@ -1025,14 +938,14 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
                           'Movie Information',
                           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                             fontWeight: FontWeight.bold,
-                            color: Colors.purple.shade700,
+                            color: StudioDesignTokens.of(context).onSurface,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           'Details about the movie',
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Colors.purple.shade600,
+                            color: StudioDesignTokens.of(context).mutedText,
                           ),
                         ),
                       ],
@@ -1050,7 +963,7 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
               icon: Icons.movie,
               isRequired: true,
               validator: (value) => _validateRequired(value, 'Movie name'),
-              color: Colors.red,
+              color: StudioDesignTokens.of(context).dangerText,
             ),
             const SizedBox(height: 20),
             
@@ -1062,7 +975,7 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
               isRequired: true,
               keyboardType: TextInputType.number,
               validator: _validateYear,
-              color: Colors.teal,
+              color: StudioDesignTokens.of(context).editingAccent,
             ),
             const SizedBox(height: 20),
             
@@ -1073,7 +986,7 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
               icon: Icons.download,
               isRequired: true,
               validator: (value) => _validateRequired(value, 'Torrent info'),
-              color: Colors.indigo,
+              color: StudioDesignTokens.of(context).primaryAction,
             ),
             const SizedBox(height: 20),
             
@@ -1085,7 +998,7 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
               isRequired: true,
               keyboardType: TextInputType.url,
               validator: _validateImdbLink,
-              color: Colors.deepOrange,
+              color: StudioDesignTokens.of(context).primaryAction,
             ),
             const SizedBox(height: 20),
             
@@ -1097,7 +1010,7 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
               isRequired: true,
               maxLines: 4,
               validator: (value) => _validateRequired(value, 'Synopsis'),
-              color: Colors.green,
+              color: StudioDesignTokens.of(context).editingAccent,
             ),
             
             const SizedBox(height: 24),
@@ -1147,7 +1060,7 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(StudioRadius.input),
         boxShadow: [
           BoxShadow(
             color: color.withValues(alpha: 0.1),
@@ -1178,32 +1091,32 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
             ),
           ),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(StudioRadius.input),
             borderSide: BorderSide(
               color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
             ),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(StudioRadius.input),
             borderSide: BorderSide(
               color: color.withValues(alpha: 0.3),
             ),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(StudioRadius.input),
             borderSide: BorderSide(
               color: color,
               width: 2,
             ),
           ),
           errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(StudioRadius.input),
             borderSide: BorderSide(
               color: Theme.of(context).colorScheme.error,
             ),
           ),
           focusedErrorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(StudioRadius.input),
             borderSide: BorderSide(
               color: Theme.of(context).colorScheme.error,
               width: 2,
@@ -1236,15 +1149,15 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  Colors.green.withValues(alpha: 0.1),
-                  Colors.green.withValues(alpha: 0.05),
+                  StudioDesignTokens.of(context).editingAccent.withValues(alpha: 0.1),
+                  StudioDesignTokens.of(context).editingAccent.withValues(alpha: 0.05),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(StudioRadius.card),
               border: Border.all(
-                color: Colors.green.withValues(alpha: 0.2),
+                color: StudioDesignTokens.of(context).editingAccent.withValues(alpha: 0.2),
               ),
             ),
             child: Row(
@@ -1252,12 +1165,12 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.green.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
+                    color: StudioDesignTokens.of(context).editingAccent.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(StudioRadius.input),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.folder_outlined,
-                    color: Colors.green,
+                    color: StudioDesignTokens.of(context).editingAccent,
                     size: 24,
                   ),
                 ),
@@ -1270,14 +1183,14 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
                         'File Selection',
                         style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: Colors.green.shade700,
+                          color: StudioDesignTokens.of(context).onSurface,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         'Choose one option: Submit a .msone project file OR submit both original and translated subtitle files',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.green.shade600,
+                          color: StudioDesignTokens.of(context).mutedText,
                         ),
                       ),
                     ],
@@ -1293,12 +1206,12 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: _msoneFilePath != null 
-                ? Colors.purple.withValues(alpha: 0.1)
+                ? StudioDesignTokens.of(context).primaryAction.withValues(alpha: 0.1)
                 : Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(StudioRadius.input),
               border: Border.all(
                 color: _msoneFilePath != null 
-                  ? Colors.purple.withValues(alpha: 0.3)
+                  ? StudioDesignTokens.of(context).primaryAction.withValues(alpha: 0.3)
                   : Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
               ),
             ),
@@ -1309,7 +1222,7 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
                   'Option 1: Submit Msone Project File',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: _msoneFilePath != null ? Colors.purple.shade700 : null,
+                    color: _msoneFilePath != null ? StudioDesignTokens.of(context).onSurface : null,
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -1326,7 +1239,7 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
                     ? 'Selected: ${path.basename(_msoneFilePath!)}'
                     : 'Choose your .msone project file',
                   icon: Icons.folder_special,
-                  gradientColors: [Colors.purple, Colors.purple.shade700],
+                  gradientColors: [StudioDesignTokens.of(context).primaryAction, StudioDesignTokens.of(context).onSurface],
                   isSelected: _msoneFilePath != null,
                   isRequired: false,
                   onTap: _selectMsoneFile,
@@ -1360,12 +1273,12 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: (_translatedSubtitlePath != null || _originalSubtitlePath != null)
-                ? Colors.blue.withValues(alpha: 0.1)
+                ? StudioDesignTokens.of(context).primaryAction.withValues(alpha: 0.1)
                 : Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(StudioRadius.input),
               border: Border.all(
                 color: (_translatedSubtitlePath != null || _originalSubtitlePath != null)
-                  ? Colors.blue.withValues(alpha: 0.3)
+                  ? StudioDesignTokens.of(context).primaryAction.withValues(alpha: 0.3)
                   : Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
               ),
             ),
@@ -1377,7 +1290,7 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: (_translatedSubtitlePath != null || _originalSubtitlePath != null)
-                      ? Colors.blue.shade700 : null,
+                      ? StudioDesignTokens.of(context).onSurface : null,
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -1395,7 +1308,7 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
               ? 'Selected: ${path.basename(_translatedSubtitlePath!)}'
               : 'Choose the translated subtitle file (required)',
             icon: Icons.subtitles,
-            gradientColors: [Colors.blue, Colors.blue.shade700],
+            gradientColors: [StudioDesignTokens.of(context).primaryAction, StudioDesignTokens.of(context).onSurface],
             isSelected: _translatedSubtitlePath != null,
             isRequired: true,
             onTap: () => _selectFile('translated'),
@@ -1408,7 +1321,7 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
               ? 'Selected: ${path.basename(_originalSubtitlePath!)}'
               : 'Choose the original subtitle file (required)',
             icon: Icons.subtitles_outlined,
-            gradientColors: [Colors.orange, Colors.orange.shade700],
+            gradientColors: [StudioDesignTokens.of(context).primaryAction, StudioDesignTokens.of(context).primaryAction],
             isSelected: _originalSubtitlePath != null,
             isRequired: true,
             onTap: () => _selectFile('original'),
@@ -1462,7 +1375,7 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(StudioRadius.card),
         boxShadow: [
           BoxShadow(
             color: isSelected 
@@ -1477,7 +1390,7 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
         color: Colors.transparent,
         child: InkWell(
           onTap: isLoading ? null : onTap,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(StudioRadius.card),
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -1492,7 +1405,7 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
                   )
                 : null,
               color: !isSelected ? Theme.of(context).colorScheme.surface : null,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(StudioRadius.card),
               border: Border.all(
                 color: isSelected 
                   ? gradientColors.first.withValues(alpha: 0.3)
@@ -1515,7 +1428,7 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(StudioRadius.input),
                   ),
                   child: isLoading
                     ? SizedBox(
@@ -1531,7 +1444,7 @@ class _MsoneSubmissionScreenState extends State<MsoneSubmissionScreen> {
                     : Icon(
                         isSelected ? Icons.check_circle : icon,
                         color: isSelected 
-                          ? Colors.white
+                          ? StudioDesignTokens.of(context).onPrimaryAction
                           : Theme.of(context).colorScheme.primary,
                         size: 24,
                       ),

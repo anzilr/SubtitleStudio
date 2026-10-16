@@ -1,0 +1,73 @@
+SubtitleStudio THEME AUDIT FINAL PASS — October 16, 2026
+User requests audit UI hardcoded color overrides, theme-respecting cleanup,
+then pause theme work and return to technical roadmap. Scope: UI accents,
+surfaces, text, action/warning/success/error states; preserve user-authored
+subtitle colors, video overlay luminance/contrast, palette definitions, and
+non-theme diagnostic/status encodings. First batch: dictionary search,
+comment dialog, two banner settings sheets, split confirmation, buttons
+grid, search/replace and checkpoint sheet. Replace hardcoded violet/blue/
+orange/green/red with live Material ColorScheme semantic roles.
+Analyze and full regression; further batches and audit exception inventory
+will follow before freeze gate.
+
+Second theme audit batch: multiple utility dialogs, comment/dictionary, search-replace, feedback/logging, history and import/export, sync etc. First CI analyzer found widget-const and contextual builder access, fixed. Run analyzer/tests before final media-overlay and large-surface pass.
+
+Batch 3: expanded UI semantic pass through utility sheets, import/export, subtitle effects, navigation, dictionaries. Previous analyzer errors were from dynamic Theme.of(context) under const wrappers and helper context not passed; fixes applied. Re-gate now.
+
+Media and waveform theme pass: video progress/hover/track settings adopt primary accents while white/black overlays directly on video remain deliberate contrast. Waveform empty/loading/errors, message bars, timeline highlights and edit/add-cue paints follow active semantic palette. Editor empty states and Home session badges theme-aware. Run full analyze and test before UI freeze.
+
+Theme audit pre-freeze: issue-responsive pass completed through project status, common loaders, welcome visuals, Home session badges, screenshot/dictionary, toolbar and waveform. Extra palette-driven foreground fixes in badge icons. Re-run analyzer + full regression now. Exceptions: actual video footage overlays, user-authored subtitle color tags, palette definitions, skin preview swatches and media artwork.
+
+Final static guard included: test/studio_ui_color_freeze_test.dart checks 31 migrated UI surfaces against reintroduction of nonsemantic fixed brand accents. Run analyzer + all Flutter tests and use failed paths to close final remaining exceptions. No release/production branch writes. Skin work to be paused after gate; next technical stream is CP86 native waveform qualification.
+
+FINAL THEME FREEZE RETEST 2026-10-16T15:50:00.000Z:
+Last guard failure in CI 38930415626 was a lingering Colors.orange
+in fullscreen repeat-control icon; changed that to live colorScheme.primary.
+Verify analyzer, all widget/unit tests and theme-freeze source guard.
+Theme scope ends here unless CI or device reproduces a specific defect.
+
+THEME FREEZE R2: CI 38933686514 exposed a single analyzer const expression in subtitle extraction progress widget. Removed const and corrected Select Subtitle Track primary-button icon to onPrimary. Rerun analyzer + all Flutter tests + fixed accent guard.
+
+CP86 R1 — 2026-10-16: waveform native qualification hardening (Windows verified global stream debug logging; SAF URI fail-closed input; no legacy SAF cache reuse; cancelled peak-cache staging regression). Appearance work remains frozen. Analyze and run full Flutter tests; native Android/Windows measurements remain a separate gate.
+
+CP86 R2 2026-10-16: optimized low-rate compact PCM FFmpeg extraction and Android versioned SAF cache reuse. Verify V1/V2 cache format compatibility, Flutter analyzer/tests; Android Kotlin and speed must be qualified on device.
+
+CP86 R3 2026-10-16: restore original role-coded waveform controllers, correct dictionary white-on-white Search buttons, and use Material for checkbox ListTile in dictionary headers. Full analyzer/tests gate required.
+
+CP86 R3 import-contrast follow-up: Import Subtitle raised primary action previously forced white download icon; use onPrimary for Carbon Zero Dark/Classic. Re-run complete analyze/test before accepting this reported issue.
+
+CP86 R4 2026-10-16: retain blue waveform, separate orange subtitle overlays/edit handles and teal add-line overlays/handles; update painter layered color invalidation. Analyze/test gate. Native libmpv SIGSEGV on hot restart remains an independent blocker.
+
+CP87 R0 2026-10-16: selected Olam language tabs (EN-ML / ML-EN / ML-ML) use dark high-contrast selection in achromatic Dark/Classic palettes; 12 built-in combinations checked. Appearance freeze maintained.
+
+CP87 R1 2026-10-16: typed file locator identities introduced for native path/Android SAF/file URI/remote/opaque sources; wrapped VideoRepository saved-video identity and classified waveform cache, revision queries and secondary subtitle reads. Existing persisted paths/cache hashes unchanged. CP86 native mpv crash remains a separate blocker.
+
+CP87 R2: optional missing secondary does not prevent primary editor loading, extracted embedded tracks persisted atomically in app support, user files never automatically deleted.
+
+CP87 R3 contrast audit: Video Settings badges, Load Secondary Subtitle cards, Save File As, Project Settings marked lines, Subtitle Tracks, Import Subtitle, and AI explanation selected toggle use theme-matched glyph colors. Preserves intentional white media-overlay icons.
+
+CP87 R3B further popups: Import Project, merge/split confirmation, Locate SRT, session selection, subtitle effects, banner-progress colors use paired theme onColors, including light-primary Carbon Zero Dark/Classic.
+
+CP87 R4 MSone screen lifecycle: asynchronous file pick and submit callbacks guarded after navigation, network submit has 45s timeout, success dialog closes correct navigator contexts, system back PopScope breadcrumbs. Root cause of prior unlogged freeze not yet verified.
+
+CP87 R4B Isar integration: lost legacy code_cache reference is safely cleared while primary editor can continue; non-ephemeral missing user-picked path retained for re-pick; durable secondary file parses. Owned secondary cleanup now requires app support root (plus strictly private Android cache location).
+
+CP87 R4 consolidated regression gate 2026-10-16: native Android session recovery, persistent embedded secondary, high-contrast popup icons, MSone route lifecycle checks and Isar integration tests. Flutter analyze/tests. Native acceptance pending.
+
+CP87 R4C source replacement order: all three secondary-selection flows now save new preference before deleting previously managed extracted subtitles; avoiding stale preference on failed write/route interruption.
+
+CP87 R5: fix submission modal transition using two-stage choice-result navigation (parent context only); add Android Back widget regressions. Fix two checkbox ListTiles in extraction options with Material instead of opaque decorated Container, per real CPH2381 assertion. Native mpv hot restart SIGSEGV remains vendor/plugin-level blocker.
+
+CP87 R5 final code gate 2026-10-17: route sheet-result navigation tests, Material-backed processing CheckboxListTiles, disposal breadcrumbs, and log-confirmed Android native hot-restart libmpv SIGSEGV as an independent unresolved blocker.
+
+CP87 R5R2 controls: fix decorated panel containing Karaoke effect RadioListTiles (zero contentPadding), its color picker ListTiles and both Banner recommended-position checkbox tiles via local Material ancestors; Carbon Zero Dark/Classic widget-level regression tests.
+
+CP87 R6: add route-return frame diagnostics and Flutter back widget regression, script for clean Android process (never clear database), UTF16-safe Logcat capture; document independent native libmpv hot-restart SIGSEGV.
+
+CP87 R7 2026-10-17: prioritize user-observed MSone Back UI freeze BEFORE operator hot restart; clean stale root cue-scroll loading overlay on editor return and track first 5 post-return pointer events. Add route-return overlay blocking regression. Native SIGSEGV after manual restart remains independent.
+
+CP87 R7 test correction: route pop widget hit test must await animation settling; initial test tap was at negative x while editor was still translating onscreen, not a regression in loader cleanup.
+
+CP87 R8: user device log confirms staleLoader=false, page-to-home Back succeeds, 3 home sessions load, but touch handlers not invoked; phase route handoff until popup/sheet/form TransitionRoute.completed to guarantee modal barriers removed, plus debug-only root pointer and navigator diagnostics. Add true popup-menu-to-sheet/form/home widget regression.
+
+CP87 R8 final gated batch: captured popup/sheet/form .completed and root pointer instrumentation, full real popup-menu→sheet→form→Editor→Home tap regression with asserts that popup/choice/form overlay entries are actually unmounted at each handoff. Existing UI appearance remains frozen. Native libmpv hot restart separate issue.

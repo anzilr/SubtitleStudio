@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:subtitle_studio/themes/studio_design_tokens.dart';
 
+/// Uses the shared component theme instead of a one-off teal/red button UI.
+/// Navigation and save/discard callbacks remain caller-owned.
 class UnsavedChangesSheet extends StatelessWidget {
   final VoidCallback onConfirm;
   final VoidCallback onDiscard;
@@ -12,54 +15,59 @@ class UnsavedChangesSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text(
-            'Unsaved Changes',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'You may have unsaved changes.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.grey,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  onDiscard();
-                },
-                child: const Text(
-                  'Discard',
-                  style: TextStyle(color: Colors.red),
-                ),
+    final tokens = StudioDesignTokens.of(context);
+    final typography = Theme.of(context).textTheme;
+
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.all(StudioSpacing.md),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Unsaved Changes',
+              style: typography.titleLarge?.copyWith(
+                color: tokens.onSurface,
+                fontWeight: FontWeight.w600,
               ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  onConfirm();
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0A9396),
+            ),
+            const SizedBox(height: StudioSpacing.xs),
+            Text(
+              'You may have unsaved changes.',
+              style: typography.bodyMedium?.copyWith(color: tokens.mutedText),
+              textAlign: TextAlign.start,
+            ),
+            const SizedBox(height: StudioSpacing.lg),
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      onDiscard();
+                    },
+                    style: TextButton.styleFrom(
+                      foregroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                    child: const Text('Discard'),
+                  ),
                 ),
-                child: const Text('Save and Exit',
-                    style: TextStyle(color: Colors.white)),
-              ),
-            ],
-          ),
-        ],
+                const SizedBox(width: StudioSpacing.sm),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      onConfirm();
+                    },
+                    child: const Text('Save and Exit'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

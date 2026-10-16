@@ -66,28 +66,49 @@ class WaveformData {
       'WaveformData(channels: $channels, sampleRate: $sampleRate, samples: $totalSamples, duration: $duration)';
 }
 
-/// Zoom level data - pre-computed min/max samples for efficient rendering
+/// Either a precomputed zoom array or a lightweight tiled zoom descriptor.
+/// Metadata descriptors contain **no** per-pixel WaveformSample allocations.
 class ZoomLevel {
   final int samplesPerPixel;
-  final List<List<WaveformSample>> data; // [channel][pixel]
+  final List<List<WaveformSample>> data; // [channel][pixel], eager only
+  final int? _metadataPixelCount;
+  final int? _metadataChannels;
 
   ZoomLevel({
     required this.samplesPerPixel,
     required this.data,
-  });
+  }) : _metadataPixelCount = null,
+       _metadataChannels = null;
 
-  int get channels => data.length;
-  int get pixelCount => data.isEmpty ? 0 : data[0].length;
+  ZoomLevel.metadata({
+    required this.samplesPerPixel,
+    required int pixelCount,
+    required int channels,
+  }) : data = const <List<WaveformSample>>[],
+       _metadataPixelCount = pixelCount,
+       _metadataChannels = channels {
+    if (samplesPerPixel < 1 || pixelCount < 0 || channels < 1) {
+      throw ArgumentError('Invalid metadata-only waveform zoom level.');
+    }
+  }
+
+  bool get isMetadataOnly => _metadataPixelCount != null;
+  /// Actual resident WaveformSample buckets (not virtual timeline width).
+  int get materializedPixels =>
+      data.fold<int>(0, (count, channel) => count + channel.length);
+  int get channels => _metadataChannels ?? data.length;
+  int get pixelCount =>
+      _metadataPixelCount ?? (data.isEmpty ? 0 : data[0].length);
 
   /// Get sample data for a specific channel
   List<WaveformSample>? getChannelData(int channel) {
-    if (channel < 0 || channel >= channels) return null;
+    if (isMetadataOnly || channel < 0 || channel >= channels) return null;
     return data[channel];
   }
 
   /// Get sample at specific pixel for a channel
   WaveformSample? getSample(int channel, int pixel) {
-    if (channel < 0 || channel >= channels) return null;
+    if (isMetadataOnly || channel < 0 || channel >= channels) return null;
     if (pixel < 0 || pixel >= pixelCount) return null;
     return data[channel][pixel];
   }

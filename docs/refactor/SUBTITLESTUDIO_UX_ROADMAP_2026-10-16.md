@@ -1,0 +1,307 @@
+# SubtitleStudio UX roadmap — visual history, plain language, unified design, compact Edit Line
+
+> **CURRENT STATUS — October 16, 2026:** Since the historical three-skin
+> proposal below, the shipped refactor code now includes **four built-in
+> skins × Light/Dark/Classic**, including Carbon Zero as the default;
+> SKIN-4 R3-B live activation and R4–R8 device-feedback fixes are in place.
+> The latest Flutter gate is [R8 / 469 tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/38926044286).
+> The R7 Riverpod waveform lifecycle crash is user-confirmed resolved; R8
+> Marked Lines, floating playback and narrow waveform toolbar still require
+> follow-up device observation. The pending UX milestones remain **DESIGN-2/3
+> component consistency, SKIN-5/6 cross-screen QA, UX-2/3 plain-language
+> visual history, UX-4 compact Edit Line, SKIN-EXT-2/3 community skin import
+> and the web creator, then desktop workspace**. See the [current refactor
+> roadmap](REFACTOR_ROADMAP_V4.md) and [R8 status report](STUDIO_R8_MARKED_LINES_FAB_WAVEFORM_UI_2026-10-16.md).
+> Older sections below document their original requirements and should not be
+> read as contradicting completed checkpoints.
+
+> **SKIN-4 R3-A / DESIGN-2 contrast migration CI verified:** Theme-aware
+> Editor cards, shared Edit Line/Editor popup rows, formatting menus and
+> confirmation, unsaved-changes actions, and Edit Line app bar/dictionary
+> icons have been migrated with retained callbacks. The [successful Actions
+> run 38894453717](https://github.com/anzilr/SubtitleStudio/actions/runs/38894453717)
+> passed **429 tests with zero analyzer issues**. [Detailed R3-A audit/report](STUDIO_SKIN4_R3A_EDITOR_CONTRAST_2026-10-16.md).
+> Remaining dialogs, toolbar/icon foregrounds and confirmation sheets must
+> migrate before **R3-B global skin activation**; broader DESIGN-2/3 and
+> physical Android/Windows checks are pending.
+
+> **DESIGN-1 R4 component foundation verified:** All built-in skins and
+> legacy themes share Material defaults for sheets, dialogs, popups, dropdowns,
+> sliders and core button variants, with one reusable size/radius contract.
+> The subtitle actions sheet is the first feature-local migration pilot.
+> [CI run 38892274970](https://github.com/anzilr/SubtitleStudio/actions/runs/38892274970):
+> **424 tests passing, analyzer clean**. [UI contract and remaining audit](STUDIO_COMPONENT_SYSTEM_2026-10-16.md).
+> DESIGN-2 must still migrate the custom-painted/screen-specific controls
+> before global skins; DESIGN-3 physical Android/Windows reviews remain.
+
+> **Design-system consistency gate — October 16, 2026:** One uniform
+> set of modal sheets, dialogs, popups/context menus, dropdown menus,
+> sliders, segmented controls and button variants across **all nine**
+> appearances and future validated community skins. Avoid different radii,
+> icon sizes, button heights, scrim surfaces and unrelated decorative action
+> colors per screen. [Canonical component styles, audit and migration gates](STUDIO_COMPONENT_SYSTEM_2026-10-16.md):
+> DESIGN-0 inventory/contract, DESIGN-1 shared Material defaults in legacy
+> and new skins, DESIGN-2 incrementally remove local style overrides and
+> introduce reusable sheet/dialog/action primitives where required,
+> DESIGN-3 320dp/tablet/Windows/accessibility acceptance. First pilot:
+> subtitle action bottom sheet. Complete contrast-critical menu/dialog
+> migrations **before SKIN-4 R3 global palette activation**; remaining
+> consistency cleanup accompanies SKIN-5, final verification SKIN-6.
+> Current UI migration is **partial**; completion must be evidence-based.
+
+> **SKIN-4 R2 Edit Line readability pilot complete (October 16, 2026):**
+> Original/Edited subtitle field surfaces, labels, character counters, editing
+> actions and start/end timing inputs use semantic colors and visible focus
+> states; no more full-primary filled text boxes or faded white metadata.
+> Typography respects custom font preferences, and user typing/undo/validation
+> callbacks are preserved. [CI 38889494374](https://github.com/anzilr/SubtitleStudio/actions/runs/38889494374)
+> verified **422 passing tests; analyzer clean**. [R2 report with fixed-color
+> risk audit](STUDIO_SKIN4_CUE_FIELD_PILOT_2026-10-16.md).
+> **Next SKIN-4 R3** is the remaining Editor/menu/nav button contrast audit,
+> gated application-wide theme factory activation and Android/Windows
+> acceptance. The SKIN-3 appearance picker still previews/saves a skin but
+> does not yet recolor live Editor routes.
+
+> **SKIN-3 R1 COMPLETE — October 16, 2026:** The existing Settings
+> sheet now includes independent Light/Dark/Classic and built-in skin
+> selectors, nine reusable previews, a locally scoped editor mockup,
+> future **My skins** section, missing-skin safeguards and persistence errors.
+> Toolbar theme switching keeps the chosen skin and uses typed appearances.
+> [CI run 38872349945](https://github.com/anzilr/SubtitleStudio/actions/runs/38872349945)
+> passed **418 tests** and Flutter analysis. [SKIN-3 report](STUDIO_SKIN3_APPEARANCE_SETTINGS_2026-10-16.md).
+> Skin selections are **saved but preview-only** until SKIN-4 replaces
+> hard-coded Editor/Edit Line field styling; existing mode changes still use
+> legacy live themes. The app-side importer and web Skin Creator remain future
+> SKIN-EXT-2/3 milestones. Next visual work: **SKIN-4** neutral edit fields,
+> real-device IME/unsaved text checks, and controlled palette activation.
+
+> **SKIN-2 R2 complete (October 16, 2026):** Built-in and future
+> community skin IDs can now be stored as independent namespaced values
+> alongside `light/dark/classic` in one Isar Preferences row; real Isar
+> tests, guarded Riverpod startup, custom-font retention, rapid mode switching
+> and migration tests passed. [Verified quality gate 38870812828](https://github.com/anzilr/SubtitleStudio/actions/runs/38870812828):
+> **411 tests / 0 analyzer issues**. [Detailed report](STUDIO_SKIN2_PERSISTENCE_2026-10-16.md).
+> The current UI still uses legacy Material palettes until SKIN-4 fixes
+> Original/Edited text field semantics. **Next UX:** SKIN-3 Appearance Settings,
+> 3×3 built-in previews and independent selectors; community file importing and
+> the web Skin Creator remain later SKIN-EXT-2/3 phases.
+
+> **SKIN-EXT-1 COMPLETE, CI verified:** Community skin IDs, immutable
+> palette definitions/catalog, generic theme factory, import-file v1 JSON
+> validator, schema and tests are committed. [GitHub Actions 38868963345](https://github.com/anzilr/SubtitleStudio/actions/runs/38868963345):
+> **400 passing tests / zero analyzer issues**. This is **not** the website or
+> app importer. User-facing SKIN-EXT-2 import/export and SKIN-EXT-3 web creator
+> remain future UX stages; current production appearance remains unchanged.
+
+> **Community skins — future UX requirement:** SubtitleStudio is open source.
+> Users should eventually create, import, export, share and locally select their
+> own validated skins. The initial three built-in families remain Carbon & Jade,
+> Copper Cinema and Aster Violet, but the underlying factory must support any
+> installed **colors-only data skin** with Light/Dark/Classic. Future Settings
+> should distinguish **Built-in** and **My skins**, offer preview-before-import,
+> accessible contrast guidance, attribution, delete/replace confirmations and
+> recovery from missing skins. A client-side web Skin Creator can export
+> `.sskin.json` using [portable v1 rules](COMMUNITY_SKIN_FORMAT_V1.md) and a
+> [published machine-readable schema](../../schemas/subtitlestudio-skin-v1.schema.json).
+> **Importer and website are planned only**, not part of the current UI.
+
+> **SKIN-1 R2 COMPLETE (October 16, 2026):** The shared nine-theme
+> palette resolver, semantic field/caret/focus/selection tokens, and read-only
+> nine-preview gallery are implemented and [CI-verified with 392 passing
+> tests](https://github.com/anzilr/SubtitleStudio/actions/runs/38867646977)
+> (zero analyzer issues). The new theme resolver is **not yet wired to MainApp**;
+> no saved preferences or live editing widgets were changed. [Implementation
+> report](STUDIO_SKIN1_THEME_FOUNDATION_2026-10-16.md). Next: SKIN-2 safe
+> independent persistence/controller migration, then SKIN-3 Appearance Settings
+> and SKIN-4 text-field redesign before rollout.
+
+> **Three-skin UX architecture approved — October 16, 2026:** CP85 R6
+> Android stability is **user-confirmed complete**. The app will offer
+> **Carbon & Jade**, **Copper Cinema**, and **Aster Violet**, each with
+> **Light / Dark / Classic**, for **nine** appearance combinations.
+> Skin and appearance are **independently selected and persisted**; the
+> initial preview is **Carbon & Jade / Dark**. All nine combinations use
+> one semantic widget/component system, not nine unrelated UI layouts.
+> See the [approved architecture and implementation plan](STUDIO_SKINS_IMPLEMENTATION_PLAN_2026-10-16.md)
+> and [reference palette matrix](STUDIO_PALETTE_DECISION_2026-10-16.md).
+> No production theme/model/widget changes are included in this approval.
+> First pilot after token/persistence work: high-contrast Edit Line cue fields,
+> without the current primary-colored input backgrounds or forced white text.
+> Keep **Checkpoint 86 native waveform qualification** on the original
+> technical roadmap; appearance work is its own dependency-gated UX track.
+
+Date: 2026-10-16
+Branch: `refactor/riverpod-architecture`
+Status: **Approved roadmap requirements / proposed execution**, not implemented UI
+Related: [Refactor roadmap v4](REFACTOR_ROADMAP_V4.md), [Checkpoint 72 mobile history](CHECKPOINT72_MOBILE_HISTORY_INTEGRATION.md), [Checkpoint 73 history safety](CHECKPOINT73_HISTORY_SAFETY_AND_SCALE.md), [Desktop reuse audit](DESKTOP_WORKSPACE_REUSE_AUDIT_2026-10-12.md).
+
+## 0. Why this is needed and source audit
+
+New user requirements:
+1. A genuinely visual, usable checkpoint-history GUI, not only a list of technical commit cards.
+2. Replace Git jargon with understandable labels and explanations for nontechnical subtitle editors.
+3. Establish an exclusive, consistent SubtitleStudio visual language and palette across the app.
+4. Reorganize the mobile Edit Line screen to be compact, productive and keyboard-friendly.
+
+At this branch head, the history backend already provides an immutable `CheckpointHistoryGraph`, typed nodes, parent/child edges, current HEAD, attached branch, and named branch/bookmark references. `CheckpointHistoryPanel` still renders stacked cards, horizontal reference chips, and technical text including `HEAD`, `commit`, `detached`, `fork`, `branch`, and `checkout`. The classic checkpoint sheet is still available and has hardcoded orange/buttons.
+
+`AppThemes` currently mixes several unrelated colors across light/dark/classic themes; editing widgets also specify additional hard-coded colors. The Edit Line layout uses a dense app bar, fixed-height (~100 px) original/edited text blocks, many inline actions, and differing mobile split-video modes. Most application state is already Riverpod-backed. **Do not rewrite repositories, checkpoint persistence, Media Kit or Isar to do UX work.**
+
+The approved three-skin visual system and copy are *not* part of the already completed 85 checkpoint fixes. The latest Android regression fixes, Project Settings encoding selector, and Riverpod disposal patch must be quality-gated before any large UI migration.
+
+## 1. Product UX principles and guardrails
+
+- Subtitle creation comes first: text editing, timings, playback, save, previous/next, comments and keyboard focus must remain one interaction away.
+- Reduce visual noise through progressive disclosure, not by removing functions. Overflow, tool sheets, search, accessibility and keyboard shortcuts preserve less common operations.
+- Design mobile portrait first, preserve fullscreen landscape video and editing-dialog round trips, then adapt to Android tablets and desktop independently.
+- Use *one* semantic token system for all surfaces; allow light, dark and existing saved theme preferences during migration; never infer state from color alone.
+- Plain language in visible UI; preserve `HEAD`, `refs/heads/*`, `checkpointId`, branch tips and all existing history transactional checks in the model, export and logs.
+- No destructive rewrite or migration of Isar checkpoint records, ID, ancestry, branch references or portable `.msone` documents. History GUI consumes read-only view models and the same `HistoryGraphCommands`.
+- Keep changes in `refactor/riverpod-architecture`; don't alter main/development/release tags. Scope UI refactors to isolated commits and run analyzer/tests at deliberate gates (about every 8–10 commits or after risky changes).
+
+## 2. Studio design language — proposed brand direction
+
+Working name: **SubtitleStudio / Frame & Cue**. Signature graphic: a tiny timeline tick + subtitle cue line, reused sparingly in navigation, history and waveform. Minimal, calm, precise, distinctly editing-oriented; no broad gradients or rainbow-coded toolbars.
+
+### Historical UX-1 blue draft (SUPERSEDED by the approved three-skin matrix)
+
+The following table documents the **old blue UX-1 baseline** for migration comparison only; **do not use these values as the final palette**. New UI colors must be resolved from the 9 palettes in [the approved palette matrix](STUDIO_PALETTE_DECISION_2026-10-16.md) and semantic roles in [the implementation plan](STUDIO_SKINS_IMPLEMENTATION_PLAN_2026-10-16.md).
+
+| Role | Light | Dark | Use |
+| --- | --- | --- | --- |
+| App background | `#F6F8FC` | `#111A2C` | Editing canvas and overall chrome |
+| Raised/sheet surface | `#FFFFFF` | `#19243A` | Cards, dialogs, panels |
+| Primary text | `#17223B` | `#EEF2FA` | Content, headings |
+| Brand primary | `#5268D9` | `#A9B6FF` | Main actions, focus, active selection |
+| Editing accent | `#188579` | `#62DBCA` | Playhead / positive editing highlights |
+| Attention/unsaved | `#D99B37` | `#F2B85B` | Caution and important markers (not alone) |
+| Error/danger | Material semantic `error` role | Material semantic `error` role | Failed save / destructive action |
+| Outline/muted | ColorScheme outline variants | ColorScheme outline variants | Dividers, inactive controls |
+
+Color accessibility rules: light primary `#5268D9` is intended for white text; dark primary `#A9B6FF` needs dark text, not white. The teal/amber highlight roles require contrast-aware foreground choices. Do not use these raw hex codes as scattered constants: create light/dark `ColorScheme` and a `ThemeExtension` for additional subtitle editor semantics (current cue, edited cue, waveform, graph lanes, marked cue, saved indicator). Verify WCAG contrast against all foreground/background pairs in tests.
+
+### Token and component system
+
+- `StudioColors` / `StudioThemeExtension`: only semantic roles, never numbered colors in feature widgets.
+- `StudioSpacing`: 4/8/12/16/24/32; radius 8 inputs, 12 cards, 16 sheets; touch targets at least 48 logical px; icon sizes 20/24.
+- `StudioTypography`: title, cue text, timestamp (tabular numbers), metadata, label, caption; Malayalam/Unicode, RTL and custom-font fallback testing.
+- Core components: `StudioScaffold`, `StudioTopBar`, `StudioCard`, `StudioSectionHeader`, `StudioIconAction`, `StudioPrimaryButton`, `StudioSheet`, `StudioCueField`, `StudioTimeField`, `StudioStatusChip`, `StudioEmptyState`, `StudioConfirmDialog`.
+- Centralize focus/error/disabled/loading treatment, snackbar/dialog styling, bottom sheets, selection, navigation and motion. Honor reduced-motion and large text.
+- Keep light/dark/classic preference data and user-loaded fonts readable; avoid breaking older saved settings. Decide whether legacy Classic remains selectable after migration only after testing.
+
+**Approved skin/mode rollout:** SKIN-0 decision → SKIN-1 resolver/tokens → SKIN-2 independently persistent Isar-backed values → SKIN-3 Appearance Settings/mode cycler → SKIN-4 Edit Line cue fields → SKIN-5 app-wide consistency → SKIN-6 verification. See [implementation plan](STUDIO_SKINS_IMPLEMENTATION_PLAN_2026-10-16.md).
+
+**Rollout order:** inventory/screenshots of Home, Edit, Edit Line, History, Project Settings, Import/Export, Source View, player/waveform and tools → implement tokens and component gallery → migrate one pilot surface (Edit Line or History) behind an opt-in internal flag → migrate all other surfaces in small batches → retire scattered constants and duplicated widgets after regressions pass.
+
+## 3. History GUI — **Edit History / Version Map**
+
+### Surface and interaction
+
+- **Top:** `Edit history`, current version, short plain-language status, actions `Save version`, `Help`.
+- **Tabs or segment:** `Timeline` (default on mobile) and `Version map` (branch lane visualization). Optional `All / Saved / Pinned` filters and search; default show recent without hiding older routes.
+- **History rows:** short readable action title, relative/absolute time (accessible timestamp), icon, current/saved/pinned markers, preview/restore action. A compact left rail shows connected version nodes/paths; use color **and** different marker geometry/line style. Avoid displaying internal IDs as primary labels.
+- **Branch map:** horizontal lanes only when alternative edit paths exist, with connecting curves and visible junctions; show a narrow horizontally scrollable lane area or adaptive full-screen viewer for large graphs. User selects a node to open a *details/action* sheet, not restore on single tap.
+- **Details sheet:** version title, timestamp, what changed (only if actual data is available), named editing path, pinned labels; `Continue editing from this version`, `Pin this version`, `Create another editing path`. Implement an actual before/after subtitle diff **only after** there is a safe, lazy historical diff API; do not simulate it from operation description alone.
+- **Restore flow:** confirmation explicitly states current editing location changes; existing alternate paths are retained subject to retention policy, that new edits may form another path, and unsaved changes must be resolved. Do not promise permanent retention of unreferenced history.
+- **Progress/errors:** show loading, empty, corruption/inconsistent graph, stale revision, retries and cancellation gracefully. Guard against double submission and stale HEAD like the existing transactional UI.
+
+### Rendering architecture
+
+- Retain `CheckpointHistoryGraph`, `HistoryGraphNode` and `HistoryGraphCommands`; add a pure deterministic `HistoryLaneLayout` that accepts immutable graph data and returns positioned nodes/edges/labels.
+- Use a small `CustomPainter` for **visible lane connectors** and lazily built rows/cards for text and tap targets. Compute lane positions once per graph revision, not on every frame; limit painter work to the viewport.
+- Rows should have predictable heights; expand details in a separate sheet rather than making all graph rows expensive. Preserve scroll and selection across filter/map mode switches; provide a plain linear accessible list alternative.
+- Test long branching histories (at least existing 2,501-node fixture), backdated timestamps, disconnected corrupt refs rejection, multiple names per node, refresh while scrolling, transaction conflicts, text scaling, RTL and screen readers.
+- On desktop later, reuse layout algorithm but present it in a dock/panel; do not clone history business logic.
+
+### Terminology changes (UI strings only)
+
+| Existing technical term | Proposed default user label | Essential truthful meaning |
+| --- | --- | --- |
+| Checkpoint / commit | Version / saved change | A recorded editing state |
+| HEAD | Current version | Version used for subsequent edits |
+| Attached to branch | Editing on path `[name]` | Named path that advances with edits |
+| Detached HEAD | Editing from an earlier version | This is an active editing position; new edits form a separate path until selecting a named path |
+| Branch | Editing path | Alternate chain of versions |
+| Fork / children | Other editing paths | More than one continuation from a version |
+| Checkout commit | Continue editing from this version | Changes the active editing state; not a read-only preview |
+| Switch branch | Switch editing path | Changes the active editing path/version |
+| Bookmark | Pin version | A lightweight reference to existing data; not a backup copy |
+| Create branch | Start another editing path | Named continuation/reference |
+| Save Point (creates checkpoint) | Save version | Creates a new recorded history entry |
+| Snapshot (full state) | Save full version | Creates a full history state **if** the underlying action does so; explicitly not an exported backup |
+| Root / parent | First version / Previous version | Position in the graph |
+| Delete bookmark or branch | Remove pin / Remove path label | May make unreferenced history eligible for future cleanup; not always equivalent to deleting data |
+
+Terminology requires one `HistoryCopy` catalog, accessible descriptions and tooltips, and consistent use across history sheet, dialogs, Help, search and notifications. Provide an optional developer/advanced detail pane for exact IDs, HEAD and refs instead of exposing them to everyone. Validate ambiguous words such as `Restore` vs `Continue editing` with usability testing before locking translations.
+
+**Do not label a history Save Point or pinned version as a backup file.**
+
+## 4. Edit Line — compact, productive portrait-first proposal
+
+### Mobile portrait wireframe (layout proposal, not implementation)
+
+```text
+┌────────────────────────────────────────┐
+│ ←   Line 128 / 842       ♧  ⋯     Save │  short stable top bar
+├────────────────────────────────────────┤
+│ ▷ Video preview    00:04:21   ▾       │  optional compact/collapsible
+│ [mini media player, ~140–180dp]        │
+├────────────────────────────────────────┤
+│ IN  00:04:19,120   OUT  00:04:22,300 │  one-row timing; expand for detail
+│          ↺ Sync       ± Shift        │
+├────────────────────────────────────────┤
+│ ORIGINAL                   Copy   ▾   │  read-only/expand; translation mode
+│ This is the source subtitle ...        │
+├────────────────────────────────────────┤
+│ TRANSLATION / EDITED                   │
+│                                        │
+│ Main text editor (grows with viewport) │
+│                                        │
+│                        28 / 42 chars  │
+├────────────────────────────────────────┤
+│ B  I  Color  Align  Dict  ⋯           │  fixed formatting strip above IME
+├────────────────────────────────────────┤
+│ ◀ Previous       ▶ Play       Next ▶   │  compact navigation/transport
+└────────────────────────────────────────┘
+```
+
+### Behavioral recommendations
+
+1. **Stable top:** Back with unsaved-edits guard, line index/total, marked/comment state and explicit Save; move theme switch and rare actions to More. Keep saving/error state visible, disable double-save.
+2. **Video as optional tool:** collapsed compact transport when keyboard opens, expandable 16:9 preview when needed, fullscreen via existing player. Hide video without leaving a blank 240 px placeholder; no rebuilding/reparenting `VideoPlayerWidget` between simultaneous GlobalKey owners.
+3. **Timing immediately accessible:** start/end display as compact paired fields, tap to enter exact timing or use +/- frames/milliseconds; Sync-to-playhead available. Do not lose keyboard timing precision or video seek logic.
+4. **Original/edited focus:** original is typically read-only/collapsible in translation mode; in edit mode keep existing original/edit permissions and do not invent a second simultaneous editing surface. Edited field gets flexible vertical space, selectable Unicode text, line break support, char/line guidance, and undo/redo.
+5. **Action priority:** permanent formatting row for bold/italic/color/alignment and More; Dictionary/AI/sync/normalization/marking/comment remain reachable via a labeled action sheet or menu. Avoid tiny icon-only clusters; all actions get tooltips/semantics.
+6. **Bottom navigation:** Prev / Play–Pause / Next, with current Auto-Save on navigation semantics preserved; prompt on unsaved changes when required. Support one-hand mobile use without accidental taps.
+7. **Keyboard-aware:** on IME opening keep edited field and formatting strip visible; video may collapse, navigation row can temporarily hide; no layout jump, focus reset or full-editor rebuild for each keyboard frame. Maintain selection and cursor during rotation.
+8. **Desktop/tablet:** reuse editing field, timing controls and command models in a new resizable pane; no extra mobile Media Kit state owner. A future dedicated desktop workspace remains a separate roadmap workstream.
+
+### Reuse strategy
+
+Extract widgets by responsibility from `lib/screens/edit_line/parts/edit_line_layout.dart` and `edit_line_{original,edited,time}_section.dart`: `EditLineHeader`, `EditLineVideoHeader`, `EditLineTimingBar`, `EditLineSourcePane`, `EditLineTargetEditor`, `EditLineFormattingBar`, `EditLineNavigationBar`. Maintain `EditLineController` and existing persistence, playback callbacks, shortcuts, check/validation logic; consolidate duplicate video callback construction only with regression coverage. Add a pure view-mode/layout-state model so orientation does not accidentally rebuild/dispose the player.
+
+## 5. Phased rollout and quality gates (proposed, checkpoint numbers TBD)
+
+| Stage | Deliverable | Gate before proceeding |
+| --- | --- | --- |
+| UX-0: baseline | Finish Android CP85 encoding and Riverpod disposal verification; capture light/dark Android editor/history screenshots; inventory inconsistent colors and screens | Clean analyzer, targeted tests, device smoke check |
+| UX-1: foundation | Design tokens, theme extensions, typography, icon/action/sheet/form components and design guidelines; extend for nine skin/mode combinations in SKIN-1–3 | Widget/golden tests for all nine combinations, contrast, Unicode/custom-font/large-text, persistence/migration |
+| UX-2: history words | Plain-label catalog, action explanations, confirmations, Help updates; use existing history actions | Exact underlying branch/HEAD behavior unchanged, stale-HEAD and no-data-loss tests |
+| UX-3: history visualization | Mobile timeline lane rail + optional true branch map, node details; maintain classic fallback temporarily | Deterministic lane layout, >=2,501 nodes, performance, semantics, Android portrait/landscape |
+| UX-4: Edit Line pilot | New compact mobile composition behind opt-in toggle; reuse existing controller/Media Kit | Save/cancel/back, marks/comments, edit vs translate, timing, IME, rotation, seek, test with/without video |
+| UX-5: app-wide rollout | Home/Editor/Import-Export/Project Settings/Source View/tools converted to shared components, one surface per batch | Screenshot comparisons, golden widget tests, navigation, no new hard-coded color exceptions |
+| UX-6: consolidation | Retire redundant theme constants/widgets, old history fallback only after parity, publish style guide | Android/Windows smoke, analyzer/tests; eventual deliberate five-platform gate before upstream PR |
+
+**Sequence with existing technical roadmap:** finish Checkpoint 85 and experimental waveform native testing first, or run the low-risk UX-1 token work in a separate small branch while waveform tests proceed. Avoid a simultaneous wholesale media-player redesign. Finish history terminology and graph work before visually replacing old history screens; pilot Edit Line after theme tokens are stable. Complete major UX changes before the dedicated desktop shell, which reuses the same styles and underlying editor services.
+
+## 6. Explicit acceptance checklist
+
+- [ ] Normal users can identify their current version, pinned version, and different editing paths without knowing Git.
+- [ ] History never silently deletes earlier paths on `Continue editing` or deleting a label; explanatory copy describes retention behavior accurately.
+- [ ] Full history visually represents split and reunion **only if represented in actual data**; parent/child graph integrity is preserved. No fake diff or merge edge.
+- [ ] Light/dark mode, custom fonts, Malayalam, long filenames, 200% text and accessibility navigation remain usable.
+- [ ] Tokens/style cover Home, Edit, Edit Line, History, Source View, Project Settings, Import/Export, player/waveform and major tool sheets.
+- [ ] Edit Line portrait offers original text, editable translation, timecodes, player, mark/comment, formatting and navigation without scrolling through unrelated actions.
+- [ ] No unsaved edits are lost with Next/Previous, Back, keyboard, rotation, dialogs or fullscreen video comment.
+- [ ] Large history graphs/long subtitle files do not block input or repaint the entire graph during playhead updates.
+- [ ] Android and Windows native tests are recorded; cross-platform behavior is not asserted from Linux CI alone.

@@ -45,19 +45,31 @@ class StartupPermissionManager {
       }
 
       if (permissionStatus.needsRequest) {
-        // Show explanation dialog before requesting permissions
-        final shouldRequest = await _showPermissionExplanationDialog(context, permissionStatus);
-        
+        if (!context.mounted) return true;
+
+        final shouldRequest = await _showPermissionExplanationDialog(
+          context,
+          permissionStatus,
+        );
+
+        if (!context.mounted) return true;
+
         if (!shouldRequest) {
-          // User chose not to grant permissions
-          return _handlePermissionsDenied(context, permissionStatus);
+          return await _handlePermissionsDenied(
+            context,
+            permissionStatus,
+          );
         }
 
-        // Request the permissions
         final granted = await _requestMissingPermissions(permissionStatus);
-        
+
+        if (!context.mounted) return true;
+
         if (!granted) {
-          return _handlePermissionsDenied(context, permissionStatus);
+          return await _handlePermissionsDenied(
+            context,
+            permissionStatus,
+          );
         }
       }
 

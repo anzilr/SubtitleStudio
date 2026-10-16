@@ -24,6 +24,7 @@ class CustomButtonGrid extends StatelessWidget {
       itemBuilder: (context, index) {
         final button = buttons[index];
         return _buildButton(
+          context: context,
           name: button.name,
           icon: button.icon,
           onTap: button.onTap,
@@ -39,18 +40,19 @@ class CustomButtonGrid extends StatelessWidget {
   /// - [icon]: The IconData to display
   /// - [onTap]: Callback function executed when button is pressed
   Widget _buildButton({
+    required BuildContext context,
     required String name,
     required IconData icon,
     required VoidCallback onTap,
   }) {
     return Material(
-      color: const Color.fromARGB(255, 1, 54, 64),
+      color: Theme.of(context).colorScheme.primary,
       elevation: 5,
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(10),
-        splashColor: Colors.blue.withValues(alpha: 0.2), // Splash effect color
+        splashColor: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2), // Splash effect color
         child: Container(
           padding: const EdgeInsets.all(6),
           child: Column(
@@ -58,7 +60,7 @@ class CustomButtonGrid extends StatelessWidget {
             children: [
               // Button icon
               Icon(icon,
-                  size: 18, color: const Color.fromARGB(255, 255, 255, 255)),
+                  size: 18, color: Theme.of(context).colorScheme.onPrimary),
               const SizedBox(height: 1),
               // Button label
               Text(
@@ -66,7 +68,7 @@ class CustomButtonGrid extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: const Color.fromARGB(255, 255, 255, 255),
+                  color: Theme.of(context).colorScheme.onPrimary,
                 ),
                 textAlign: TextAlign.center,
               ),

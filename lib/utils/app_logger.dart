@@ -21,6 +21,7 @@
 // - Adapt file operations to iOS sandbox restrictions
 // - Use iOS-native error reporting systems
 
+import 'dart:async';                           // Timers and unawaited futures
 import 'dart:io';                              // File system operations
 import 'dart:convert';                         // JSON encoding for structured logs
 import 'package:flutter/foundation.dart';     // Flutter debugging utilities
@@ -66,7 +67,7 @@ enum LogLevel {
 /// 
 /// **System Integration:**
 /// - Flutter error handler override for crash logging
-/// - Device information collection (OS, device model, etc.)
+/// - Coarse device information collection (platform, model, OS version)
 /// - App version and build information logging
 /// - Performance timing and monitoring
 /// 
@@ -102,10 +103,17 @@ class AppLogger {
   String? _deviceInfo;               // Cached device information
   String? _appInfo;                  // Cached app version information
   bool _isInitialized = false;       // Initialization state flag
-  
+
+  // Buffered file logging keeps frequent editor/search events off the hot path.
+  final List<String> _pendingEntries = <String>[];
+  Timer? _flushTimer;
+  Future<void> _flushChain = Future<void>.value();
+
   // Configuration constants
   static const int maxLogFileSize = 5 * 1024 * 1024; // 5MB per log file
   static const int maxLogFiles = 3;                   // Keep last 3 log files only
+  static const int _flushEntryThreshold = 24;
+  static const Duration _flushDelay = Duration(milliseconds: 750);
   
   /// Initialize the logging system
   /// This should be called early in main() function
@@ -197,22 +205,34 @@ class AppLogger {
         deviceData['version'] = androidInfo.version.release;
         deviceData['sdkInt'] = androidInfo.version.sdkInt;
         deviceData['brand'] = androidInfo.brand;
-        deviceData['device'] = androidInfo.device;
-        deviceData['hardware'] = androidInfo.hardware;
-        deviceData['product'] = androidInfo.product;
       } else if (Platform.isIOS) {
         final iosInfo = await deviceInfo.iosInfo;
         deviceData['platform'] = 'iOS';
         deviceData['model'] = iosInfo.model;
-        deviceData['name'] = iosInfo.name;
         deviceData['systemVersion'] = iosInfo.systemVersion;
         deviceData['localizedModel'] = iosInfo.localizedModel;
       } else if (Platform.isWindows) {
         final windowsInfo = await deviceInfo.windowsInfo;
         deviceData['platform'] = 'Windows';
-        deviceData['computerName'] = windowsInfo.computerName;
         deviceData['numberOfCores'] = windowsInfo.numberOfCores;
-        deviceData['systemMemoryInMegabytes'] = windowsInfo.systemMemoryInMegabytes;
+        deviceData['systemMemoryInMegabytes'] =
+            windowsInfo.systemMemoryInMegabytes;
+      } else if (Platform.isMacOS) {
+        final macInfo = await deviceInfo.macOsInfo;
+        deviceData['platform'] = 'macOS';
+        deviceData['model'] = macInfo.model;
+        deviceData['modelName'] = macInfo.modelName;
+        deviceData['arch'] = macInfo.arch;
+        deviceData['osRelease'] = macInfo.osRelease;
+        deviceData['activeCPUs'] = macInfo.activeCPUs;
+        deviceData['memorySize'] = macInfo.memorySize;
+      } else if (Platform.isLinux) {
+        final linuxInfo = await deviceInfo.linuxInfo;
+        deviceData['platform'] = 'Linux';
+        deviceData['name'] = linuxInfo.name;
+        deviceData['version'] = linuxInfo.version;
+        deviceData['prettyName'] = linuxInfo.prettyName;
+        deviceData['versionId'] = linuxInfo.versionId;
       }
       
       _deviceInfo = jsonEncode(deviceData);
@@ -230,7 +250,6 @@ class AppLogger {
         'packageName': packageInfo.packageName,
         'version': packageInfo.version,
         'buildNumber': packageInfo.buildNumber,
-        'buildSignature': packageInfo.buildSignature,
       };
       
       _appInfo = jsonEncode(appData);
@@ -239,32 +258,100 @@ class AppLogger {
     }
   }
 
-  /// Setup Flutter error handling to catch uncaught errors
+  /// Setup Flutter error handling to catch uncaught errors.
+  ///
+  /// Chain any existing handlers instead of replacing them. This keeps crash
+  /// reporting, framework console output, and host integrations working while
+  /// AppLogger records the same failure.
   void _setupFlutterErrorHandling() {
-    // Catch Flutter framework errors
+    final previousFlutterErrorHandler = FlutterError.onError;
+    final previousPlatformErrorHandler = PlatformDispatcher.instance.onError;
+
     FlutterError.onError = (FlutterErrorDetails details) {
-      // Log the error
-      fatal(
-        'Flutter Error: ${details.exception}',
-        stackTrace: details.stack,
-        context: 'FlutterError.onError',
+      unawaited(
+        fatal(
+          'Flutter Error: ${details.exception}',
+          stackTrace: details.stack,
+          context: 'FlutterError.onError',
+        ),
       );
-      
-      // Call the default error handler in debug mode
-      if (kDebugMode) {
+
+      if (previousFlutterErrorHandler != null) {
+        previousFlutterErrorHandler(details);
+      } else {
         FlutterError.presentError(details);
       }
     };
 
-    // Catch errors not handled by Flutter framework
     PlatformDispatcher.instance.onError = (error, stackTrace) {
-      fatal(
-        'Uncaught Error: $error',
-        stackTrace: stackTrace,
-        context: 'PlatformDispatcher.onError',
+      unawaited(
+        fatal(
+          'Uncaught Error: $error',
+          stackTrace: stackTrace,
+          context: 'PlatformDispatcher.onError',
+        ),
       );
-      return true;
+
+      return previousPlatformErrorHandler?.call(error, stackTrace) ?? true;
     };
+  }
+
+  String _redactSensitiveText(String value) {
+    var redacted = value;
+
+    final homeCandidates = <String?>[
+      Platform.environment['HOME'],
+      Platform.environment['USERPROFILE'],
+      if (Platform.environment['HOMEDRIVE'] != null &&
+          Platform.environment['HOMEPATH'] != null)
+        '${Platform.environment['HOMEDRIVE']}'
+        '${Platform.environment['HOMEPATH']}',
+    ];
+
+    for (final home in homeCandidates) {
+      if (home == null || home.trim().isEmpty) continue;
+
+      final variants = <String>{
+        home,
+        home.replaceAll('\\', '/'),
+        home.replaceAll('/', '\\'),
+      };
+
+      for (final variant in variants) {
+        if (variant.isNotEmpty) {
+          redacted = redacted.replaceAll(variant, '<user-home>');
+        }
+      }
+    }
+
+    // Common credential-shaped values. This is deliberately conservative:
+    // keep the key/label for diagnostics while hiding its value.
+    redacted = redacted.replaceAllMapped(
+      RegExp(
+        r'(token|api[_ -]?key|authorization|secret)'
+        r'(\s*[:=]\s*)([^\s,;]+)',
+        caseSensitive: false,
+      ),
+      (match) => '${match.group(1)}${match.group(2)}<redacted>',
+    );
+
+    return redacted;
+  }
+
+  Object? _redactExtraValue(Object? value) {
+    if (value is String) return _redactSensitiveText(value);
+    if (value is Map) {
+      return value.map(
+        (key, nested) => MapEntry(
+          key.toString(),
+          _redactExtraValue(nested),
+        ),
+      );
+    }
+    if (value is Iterable) {
+      return value.map(_redactExtraValue).toList(growable: false);
+    }
+    return value;
   }
 
   /// Format log entry with timestamp, level, and message
@@ -276,19 +363,19 @@ class AppLogger {
     final timestamp = DateTime.now().toIso8601String();
     final buffer = StringBuffer();
     
-    buffer.writeln('[$timestamp] [${level.name}] $message');
+    buffer.writeln('[$timestamp] [${level.name}] ${_redactSensitiveText(message)}');
     
     if (context != null) {
-      buffer.writeln('  Context: $context');
+      buffer.writeln('  Context: ${_redactSensitiveText(context)}');
     }
     
     if (extra != null && extra.isNotEmpty) {
-      buffer.writeln('  Extra: ${jsonEncode(extra)}');
+      buffer.writeln('  Extra: ${jsonEncode(_redactExtraValue(extra))}');
     }
     
     if (stackTrace != null) {
       buffer.writeln('  Stack Trace:');
-      buffer.writeln(stackTrace.toString().split('\n').map((line) => '    $line').join('\n'));
+      buffer.writeln(_redactSensitiveText(stackTrace.toString()).split('\n').map((line) => '    $line').join('\n'));
     }
     
     buffer.writeln(''); // Empty line for readability
@@ -296,46 +383,94 @@ class AppLogger {
     return buffer.toString();
   }
 
-  /// Write log entry to file and console
-  Future<void> _writeLog(LogLevel level, String message, {
+  /// Queue a log entry for serialized batched file output.
+  Future<void> _writeLog(
+    LogLevel level,
+    String message, {
     String? context,
     StackTrace? stackTrace,
     Map<String, dynamic>? extra,
   }) async {
     if (!_isInitialized && level != LogLevel.fatal) {
-      // For non-fatal logs, try to initialize if not done yet
       await initialize();
     }
-    
-    final logEntry = _formatLogEntry(
-      level,
-      message,
-      context: context,
-      stackTrace: stackTrace,
-      extra: extra,
-    );
-    
-    // Always print to console in debug mode
+
+    // Verbose debug logs are useful during development but should not create
+    // production disk I/O.
+    if (level == LogLevel.debug && !kDebugMode) {
+      return;
+    }
+
+    late final String logEntry;
+    try {
+      logEntry = _formatLogEntry(
+        level,
+        message,
+        context: context,
+        stackTrace: stackTrace,
+        extra: extra,
+      );
+    } catch (e) {
+      debugPrint('Failed to format log entry: $e');
+      return;
+    }
+
     if (kDebugMode) {
       debugPrint(logEntry.trim());
     }
-    
-    // Write to file if available
-    try {
-      if (_logFile != null) {
-        await _logFile!.writeAsString(logEntry, mode: FileMode.append);
-        
-        // Check if we need to rotate the log file
-        final size = await _logFile!.length();
+
+    if (_logFile == null) return;
+
+    _pendingEntries.add(logEntry);
+
+    final shouldFlushImmediately =
+        level.value >= LogLevel.error.value ||
+        _pendingEntries.length >= _flushEntryThreshold;
+
+    if (shouldFlushImmediately) {
+      await _flushPendingLogs();
+    } else {
+      _scheduleFlush();
+    }
+  }
+
+  void _scheduleFlush() {
+    if (_flushTimer?.isActive == true) return;
+
+    _flushTimer = Timer(_flushDelay, () {
+      _flushTimer = null;
+      unawaited(_flushPendingLogs());
+    });
+  }
+
+  /// Serializes file appends so concurrent callers cannot interleave writes.
+  Future<void> _flushPendingLogs() {
+    _flushTimer?.cancel();
+    _flushTimer = null;
+
+    _flushChain = _flushChain.then((_) async {
+      final file = _logFile;
+      if (file == null || _pendingEntries.isEmpty) return;
+
+      final batch = _pendingEntries.join();
+      _pendingEntries.clear();
+
+      try {
+        await file.writeAsString(batch, mode: FileMode.append);
+
+        final size = await file.length();
         if (size > maxLogFileSize) {
           final directory = await getApplicationSupportDirectory();
-          final appLogsDir = Directory('${directory.path}/Subtitle Studio/logs');
+          final appLogsDir =
+              Directory('${directory.path}/Subtitle Studio/logs');
           await _rotateLogsIfNeeded(appLogsDir);
         }
+      } catch (e) {
+        debugPrint('Failed to write log batch: $e');
       }
-    } catch (e) {
-      debugPrint('Failed to write to log file: $e');
-    }
+    });
+
+    return _flushChain;
   }
 
   /// Log debug message
@@ -431,6 +566,7 @@ class AppLogger {
   /// Share logs with developer or support
   /// This creates a comprehensive log report and saves it to the documents directory
   Future<String> exportLogsToFile({String? fileName}) async {
+    await _flushPendingLogs();
     try {
       final logFiles = await getLogFiles();
       
@@ -592,6 +728,7 @@ class AppLogger {
 
   /// Clear all log files
   Future<void> clearLogs() async {
+    await _flushPendingLogs();
     try {
       final logFiles = await getLogFiles();
       
@@ -614,6 +751,7 @@ class AppLogger {
 
   /// Get log statistics
   Future<Map<String, dynamic>> getLogStats() async {
+    await _flushPendingLogs();
     try {
       final logFiles = await getLogFiles();
       

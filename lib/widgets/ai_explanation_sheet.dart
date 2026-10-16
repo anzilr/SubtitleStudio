@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart' show ConsumerStatefulWidget, ConsumerState, ProviderScope;
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
-import 'package:provider/provider.dart';
 import 'package:flutter_gemini/flutter_gemini.dart';
-import 'package:subtitle_studio/features/ai_explanation/ai_explanation_cubit.dart';
+import 'package:subtitle_studio/features/ai_explanation/ai_explanation_controller.dart';
 import 'package:subtitle_studio/features/ai_explanation/ai_explanation_state.dart';
-import 'package:subtitle_studio/database/models/preferences_model.dart';
-import 'package:subtitle_studio/themes/theme_provider.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/services/gemini_models_service.dart';
 
@@ -38,7 +36,6 @@ Keep the explanation concise and easy to understand.''';
   /// Show AI explanation for the given text with optional context
   static Future<void> show({
     required BuildContext context,
-    required AiExplanationCubit aiExplanationCubit,
     required String currentText,
     List<String>? previousLines,
     List<String>? nextLines,
@@ -58,7 +55,9 @@ Keep the explanation concise and easy to understand.''';
     }
 
     // Check if API key is configured
-    final apiKey = await PreferencesModel.getGeminiApiKey();
+    final apiKey = await ProviderScope.containerOf(context)
+        .read(aiExplanationPreferencesRepositoryProvider)
+        .getGeminiApiKey();
     if (apiKey == null || apiKey.isEmpty) {
       if (!context.mounted) return;
       SnackbarHelper.showError(
@@ -75,7 +74,6 @@ Keep the explanation concise and easy to understand.''';
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => _AiExplanationSheetContent(
-        aiExplanationCubit: aiExplanationCubit,
         currentText: currentText,
         initialPreviousLines: previousLines ?? [],
         initialNextLines: nextLines ?? [],
@@ -124,8 +122,7 @@ Keep the explanation concise and easy to understand.''';
 }
 
 /// Stateful content widget for the AI Explanation Sheet
-class _AiExplanationSheetContent extends StatefulWidget {
-  final AiExplanationCubit aiExplanationCubit;
+class _AiExplanationSheetContent extends ConsumerStatefulWidget {
   final String currentText;
   final List<String> initialPreviousLines;
   final List<String> initialNextLines;
@@ -135,7 +132,6 @@ class _AiExplanationSheetContent extends StatefulWidget {
   final List<String>? editedAllLines;
 
   const _AiExplanationSheetContent({
-    required this.aiExplanationCubit,
     required this.currentText,
     required this.initialPreviousLines,
     required this.initialNextLines,
@@ -146,10 +142,10 @@ class _AiExplanationSheetContent extends StatefulWidget {
   });
 
   @override
-  State<_AiExplanationSheetContent> createState() => _AiExplanationSheetContentState();
+  ConsumerState<_AiExplanationSheetContent> createState() => _AiExplanationSheetContentState();
 }
 
-class _AiExplanationSheetContentState extends State<_AiExplanationSheetContent> {
+class _AiExplanationSheetContentState extends ConsumerState<_AiExplanationSheetContent> {
   bool _isEditingPrompt = false;
   late TextEditingController _promptController;
   String? _customPrompt;
@@ -177,9 +173,10 @@ class _AiExplanationSheetContentState extends State<_AiExplanationSheetContent> 
   }
 
   Future<void> _loadSettings() async {
-    final prompt = await PreferencesModel.getAiExplanationPrompt();
-    final model = await PreferencesModel.getGeminiModel();
-    final contextLines = await PreferencesModel.getAiExplanationContextLines();
+    final preferences = ref.read(aiExplanationPreferencesRepositoryProvider);
+    final prompt = await preferences.getAiExplanationPrompt();
+    final model = await preferences.getGeminiModel();
+    final contextLines = await preferences.getAiExplanationContextLines();
     
     setState(() {
       _customPrompt = prompt;
@@ -242,7 +239,9 @@ class _AiExplanationSheetContentState extends State<_AiExplanationSheetContent> 
   }
 
   Future<void> _savePrompt() async {
-    await PreferencesModel.setAiExplanationPrompt(_promptController.text);
+    await ref
+        .read(aiExplanationPreferencesRepositoryProvider)
+        .setAiExplanationPrompt(_promptController.text);
     setState(() {
       _customPrompt = _promptController.text;
       _isEditingPrompt = false;
@@ -252,7 +251,9 @@ class _AiExplanationSheetContentState extends State<_AiExplanationSheetContent> 
   }
 
   Future<void> _resetPrompt() async {
-    await PreferencesModel.setAiExplanationPrompt(null);
+    await ref
+        .read(aiExplanationPreferencesRepositoryProvider)
+        .setAiExplanationPrompt(null);
     setState(() {
       _customPrompt = null;
       _promptController.text = AiExplanationSheet.defaultPrompt;
@@ -274,7 +275,7 @@ class _AiExplanationSheetContentState extends State<_AiExplanationSheetContent> 
     });
     
     // Trigger AI explanation with current context, model, and prompt
-    widget.aiExplanationCubit.getExplanation(
+    ref.read(aiExplanationControllerProvider.notifier).getExplanation(
       currentLine: _currentAnalyzedText,
       previousLines: _currentPreviousLines,
       nextLines: _currentNextLines,
@@ -292,12 +293,16 @@ class _AiExplanationSheetContentState extends State<_AiExplanationSheetContent> 
     });
 
     _recalculateContextLines();
-    PreferencesModel.setAiExplanationContextLines(newCount);
+    ref
+        .read(aiExplanationPreferencesRepositoryProvider)
+        .setAiExplanationContextLines(newCount);
   }
 
   Future<void> _changeModel(String? newModel) async {
     if (newModel == null || newModel == _currentModel) return;
-    await PreferencesModel.setGeminiModel(newModel);
+    await ref
+        .read(aiExplanationPreferencesRepositoryProvider)
+        .setGeminiModel(newModel);
     setState(() {
       _currentModel = newModel;
     });
@@ -334,7 +339,12 @@ class _AiExplanationSheetContentState extends State<_AiExplanationSheetContent> 
     });
 
     try {
-      final models = await GeminiModelsService.fetchAvailableModels();
+      final apiKey = await ref
+          .read(aiExplanationPreferencesRepositoryProvider)
+          .getGeminiApiKey();
+      final models = await GeminiModelsService.fetchAvailableModels(
+        apiKey: apiKey,
+      );
       if (mounted) {
         setState(() {
           _availableModels = models;
@@ -354,7 +364,9 @@ class _AiExplanationSheetContentState extends State<_AiExplanationSheetContent> 
           if (!currentModelExists) {
             // Set to first available model
             final newModel = _availableModels.first.name ?? 'models/gemini-2.5-flash';
-            await PreferencesModel.setGeminiModel(newModel);
+            await ref
+        .read(aiExplanationPreferencesRepositoryProvider)
+        .setGeminiModel(newModel);
             setState(() {
               _currentModel = newModel;
             });
@@ -377,7 +389,7 @@ class _AiExplanationSheetContentState extends State<_AiExplanationSheetContent> 
 
   @override
   Widget build(BuildContext context) {
-    final isLightTheme = Provider.of<ThemeProvider>(context, listen: false).themeMode == ThemeMode.light;
+    final isLightTheme = Theme.of(context).brightness == Brightness.light;
     final primaryColor = Theme.of(context).primaryColor;
     final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
     final mutedColor = onSurfaceColor.withValues(alpha: 0.6);
@@ -563,7 +575,7 @@ class _AiExplanationSheetContentState extends State<_AiExplanationSheetContent> 
                 )
               else if (_availableModels.isEmpty)
                 IconButton(
-                  icon: const Icon(Icons.refresh),
+                  icon: Icon(Icons.refresh),
                   iconSize: 20,
                   onPressed: _fetchAvailableModels,
                   tooltip: 'Refresh models',
@@ -643,7 +655,7 @@ class _AiExplanationSheetContentState extends State<_AiExplanationSheetContent> 
                       foregroundColor: WidgetStateProperty.resolveWith<Color>(
                         (Set<WidgetState> states) {
                           if (states.contains(WidgetState.selected)) {
-                            return Colors.white;
+                            return Theme.of(context).colorScheme.onPrimary;
                           }
                           return Theme.of(context).colorScheme.onSurface;
                         },
@@ -669,13 +681,13 @@ class _AiExplanationSheetContentState extends State<_AiExplanationSheetContent> 
               ),
               const Spacer(),
               IconButton(
-                icon: const Icon(Icons.remove),
+                icon: Icon(Icons.remove),
                 iconSize: 20,
                 onPressed: () => _adjustContextLines(-1),
                 tooltip: 'Decrease context',
               ),
               IconButton(
-                icon: const Icon(Icons.add),
+                icon: Icon(Icons.add),
                 iconSize: 20,
                 onPressed: () => _adjustContextLines(1),
                 tooltip: 'Increase context',
@@ -702,7 +714,7 @@ class _AiExplanationSheetContentState extends State<_AiExplanationSheetContent> 
             const Spacer(),
             TextButton.icon(
               onPressed: _resetPrompt,
-              icon: const Icon(Icons.restore, size: 16),
+              icon: Icon(Icons.restore, size: 16),
               label: const Text('Reset'),
             ),
           ],
@@ -748,11 +760,11 @@ class _AiExplanationSheetContentState extends State<_AiExplanationSheetContent> 
                         _savePrompt();
                         _generateExplanation();
                       },
-                      icon: const Icon(Icons.save, size: 18),
+                      icon: Icon(Icons.save, size: 18),
                       label: const Text('Save & Generate'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryColor,
-                        foregroundColor: Colors.white,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
                     ),
@@ -794,11 +806,11 @@ class _AiExplanationSheetContentState extends State<_AiExplanationSheetContent> 
                         _savePrompt();
                         _generateExplanation();
                       },
-                      icon: const Icon(Icons.save, size: 18),
+                      icon: Icon(Icons.save, size: 18),
                       label: const Text('Save & Generate'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryColor,
-                        foregroundColor: Colors.white,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
                     ),
@@ -850,7 +862,7 @@ class _AiExplanationSheetContentState extends State<_AiExplanationSheetContent> 
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: !isLightTheme ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+            color: !isLightTheme ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: borderColor, width: 1),
           ),
@@ -875,7 +887,7 @@ class _AiExplanationSheetContentState extends State<_AiExplanationSheetContent> 
               ],
               Row(
                 children: [
-                  Icon(Icons.check_circle, color: Colors.green, size: 16),
+                  Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary, size: 16),
                   const SizedBox(width: 8),
                   Text(
                     'Current line',
@@ -957,112 +969,124 @@ class _AiExplanationSheetContentState extends State<_AiExplanationSheetContent> 
           width: double.infinity, // Make loading indicator span full width
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: !isLightTheme ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+            color: !isLightTheme ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: borderColor, width: 1),
           ),
-          child: StreamBuilder<AiExplanationState>(
-            stream: widget.aiExplanationCubit.stream,
-            initialData: widget.aiExplanationCubit.state,
-            builder: (context, snapshot) {
-              final state = snapshot.data;
-
-              if (state is AiExplanationLoading) {
-                return Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const SizedBox(height: 20),
-                      CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Generating explanation...',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: mutedColor,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                    ],
-                  ),
-                );
-              } else if (state is AiExplanationError) {
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.error_outline, color: Colors.red, size: 48),
-                    const SizedBox(height: 16),
-                    Text(
-                      state.message,
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: Colors.red,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                );
-              } else if (state is AiExplanationSuccess) {
-                return MarkdownBody(
-                  data: state.explanation,
-                  selectable: true,
-                  styleSheet: MarkdownStyleSheet(
-                    p: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      height: 1.6,
-                      color: onSurfaceColor,
-                    ),
-                    h1: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: onSurfaceColor,
-                    ),
-                    h2: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: onSurfaceColor,
-                    ),
-                    h3: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: onSurfaceColor,
-                    ),
-                    code: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontFamily: 'monospace',
-                      backgroundColor: onSurfaceColor.withValues(alpha: 0.1),
-                      color: onSurfaceColor,
-                    ),
-                    blockquote: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      fontStyle: FontStyle.italic,
-                      color: mutedColor,
-                    ),
-                    listBullet: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: onSurfaceColor,
-                    ),
-                    listIndent: 16,
-                  ),
-                );
-              } else {
-                return Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const SizedBox(height: 20),
-                      CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Initializing...',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: mutedColor,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                    ],
-                  ),
-                );
-              }
-            },
+          child: _buildExplanationState(
+            ref.watch(aiExplanationControllerProvider),
+            context,
+            primaryColor,
+            onSurfaceColor,
+            mutedColor,
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildExplanationState(
+    AiExplanationState state,
+    BuildContext context,
+    Color primaryColor,
+    Color onSurfaceColor,
+    Color mutedColor,
+  ) {
+    if (state is AiExplanationLoading) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 20),
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Generating explanation...',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: mutedColor,
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      );
+    }
+
+    if (state is AiExplanationError) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.error_outline, color: Theme.of(context).colorScheme.error, size: 48),
+          const SizedBox(height: 16),
+          Text(
+            state.message,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: Theme.of(context).colorScheme.error,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      );
+    }
+
+    if (state is AiExplanationSuccess) {
+      return MarkdownBody(
+        data: state.explanation,
+        selectable: true,
+        styleSheet: MarkdownStyleSheet(
+          p: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            height: 1.6,
+            color: onSurfaceColor,
+          ),
+          h1: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: onSurfaceColor,
+          ),
+          h2: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: onSurfaceColor,
+          ),
+          h3: Theme.of(context).textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: onSurfaceColor,
+          ),
+          code: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            fontFamily: 'monospace',
+            backgroundColor: onSurfaceColor.withValues(alpha: 0.1),
+            color: onSurfaceColor,
+          ),
+          blockquote: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            fontStyle: FontStyle.italic,
+            color: mutedColor,
+          ),
+          listBullet: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            color: onSurfaceColor,
+          ),
+          listIndent: 16,
+        ),
+      );
+    }
+
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 20),
+          CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Initializing...',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: mutedColor,
+            ),
+          ),
+          const SizedBox(height: 20),
+        ],
+      ),
     );
   }
 
@@ -1101,7 +1125,7 @@ class _AiExplanationSheetContentState extends State<_AiExplanationSheetContent> 
                   )
                 : ElevatedButton.icon(
                     onPressed: _generateExplanation,
-                    icon: const Icon(Icons.auto_awesome, size: 20),
+                    icon: Icon(Icons.auto_awesome, size: 20),
                     label: const Text(
                       'Generate Explanation',
                       style: TextStyle(
@@ -1111,7 +1135,7 @@ class _AiExplanationSheetContentState extends State<_AiExplanationSheetContent> 
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primaryColor,
-                      foregroundColor: Colors.white,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -1128,7 +1152,7 @@ class _AiExplanationSheetContentState extends State<_AiExplanationSheetContent> 
               onPressed: () => Navigator.of(context).pop(),
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryColor,
-                foregroundColor: Colors.white,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -1137,7 +1161,7 @@ class _AiExplanationSheetContentState extends State<_AiExplanationSheetContent> 
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.check, size: 20),
+                  Icon(Icons.check, size: 20),
                   const SizedBox(width: 8),
                   Text(
                     'Got it',

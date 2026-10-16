@@ -19,6 +19,7 @@ class Preferences {
 
   late int? lastEditedSession; //ID of last edited session.
   late String? themeMode; // Theme mode preference
+  String? skinId; // Selected built-in or community skin (namespaced ID).
   bool autoSave; // Whether to automatically save the changes to the database.
   
   // MSone features
@@ -92,6 +93,7 @@ class Preferences {
     this.lastEditedSession,
     required this.autoSave,
     this.themeMode,
+    this.skinId,
     this.msoneEnabled = false,
     this.colorHistory = const [],
     this.floatingControlsEnabled = false,
@@ -256,6 +258,39 @@ class Checkpoint {
     required this.deltas,
     required this.snapshot,
     this.metadata,
+  });
+}
+
+/// Persistent, session-scoped Git-like reference to a checkpoint.
+///
+/// This is an additive collection, deliberately separate from Checkpoint so
+/// old databases retain their complete history during Isar schema upgrades.
+/// HEAD is initially attached to refs/heads/main; checkout by commit detaches.
+@collection
+class HistoryRef {
+  Id id = Isar.autoIncrement;
+
+  @Index()
+  late int sessionId;
+  late int subtitleCollectionId;
+  late String name; // HEAD, refs/heads/* or refs/bookmarks/*
+  late String kind; // head, branch, bookmark
+  late int targetCheckpointId;
+  String? symbolicBranchName; // Used only by HEAD; null = detached
+  int schemaVersion = 1;
+  late DateTime createdAt;
+  late DateTime updatedAt;
+
+  HistoryRef({
+    required this.sessionId,
+    required this.subtitleCollectionId,
+    required this.name,
+    required this.kind,
+    required this.targetCheckpointId,
+    this.symbolicBranchName,
+    this.schemaVersion = 1,
+    required this.createdAt,
+    required this.updatedAt,
   });
 }
 

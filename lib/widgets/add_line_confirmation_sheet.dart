@@ -198,7 +198,7 @@ class _AddLineConfirmationSheetState extends State<AddLineConfirmationSheet> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                  color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: borderColor,
@@ -281,7 +281,7 @@ class _AddLineConfirmationSheetState extends State<AddLineConfirmationSheet> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                    color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: borderColor,
@@ -335,7 +335,7 @@ class _AddLineConfirmationSheetState extends State<AddLineConfirmationSheet> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                  color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: borderColor,
@@ -423,7 +423,7 @@ class _AddLineConfirmationSheetState extends State<AddLineConfirmationSheet> {
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primaryColor,
-                          foregroundColor: Colors.white,
+                          foregroundColor: Theme.of(context).colorScheme.onPrimary,
                           elevation: 0,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -460,7 +460,7 @@ class _AddLineConfirmationSheetState extends State<AddLineConfirmationSheet> {
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primaryColor,
-                          foregroundColor: Colors.white,
+                          foregroundColor: Theme.of(context).colorScheme.onPrimary,
                           elevation: 0,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -494,10 +494,10 @@ class _AddLineConfirmationSheetState extends State<AddLineConfirmationSheet> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.1),
+                    color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: Colors.orange.withValues(alpha: 0.3),
+                      color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.3),
                       width: 1,
                     ),
                   ),
@@ -505,7 +505,7 @@ class _AddLineConfirmationSheetState extends State<AddLineConfirmationSheet> {
                     children: [
                       Icon(
                         Icons.info_outline,
-                        color: Colors.orange,
+                        color: Theme.of(context).colorScheme.tertiary,
                         size: 20,
                       ),
                       const SizedBox(width: 8),
@@ -513,7 +513,7 @@ class _AddLineConfirmationSheetState extends State<AddLineConfirmationSheet> {
                         child: Text(
                           "This is the only subtitle. New lines will be created with appropriate timing.",
                           style: TextStyle(
-                            color: Colors.orange.shade700,
+                            color: Theme.of(context).colorScheme.tertiary,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -527,7 +527,7 @@ class _AddLineConfirmationSheetState extends State<AddLineConfirmationSheet> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                    color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: borderColor,
@@ -612,7 +612,7 @@ class _AddLineConfirmationSheetState extends State<AddLineConfirmationSheet> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                    color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: borderColor,

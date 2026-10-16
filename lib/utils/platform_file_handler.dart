@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'saf_file_handler.dart';
@@ -183,12 +182,16 @@ class PlatformFileHandler {
   /// 
   /// Returns a [PlatformFileInfo] object if successful
   static Future<PlatformFileInfo?> saveNewFile({
-    required String content,
+    String? content,
+    Uint8List? bytes,
     required String fileName,
     String mimeType = 'text/plain',
   }) async {
+    if (content == null && bytes == null) {
+      throw ArgumentError('Content or bytes must be provided.');
+    }
     if (Platform.isAndroid) {
-      final contentBytes = Uint8List.fromList(utf8.encode(content));
+      final contentBytes = bytes ?? Uint8List.fromList(utf8.encode(content!));
       
       try {
         final safInfo = await SafFileHandler.saveNewFile(

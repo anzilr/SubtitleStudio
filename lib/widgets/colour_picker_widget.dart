@@ -127,7 +127,7 @@ class ColorPickerWithTextEditingState
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    const highlightColor = Color(0xFF4A90E2); // Blue color for consistency
+    final highlightColor = theme.colorScheme.primary;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.only(bottom: 16),
@@ -296,7 +296,7 @@ class ColorPickerWithTextEditingState
                 onPressed: _applyChanges,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: highlightColor,
-                  foregroundColor: Colors.white,
+                  foregroundColor: theme.colorScheme.onPrimary,
                   overlayColor: highlightColor.withValues(alpha: 0.2),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(

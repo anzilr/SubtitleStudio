@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:subtitle_studio/database/database_helper.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/database/models/models.dart';
+import 'package:subtitle_studio/features/search_replace/search_replace_planner.dart';
+import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
+import 'package:subtitle_studio/screens/edit/providers/subtitle_repository_provider.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class SearchReplaceSheet extends StatefulWidget {
+class SearchReplaceSheet extends ConsumerStatefulWidget {
   final List<SubtitleLine> subtitleLines;
   final int subtitleId;
+  final int sessionId;
   final bool isReplaceMode;
   final Function() onRefresh;
   final Function(int) onLineSelected;
@@ -15,16 +19,17 @@ class SearchReplaceSheet extends StatefulWidget {
     super.key,
     required this.subtitleLines,
     required this.subtitleId,
+    required this.sessionId,
     required this.isReplaceMode,
     required this.onRefresh,
     required this.onLineSelected,
   });
 
   @override
-  State<SearchReplaceSheet> createState() => _SearchReplaceSheetState();
+  ConsumerState<SearchReplaceSheet> createState() => _SearchReplaceSheetState();
 }
 
-class _SearchReplaceSheetState extends State<SearchReplaceSheet> {
+class _SearchReplaceSheetState extends ConsumerState<SearchReplaceSheet> {
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _replaceController = TextEditingController();
   List<SearchResult> _searchResults = [];
@@ -71,7 +76,7 @@ class _SearchReplaceSheetState extends State<SearchReplaceSheet> {
           _searchResults.add(
             SearchResult(
               lineIndex: i,
-              line: line,
+              line: CheckpointStateReducer.copyLine(line),
               matchStart: match.start,
               matchEnd: match.end,
               originalText: originalText,
@@ -86,7 +91,7 @@ class _SearchReplaceSheetState extends State<SearchReplaceSheet> {
           _searchResults.add(
             SearchResult(
               lineIndex: i,
-              line: line,
+              line: CheckpointStateReducer.copyLine(line),
               matchStart: index,
               matchEnd: index + term.length,
               originalText: originalText,
@@ -110,9 +115,7 @@ class _SearchReplaceSheetState extends State<SearchReplaceSheet> {
     if (searchTerm.isEmpty) return;
 
     final theme = Theme.of(context);
-    final highlightColor = theme.brightness == Brightness.dark
-        ? Color(0xFFE9C46A)  // Yellow for dark mode
-        : Color(0xFF2A9D8F); // Teal for light mode
+    final highlightColor = Theme.of(context).colorScheme.primary; // Teal for light mode
 
     final shouldReplace = await showDialog<bool>(
       context: context,
@@ -126,8 +129,8 @@ class _SearchReplaceSheetState extends State<SearchReplaceSheet> {
               'Cancel',
               style: TextStyle(
                 color: theme.brightness == Brightness.dark 
-                    ? Colors.white70 
-                    : Colors.black87,
+                    ? Theme.of(context).colorScheme.onSurfaceVariant 
+                    : Theme.of(context).colorScheme.onSurface,
               ),
             ),
           ),
@@ -147,51 +150,48 @@ class _SearchReplaceSheetState extends State<SearchReplaceSheet> {
 
     if (!shouldReplace) return;
 
-    final Map<int, SubtitleLine> updatedLinesMap = {};
+    try {
+      final plan = SubtitleSearchReplacePlanner.build(
+        matches: _searchResults.map((result) => SubtitleSearchMatch(
+          line: result.line,
+          start: result.matchStart,
+          end: result.matchEnd,
+        )),
+        searchTerm: searchTerm,
+        replacement: replaceTerm,
+        caseSensitive: _caseSensitive,
+      );
 
-    for (final result in _searchResults) {
-      final oldText = result.line.edited ?? result.line.original;
+      if (plan.updatedLines.isEmpty) return;
+      final success = await ref
+          .read(subtitleRepositoryProvider)
+          .updateMultipleLinesWithHistory(
+            collectionId: widget.subtitleId,
+            sessionId: widget.sessionId,
+            expectedLines: plan.expectedLines,
+            updatedLines: plan.updatedLines,
+            operationType: 'replace',
+            description: 'Replaced ${plan.replacements} subtitle text matches',
+          );
 
-      RegExp pattern;
-      if (_wholeWord) {
-        pattern = RegExp('\\b${RegExp.escape(searchTerm)}\\b', caseSensitive: _caseSensitive);
-      } else {
-        pattern = RegExp(RegExp.escape(searchTerm), caseSensitive: _caseSensitive);
+      if (!mounted) return;
+      if (!success) {
+        SnackbarHelper.showError(
+          context,
+          'Subtitle text changed. Refresh the search before replacing.',
+        );
+        return;
       }
-
-      final newText = oldText.replaceAll(pattern, replaceTerm);
-
-      if (!updatedLinesMap.containsKey(result.line.index)) {
-        final updatedLine = SubtitleLine()
-          ..index = result.line.index
-          ..startTime = result.line.startTime
-          ..endTime = result.line.endTime
-          ..original = result.line.original
-          ..edited = newText;
-
-        updatedLinesMap[result.line.index] = updatedLine;
-      }
-    }
-
-    final updatedLines = updatedLinesMap.values.toList();
-
-    final success = await updateMultipleSubtitleLines(
-      widget.subtitleId,
-      updatedLines,
-    );
-
-    if (success) {
       widget.onRefresh();
-      Navigator.pop(context);
       SnackbarHelper.showSuccess(
         context,
-        'Replaced ${_searchResults.length} occurrences in ${updatedLines.length} lines',
+        'Replaced ${plan.replacements} occurrences in '
+        '${plan.updatedLines.length} lines',
       );
-    } else {
-      SnackbarHelper.showError(
-        context,
-        'Failed to replace text',
-      );
+      Navigator.pop(context);
+    } on FormatException catch (error) {
+      if (!mounted) return;
+      SnackbarHelper.showError(context, error.message);
     }
   }
 
@@ -219,9 +219,7 @@ class _SearchReplaceSheetState extends State<SearchReplaceSheet> {
     final replaceTerm = _replaceController.text;
 
     final theme = Theme.of(context);
-    final highlightColor = theme.brightness == Brightness.dark
-        ? Color(0xFFE9C46A)  // Yellow for dark mode
-        : Color(0xFF2A9D8F); // Teal for light mode
+    final highlightColor = Theme.of(context).colorScheme.primary; // Teal for light mode
 
     final shouldReplace = await showDialog<bool>(
       context: context,
@@ -235,8 +233,8 @@ class _SearchReplaceSheetState extends State<SearchReplaceSheet> {
               'Cancel',
               style: TextStyle(
                 color: theme.brightness == Brightness.dark 
-                    ? Colors.white70 
-                    : Colors.black87,
+                    ? Theme.of(context).colorScheme.onSurfaceVariant 
+                    : Theme.of(context).colorScheme.onSurface,
               ),
             ),
           ),
@@ -256,58 +254,52 @@ class _SearchReplaceSheetState extends State<SearchReplaceSheet> {
 
     if (!shouldReplace) return;
 
-    final Map<int, SubtitleLine> updatedLinesMap = {};
+    try {
+      final plan = SubtitleSearchReplacePlanner.build(
+        matches: _selectedIndices.map((index) {
+          final result = _searchResults[index];
+          return SubtitleSearchMatch(
+            line: result.line,
+            start: result.matchStart,
+            end: result.matchEnd,
+          );
+        }),
+        searchTerm: searchTerm,
+        replacement: replaceTerm,
+        caseSensitive: _caseSensitive,
+      );
 
-    for (final resultIndex in _selectedIndices) {
-      final result = _searchResults[resultIndex];
-      final oldText = result.line.edited ?? result.line.original;
+      final success = await ref
+          .read(subtitleRepositoryProvider)
+          .updateMultipleLinesWithHistory(
+            collectionId: widget.subtitleId,
+            sessionId: widget.sessionId,
+            expectedLines: plan.expectedLines,
+            updatedLines: plan.updatedLines,
+            operationType: 'replace',
+            description: 'Replaced ${plan.replacements} selected matches',
+          );
 
-      final beforeText = oldText.substring(0, result.matchStart);
-      final afterText = oldText.substring(result.matchEnd);
-
-      final newText = beforeText + replaceTerm + afterText;
-
-      if (updatedLinesMap.containsKey(result.line.index)) {
-        updatedLinesMap[result.line.index] = SubtitleLine()
-          ..index = result.line.index
-          ..startTime = result.line.startTime
-          ..endTime = result.line.endTime
-          ..original = result.line.original
-          ..edited = newText;
-      } else {
-        updatedLinesMap[result.line.index] = SubtitleLine()
-          ..index = result.line.index
-          ..startTime = result.line.startTime
-          ..endTime = result.line.endTime
-          ..original = result.line.original
-          ..edited = newText;
+      if (!mounted) return;
+      if (!success) {
+        SnackbarHelper.showError(
+          context,
+          'Subtitle text changed. Refresh the search before replacing.',
+        );
+        return;
       }
-    }
-
-    final updatedLines = updatedLinesMap.values.toList();
-
-    final success = await updateMultipleSubtitleLines(
-      widget.subtitleId,
-      updatedLines,
-    );
-
-    if (success) {
       widget.onRefresh();
-      setState(() {
-        _selectionMode = false;
-        _selectedIndices = {};
-      });
       SnackbarHelper.showSuccess(
         context,
-        'Replaced ${_selectedIndices.length} occurrences in ${updatedLines.length} lines',
+        'Replaced ${plan.replacements} occurrences in '
+        '${plan.updatedLines.length} lines',
       );
-
-      _performSearch();
-    } else {
-      SnackbarHelper.showError(
-        context,
-        'Failed to replace text',
-      );
+      // The current search result offsets are now invalid; close the
+      // sheet rather than leaving stale selected matches on screen.
+      Navigator.pop(context);
+    } on FormatException catch (error) {
+      if (!mounted) return;
+      SnackbarHelper.showError(context, error.message);
     }
   }
 
@@ -328,17 +320,11 @@ class _SearchReplaceSheetState extends State<SearchReplaceSheet> {
     final borderColor = onSurfaceColor.withValues(alpha: 0.12);
 
     // Legacy highlight colors for search functionality
-    final highlightColor = isDark
-        ? Color(0xFFE9C46A)
-        : Color(0xFF2A9D8F);
+    final highlightColor = Theme.of(context).colorScheme.primary;
 
-    final selectedCardColor = isDark
-        ? Color(0xFF2A9D8F).withValues(alpha:0.3)
-        : Color(0xFF2A9D8F).withValues(alpha:0.2);
+    final selectedCardColor = Theme.of(context).colorScheme.primary.withValues(alpha: 0.2);
 
-    final matchBackgroundColor = isDark
-        ? Color(0xFF4CAF50)  // Green for dark mode - changed color
-        : Color(0xFF2196F3); // Blue for light mode - changed color
+    final matchBackgroundColor = Theme.of(context).colorScheme.primary;
 
     return SafeArea(
       child: Scaffold(
@@ -406,7 +392,7 @@ class _SearchReplaceSheetState extends State<SearchReplaceSheet> {
                   // Search Input Section
                   Container(
                     decoration: BoxDecoration(
-                      color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                      color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                         color: borderColor,
@@ -438,7 +424,7 @@ class _SearchReplaceSheetState extends State<SearchReplaceSheet> {
                   // Replace Input Section
                   Container(
                     decoration: BoxDecoration(
-                      color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                      color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                         color: borderColor,
@@ -470,7 +456,7 @@ class _SearchReplaceSheetState extends State<SearchReplaceSheet> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                      color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                         color: borderColor,
@@ -547,7 +533,7 @@ class _SearchReplaceSheetState extends State<SearchReplaceSheet> {
                       onPressed: _performSearch,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryColor,
-                        foregroundColor: Colors.white,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
@@ -581,8 +567,8 @@ class _SearchReplaceSheetState extends State<SearchReplaceSheet> {
                             child: ElevatedButton(
                               onPressed: _searchResults.isNotEmpty ? _startSelectionMode : null,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: _searchResults.isNotEmpty ? Colors.orange : onSurfaceColor.withValues(alpha: 0.3),
-                                foregroundColor: Colors.white,
+                                backgroundColor: _searchResults.isNotEmpty ? Theme.of(context).colorScheme.tertiary : onSurfaceColor.withValues(alpha: 0.3),
+                                foregroundColor: Theme.of(context).colorScheme.onPrimary,
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
@@ -616,8 +602,8 @@ class _SearchReplaceSheetState extends State<SearchReplaceSheet> {
                             child: ElevatedButton(
                               onPressed: _searchResults.isNotEmpty ? _replaceAll : null,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: _searchResults.isNotEmpty ? Colors.green : onSurfaceColor.withValues(alpha: 0.3),
-                                foregroundColor: Colors.white,
+                                backgroundColor: _searchResults.isNotEmpty ? Theme.of(context).colorScheme.primary : onSurfaceColor.withValues(alpha: 0.3),
+                                foregroundColor: Theme.of(context).colorScheme.onPrimary,
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
@@ -694,8 +680,8 @@ class _SearchReplaceSheetState extends State<SearchReplaceSheet> {
                             child: ElevatedButton(
                               onPressed: _selectedIndices.isNotEmpty ? _replaceSelected : null,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: _selectedIndices.isNotEmpty ? Colors.green : onSurfaceColor.withValues(alpha: 0.3),
-                                foregroundColor: Colors.white,
+                                backgroundColor: _selectedIndices.isNotEmpty ? Theme.of(context).colorScheme.primary : onSurfaceColor.withValues(alpha: 0.3),
+                                foregroundColor: Theme.of(context).colorScheme.onPrimary,
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
@@ -743,7 +729,7 @@ class _SearchReplaceSheetState extends State<SearchReplaceSheet> {
                           margin: const EdgeInsets.only(bottom: 8),
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                            color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
                               color: borderColor,
@@ -835,7 +821,7 @@ class _SearchReplaceSheetState extends State<SearchReplaceSheet> {
                                                   decoration: BoxDecoration(
                                                     color: _selectionMode && _selectedIndices.contains(index)
                                                         ? selectedCardColor
-                                                        : (isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50),
+                                                        : (isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow),
                                                     borderRadius: BorderRadius.circular(12),
                                                     border: Border.all(
                                                       color: _selectionMode && _selectedIndices.contains(index)
@@ -871,9 +857,9 @@ class _SearchReplaceSheetState extends State<SearchReplaceSheet> {
                                                             child: Text(
                                                               'Line ${result.line.index}',
                                                               style: GoogleFonts.spaceMono(
-                                                                textStyle: const TextStyle(
+                                                                textStyle: TextStyle(
                                                                   fontWeight: FontWeight.w600,
-                                                                  color: Colors.white,
+                                                                  color: Theme.of(context).colorScheme.onPrimary,
                                                                   fontSize: 11,
                                                                 ),
                                                               ),
@@ -902,7 +888,7 @@ class _SearchReplaceSheetState extends State<SearchReplaceSheet> {
                                                               text: matchText,
                                                               style: TextStyle(
                                                                 backgroundColor: matchBackgroundColor,
-                                                                color: Colors.white,
+                                                                color: Theme.of(context).colorScheme.onPrimary,
                                                                 fontWeight: FontWeight.bold,
                                                               ),
                                                             ),

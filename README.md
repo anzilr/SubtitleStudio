@@ -16,7 +16,7 @@ Downloads
 ## ✨ Features
 
 ### Core Features
-- 🎬 **Cross-Platform Support**: Android, iOS, macOS, Windows, Linux, and Web
+- 🎬 **Cross-Platform Support**: Android, iOS, macOS, Windows, and Linux
 - ✏️ **Professional Editing**: Frame-accurate timing adjustments and text formatting
 - 🎥 **Video Synchronization**: Real-time subtitle sync with video playback
 - 💾 **Auto-Save**: Never lose your work with automatic saving
@@ -80,13 +80,6 @@ cd SubtitleStudio
 flutter pub get
 ```
 
-**Optional: Set up environment variables** (for Telegram integration):
-```bash
-cp .env.example .env
-# Edit .env and add your credentials if needed
-# See .env.example for instructions
-```
-
 ### 2. Running the App
 
 **Android:**
@@ -112,11 +105,6 @@ flutter run -d windows
 **Linux:**
 ```bash
 flutter run -d linux
-```
-
-**Web:**
-```bash
-flutter run -d web
 ```
 
 ### 3. Building for Release
@@ -187,36 +175,28 @@ lib/
 
 ### Architecture
 
-Subtitle Studio follows a modular architecture with:
-- **Feature-first organization** for scalability
-- **Provider pattern** for state management
-- **Isar database** for local persistence
-- **Clean separation** of concerns
+Subtitle Studio is being incrementally modernized while keeping the application
+usable throughout the migration:
+
+- **Riverpod** is the application state-management system for root, Home,
+  Editor, Edit Line, Source View, theme and waveform state.
+- **Isar** provides local persistence for sessions, preferences and subtitle
+  data.
+- Large editor/video widgets are split by feature boundary to improve
+  testability and reviewability.
+- The former BLoC, Provider and GetX application state layers have been removed
+  from the active architecture; Riverpod now owns application/domain state.
 
 
-## 📦 Environment Configuration
+## 🔐 Client Secret Policy
 
-### Telegram Integration (Optional)
+Subtitle Studio does not embed bot tokens, service credentials, or other
+privileged secrets in the Flutter application. Client-side assets and bundled
+configuration can be extracted from released apps.
 
-To enable Telegram integration for bug reporting:
-
-1. **Get a Telegram bot token:**
-   - Talk to [@BotFather](https://t.me/BotFather)
-   - Create a new bot
-   - Copy the token
-
-2. **Configure environment variables:**
-   ```bash
-   cp .env.example .env
-   ```
-
-3. **Edit `.env` file:**
-   ```
-   TELEGRAM_BOT_TOKEN=your_token_here
-   TELEGRAM_CHANNEL_ID=your_channel_id_here
-   ```
-
-4. **Rebuild the app** for changes to take effect
+Features that require privileged third-party credentials must use a trusted
+server-side service or a user-owned credential stored with an appropriate
+platform-secure mechanism.
 
 ## 📊 Version Information
 
@@ -256,11 +236,10 @@ Switch between three beautiful themes:
 
 Key dependencies include:
 - **Flutter**: UI framework
-- **Provider**: State management
+- **Riverpod**: Primary application state management
 - **Isar**: Local database
 - **Media Kit**: Video playback
 - **FFmpeg**: Video processing
-- **Flutter Dotenv**: Environment configuration
 
 Run `flutter pub outdated` to check for dependency updates.
 
@@ -291,8 +270,8 @@ This project is licensed under the **GNU General Public License v3.0**. See [LIC
 
 ## 💬 Contact & Support
 
-- 🐛 Report bugs via [GitHub Issues](https://github.com/anzilr/MsoneSubEditor/issues)
-- 💬 Start a discussion on [GitHub Discussions](https://github.com/anzilr/MsoneSubEditor/discussions)
+- 🐛 Report bugs via [GitHub Issues](https://github.com/Msoneofficial/SubtitleStudio/issues)
+- 💬 Start a discussion on [GitHub Discussions](https://github.com/Msoneofficial/SubtitleStudio/discussions)
 
 ---
 

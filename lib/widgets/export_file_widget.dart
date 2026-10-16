@@ -7,7 +7,9 @@ import 'package:subtitle_studio/utils/app_logger.dart';
 import 'package:subtitle_studio/widgets/file_replace_dialog.dart';
 import 'package:file_picker/file_picker.dart' as fp;
 import 'dart:io';
-import 'dart:convert';
+import 'package:subtitle_studio/services/subtitle_text_codec.dart';
+import 'package:subtitle_studio/services/subtitle_extended_encoding_service.dart';
+import 'package:subtitle_studio/widgets/subtitle_encoding_picker.dart';
 import 'dart:typed_data';
 import '../database/models/models.dart';
 
@@ -29,16 +31,21 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
   late TextEditingController _fileNameController;
   late TextEditingController _filePathController;
   late TextEditingController _customTagController; // New controller for custom tag
-  String _selectedEncoding = "UTF-8"; // Default encoding
+  String _selectedEncoding = 'UTF-8'; // Explicit output charset/BOM.
+  List<String> _availableEncodings = SubtitleTextCodec.supportedEncodings;
   bool _exportOriginalAsWell = false; // Track if original lines should be exported separately
 
   @override
   void initState() {
     super.initState();
+    // Preserve the stored source charset, even when not supported locally.
+    _selectedEncoding = widget.subtitle.encoding.isEmpty
+        ? 'UTF-8' : widget.subtitle.encoding;
     _fileNameController = TextEditingController(text: widget.subtitle.fileName);
     _filePathController =
         TextEditingController(text: widget.subtitle.filePath ?? '');
     _customTagController = TextEditingController(text: "MSone"); // Default tag value
+    _loadEncodings();
   }
 
   @override
@@ -47,6 +54,23 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
     _filePathController.dispose();
     _customTagController.dispose(); // Dispose the custom tag controller
     super.dispose();
+  }
+
+  Future<void> _loadEncodings() async {
+    final choices = await SubtitleExtendedEncodingService.standard
+        .availableEncodings();
+    if (mounted) setState(() => _availableEncodings = choices);
+  }
+
+  Future<void> _chooseEncoding() async {
+    final choice = await SubtitleEncodingPicker.show(
+      context: context,
+      title: 'Output subtitle encoding',
+      options: _availableEncodings,
+      selected: _selectedEncoding,
+    );
+    if (!mounted || choice == null) return;
+    setState(() => _selectedEncoding = choice);
   }
 
   Future<void> _pickFolder() async {
@@ -77,6 +101,11 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
     await AppLogger.instance.info('Starting export process', context: 'ExportBottomSheet._exportSrt');
     
     try {
+      // Do not overwrite files by silently switching a missing codec.
+      if (!_availableEncodings.contains(_selectedEncoding)) {
+        throw UnsupportedError('The source charset is unavailable on this '
+            'device. Choose a supported export encoding.');
+      }
       // Request storage permission
       await _requestStoragePermission();
 
@@ -113,7 +142,11 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
   Future<void> _exportWithSAF(String fileName, String customTag) async {
     try {
       // Compile subtitle content
-      final content = SrtCompiler.generateSrtContent(widget.subtitle.lines, forceOriginal: _exportOriginalAsWell);
+      final content = await SrtCompiler.generateSrtBytesExtended(
+        widget.subtitle.lines,
+        encoding: _selectedEncoding,
+        forceOriginal: _exportOriginalAsWell,
+      );
       
       // Determine filename based on export option
       String exportFileName;
@@ -131,7 +164,7 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
       // Use SAF to save the file
       final success = await FilePickerConvenience.saveFile(
         context: context,
-        content: content,
+        bytes: Uint8List.fromList(content),
         fileName: exportFileName,
         mimeType: 'application/x-subrip', // Proper MIME type for SRT files
       );
@@ -159,7 +192,11 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
   Future<void> _exportWithFilePicker(String fileName, String customTag) async {
     try {
       // Compile subtitle content
-      final content = SrtCompiler.generateSrtContent(widget.subtitle.lines, forceOriginal: _exportOriginalAsWell);
+      final content = await SrtCompiler.generateSrtBytesExtended(
+        widget.subtitle.lines,
+        encoding: _selectedEncoding,
+        forceOriginal: _exportOriginalAsWell,
+      );
       
       // Determine filename based on export option
       String exportFileName;
@@ -175,7 +212,7 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
       }
       
       // Convert content to bytes for iOS file picker
-      final contentBytes = Uint8List.fromList(utf8.encode(content));
+      final contentBytes = Uint8List.fromList(content);
       
       // Use file picker to save the file on iOS
       final result = await fp.FilePicker.platform.saveFile(
@@ -389,7 +426,7 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                        color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: borderColor,
@@ -401,12 +438,12 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: Colors.green,
+                              color: Theme.of(context).colorScheme.primary,
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.folder_outlined,
-                              color: Colors.white,
+                              color: Theme.of(context).colorScheme.onPrimary,
                               size: 20,
                             ),
                           ),
@@ -454,7 +491,7 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
               // File Name Input
               Container(
                 decoration: BoxDecoration(
-                  color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                  color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: borderColor,
@@ -482,7 +519,7 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
               // Custom Tag Input
               Container(
                 decoration: BoxDecoration(
-                  color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                  color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: borderColor,
@@ -509,44 +546,14 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
               ),
               const SizedBox(height: 16),
 
-              // Encoding Dropdown
-              Container(
-                decoration: BoxDecoration(
-                  color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: borderColor,
-                    width: 1,
-                  ),
-                ),
-                child: DropdownButtonFormField<String>(
-                  value: _selectedEncoding,
-                  onChanged: (String? newValue) {
-                    if (newValue != null) {
-                      setState(() {
-                        _selectedEncoding = newValue;
-                      });
-                    }
-                  },
-                  items: ["UTF-8", "ISO-8859-1", "ASCII"].map((String encoding) {
-                    return DropdownMenuItem<String>(
-                      value: encoding,
-                      child: Text(encoding),
-                    );
-                  }).toList(),
-                  decoration: InputDecoration(
-                    labelText: 'Encoding',
-                    prefixIcon: Icon(
-                      Icons.code,
-                      color: primaryColor,
-                    ),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                    labelStyle: TextStyle(
-                      color: primaryColor,
-                    ),
-                  ),
-                ),
+              // Searchable encoding chooser replaces the long dropdown.
+              OutlinedButton.icon(
+                key: const ValueKey('output-encoding-picker'),
+                onPressed: _chooseEncoding,
+                icon: Icon(Icons.manage_search),
+                label: Text(_availableEncodings.contains(_selectedEncoding)
+                    ? 'Output encoding: ' + _selectedEncoding
+                    : 'Unavailable on this device: ' + _selectedEncoding),
               ),
               const SizedBox(height: 20),
 
@@ -554,7 +561,7 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                  color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: borderColor,
@@ -572,9 +579,9 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
                             color: primaryColor,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.tune,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                             size: 20,
                           ),
                         ),
@@ -626,8 +633,8 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
                       child: OutlinedButton(
                         onPressed: () => Navigator.pop(context),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.red,
-                          side: BorderSide(color: Colors.red.withValues(alpha: 0.5)),
+                          foregroundColor: Theme.of(context).colorScheme.error,
+                          side: BorderSide(color: Theme.of(context).colorScheme.error.withValues(alpha: 0.5)),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -651,7 +658,7 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
                         onPressed: _exportSrt,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primaryColor,
-                          foregroundColor: Colors.white,
+                          foregroundColor: Theme.of(context).colorScheme.onPrimary,
                           elevation: 0,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),

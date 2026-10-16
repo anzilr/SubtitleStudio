@@ -1,10 +1,14 @@
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:subtitle_studio/features/waveform/models/waveform_sample.dart';
-import 'package:subtitle_studio/database/models/preferences_model.dart';
+import 'package:subtitle_studio/features/waveform/repositories/waveform_preferences_repository.dart';
 
 /// Service for generating zoom levels from waveform data
 class ZoomBufferGenerator {
+  final WaveformPreferencesRepository _preferences;
+
+  const ZoomBufferGenerator(this._preferences);
+
   /// Generate multiple zoom levels for smooth zooming
   /// Based on Subtitle Composer's zoom buffer implementation
   Future<List<ZoomLevel>> generateZoomLevels(
@@ -45,16 +49,56 @@ class ZoomBufferGenerator {
     return zoomLevels;
   }
 
+  /// Experimental preparation path: no full-track zoom arrays or scaling.
+  /// Identical zoom ladder and width semantics to generateZoomLevels().
+  Future<List<ZoomLevel>> generateZoomMetadata(
+    WaveformData rawData, {
+    Function(double)? onProgress,
+  }) async {
+    final values = await _calculateZoomLevels(rawData.totalSamples);
+    final levels = <ZoomLevel>[];
+    for (var i = 0; i < values.length; i++) {
+      final spp = values[i];
+      levels.add(ZoomLevel.metadata(
+        samplesPerPixel: spp,
+        pixelCount: (rawData.totalSamples + spp - 1) ~/ spp,
+        channels: rawData.channels,
+      ));
+      onProgress?.call((i + 1) / values.length);
+    }
+    return levels;
+  }
+
+  /// Single preparation boundary used by AudioProcessor and regression tests.
+  /// Tiled builds skip eager pixel aggregation AND a second scaling pass.
+  Future<List<ZoomLevel>> prepareZoomLevels(
+    WaveformData rawData, {
+    required bool tiled,
+    Function(double)? onProgress,
+  }) async {
+    if (tiled) {
+      return generateZoomMetadata(rawData, onProgress: onProgress);
+    }
+    final eager = await generateZoomLevels(rawData, onProgress: (value) {
+      onProgress?.call(value * 0.9);
+    });
+    onProgress?.call(0.95);
+    final scaled = applyScaling(eager);
+    onProgress?.call(1.0);
+    return scaled;
+  }
+
   /// Calculate optimal zoom levels for given total samples
   /// Creates logarithmic zoom levels for smooth zooming with more intermediate steps
   /// Optimized to provide extra detail in useful ranges without performance penalty
   Future<List<int>> _calculateZoomLevels(int totalSamples) async {
     final levels = <int>[];
 
-    // Get configurable settings from preferences
-    final maxPixelsForDetailedView = await PreferencesModel.getWaveformMaxPixels();
-    final sampleRateFactor = await PreferencesModel.getWaveformSampleRateFactor();
-    final zoomMultiplier = await PreferencesModel.getWaveformZoomMultiplier();
+    // Get configurable settings through the injected persistence boundary.
+    final config = await _preferences.getGenerationConfig();
+    final maxPixelsForDetailedView = config.maxPixelsForDetailedView;
+    final sampleRateFactor = config.sampleRateFactor;
+    final zoomMultiplier = config.zoomMultiplier;
     
     // Minimum samples per pixel (most zoomed in) - adjusted for long audio
     final minSamplesPerPixel = math.max(1, totalSamples ~/ maxPixelsForDetailedView);

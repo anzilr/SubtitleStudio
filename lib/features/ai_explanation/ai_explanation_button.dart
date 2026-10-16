@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:subtitle_studio/features/ai_explanation/ai_explanation_cubit.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:subtitle_studio/features/ai_explanation/ai_explanation_controller.dart';
 import 'package:subtitle_studio/features/ai_explanation/ai_explanation_state.dart';
-import 'package:subtitle_studio/database/models/preferences_model.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 
 /// AI Explanation Button Widget
@@ -10,7 +9,7 @@ import 'package:subtitle_studio/utils/logging_helpers.dart';
 /// Displays a button below the subtitle text field that triggers AI explanations
 /// Only visible when a Gemini API key is configured
 /// Follows clean architecture with separated UI and business logic
-class AiExplanationButton extends StatefulWidget {
+class AiExplanationButton extends ConsumerStatefulWidget {
   final String currentLine;
   final List<String> previousLines;
   final List<String> nextLines;
@@ -23,10 +22,10 @@ class AiExplanationButton extends StatefulWidget {
   });
 
   @override
-  State<AiExplanationButton> createState() => _AiExplanationButtonState();
+  ConsumerState<AiExplanationButton> createState() => _AiExplanationButtonState();
 }
 
-class _AiExplanationButtonState extends State<AiExplanationButton> {
+class _AiExplanationButtonState extends ConsumerState<AiExplanationButton> {
   bool _hasApiKey = false;
   bool _isCheckingApiKey = true;
 
@@ -38,7 +37,9 @@ class _AiExplanationButtonState extends State<AiExplanationButton> {
 
   /// Check if API key is configured
   Future<void> _checkApiKey() async {
-    final apiKey = await PreferencesModel.getGeminiApiKey();
+    final apiKey = await ref
+        .read(aiExplanationPreferencesRepositoryProvider)
+        .getGeminiApiKey();
     if (mounted) {
       setState(() {
         _hasApiKey = apiKey != null && apiKey.isNotEmpty;
@@ -145,7 +146,7 @@ class _AiExplanationButtonState extends State<AiExplanationButton> {
                           Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                              color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
                                 color: borderColor,
@@ -179,7 +180,7 @@ class _AiExplanationButtonState extends State<AiExplanationButton> {
                                   children: [
                                     Icon(
                                       Icons.check_circle,
-                                      color: Colors.green,
+                                      color: Theme.of(context).colorScheme.primary,
                                       size: 16,
                                     ),
                                     const SizedBox(width: 8),
@@ -257,7 +258,7 @@ class _AiExplanationButtonState extends State<AiExplanationButton> {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                            color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: borderColor,
@@ -282,7 +283,7 @@ class _AiExplanationButtonState extends State<AiExplanationButton> {
                             onPressed: () => Navigator.of(context).pop(),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: primaryColor,
-                              foregroundColor: Colors.white,
+                              foregroundColor: Theme.of(context).colorScheme.onPrimary,
                               elevation: 0,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -291,7 +292,7 @@ class _AiExplanationButtonState extends State<AiExplanationButton> {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(Icons.check, size: 20),
+                                Icon(Icons.check, size: 20),
                                 const SizedBox(width: 8),
                                 Text(
                                   'Got it',
@@ -323,7 +324,7 @@ class _AiExplanationButtonState extends State<AiExplanationButton> {
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            const Icon(Icons.error_outline, color: Colors.red),
+            Icon(Icons.error_outline, color: Theme.of(context).colorScheme.error),
             const SizedBox(width: 8),
             const Text('Error'),
           ],
@@ -340,17 +341,14 @@ class _AiExplanationButtonState extends State<AiExplanationButton> {
   }
 
   /// Trigger AI explanation
-  void _getExplanation(BuildContext context) {
-    final cubit = context.read<AiExplanationCubit>();
-    
-    // Validate that current line is not empty
+  void _getExplanation() {
     if (widget.currentLine.trim().isEmpty) {
       _showErrorDialog('Please enter some text to get an explanation.');
       return;
     }
 
     logInfo('Requesting AI explanation for dialogue');
-    cubit.getExplanation(
+    ref.read(aiExplanationControllerProvider.notifier).getExplanation(
       currentLine: widget.currentLine,
       previousLines: widget.previousLines,
       nextLines: widget.nextLines,
@@ -369,90 +367,90 @@ class _AiExplanationButtonState extends State<AiExplanationButton> {
       return const SizedBox.shrink();
     }
 
-    return BlocConsumer<AiExplanationCubit, AiExplanationState>(
-      listener: (context, state) {
-        if (state is AiExplanationSuccess) {
-          _showExplanationSheet(state.explanation);
-          // Reset state after showing sheet
-          context.read<AiExplanationCubit>().reset();
-        } else if (state is AiExplanationError) {
-          _showErrorDialog(state.message);
-          // Reset state after showing error
-          context.read<AiExplanationCubit>().reset();
-        } else if (state is AiExplanationNoApiKey) {
-          _showErrorDialog(
-            'Gemini API key not configured. Please add your API key in settings.',
-          );
-          context.read<AiExplanationCubit>().reset();
-        }
-      },
-      builder: (context, state) {
-        final isLoading = state is AiExplanationLoading;
+    final state = ref.watch(aiExplanationControllerProvider);
 
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              gradient: LinearGradient(
-                colors: isLoading
-                    ? [Colors.grey.shade300, Colors.grey.shade400]
-                    : [
-                        Colors.deepPurple.withOpacity(0.1),
-                        Colors.purple.withOpacity(0.1),
-                      ],
+    ref.listen<AiExplanationState>(aiExplanationControllerProvider, (previous, next) {
+      if (next is AiExplanationSuccess &&
+          previous is! AiExplanationSuccess) {
+        _showExplanationSheet(next.explanation);
+        ref.read(aiExplanationControllerProvider.notifier).reset();
+      } else if (next is AiExplanationError &&
+          previous is! AiExplanationError) {
+        _showErrorDialog(next.message);
+        ref.read(aiExplanationControllerProvider.notifier).reset();
+      } else if (next is AiExplanationNoApiKey &&
+          previous is! AiExplanationNoApiKey) {
+        _showErrorDialog(
+          'Gemini API key not configured. Please add your API key in settings.',
+        );
+        ref.read(aiExplanationControllerProvider.notifier).reset();
+      }
+    });
+
+    final isLoading = state is AiExplanationLoading;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          gradient: LinearGradient(
+            colors: isLoading
+                ? [Theme.of(context).colorScheme.outlineVariant, Theme.of(context).colorScheme.outline]
+                : [
+                    Theme.of(context).colorScheme.secondary.withValues(alpha: 0.1),
+                    Theme.of(context).colorScheme.secondary.withValues(alpha: 0.1),
+                  ],
+          ),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: isLoading ? null : _getExplanation,
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 12.0,
               ),
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: isLoading ? null : () => _getExplanation(context),
-                borderRadius: BorderRadius.circular(8),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16.0,
-                    vertical: 12.0,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (isLoading)
-                        const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.deepPurple,
-                            ),
-                          ),
-                        )
-                      else
-                        const Icon(
-                          Icons.auto_awesome,
-                          color: Colors.deepPurple,
-                          size: 20,
-                        ),
-                      const SizedBox(width: 8),
-                      Text(
-                        isLoading
-                            ? 'Getting AI Explanation...'
-                            : 'Explain with AI',
-                        style: TextStyle(
-                          color: isLoading ? Colors.grey : Colors.deepPurple,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (isLoading)
+                    SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Theme.of(context).colorScheme.secondary,
                         ),
                       ),
-                    ],
+                    )
+                  else
+                    Icon(
+                      Icons.auto_awesome,
+                      color: Theme.of(context).colorScheme.secondary,
+                      size: 20,
+                    ),
+                  const SizedBox(width: 8),
+                  Text(
+                    isLoading
+                        ? 'Getting AI Explanation...'
+                        : 'Explain with AI',
+                    style: TextStyle(
+                      color: isLoading ? Theme.of(context).colorScheme.onSurfaceVariant : Theme.of(context).colorScheme.secondary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }

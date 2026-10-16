@@ -43,57 +43,26 @@ class CommentDialog extends StatefulWidget {
     int? subtitleIndex,
     Function(String)? onTextEdited,
   }) async {
-    // Store current orientation preferences before changing to portrait
-    List<DeviceOrientation>? originalOrientations;
-    
-    // Check if we're in fullscreen video mode by checking screen orientation
-    final orientation = MediaQuery.of(context).orientation;
-    final isLandscape = orientation == Orientation.landscape;
-    
-    // If in landscape (likely fullscreen), store current orientations and switch to portrait
-    if (isLandscape) {
-      // Store the current preferred orientations (we'll assume they were all orientations)
-      originalOrientations = [
-        DeviceOrientation.portraitUp,
-        DeviceOrientation.portraitDown,
-        DeviceOrientation.landscapeLeft,
-        DeviceOrientation.landscapeRight,
-      ];
-      
-      // Force portrait orientation for better comment input experience
-      await SystemChrome.setPreferredOrientations([
-        DeviceOrientation.portraitUp,
-        DeviceOrientation.portraitDown,
-      ]);
-      
-      // Give a small delay for orientation change to complete
-      await Future.delayed(const Duration(milliseconds: 300));
-    }
-    
-    try {
-      await showModalBottomSheet<void>(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        useSafeArea: true,
-        enableDrag: true,
-        isDismissible: true,
-        builder: (context) => CommentDialog(
-          existingComment: existingComment,
-          onCommentSaved: onCommentSaved,
-          onCommentDeleted: onCommentDeleted,
-          originalText: originalText,
-          editedText: editedText,
-          subtitleIndex: subtitleIndex,
-          onTextEdited: onTextEdited,
-        ),
-      );
-    } finally {
-      // Restore original orientation when dialog is dismissed
-      if (originalOrientations != null) {
-        await SystemChrome.setPreferredOrientations(originalOrientations);
-      }
-    }
+    // Dialogs should not own device orientation. In particular, rotating the
+    // Android Activity while a video fullscreen OverlayEntry is mounted can
+    // corrupt the Navigator overlay and its GlobalKeys.
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      useSafeArea: true,
+      enableDrag: true,
+      isDismissible: true,
+      builder: (context) => CommentDialog(
+        existingComment: existingComment,
+        onCommentSaved: onCommentSaved,
+        onCommentDeleted: onCommentDeleted,
+        originalText: originalText,
+        editedText: editedText,
+        subtitleIndex: subtitleIndex,
+        onTextEdited: onTextEdited,
+      ),
+    );
   }
 }
 
@@ -161,7 +130,10 @@ class CommentDialogState extends State<CommentDialog> {
     try {
       // Call the callback to save the comment
       // The parent (screen_edit.dart) will handle marking the line if needed
-      widget.onCommentSaved(comment);
+      // Wait for asynchronous persistence before dismissing the editor.
+      // This also keeps the Save button disabled against double taps.
+      await Future.sync(() => widget.onCommentSaved(comment));
+      if (!mounted) return;
       
       // Only call Navigator.pop() if not in overlay mode
       if (!widget.isOverlayMode) {
@@ -181,9 +153,10 @@ class CommentDialogState extends State<CommentDialog> {
     try {
       // Call the callback to delete the comment
       if (widget.onCommentDeleted != null) {
-        widget.onCommentDeleted!();
+        await Future.sync(() => widget.onCommentDeleted!());
       }
-      
+      if (!mounted) return;
+
       // Only call Navigator.pop() if not in overlay mode
       if (!widget.isOverlayMode) {
         Navigator.of(context).pop();
@@ -205,6 +178,9 @@ class CommentDialogState extends State<CommentDialog> {
     final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
     final mutedColor = onSurfaceColor.withValues(alpha: 0.6);
     final borderColor = onSurfaceColor.withValues(alpha: 0.12);
+    // Landscape fullscreen playback has very little vertical space,
+    // especially when the keyboard is raised.
+    final compactLayout = MediaQuery.sizeOf(context).height < 500;
 
     Widget content = Container(
       constraints: BoxConstraints(
@@ -215,29 +191,29 @@ class CommentDialogState extends State<CommentDialog> {
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: EdgeInsets.all(compactLayout ? 12.0 : 24.0),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
             // Standard Header Structure
             Container(
-              padding: const EdgeInsets.symmetric(vertical: 16),
+              padding: EdgeInsets.symmetric(vertical: compactLayout ? 4 : 16),
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: EdgeInsets.all(compactLayout ? 8 : 12),
                     decoration: BoxDecoration(
-                      color: Colors.blue.withValues(alpha: 0.1),
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
                       Icons.comment_outlined,
-                      color: Colors.blue,
+                      color: Theme.of(context).colorScheme.primary,
                       size: 28,
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  SizedBox(width: compactLayout ? 8 : 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -248,8 +224,8 @@ class CommentDialogState extends State<CommentDialog> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
+                        if (!compactLayout) const SizedBox(height: 4),
+                        if (!compactLayout) Text(
                           _isEditing 
                             ? 'Modify your comment for this subtitle line'
                             : 'Add a comment to this subtitle line',
@@ -271,7 +247,7 @@ class CommentDialogState extends State<CommentDialog> {
                           padding: const EdgeInsets.all(8),
                           child: Icon(
                             Icons.delete_outline,
-                            color: Colors.red,
+                            color: Theme.of(context).colorScheme.error,
                             size: 24,
                           ),
                         ),
@@ -283,14 +259,14 @@ class CommentDialogState extends State<CommentDialog> {
             
             // Subtitle Content Display (if available)
             if (widget.originalText != null || widget.editedText != null) ...[
-              const SizedBox(height: 20),
+              SizedBox(height: compactLayout ? 8 : 20),
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(compactLayout ? 8 : 16),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.08),
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: Colors.blue.withValues(alpha: 0.2),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
                     width: 1,
                   ),
                 ),
@@ -302,7 +278,7 @@ class CommentDialogState extends State<CommentDialog> {
                       children: [
                         Icon(
                           Icons.subtitles_outlined,
-                          color: Colors.blue,
+                          color: Theme.of(context).colorScheme.primary,
                           size: 20,
                         ),
                         const SizedBox(width: 8),
@@ -312,7 +288,7 @@ class CommentDialogState extends State<CommentDialog> {
                             : 'Subtitle Line',
                           style: Theme.of(context).textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w600,
-                            color: Colors.blue,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                         ),
                         const Spacer(),
@@ -327,12 +303,12 @@ class CommentDialogState extends State<CommentDialog> {
                                   SnackBar(
                                     content: Row(
                                       children: [
-                                        Icon(Icons.check_circle, color: Colors.white, size: 20),
+                                        Icon(Icons.check_circle, color: Theme.of(context).colorScheme.onPrimary, size: 20),
                                         const SizedBox(width: 8),
                                         Text('Subtitle text copied to clipboard'),
                                       ],
                                     ),
-                                    backgroundColor: Colors.green,
+                                    backgroundColor: Theme.of(context).colorScheme.primary,
                                     duration: const Duration(seconds: 2),
                                     behavior: SnackBarBehavior.floating,
                                   ),
@@ -347,14 +323,14 @@ class CommentDialogState extends State<CommentDialog> {
                                 children: [
                                   Icon(
                                     Icons.copy,
-                                    color: Colors.green,
+                                    color: Theme.of(context).colorScheme.primary,
                                     size: 16,
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
                                     'Copy',
                                     style: TextStyle(
-                                      color: Colors.green,
+                                      color: Theme.of(context).colorScheme.primary,
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -376,7 +352,7 @@ class CommentDialogState extends State<CommentDialog> {
                           color: surfaceColor,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: _isEditingSubtitleText ? Colors.blue : borderColor,
+                            color: _isEditingSubtitleText ? Theme.of(context).colorScheme.primary : borderColor,
                             width: _isEditingSubtitleText ? 2 : 1,
                           ),
                         ),
@@ -426,14 +402,14 @@ class CommentDialogState extends State<CommentDialog> {
                                             children: [
                                               Icon(
                                                 _isEditingSubtitleText ? Icons.check : Icons.edit,
-                                                color: Colors.blue,
+                                                color: Theme.of(context).colorScheme.primary,
                                                 size: 16,
                                               ),
                                               const SizedBox(width: 4),
                                               Text(
                                                 _isEditingSubtitleText ? 'Save' : 'Edit',
                                                 style: TextStyle(
-                                                  color: Colors.blue,
+                                                  color: Theme.of(context).colorScheme.primary,
                                                   fontSize: 12,
                                                   fontWeight: FontWeight.w600,
                                                 ),
@@ -462,14 +438,14 @@ class CommentDialogState extends State<CommentDialog> {
                                             children: [
                                               Icon(
                                                 Icons.close,
-                                                color: Colors.red,
+                                                color: Theme.of(context).colorScheme.error,
                                                 size: 16,
                                               ),
                                               const SizedBox(width: 4),
                                               Text(
                                                 'Cancel',
                                                 style: TextStyle(
-                                                  color: Colors.red,
+                                                  color: Theme.of(context).colorScheme.error,
                                                   fontSize: 12,
                                                   fontWeight: FontWeight.w600,
                                                 ),
@@ -554,36 +530,36 @@ class CommentDialogState extends State<CommentDialog> {
               ),
             ],
             
-            const SizedBox(height: 20),
+            SizedBox(height: compactLayout ? 8 : 20),
             
             // Comment Input Field
             Container(
               decoration: BoxDecoration(
-                color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: borderColor,
                   width: 1,
                 ),
               ),
-              child: RawKeyboardListener(
-                focusNode: FocusNode(),
-                onKey: (RawKeyEvent event) {
-                  if (event is RawKeyDownEvent) {
-                    // Check for Enter key
-                    if (event.logicalKey == LogicalKeyboardKey.enter) {
-                      // Check if Shift is pressed
-                      if (event.isShiftPressed) {
-                        // Shift+Enter: Allow new line (do nothing, let TextField handle it)
-                        return;
-                      } else {
-                        // Enter only: Save comment
-                        if (!_isLoading && _commentController.text.trim().isNotEmpty) {
-                          _saveComment();
-                        }
-                      }
-                    }
+              child: Focus(
+                onKeyEvent: (node, event) {
+                  if (event is! KeyDownEvent ||
+                      event.logicalKey != LogicalKeyboardKey.enter) {
+                    return KeyEventResult.ignored;
                   }
+
+                  if (HardwareKeyboard.instance.isShiftPressed) {
+                    return KeyEventResult.ignored;
+                  }
+
+                  if (!_isLoading &&
+                      _commentController.text.trim().isNotEmpty) {
+                    _saveComment();
+                    return KeyEventResult.handled;
+                  }
+
+                  return KeyEventResult.ignored;
                 },
                 child: TextField(
                   controller: _commentController,
@@ -592,7 +568,7 @@ class CommentDialogState extends State<CommentDialog> {
                   ],
                   focusNode: _focusNode,
                   maxLines: null,
-                  minLines: 3,
+                  minLines: compactLayout ? 2 : 3,
                   keyboardType: TextInputType.multiline,
                   textInputAction: TextInputAction.newline,
                   decoration: InputDecoration(
@@ -602,12 +578,12 @@ class CommentDialogState extends State<CommentDialog> {
                         : 'Enter your comment here...',
                     prefixIcon: Icon(
                       Icons.edit_note,
-                      color: Colors.blue,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                     labelStyle: TextStyle(
-                      color: Colors.blue,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
                   enabled: !_isLoading,
@@ -615,7 +591,7 @@ class CommentDialogState extends State<CommentDialog> {
               ),
             ),
             
-            const SizedBox(height: 24),
+            SizedBox(height: compactLayout ? 12 : 24),
             
             // Action Buttons
             Row(
@@ -664,19 +640,19 @@ class CommentDialogState extends State<CommentDialog> {
                       onPressed: _isLoading ? null : _saveComment,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryColor,
-                        foregroundColor: Colors.white,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
                       child: _isLoading
-                          ? const SizedBox(
+                          ? SizedBox(
                               width: 20,
                               height: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.onPrimary),
                               ),
                             )
                           : Row(

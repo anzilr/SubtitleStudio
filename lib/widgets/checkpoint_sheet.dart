@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/database/models/models.dart';
-import 'package:subtitle_studio/services/checkpoint_manager.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/screens/screen_help.dart';
+import 'package:subtitle_studio/widgets/checkpoint_history_panel.dart';
+import 'package:subtitle_studio/services/checkpoint_timeline.dart';
 
 /// Edit History Sheet - User-friendly undo/redo interface
 /// 
@@ -11,7 +14,7 @@ import 'package:subtitle_studio/screens/screen_help.dart';
 /// - Easy undo to any point
 /// - Save points for important states
 /// - Automatic history tracking
-class CheckpointSheet extends StatefulWidget {
+class CheckpointSheet extends ConsumerStatefulWidget {
   final int sessionId;
   final int subtitleCollectionId;
   final Function() onCheckpointRestored;
@@ -24,7 +27,7 @@ class CheckpointSheet extends StatefulWidget {
   });
 
   @override
-  State<CheckpointSheet> createState() => _CheckpointSheetState();
+  ConsumerState<CheckpointSheet> createState() => _CheckpointSheetState();
 }
 
 /// Tree node representing a checkpoint in the tree structure
@@ -42,9 +45,13 @@ class CheckpointNode {
   });
 }
 
-class _CheckpointSheetState extends State<CheckpointSheet> {
+class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
   List<Checkpoint> _checkpoints = [];
   bool _isLoading = true;
+  bool _showGraph = true;
+  bool _classicCheckoutPending = false;
+  int _graphRefreshVersion = 0;
+  int _historyLoadGeneration = 0;
   List<CheckpointNode> _treeNodes = [];
   final ScrollController _scrollController = ScrollController();
 
@@ -56,6 +63,7 @@ class _CheckpointSheetState extends State<CheckpointSheet> {
   
   @override
   void dispose() {
+    _historyLoadGeneration++;
     _scrollController.dispose();
     super.dispose();
   }
@@ -78,40 +86,19 @@ class _CheckpointSheetState extends State<CheckpointSheet> {
         checkpoint: checkpoint,
         children: [], // No nested children in simplified view
         depth: 0, // All at same depth (linear)
-        branchColor: Colors.blue,
+        branchColor: Theme.of(context).colorScheme.primary,
       );
     }).toList();
   }
   
-  /// Check if a checkpoint is a descendant of another
-  bool _isDescendantOf(Checkpoint checkpoint, int ancestorId) {
-    int? currentParentId = checkpoint.parentCheckpointId;
-    
-    while (currentParentId != null) {
-      if (currentParentId == ancestorId) {
-        return true;
-      }
-      
-      // Find parent checkpoint
-      final parent = _checkpoints.firstWhere(
-        (cp) => cp.id == currentParentId,
-        orElse: () => checkpoint, // Fallback to avoid infinite loop
-      );
-      
-      if (parent.id == checkpoint.id) break; // Avoid infinite loop
-      currentParentId = parent.parentCheckpointId;
-    }
-    
-    return false;
-  }
-
   int? _currentCheckpointId; // Track the current/latest point in history
   
   Future<void> _loadHistory() async {
+    final loadId = ++_historyLoadGeneration;
     setState(() => _isLoading = true);
     
     try {
-      final checkpoints = await CheckpointManager.getCheckpointsForSession(widget.sessionId);
+      final checkpoints = await ref.read(checkpointRepositoryProvider).getCheckpointsForSession(widget.sessionId);
 
       // Find the currently active point
       Checkpoint? currentCheckpoint;
@@ -126,24 +113,30 @@ class _CheckpointSheetState extends State<CheckpointSheet> {
         }
       }
 
+      if (!mounted || loadId != _historyLoadGeneration) return;
+
       setState(() {
         _checkpoints = checkpoints;
+        _graphRefreshVersion++;
         _currentCheckpointId = currentCheckpoint?.id;
         _buildTree();
         _isLoading = false;
       });
-      
-      // Scroll to current point after the UI is built
+
       if (currentCheckpoint != null) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          _scrollToCurrentCheckpoint();
+          if (mounted) {
+            _scrollToCurrentCheckpoint();
+          }
         });
       }
     } catch (e) {
+      if (!mounted || loadId != _historyLoadGeneration) return;
       setState(() => _isLoading = false);
-      if (mounted) {
-        SnackbarHelper.showError(context, 'Failed to load history: $e');
-      }
+      SnackbarHelper.showError(
+        context,
+        'Could not load checkpoint history. Please try again.',
+      );
     }
   }
   
@@ -179,14 +172,14 @@ class _CheckpointSheetState extends State<CheckpointSheet> {
   }
 
   Future<void> _restoreCheckpoint(Checkpoint checkpoint) async {
-    // Count future checkpoints that will be affected
-    int futureCheckpointsCount = 0;
-    for (final cp in _checkpoints) {
-      if (cp.parentCheckpointId == checkpoint.id || 
-          _isDescendantOf(cp, checkpoint.id)) {
-        futureCheckpointsCount++;
-      }
-    }
+    if (_classicCheckoutPending) return;
+    _classicCheckoutPending = true;
+    try {
+    // O(history size), cycle-bounded traversal, including alternate branches.
+    final futureCheckpointsCount = CheckpointTimeline.descendantIds(
+      checkpoints: _checkpoints,
+      parentCheckpointId: checkpoint.id,
+    ).length;
     
     // Show confirmation dialog with warning about future checkpoints
     final confirmed = await showDialog<bool>(
@@ -204,7 +197,7 @@ class _CheckpointSheetState extends State<CheckpointSheet> {
                   children: [
                     Icon(
                       futureCheckpointsCount > 0 ? Icons.warning_amber : Icons.restore,
-                      color: futureCheckpointsCount > 0 ? Colors.orange : Theme.of(context).primaryColor,
+                      color: futureCheckpointsCount > 0 ? Theme.of(context).colorScheme.tertiary : Theme.of(context).primaryColor,
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -227,32 +220,32 @@ class _CheckpointSheetState extends State<CheckpointSheet> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.orange.withValues(alpha: 0.1),
+                      color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                      border: Border.all(color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.3)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.info_outline, size: 16, color: Colors.orange.shade700),
+                            Icon(Icons.info_outline, size: 16, color: Theme.of(context).colorScheme.tertiary),
                             const SizedBox(width: 8),
                             Text(
                               'Note',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: Colors.orange.shade700,
+                                color: Theme.of(context).colorScheme.tertiary,
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Making new changes after going back will replace $futureCheckpointsCount newer change${futureCheckpointsCount > 1 ? 's' : ''}.',
+                          '$futureCheckpointsCount newer change${futureCheckpointsCount > 1 ? 's are' : ' is'} preserved as alternate history. Making a new edit from here creates a new branch.',
                           style: TextStyle(
                             fontSize: 13,
-                            color: Colors.orange.shade900,
+                            color: Theme.of(context).colorScheme.tertiary,
                           ),
                         ),
                       ],
@@ -283,7 +276,7 @@ class _CheckpointSheetState extends State<CheckpointSheet> {
                       onPressed: () => Navigator.pop(context, true),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Theme.of(context).primaryColor,
-                        foregroundColor: Colors.white,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
                       ),
                       child: const Text('Undo to Here'),
                     ),
@@ -297,9 +290,10 @@ class _CheckpointSheetState extends State<CheckpointSheet> {
     );
 
     if (confirmed == true && mounted) {
-      final success = await CheckpointManager.undoToCheckpoint(
+      final success = await ref.read(checkpointRepositoryProvider).checkoutCheckpoint(
         checkpointId: checkpoint.id,
         sessionId: widget.sessionId,
+        ifCurrentHeadId: _currentCheckpointId,
       );
 
       if (success && mounted) {
@@ -308,12 +302,15 @@ class _CheckpointSheetState extends State<CheckpointSheet> {
         
         if (mounted) {
           SnackbarHelper.showSuccess(context, 'Restored successfully');
-          widget.onCheckpointRestored();
           Navigator.pop(context);
+          widget.onCheckpointRestored();
         }
       } else if (mounted) {
         SnackbarHelper.showError(context, 'Failed to restore');
       }
+    }
+    } finally {
+      _classicCheckoutPending = false;
     }
   }
 
@@ -372,7 +369,7 @@ class _CheckpointSheetState extends State<CheckpointSheet> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Mark an important moment in your work. You can easily jump back to any save point to undo multiple changes at once.',
+                        'Saves a named snapshot in this project\'s history, not a separate backup file. Use a bookmark to label an existing commit without adding a snapshot.',
                         style: TextStyle(
                           fontSize: 13,
                           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
@@ -409,7 +406,7 @@ class _CheckpointSheetState extends State<CheckpointSheet> {
                       onPressed: () => Navigator.pop(context, nameController.text),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Theme.of(context).primaryColor,
-                        foregroundColor: Colors.white,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
                       ),
                       child: const Text('Create'),
                     ),
@@ -423,7 +420,7 @@ class _CheckpointSheetState extends State<CheckpointSheet> {
     );
 
     if (name != null && name.isNotEmpty && mounted) {
-      await CheckpointManager.createManualCheckpoint(
+      await ref.read(checkpointRepositoryProvider).createManualCheckpoint(
         sessionId: widget.sessionId,
         subtitleCollectionId: widget.subtitleCollectionId,
         customDescription: name,
@@ -451,13 +448,13 @@ class _CheckpointSheetState extends State<CheckpointSheet> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
+                Row(
                   children: [
-                    Icon(Icons.camera_alt, color: Colors.orange, size: 28),
+                    Icon(Icons.camera_alt, color: Theme.of(context).colorScheme.tertiary, size: 28),
                     SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Create Full Backup',
+                        'Create In-app Snapshot',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -470,32 +467,32 @@ class _CheckpointSheetState extends State<CheckpointSheet> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.1),
+                    color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                    border: Border.all(color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.3)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.info_outline, size: 16, color: Colors.orange.shade700),
+                          Icon(Icons.info_outline, size: 16, color: Theme.of(context).colorScheme.tertiary),
                           const SizedBox(width: 8),
                           Text(
-                            'What is a Full Backup?',
+                            'What is an In-app Snapshot?',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              color: Colors.orange.shade700,
+                              color: Theme.of(context).colorScheme.tertiary,
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'A complete backup of all subtitles at this moment. Provides the most reliable way to restore your work to this exact point.',
+                        'Saves a snapshot in this project\'s edit history. It does not create a separate backup file. Export your project for an independent copy.',
                         style: TextStyle(
                           fontSize: 13,
-                          color: Colors.orange.shade900,
+                          color: Theme.of(context).colorScheme.tertiary,
                         ),
                       ),
                     ],
@@ -528,8 +525,8 @@ class _CheckpointSheetState extends State<CheckpointSheet> {
                     ElevatedButton(
                       onPressed: () => Navigator.pop(context, nameController.text),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                        foregroundColor: Colors.white,
+                        backgroundColor: Theme.of(context).colorScheme.tertiary,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
                       ),
                       child: const Text('Create'),
                     ),
@@ -543,19 +540,16 @@ class _CheckpointSheetState extends State<CheckpointSheet> {
     );
 
     if (name != null && name.isNotEmpty && mounted) {
-      await CheckpointManager.createCheckpoint(
+      await ref.read(checkpointRepositoryProvider).createManualCheckpoint(
         sessionId: widget.sessionId,
         subtitleCollectionId: widget.subtitleCollectionId,
-        operationType: 'manual',
-        description: name,
-        deltas: [],
-        forceSnapshot: true, // Force this to be a snapshot
+        customDescription: name,
       );
 
       await _loadHistory();
       
       if (mounted) {
-        SnackbarHelper.showSuccess(context, 'Full backup created: $name');
+        SnackbarHelper.showSuccess(context, 'In-app snapshot created: $name');
       }
     }
   }
@@ -607,53 +601,44 @@ class _CheckpointSheetState extends State<CheckpointSheet> {
     }
   }
   
-  /// Build tree view with visual connections
-  Widget _buildTreeView(BuildContext context, bool isDark, Color onSurfaceColor, Color mutedColor, Color borderColor) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: _treeNodes.asMap().entries.map((entry) {
-        final index = entry.key;
-        final node = entry.value;
-        final isFirst = index == 0;
-        final isLast = index == _treeNodes.length - 1;
-        
-        // Check if next node has different depth (indicates branching)
-        final nextNode = index < _treeNodes.length - 1 ? _treeNodes[index + 1] : null;
-        final hasNextNodeAtDifferentDepth = nextNode != null && nextNode.depth != node.depth;
-        
+  /// Lazily build the legacy cards rather than allocating every card eagerly.
+  Widget _buildTreeView(BuildContext context, bool isDark,
+      Color onSurfaceColor, Color mutedColor, Color borderColor) {
+    return ListView.builder(
+      controller: _scrollController,
+      padding: const EdgeInsets.all(16),
+      itemCount: _treeNodes.length,
+      itemBuilder: (context, index) {
+        final node = _treeNodes[index];
         return _buildTreeNode(
-          context,
-          node,
-          isDark,
-          onSurfaceColor,
-          mutedColor,
-          borderColor,
-          isFirst: isFirst,
-          isLast: isLast,
-          showBranchLine: hasNextNodeAtDifferentDepth,
+          context, node, isDark, onSurfaceColor, mutedColor, borderColor,
+          isFirst: index == 0,
+          isLast: index == _treeNodes.length - 1,
+          showBranchLine: index + 1 < _treeNodes.length &&
+              _treeNodes[index + 1].depth != node.depth,
         );
-      }).toList(),
+      },
     );
   }
-  
+
   /// Get checkpoint type details (icon, color, size)
   Map<String, dynamic> _getCheckpointTypeDetails(String operationType, String checkpointType) {
     if (checkpointType == 'snapshot') {
       return {
         'icon': Icons.save, // Full Backup icon
-        'color': Colors.orange,
+        'color': Theme.of(context).colorScheme.tertiary,
         'size': 20.0,
       };
     } else if (operationType == 'manual') {
       return {
         'icon': Icons.bookmark_add, // Save Point icon
-        'color': Colors.purple,
+        'color': Theme.of(context).colorScheme.secondary,
         'size': 18.0,
       };
     } else {
       return {
         'icon': Icons.circle,
-        'color': Colors.blue,
+        'color': Theme.of(context).colorScheme.primary,
         'size': 12.0,
       };
     }
@@ -692,7 +677,7 @@ class _CheckpointSheetState extends State<CheckpointSheet> {
                 bottom: 0,
                 child: Container(
                   width: 2,
-                  color: Colors.blue.withValues(alpha: 0.3),
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
                 ),
               ),
               // Hide line at top for first item
@@ -739,11 +724,11 @@ class _CheckpointSheetState extends State<CheckpointSheet> {
                   typeDetails['icon'],
                   size: dotSize,
                   color: isCurrentCheckpoint 
-                      ? Colors.amber 
+                      ? Theme.of(context).colorScheme.tertiary 
                       : typeDetails['color'],
                   shadows: isCurrentCheckpoint ? [
                     Shadow(
-                      color: Colors.amber.withValues(alpha: 0.5),
+                      color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.5),
                       blurRadius: 8,
                     ),
                   ] : null,
@@ -766,18 +751,18 @@ class _CheckpointSheetState extends State<CheckpointSheet> {
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: isCurrentCheckpoint
-                            ? (isDark ? onSurfaceColor.withValues(alpha: 0.08) : Colors.grey.shade100)
-                            : (isDark ? onSurfaceColor.withValues(alpha: 0.03) : Colors.white),
+                            ? (isDark ? onSurfaceColor.withValues(alpha: 0.08) : Theme.of(context).colorScheme.surfaceContainerLow)
+                            : Theme.of(context).colorScheme.surface,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: isCurrentCheckpoint 
-                              ? Colors.amber.withValues(alpha: 0.5)
+                              ? Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.5)
                               : borderColor,
                           width: isCurrentCheckpoint ? 2 : 1,
                         ),
                         boxShadow: isCurrentCheckpoint ? [
                           BoxShadow(
-                            color: Colors.amber.withValues(alpha: 0.15),
+                            color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.15),
                             blurRadius: 8,
                             spreadRadius: 0,
                           ),
@@ -915,11 +900,12 @@ class _CheckpointSheetState extends State<CheckpointSheet> {
     final isMobile = screenWidth < 600;
 
     return SafeArea(
-      child: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
+      // Give PopupMenuButton, ActionChip and other interactive history
+      // controls a real Material ancestor inside the bottom sheet.
+      child: Material(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        clipBehavior: Clip.antiAlias,
         child: Column(
           children: [
             // Header
@@ -963,6 +949,11 @@ class _CheckpointSheetState extends State<CheckpointSheet> {
                       ],
                     ),
                   ),
+                  IconButton(
+                    tooltip: _showGraph ? 'Show classic timeline' : 'Show history graph',
+                    onPressed: () => setState(() => _showGraph = !_showGraph),
+                    icon: Icon(_showGraph ? Icons.view_timeline : Icons.account_tree_outlined),
+                  ),
                   // Help button
                   IconButton(
                     onPressed: () {
@@ -986,9 +977,22 @@ class _CheckpointSheetState extends State<CheckpointSheet> {
               ),
             ),
 
-          // Checkpoints timeline (linear)
+          // Shared graph by default. The classic view remains available for
+          // backwards-compatible mobile history interactions.
           Expanded(
-            child: _isLoading
+            child: _showGraph
+                ? CheckpointHistoryPanel(
+                    sessionId: widget.sessionId,
+                    refreshVersion: _graphRefreshVersion,
+                    onCheckpointRestored: () {
+                      // Close the sheet before allowing the editor callback
+                      // to trigger route/state changes.
+                      if (!mounted) return;
+                      Navigator.of(context).pop();
+                      widget.onCheckpointRestored();
+                    },
+                  )
+                : _isLoading
                 ? const Center(
                     child: Padding(
                       padding: EdgeInsets.all(48.0),
@@ -1026,11 +1030,9 @@ class _CheckpointSheetState extends State<CheckpointSheet> {
                           ),
                         ),
                       )
-                    : SingleChildScrollView(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.all(16),
-                        child: _buildTreeView(context, isDark, onSurfaceColor, mutedColor, borderColor),
-                      ),
+                    : _buildTreeView(
+                        context, isDark, onSurfaceColor, mutedColor, borderColor),
+
           ),
 
           // Action buttons
@@ -1054,7 +1056,7 @@ class _CheckpointSheetState extends State<CheckpointSheet> {
                           foregroundColor: onSurfaceColor,
                           side: BorderSide(color: borderColor),
                         ),
-                        icon: const Icon(Icons.close, size: 18),
+                        icon: Icon(Icons.close, size: 18),
                         label: const Text('Close'),
                       ),
                     ),
@@ -1067,11 +1069,11 @@ class _CheckpointSheetState extends State<CheckpointSheet> {
                     child: ElevatedButton.icon(
                       onPressed: _createSnapshot,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                        foregroundColor: Colors.white,
+                        backgroundColor: Theme.of(context).colorScheme.tertiary,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
                       ),
-                      icon: const Icon(Icons.save, size: 18),
-                      label: const Text('Full Backup'),
+                      icon: Icon(Icons.save, size: 18),
+                      label: const Text('Snapshot'),
                     ),
                   ),
                 ),
@@ -1083,9 +1085,9 @@ class _CheckpointSheetState extends State<CheckpointSheet> {
                       onPressed: _createManualCheckpoint,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Theme.of(context).primaryColor,
-                        foregroundColor: Colors.white,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
                       ),
-                      icon: const Icon(Icons.bookmark_add, size: 18),
+                      icon: Icon(Icons.bookmark_add, size: 18),
                       label: const Text('Save Point'),
                     ),
                   ),

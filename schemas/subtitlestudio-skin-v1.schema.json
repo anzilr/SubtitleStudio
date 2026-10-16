@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/anzilr/SubtitleStudio/blob/refactor/riverpod-architecture/schemas/subtitlestudio-skin-v1.schema.json",
+  "title": "SubtitleStudio community skin (version 1)",
+  "description": "Data-only portable palette for Light, Dark and Classic, with no executable features or external assets.",
+  "type": "object",
+  "required": [
+    "format",
+    "schemaVersion",
+    "id",
+    "name",
+    "palettes"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "format": {
+      "const": "subtitlestudio.skin"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^community\\.[a-z0-9][a-z0-9_-]{2,63}$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80
+    },
+    "author": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "palettes": {
+      "type": "object",
+      "required": [
+        "light",
+        "dark",
+        "classic"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "light": {
+          "$ref": "#/$defs/palette"
+        },
+        "dark": {
+          "$ref": "#/$defs/palette"
+        },
+        "classic": {
+          "$ref": "#/$defs/palette"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "color": {
+      "type": "string",
+      "pattern": "^#[0-9A-Fa-f]{6}$"
+    },
+    "palette": {
+      "type": "object",
+      "required": [
+        "canvas",
+        "surface",
+        "raisedSurface",
+        "fieldSurface",
+        "onSurface",
+        "mutedText",
+        "outline",
+        "fieldBorder",
+        "accent",
+        "onAccent",
+        "appBar",
+        "onAppBar"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "canvas": {
+          "$ref": "#/$defs/color"
+        },
+        "surface": {
+          "$ref": "#/$defs/color"
+        },
+        "raisedSurface": {
+          "$ref": "#/$defs/color"
+        },
+        "fieldSurface": {
+          "$ref": "#/$defs/color"
+        },
+        "onSurface": {
+          "$ref": "#/$defs/color"
+        },
+        "mutedText": {
+          "$ref": "#/$defs/color"
+        },
+        "outline": {
+          "$ref": "#/$defs/color"
+        },
+        "fieldBorder": {
+          "$ref": "#/$defs/color"
+        },
+        "accent": {
+          "$ref": "#/$defs/color"
+        },
+        "onAccent": {
+          "$ref": "#/$defs/color"
+        },
+        "appBar": {
+          "$ref": "#/$defs/color"
+        },
+        "onAppBar": {
+          "$ref": "#/$defs/color"
+        }
+      }
+    }
+  }
+}
