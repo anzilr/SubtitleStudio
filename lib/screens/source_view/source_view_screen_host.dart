@@ -27,12 +27,16 @@ class SourceViewScreenHost extends StatefulWidget {
   final String? safUri;
   final String? fileContent;
 
+  @visibleForTesting
+  final SourceViewController Function()? controllerFactory;
+
   const SourceViewScreenHost({
     super.key,
     required this.filePath,
     this.displayName,
     this.safUri,
     this.fileContent,
+    this.controllerFactory,
   });
 
   @override
@@ -51,6 +55,8 @@ class _SourceViewScreenHostState extends State<SourceViewScreenHost> {
         fileContent: widget.fileContent,
       ),
     ),
+    if (widget.controllerFactory != null)
+      sourceViewControllerProvider.overrideWith(widget.controllerFactory!),
   ];
 
   @override
@@ -69,6 +75,8 @@ class _SourceViewScreenHostState extends State<SourceViewScreenHost> {
           fileContent: widget.fileContent,
         ),
       ),
+      if (widget.controllerFactory != null)
+        sourceViewControllerProvider.overrideWith(widget.controllerFactory!),
     ];
   }
 
@@ -78,7 +86,8 @@ class _SourceViewScreenHostState extends State<SourceViewScreenHost> {
     if (oldWidget.filePath != widget.filePath ||
         oldWidget.displayName != widget.displayName ||
         oldWidget.safUri != widget.safUri ||
-        oldWidget.fileContent != widget.fileContent) {
+        oldWidget.fileContent != widget.fileContent ||
+        oldWidget.controllerFactory != widget.controllerFactory) {
       _resetOverrides();
     }
   }
