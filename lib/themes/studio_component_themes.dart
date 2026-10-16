@@ -81,7 +81,9 @@ abstract final class StudioComponentThemes {
       menuTheme: MenuThemeData(
         style: MenuStyle(
           backgroundColor: WidgetStatePropertyAll(tokens.raisedSurface),
-          foregroundColor: WidgetStatePropertyAll(tokens.onSurface),
+          textStyle: WidgetStatePropertyAll(
+            text.bodyMedium?.copyWith(color: tokens.onSurface),
+          ),
           surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
           shape: WidgetStatePropertyAll(popupShape),
           padding: const WidgetStatePropertyAll(
@@ -93,7 +95,9 @@ abstract final class StudioComponentThemes {
         textStyle: text.bodyMedium?.copyWith(color: tokens.onSurface),
         menuStyle: MenuStyle(
           backgroundColor: WidgetStatePropertyAll(tokens.raisedSurface),
-          foregroundColor: WidgetStatePropertyAll(tokens.onSurface),
+          textStyle: WidgetStatePropertyAll(
+            text.bodyMedium?.copyWith(color: tokens.onSurface),
+          ),
           shape: WidgetStatePropertyAll(popupShape),
         ),
         inputDecorationTheme: InputDecorationTheme(
