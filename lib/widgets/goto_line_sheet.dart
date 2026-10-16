@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:subtitle_studio/themes/studio_design_tokens.dart';
 import 'package:subtitle_studio/utils/app_logger.dart';
 
 void showGotToLineModal({
@@ -325,13 +326,13 @@ void showGotToLineModal({
                                 Expanded(
                                   child: SliderTheme(
                                     data: SliderTheme.of(context).copyWith(
-                                      activeTrackColor: isDark ? Colors.blue.shade400 : Colors.blue.shade600,
-                                      inactiveTrackColor: isDark ? Colors.grey.shade600 : Colors.grey.shade300,
-                                      thumbColor: isDark ? Colors.blue.shade300 : Colors.blue.shade700,
-                                      overlayColor: (isDark ? Colors.blue.shade300 : Colors.blue.shade700).withValues(alpha: 0.2),
-                                      valueIndicatorColor: isDark ? Colors.blue.shade400 : Colors.blue.shade600,
-                                      valueIndicatorTextStyle: const TextStyle(
-                                        color: Colors.white,
+                                      activeTrackColor: StudioDesignTokens.of(context).primaryAction,
+                                      inactiveTrackColor: StudioDesignTokens.of(context).outline,
+                                      thumbColor: StudioDesignTokens.of(context).primaryAction,
+                                      overlayColor: StudioDesignTokens.of(context).primaryAction.withValues(alpha: 0.18),
+                                      valueIndicatorColor: StudioDesignTokens.of(context).raisedSurface,
+                                      valueIndicatorTextStyle: TextStyle(
+                                        color: StudioDesignTokens.of(context).onSurface,
                                       ),
                                       trackHeight: 4.0,
                                       thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10.0),
@@ -410,7 +411,7 @@ void showGotToLineModal({
                           onPressed: processInput,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: primaryColor,
-                            foregroundColor: Colors.white,
+                            foregroundColor: Theme.of(context).colorScheme.onPrimary,
                             elevation: 0,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
