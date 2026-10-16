@@ -7,7 +7,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/app/providers/core_providers.dart';
 
 import 'studio_skin.dart';
-import 'theme.dart';
+import 'studio_skin_catalog.dart';
+import 'studio_skin_catalog_provider.dart';
+import 'studio_theme_factory.dart';
 import 'theme_preferences_repository.dart';
 
 final themePreferencesRepositoryProvider = Provider<ThemePreferencesStore>(
@@ -18,11 +20,17 @@ final themeControllerProvider = NotifierProvider<ThemeController, ThemeState>(
   ThemeController.new,
 );
 
-/// Application appearance preferences, independent of the bundled palette.
-///
-/// The legacy UI will continue rendering AppThemes until SKIN-4 migrates its
-/// hard-coded white-on-primary editing fields. This checkpoint only migrates
-/// persistence and provides typed skin/mode state without changing the editor.
+/// Live app theme; watches both saved appearance and validated installed skins.
+/// A missing community ID is preserved in preferences but renders the
+/// catalog's safe Carbon & Jade fallback until it is installed again.
+final liveStudioThemeProvider = Provider<ThemeData>((ref) {
+  final appearance = ref.watch(themeControllerProvider);
+  final catalog = ref.watch(studioSkinCatalogProvider);
+  return appearance.themeDataFor(catalog);
+});
+
+/// Separately persisted skin and appearance selections and custom font.
+/// Live colors resolve through the same data-only catalog/factory as previews.
 @immutable
 class ThemeState {
   const ThemeState({
@@ -70,23 +78,18 @@ class ThemeState {
         isLoaded: isLoaded ?? this.isLoaded,
       );
 
-  /// Temporary legacy rendering boundary. Activate StudioThemeFactory only
-  /// after SKIN-4 replaces white-on-primary Editor/Edit Line input boxes.
-  ThemeData get themeData {
-    final baseTheme = switch (appearance) {
-      StudioAppearance.light => AppThemes.lightTheme,
-      StudioAppearance.dark => AppThemes.darkTheme,
-      StudioAppearance.classic => AppThemes.classicTheme,
-    };
+  /// Pure catalog resolution. Community definitions and built-ins use one
+  /// factory, and an unavailable saved ID never changes the stored selection.
+  ThemeData themeDataFor(StudioSkinCatalog catalog) =>
+      StudioThemeFactory.fromDefinition(
+        catalog.resolveOrDefault(skinId),
+        appearance,
+        fontFamily: fontFamily,
+      );
 
-    final family = fontFamily;
-    if (family == null) return baseTheme;
-    return baseTheme.copyWith(
-      textTheme: baseTheme.textTheme.apply(fontFamily: family),
-      primaryTextTheme:
-          baseTheme.primaryTextTheme.apply(fontFamily: family),
-    );
-  }
+  /// Backwards-compatible standalone accessor for built-in themes.
+  /// MainApp watches liveStudioThemeProvider to support community injection.
+  ThemeData get themeData => themeDataFor(StudioSkinCatalog());
 }
 
 class ThemeController extends Notifier<ThemeState> {
