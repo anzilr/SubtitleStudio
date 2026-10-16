@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'studio_palette.dart';
 import 'studio_skin.dart';
-import 'studio_skin_catalog.dart';
 
 /// The same import-time checks apply to imported skins and UI-created skins.
 /// Errors reject the entire package before it can become a current theme.
@@ -13,18 +12,23 @@ abstract final class StudioSkinValidator {
     return ((a > b ? a : b) + 0.05) / ((a < b ? a : b) + 0.05);
   }
 
-  static void validate(StudioSkinDefinition definition) {
-    if (definition.id.isBuiltIn) {
+  static void validate({
+    required StudioSkinId id,
+    required Map<StudioAppearance, StudioPalette> palettes,
+    String? author,
+    String? description,
+  }) {
+    if (id.isBuiltIn) {
       throw const FormatException('Imported skins may not replace built-ins');
     }
-    if (definition.author != null && definition.author!.length > 100) {
+    if (author != null && author!.length > 100) {
       throw const FormatException('Skin author is too long');
     }
-    if (definition.description != null && definition.description!.length > 500) {
+    if (description != null && description!.length > 500) {
       throw const FormatException('Skin description is too long');
     }
     for (final mode in StudioAppearance.values) {
-      final palette = definition.paletteFor(mode);
+      final palette = palettes[mode]!;
       _validatePalette(mode, palette);
     }
   }
