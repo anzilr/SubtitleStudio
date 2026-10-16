@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:subtitle_studio/widgets/colour_picker_widget.dart';
 import 'package:subtitle_studio/utils/text_formatting.dart';
+import 'package:subtitle_studio/themes/studio_design_tokens.dart';
 
 class FormattingMenu extends StatelessWidget {
   final TextEditingController controller;
@@ -22,7 +23,7 @@ class FormattingMenu extends StatelessWidget {
       useSafeArea: true,
       builder: (BuildContext context) {
         return Scaffold(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          backgroundColor: StudioDesignTokens.of(context).surface,
           appBar: AppBar(
             title: const Text(
               'Text Color Editor',
@@ -64,11 +65,11 @@ class FormattingMenu extends StatelessWidget {
                 }
                 Navigator.of(context).pop(true);
               },
-              backgroundColor: const Color(0xFF4A90E2),
-              foregroundColor: Colors.white,
-              elevation: 6,
+              backgroundColor: StudioDesignTokens.of(context).primaryAction,
+              foregroundColor: StudioDesignTokens.of(context).onPrimaryAction,
+              elevation: 0,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(StudioRadius.input),
               ),
               label: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -95,16 +96,14 @@ class FormattingMenu extends StatelessWidget {
   void _showClearFormattingDialog(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(20.0),
-        ),
-      ),
       builder: (BuildContext context) {
+        final tokens = StudioDesignTokens.of(context);
         return Container(
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            color: tokens.surface,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(StudioRadius.sheet),
+            ),
           ),
           child: Padding(
             padding: const EdgeInsets.all(24.0),
@@ -119,12 +118,12 @@ class FormattingMenu extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.orange.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
+                          color: tokens.caution.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(StudioRadius.input),
                         ),
                         child: Icon(
                           Icons.cleaning_services_rounded,
-                          color: Colors.orange,
+                          color: tokens.caution,
                           size: 28,
                         ),
                       ),
@@ -143,7 +142,7 @@ class FormattingMenu extends StatelessWidget {
                             Text(
                               'This action cannot be undone',
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Colors.orange.withValues(alpha: 0.8),
+                                color: tokens.caution,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -161,10 +160,10 @@ class FormattingMenu extends StatelessWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.05),
-                    borderRadius: BorderRadius.circular(12),
+                    color: tokens.caution.withValues(alpha: 0.07),
+                    borderRadius: BorderRadius.circular(StudioRadius.input),
                     border: Border.all(
-                      color: Colors.orange.withValues(alpha: 0.2),
+                      color: tokens.caution.withValues(alpha: 0.4),
                       width: 1,
                     ),
                   ),
@@ -174,7 +173,7 @@ class FormattingMenu extends StatelessWidget {
                         children: [
                           Icon(
                             Icons.warning_amber_rounded,
-                            color: Colors.orange,
+                            color: tokens.caution,
                             size: 20,
                           ),
                           const SizedBox(width: 8),
@@ -182,7 +181,7 @@ class FormattingMenu extends StatelessWidget {
                             'Warning',
                             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w600,
-                              color: Colors.orange,
+                              color: tokens.caution,
                             ),
                           ),
                         ],
@@ -208,11 +207,11 @@ class FormattingMenu extends StatelessWidget {
                         child: TextButton(
                           onPressed: () => Navigator.pop(context),
                           style: TextButton.styleFrom(
-                            foregroundColor: Colors.grey.shade600,
+                            foregroundColor: tokens.mutedText,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(StudioRadius.input),
                               side: BorderSide(
-                                color: Colors.grey.withValues(alpha: 0.3),
+                                color: tokens.fieldBorder,
                               ),
                             ),
                           ),
@@ -237,11 +236,11 @@ class FormattingMenu extends StatelessWidget {
                             Navigator.of(context).pop();
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orange,
-                            foregroundColor: Colors.white,
+                            backgroundColor: Theme.of(context).colorScheme.error,
+                            foregroundColor: Theme.of(context).colorScheme.onError,
                             elevation: 0,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(StudioRadius.input),
                             ),
                           ),
                           child: Row(
@@ -283,14 +282,8 @@ class FormattingMenu extends StatelessWidget {
       icon: Icon(
         Icons.format_size, 
         size: 32,
-        color: Theme.of(context).brightness == Brightness.light
-            ? const Color.fromARGB(255, 0, 45, 54)
-            : const Color.fromARGB(255, 233, 216, 166),
+        color: StudioDesignTokens.of(context).primaryAction,
       ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      elevation: 8,
       offset: const Offset(0, 8),
       onSelected: (String value) {
         if (value == "color") {
@@ -310,7 +303,7 @@ class FormattingMenu extends StatelessWidget {
               children: [
                 Icon(
                   Icons.format_bold,
-                  color: Colors.orange,
+                  color: StudioDesignTokens.of(context).primaryAction,
                   size: 24,
                 ),
                 const SizedBox(width: 16),
@@ -332,7 +325,7 @@ class FormattingMenu extends StatelessWidget {
               children: [
                 Icon(
                   Icons.format_italic,
-                  color: Colors.blue,
+                  color: StudioDesignTokens.of(context).primaryAction,
                   size: 24,
                 ),
                 const SizedBox(width: 16),
@@ -354,7 +347,7 @@ class FormattingMenu extends StatelessWidget {
               children: [
                 Icon(
                   Icons.format_underline,
-                  color: Colors.green,
+                  color: StudioDesignTokens.of(context).primaryAction,
                   size: 24,
                 ),
                 const SizedBox(width: 16),
@@ -376,7 +369,7 @@ class FormattingMenu extends StatelessWidget {
               children: [
                 Icon(
                   Icons.format_strikethrough,
-                  color: Colors.red,
+                  color: StudioDesignTokens.of(context).primaryAction,
                   size: 24,
                 ),
                 const SizedBox(width: 16),
@@ -399,7 +392,7 @@ class FormattingMenu extends StatelessWidget {
               children: [
                 Icon(
                   Icons.palette,
-                  color: Colors.purple,
+                  color: StudioDesignTokens.of(context).primaryAction,
                   size: 24,
                 ),
                 const SizedBox(width: 16),
@@ -421,7 +414,7 @@ class FormattingMenu extends StatelessWidget {
               children: [
                 Icon(
                   Icons.cleaning_services,
-                  color: Colors.orange,
+                  color: StudioDesignTokens.of(context).primaryAction,
                   size: 24,
                 ),
                 const SizedBox(width: 16),
