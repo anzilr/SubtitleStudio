@@ -8,7 +8,7 @@ import 'package:subtitle_studio/themes/studio_skin.dart';
 import 'package:subtitle_studio/themes/studio_theme_factory.dart';
 
 void main() {
-  testWidgets('Source View preserves multilingual edits when cycling nine skins',
+  testWidgets('Source View preserves multilingual edits when cycling twelve appearances',
       (tester) async {
     final entry = SubtitleEntry(
       index: '1',
@@ -16,6 +16,7 @@ void main() {
       endTime: '00:00:04,000',
       text: 'മലയാളം مرحبا',
     );
+    final entries = <SubtitleEntry>[entry];
     final scroll = ScrollController();
     addTearDown(scroll.dispose);
     var changes = 0;
@@ -27,7 +28,7 @@ void main() {
           theme: StudioThemeFactory.resolve(skin, appearance),
           home: Scaffold(
             body: SourceViewPane(
-              entries: [entry],
+              entries: entries,
               scrollController: scroll,
               onChanged: () => changes++,
             ),
@@ -46,7 +47,7 @@ void main() {
     await tester.enterText(find.byKey(const ValueKey('raw-srt-editor')),
         '1\\n00:00:01,000 --> 00:00:04,000\\nപുതിയത് مرحبا');
     await tester.pump();
-    expect(entry.text, 'പുതിയത് مرحبا');
+    expect(entries.single.text, 'പുതിയത് مرحبا');
     expect(changes, 1);
   });
 
