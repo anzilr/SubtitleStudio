@@ -96,6 +96,7 @@ class SecondarySubtitleSheet extends ConsumerWidget {
                 description: 'Import subtitle from an external file (.srt)',
                 onTap: () => _loadFromFile(context, ref),
                 themeColor: primaryColor,
+                iconForegroundColor: Theme.of(context).colorScheme.onPrimary,
               ),
               const SizedBox(height: 12),
               _buildActionCard(
@@ -105,6 +106,7 @@ class SecondarySubtitleSheet extends ConsumerWidget {
                 description: 'Display original text from current subtitles as secondary track',
                 onTap: () => _useOriginalText(context, ref),
                 themeColor: Theme.of(context).colorScheme.tertiary,
+                iconForegroundColor: Theme.of(context).colorScheme.onTertiary,
               ),
               // Only show video subtitle track option if video player is available and has subtitle tracks
               if (videoPlayerState != null && _hasAvailableSubtitleTracks()) ...[
@@ -116,6 +118,7 @@ class SecondarySubtitleSheet extends ConsumerWidget {
                   description: 'Select from subtitle tracks embedded in the video file',
                   onTap: () => _showVideoSubtitleTrackDialog(context, ref),
                   themeColor: Theme.of(context).colorScheme.secondary,
+                  iconForegroundColor: Theme.of(context).colorScheme.onSecondary,
                 ),
               ],
               const SizedBox(height: 24),
@@ -162,6 +165,7 @@ class SecondarySubtitleSheet extends ConsumerWidget {
     required String description,
     required VoidCallback onTap,
     required Color themeColor,
+    required Color iconForegroundColor,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
@@ -194,7 +198,7 @@ class SecondarySubtitleSheet extends ConsumerWidget {
                 ),
                 child: Icon(
                   icon,
-                  color: Colors.white,
+                  color: iconForegroundColor,
                   size: 20,
                 ),
               ),

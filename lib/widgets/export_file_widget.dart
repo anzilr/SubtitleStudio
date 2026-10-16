@@ -443,7 +443,7 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
                             ),
                             child: Icon(
                               Icons.folder_outlined,
-                              color: Colors.white,
+                              color: Theme.of(context).colorScheme.onPrimary,
                               size: 20,
                             ),
                           ),
@@ -581,7 +581,7 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
                           ),
                           child: Icon(
                             Icons.tune,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                             size: 20,
                           ),
                         ),

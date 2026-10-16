@@ -458,7 +458,7 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
                           ),
                           child: Icon(
                             _selectedFilePath != null ? Icons.check : Icons.file_open,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                             size: 20,
                           ),
                         ),
@@ -564,7 +564,9 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
                           ),
                           child: Icon(
                             _selectedProjectPath != null ? Icons.check : Icons.folder_open,
-                            color: Colors.white,
+                            color: _selectedProjectPath != null
+                                ? Theme.of(context).colorScheme.onTertiary
+                                : Theme.of(context).colorScheme.onPrimary,
                             size: 20,
                           ),
                         ),
@@ -666,7 +668,7 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
                                 child: _removeHearingImpairedLines
                                     ? Icon(
                                         Icons.check,
-                                        color: Colors.white,
+                                        color: Theme.of(context).colorScheme.onPrimary,
                                         size: 16,
                                       )
                                     : null,
@@ -727,7 +729,7 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
                                 child: _mergeOverlappingSubtitles
                                     ? Icon(
                                         Icons.check,
-                                        color: Colors.white,
+                                        color: Theme.of(context).colorScheme.onPrimary,
                                         size: 16,
                                       )
                                     : null,

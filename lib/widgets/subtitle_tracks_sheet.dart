@@ -172,7 +172,7 @@ class SubtitleTracksSheet extends StatelessWidget {
                   color: primaryColor,
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: Icon(Icons.download, color: Colors.white, size: 18),
+                child: Icon(Icons.download, color: Theme.of(context).colorScheme.onPrimary, size: 18),
               ),
               const SizedBox(width: 12),
               Expanded(

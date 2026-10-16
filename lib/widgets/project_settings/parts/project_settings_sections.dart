@@ -304,9 +304,9 @@ extension _ProjectSettingsSections on _ProjectSettingsSheetState {
                       color: Theme.of(context).colorScheme.primary,
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.bookmark_added,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onPrimary,
                       size: 20,
                     ),
                   ),

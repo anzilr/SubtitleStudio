@@ -149,7 +149,7 @@ class _SettingsButtonState extends State<_SettingsButton> {
                                   ),
                                   child: Icon(
                                     Icons.speed,
-                                    color: Colors.white,
+                                    color: Theme.of(sheetContext).colorScheme.onPrimary,
                                     size: 18,
                                   ),
                                 ),
@@ -380,7 +380,7 @@ class _SettingsButtonState extends State<_SettingsButton> {
                                   ),
                                   child: Icon(
                                     Icons.font_download,
-                                    color: Colors.white,
+                                    color: Theme.of(sheetContext).colorScheme.onPrimary,
                                     size: 18,
                                   ),
                                 ),
@@ -474,7 +474,7 @@ class _SettingsButtonState extends State<_SettingsButton> {
                                       ),
                                       child: Icon(
                                         Icons.text_fields,
-                                        color: Colors.white,
+                                        color: Theme.of(sheetContext).colorScheme.onPrimary,
                                         size: 18,
                                       ),
                                     ),
@@ -568,7 +568,7 @@ class _SettingsButtonState extends State<_SettingsButton> {
                                       ),
                                       child: Icon(
                                         Icons.vertical_align_bottom,
-                                        color: Colors.white,
+                                        color: Theme.of(sheetContext).colorScheme.onPrimary,
                                         size: 20,
                                       ),
                                     ),
@@ -702,7 +702,7 @@ class _SettingsButtonState extends State<_SettingsButton> {
                                         ),
                                         child: Icon(
                                           Icons.vertical_align_top,
-                                          color: Colors.white,
+                                          color: Theme.of(sheetContext).colorScheme.onPrimary,
                                           size: 20,
                                         ),
                                       ),

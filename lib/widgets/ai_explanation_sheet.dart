@@ -655,7 +655,7 @@ class _AiExplanationSheetContentState extends ConsumerState<_AiExplanationSheetC
                       foregroundColor: WidgetStateProperty.resolveWith<Color>(
                         (Set<WidgetState> states) {
                           if (states.contains(WidgetState.selected)) {
-                            return Colors.white;
+                            return Theme.of(context).colorScheme.onPrimary;
                           }
                           return Theme.of(context).colorScheme.onSurface;
                         },
