@@ -97,7 +97,7 @@ class _BannerConfigurationSheetState extends State<BannerConfigurationSheet> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Please select at least one banner to insert'),
-          backgroundColor: Colors.red,
+          backgroundColor: Theme.of(context).colorScheme.error,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10.0),
@@ -114,7 +114,7 @@ class _BannerConfigurationSheetState extends State<BannerConfigurationSheet> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('All enabled banner texts must be filled'),
-          backgroundColor: Colors.red,
+          backgroundColor: Theme.of(context).colorScheme.error,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10.0),
@@ -166,7 +166,7 @@ class _BannerConfigurationSheetState extends State<BannerConfigurationSheet> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('$insertedCount banner${insertedCount == 1 ? '' : 's'} inserted successfully!'),
-              backgroundColor: Colors.green,
+              backgroundColor: Theme.of(context).colorScheme.primary,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10.0),
@@ -182,7 +182,7 @@ class _BannerConfigurationSheetState extends State<BannerConfigurationSheet> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error inserting banners: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10.0),
@@ -283,21 +283,21 @@ class _BannerConfigurationSheetState extends State<BannerConfigurationSheet> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.orange.withValues(alpha: 0.1),
+                        color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                        border: Border.all(color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.3)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
-                              Icon(Icons.warning, color: Colors.orange, size: 20),
+                              Icon(Icons.warning, color: Theme.of(context).colorScheme.tertiary, size: 20),
                               const SizedBox(width: 8),
                               Text(
                                 'Potential Issues:',
                                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                  color: Colors.orange,
+                                  color: Theme.of(context).colorScheme.tertiary,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -309,7 +309,7 @@ class _BannerConfigurationSheetState extends State<BannerConfigurationSheet> {
                               padding: const EdgeInsets.only(bottom: 4),
                               child: Text('• $warning', 
                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                           color: Colors.orange.shade700,
+                                           color: Theme.of(context).colorScheme.tertiary,
                                          )),
                             ),
                           )),
@@ -324,21 +324,21 @@ class _BannerConfigurationSheetState extends State<BannerConfigurationSheet> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.blue.withValues(alpha: 0.1),
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+                        border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
-                              Icon(Icons.lightbulb, color: Colors.blue, size: 20),
+                              Icon(Icons.lightbulb, color: Theme.of(context).colorScheme.primary, size: 20),
                               const SizedBox(width: 8),
                               Text(
                                 'Recommended Positions (No Overlaps):',
                                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                  color: Colors.blue,
+                                  color: Theme.of(context).colorScheme.primary,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -346,17 +346,17 @@ class _BannerConfigurationSheetState extends State<BannerConfigurationSheet> {
                           ),
                           const SizedBox(height: 8),
                           Text('• Beginning: ${_formatDuration(_recommendedPositions!.beginningPosition)}', 
-                               style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.blue.shade700)),
+                               style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.primary)),
                           Text('• Middle: ${_formatDuration(_recommendedPositions!.middlePosition)}', 
-                               style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.blue.shade700)),
+                               style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.primary)),
                           Text('• End: ${_formatDuration(_recommendedPositions!.endPosition)}', 
-                               style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.blue.shade700)),
+                               style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.primary)),
                           const SizedBox(height: 12),
                           CheckboxListTile(
                             title: Text(
                               'Use recommended positions',
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Colors.blue.shade700,
+                                color: Theme.of(context).colorScheme.primary,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -462,7 +462,7 @@ class _BannerConfigurationSheetState extends State<BannerConfigurationSheet> {
                   onPressed: _isProcessing ? null : _insertBanners,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).primaryColor,
-                    foregroundColor: Colors.white,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   ),
                   icon: _isProcessing
