@@ -70,8 +70,8 @@ class SessionCard extends StatelessWidget {
                   'assets/msone.svg',
                   width: 18,
                   height: 18,
-                  colorFilter: const ColorFilter.mode(
-                    Colors.blue,
+                  colorFilter: ColorFilter.mode(
+                    colorScheme.primary,
                     BlendMode.srcIn,
                   ),
                 )
@@ -105,12 +105,12 @@ class SessionCard extends StatelessWidget {
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.blue,
+                        color: colorScheme.primary,
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.history,
-                        color: Colors.white,
+                        color: colorScheme.onPrimary,
                         size: 10,
                       ),
                     ),
@@ -125,12 +125,12 @@ class SessionCard extends StatelessWidget {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.green.shade600,
+                          color: colorScheme.secondary,
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.folder_special,
-                          color: Colors.white,
+                          color: colorScheme.onSecondary,
                           size: 10,
                         ),
                       ),
