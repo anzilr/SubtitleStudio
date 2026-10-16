@@ -542,12 +542,7 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
       appBar: AppBar(
         title: Text(
           'Submit to Msone - ${widget.submissionType == 'main' ? 'Existing Translator' : 'Fresher'}',
-          style: TextStyle(fontWeight: FontWeight.w600, color: StudioDesignTokens.of(context).onSurface, fontSize: 16),
         ),
-        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-        elevation: 2,
-        shadowColor: Theme.of(context).shadowColor.withValues(alpha: 0.1),
-        foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,
       ),
       backgroundColor: Theme.of(context).colorScheme.surface,
       body: Column(
@@ -641,130 +636,37 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
                 children: [
                   if (_currentStep > 0)
                     Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(StudioRadius.input),
-                          border: Border.all(
-                            color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
-                            width: 1.5,
-                          ),
-                        ),
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: _isSubmitting ? null : _previousStep,
-                            borderRadius: BorderRadius.circular(StudioRadius.input),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.arrow_back_ios,
-                                    size: 18,
-                                    color: _isSubmitting 
-                                      ? Theme.of(context).disabledColor
-                                      : Theme.of(context).primaryColor,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Previous',
-                                    style: TextStyle(
-                                      color: _isSubmitting 
-                                        ? Theme.of(context).disabledColor
-                                        : Theme.of(context).primaryColor,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
+                      child: OutlinedButton.icon(
+                        onPressed: _isSubmitting ? null : _previousStep,
+                        icon: const Icon(Icons.arrow_back_ios, size: 18),
+                        label: const Text('Previous'),
                       ),
                     ),
-                  if (_currentStep > 0) const SizedBox(width: 16),
+                  if (_currentStep > 0)
+                    const SizedBox(width: StudioSpacing.md),
                   Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(StudioRadius.input),
-                        gradient: LinearGradient(
-                          colors: _isSubmitting 
-                            ? [
-                                Theme.of(context).disabledColor,
-                                Theme.of(context).disabledColor,
-                              ]
-                            : [
-                                Theme.of(context).primaryColor,
-                                Theme.of(context).primaryColor.withValues(alpha: 0.8),
-                              ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        boxShadow: !_isSubmitting ? [
-                          BoxShadow(
-                            color: Theme.of(context).primaryColor.withValues(alpha: 0.4),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
-                          ),
-                        ] : null,
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: _isSubmitting 
-                            ? null 
-                            : _currentStep < 2 
-                              ? _nextStep 
-                              : _submitToMsone,
-                          borderRadius: BorderRadius.circular(StudioRadius.input),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                if (_isSubmitting)
-                                  SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(StudioDesignTokens.of(context).onPrimaryAction),
-                                    ),
-                                  )
-                                else ...[
-                                  Text(
-                                    _currentStep < 2 ? 'Next' : 'Submit',
-                                    style: TextStyle(
-                                      color: StudioDesignTokens.of(context).onPrimaryAction,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Icon(
-                                    _currentStep < 2 ? Icons.arrow_forward_ios : Icons.send,
-                                    size: 18,
-                                    color: StudioDesignTokens.of(context).onPrimaryAction,
-                                  ),
-                                ],
-                                if (_isSubmitting) ...[
-                                  const SizedBox(width: 12),
-                                  Text(
-                                    _currentStep < 2 ? 'Processing...' : 'Submitting...',
-                                    style: TextStyle(
-                                      color: StudioDesignTokens.of(context).onPrimaryAction,
-                                      fontWeight: FontWeight.w500,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ],
-                              ],
+                    child: FilledButton.icon(
+                      onPressed: _isSubmitting
+                          ? null
+                          : _currentStep < 2 ? _nextStep : _submitToMsone,
+                      icon: _isSubmitting
+                          ? SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: StudioDesignTokens.of(context).onPrimaryAction,
+                              ),
+                            )
+                          : Icon(
+                              _currentStep < 2
+                                  ? Icons.arrow_forward_ios
+                                  : Icons.send,
+                              size: 18,
                             ),
-                          ),
-                        ),
-                      ),
+                      label: Text(_isSubmitting
+                          ? (_currentStep < 2 ? 'Processing...' : 'Submitting...')
+                          : (_currentStep < 2 ? 'Next' : 'Submit')),
                     ),
                   ),
                 ],
