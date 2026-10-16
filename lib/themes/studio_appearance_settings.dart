@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'studio_palette.dart';
 import 'studio_skin.dart';
 import 'studio_skin_catalog.dart';
 import 'studio_skin_catalog_provider.dart';
