@@ -64,10 +64,10 @@ class EmptySubtitleView extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
+          Icon(
             Icons.subtitles_outlined,
             size: 80,
-            color: Color(0xFF0A9396),
+            color: Theme.of(context).colorScheme.primary,
           ),
           const SizedBox(height: 24),
           const Text(
@@ -78,12 +78,12 @@ class EmptySubtitleView extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             'Get started by adding your first subtitle line',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 16,
-              color: Colors.grey,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 32),
@@ -93,20 +93,20 @@ class EmptySubtitleView extends StatelessWidget {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor:
-                  const Color.fromARGB(255, 1, 54, 64),
+                  Theme.of(context).colorScheme.primary,
               padding: const EdgeInsets.symmetric(
                 horizontal: 24,
                 vertical: 12,
               ),
             ),
-            icon: const Icon(
+            icon: Icon(
               Icons.add,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onPrimary,
             ),
-            label: const Text(
+            label: Text(
               'Add Subtitle Line',
               style: TextStyle(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onPrimary,
                 fontSize: 16,
               ),
             ),
