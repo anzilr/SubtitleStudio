@@ -36,3 +36,10 @@ R5 final R3: run 38914770625 analyzed clean and 445 other tests
 passed; three Go To Line widget tests exposed a 35px horizontal RenderFlex
 overflow in the actual modal at 390dp. Keep those tests and use tighter
 outer/slider-card margins plus flexible header title. Recheck all tests.
+
+R5 final R4, device-width assurance: CI 38915501196 passed all 448
+tests, 0 analyzer issues at prior commit 965191a. Attached Android
+device reports smallestScreenWidthDp=360, not 390: tighten Go To Line
+slider widget test to 360dp; wrap both action-row contents with
+scale-down fitting to avoid cramped Cancel/Jump label RenderFlex issues.
+Rerun analyzer and full suite at this exact device-width acceptance gate.
