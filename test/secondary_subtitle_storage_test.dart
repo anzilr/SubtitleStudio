@@ -24,7 +24,7 @@ void main() {
     final saved = await SecondarySubtitleStorage.persist(
       supportDirectory: root, collectionId: 1,
       extension: 'srt',
-      content: '1\\n00:00:01,000 --> 00:00:02,000\\nExample\\n',
+      content: '1\n00:00:01,000 --> 00:00:02,000\nExample\n',
     );
     expect(saved, contains('secondary_subtitles'));
     expect(await File(saved).readAsString(), contains('Example'));

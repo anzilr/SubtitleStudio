@@ -44,7 +44,7 @@ void main() {
     const collectionId = 903;
     final file = File('${h.directory.path}/secondary.srt');
     await file.writeAsString(
-        '1\\n00:00:01,000 --> 00:00:02,000\\nHello world\\n');
+        '1\n00:00:01,000 --> 00:00:02,000\nHello world\n');
     await preferences.saveSecondarySubtitlePath(collectionId, file.path);
     final data = await video.loadSavedSecondarySubtitle(collectionId);
     expect(data, isNotNull);
