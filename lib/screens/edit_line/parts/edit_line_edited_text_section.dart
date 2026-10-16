@@ -41,7 +41,6 @@ child:
                                                             UnicodeTextInputFormatter(),
                                                           ],
                                                           decoration: StudioCueFieldStyle.decoration(padding: const EdgeInsets.fromLTRB(8, 8, 30, 8)),
-                                                          ),
                                                           style: StudioCueFieldStyle.text(context),
                                                           scrollPhysics:
                                                               const ClampingScrollPhysics(), // Enable scrolling
