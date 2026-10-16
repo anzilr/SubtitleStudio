@@ -1,5 +1,20 @@
 # SubtitleStudio Refactor Roadmap v4
 
+> **SKIN-4 R2 PILOT COMPLETE — October 16, 2026:** Semantic, focus-aware
+> neutral cue fields now replace previously saturated primary-colored
+> Original/Edited boxes, with contrasting subtitle text, metadata and action
+> icons. The shared time input uses field/error/focus tokens and preserves
+> existing text/time controllers, undo and callbacks. A reusable historical
+> `OptimizedTextField` uses the same tokens. [Successful SKIN-4 R2 CI
+> 38889494374](https://github.com/anzilr/SubtitleStudio/actions/runs/38889494374)
+> verified **422 tests passed and zero analyzer issues** against code
+> `535eb07`. [Implementation/audit report](STUDIO_SKIN4_CUE_FIELD_PILOT_2026-10-16.md).
+> **R3 not done:** live MaterialApp still deliberately uses legacy
+> `AppThemes` while other Editor/menu/waveform toolbar colors are audited.
+> Next: migrate remaining contrast-sensitive controls and safely install the
+> skin factory, then Android/Windows real-device acceptance. The original
+> CP86 waveform native qualification track remains independent.
+
 > **SKIN-3 R1 COMPLETE — October 16, 2026:** An Appearance section
 > in Settings now offers independent saved skin and Light/Dark/Classic choices,
 > previews all three built-in skins (nine swatches), and supports injectable
