@@ -46,9 +46,6 @@ void main() {
     _TrackingEditController.builds = 0;
     var dark = false;
     await tester.pumpWidget(ProviderScope(
-      overrides: [
-        editControllerProvider.overrideWith(_TrackingEditController.new),
-      ],
       child: StatefulBuilder(builder: (context, setTheme) {
         return MaterialApp(
           theme: dark ? AppThemes.darkTheme : AppThemes.lightTheme,
@@ -59,10 +56,11 @@ void main() {
                 onPressed: () => setTheme(() => dark = !dark),
                 child: const Text('Change theme'),
               ),
-              const Expanded(
+              Expanded(
                 child: EditScreenHost(
                   subtitleCollectionId: 11,
                   sessionId: 9,
+                  controllerFactory: _TrackingEditController.new,
                 ),
               ),
             ]),
@@ -88,9 +86,6 @@ void main() {
     _TrackingEditLineController.builds = 0;
     var dark = false;
     await tester.pumpWidget(ProviderScope(
-      overrides: [
-        editLineControllerProvider.overrideWith(_TrackingEditLineController.new),
-      ],
       child: StatefulBuilder(builder: (context, setTheme) {
         return MaterialApp(
           theme: dark ? AppThemes.darkTheme : AppThemes.lightTheme,
@@ -101,11 +96,12 @@ void main() {
                 onPressed: () => setTheme(() => dark = !dark),
                 child: const Text('Change theme'),
               ),
-              const Expanded(
+              Expanded(
                 child: EditSubtitleScreenHost(
                   subtitleId: 11,
                   index: 2,
                   sessionId: 9,
+                  controllerFactory: _TrackingEditLineController.new,
                 ),
               ),
             ]),
