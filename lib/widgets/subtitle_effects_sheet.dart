@@ -367,7 +367,7 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
                           ),
                         ),
                         child: _isProcessing
-                            ? const SizedBox(
+                            ? SizedBox(
                                 width: 20,
                                 height: 20,
                                 child: CircularProgressIndicator(
