@@ -1,6 +1,7 @@
-SubtitleStudio CP85 R4 lifecycle regression tests | 2026-10-16
-Analyzer + full flutter test -j 1. Inject fake controllers inside
-the actual Editor/Edit Line ProviderScope during widget theme
-rebuild tests; preserve stable route configuration, captured Navigator
-arguments, neutral light surfaces and simplified settings accents.
-No native build matrix or Isar code generation.
+SubtitleStudio CP85 R5 theme-switch regression gate | 2026-10-16
+Analyzer and full Flutter test suite. Theme-route lifecycle widget
+tests now advance bounded frames (fake loading indicators animate
+forever), retaining strict controller identity checks across theme
+switches. Also covers stable Riverpod scopes, async navigation
+guards, unified light surfaces, and project settings colors.
+No native build jobs.
