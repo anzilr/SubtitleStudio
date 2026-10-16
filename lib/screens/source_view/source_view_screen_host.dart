@@ -85,7 +85,8 @@ class _SourceViewRiverpodHost extends ConsumerWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(next.saveMessage!),
+                    Text(next.saveMessage!,
+                        style: TextStyle(color: tokens.onCaution)),
                     const SizedBox(height: 4),
                     GestureDetector(
                       onTap: () {
