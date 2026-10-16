@@ -2,9 +2,27 @@ import 'package:flutter/material.dart';
 
 import 'studio_palette.dart';
 import 'studio_skin.dart';
+import 'studio_skin_catalog.dart';
 
-/// A small, read-only theme preview for the future Appearance Settings.
-/// It uses the same nine palette definitions as StudioThemeFactory.
+/// Read-only preview usable for built-in *and* community skin definitions.
+class StudioSkinDefinitionPreviewTile extends StatelessWidget {
+  const StudioSkinDefinitionPreviewTile({
+    super.key,
+    required this.definition,
+    required this.appearance,
+  });
+
+  final StudioSkinDefinition definition;
+  final StudioAppearance appearance;
+
+  @override
+  Widget build(BuildContext context) => StudioPalettePreviewTile(
+        name: definition.name,
+        palette: definition.paletteFor(appearance),
+      );
+}
+
+/// Compatibility wrapper retained for existing SKIN-1 gallery/tests.
 class StudioSkinPreviewTile extends StatelessWidget {
   const StudioSkinPreviewTile({
     super.key,
@@ -16,10 +34,29 @@ class StudioSkinPreviewTile extends StatelessWidget {
   final StudioAppearance appearance;
 
   @override
+  Widget build(BuildContext context) => StudioPalettePreviewTile(
+        name: skin.label,
+        palette: StudioPalette.resolve(skin, appearance),
+      );
+}
+
+/// The only rendering implementation for palette thumbnails. Presentation is
+/// pure data and never installs, applies, or imports a skin.
+class StudioPalettePreviewTile extends StatelessWidget {
+  const StudioPalettePreviewTile({
+    super.key,
+    required this.name,
+    required this.palette,
+  });
+
+  final String name;
+  final StudioPalette palette;
+
+  @override
   Widget build(BuildContext context) {
-    final palette = StudioPalette.resolve(skin, appearance);
+    final appearance = palette.appearance;
     return Semantics(
-      label: '${skin.label}, ${appearance.label} appearance preview',
+      label: '$name, ${appearance.label} appearance preview',
       image: true,
       child: Container(
         padding: const EdgeInsets.all(8),
