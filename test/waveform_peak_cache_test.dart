@@ -69,6 +69,25 @@ void main() {
         32767);
   });
 
+  test('reduced PCM V2 round-trips and checksum guards against corruption',
+      () async {
+    final samples = List<int>.generate(4099,
+        (i) => i.isEven ? -32768 : (i * 17) % 32768);
+    final pcm = await _writePcm(directory, samples);
+    final data = await WaveformPeakCache.build(
+      pcmFile: pcm, cacheFile: cache(), inputAlreadyReduced: true,
+    );
+    expect(data.sampleRate, WaveformPeakCache.outputRate);
+    expect(data.rawSamples.single, samples);
+    expect(await cache().length(),
+        WaveformPeakCache.headerBytes + samples.length * 2);
+    expect((await WaveformPeakCache.load(cache())).rawSamples.single, samples);
+    final corrupted = await cache().readAsBytes();
+    corrupted[corrupted.length - 1] ^= 0x20;
+    await cache().writeAsBytes(corrupted);
+    await expectLater(WaveformPeakCache.load(cache()), throwsFormatException);
+  });
+
   test('truncated, corrupt and tampered cache is rejected', () async {
     final pcm = await _writePcm(directory, List<int>.filled(256, 231));
     await WaveformPeakCache.build(pcmFile: pcm, cacheFile: cache());

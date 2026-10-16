@@ -5,11 +5,13 @@ class WaveformFfmpegPlan {
   final String inputPath;
   final String outputPath;
   final String? selectedTrackId;
+  final int pcmSampleRate;
 
   const WaveformFfmpegPlan({
     required this.inputPath,
     required this.outputPath,
     this.selectedTrackId,
+    this.pcmSampleRate = 44100,
   });
 
   /// Only null/auto permit automatic track selection.
@@ -69,6 +71,9 @@ class WaveformFfmpegPlan {
         throw const FormatException('Invalid FFmpeg audio path.');
       }
     }
+    if (pcmSampleRate != 44100 && pcmSampleRate != 2756) {
+      throw FormatException('Unsupported waveform PCM rate: $pcmSampleRate');
+    }
     final map = streamMap(selectedTrackId);
     return List<String>.unmodifiable([
       '-nostdin',
@@ -80,7 +85,7 @@ class WaveformFfmpegPlan {
       if (map != null) ...['-map', map],
       '-af', 'aresample=async=1:first_pts=0',
       '-ac', '1',
-      '-ar', '44100',
+      '-ar', pcmSampleRate.toString(),
       '-f', 's16le',
       '-acodec', 'pcm_s16le',
       outputPath,

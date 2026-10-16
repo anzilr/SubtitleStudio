@@ -53,6 +53,16 @@ void main() {
       expect(plan.arguments(), contains('0:a:2'));
     });
 
+    test('compact extraction requests low-rate FFmpeg PCM', () {
+      const reduced = WaveformFfmpegPlan(
+        inputPath: 'video.mkv', outputPath: 'audio.raw', pcmSampleRate: 2756,
+      );
+      expect(reduced.arguments(), containsAllInOrder(['-ar', '2756']));
+      expect(() => const WaveformFfmpegPlan(
+        inputPath: 'a', outputPath: 'b', pcmSampleRate: 32000,
+      ).arguments(), throwsFormatException);
+    });
+
     test('invalid and disabled stream selections never fall back', () {
       for (final value in <String>[
         '', 'no', '-1', 'xyz', 'auto ', ' 1', 'ffmpeg:a:-1',

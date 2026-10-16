@@ -20,6 +20,18 @@ void main() {
     expect(original, contains('waveform_audio_7_'));
   });
 
+  test('SAF cache keys include source revision', () async {
+    Future<String> key(String? revision) => WaveformCacheIdentity.pcmPath(
+      temporaryDirectory: Directory.systemTemp.path,
+      subtitleCollectionId: 9, sourcePath: 'content://media/document/9',
+      sourceRevision: revision, audioTrackId: 'auto',
+    );
+    expect(await key('size=10;modified=100'), await key('size=10;modified=100'));
+    expect(await key('size=10;modified=100'), isNot(await key(null)));
+    expect(await key('size=10;modified=100'),
+        isNot(await key('size=11;modified=101')));
+  });
+
   test('reject mismatched metadata or truncated PCM', () {
     bool okay(int length, {int channels = 1, int rate = 44100,
         String path = 'same'}) =>

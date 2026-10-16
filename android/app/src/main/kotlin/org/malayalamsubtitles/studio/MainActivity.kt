@@ -3,6 +3,7 @@ package org.malayalamsubtitles.studio
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
+import android.provider.DocumentsContract
 import android.provider.OpenableColumns
 import android.util.Log
 import android.webkit.MimeTypeMap
@@ -117,6 +118,38 @@ class MainActivity: FlutterActivity() {
                 }
                 "hasUriPermission" -> {
                     handleHasUriPermission(call, result)
+                }
+                "getDocumentRevision" -> {
+                    val uriText = call.argument<String>("uri")
+                    if (uriText == null) {
+                        result.success(null)
+                    } else {
+                        try {
+                            val projection = arrayOf(
+                                OpenableColumns.SIZE,
+                                DocumentsContract.Document.COLUMN_LAST_MODIFIED
+                            )
+                            val revision = contentResolver.query(
+                                Uri.parse(uriText), projection, null, null, null
+                            )?.use { cursor ->
+                                if (!cursor.moveToFirst()) return@use null
+                                val sizeColumn = cursor.getColumnIndex(OpenableColumns.SIZE)
+                                val modifiedColumn = cursor.getColumnIndex(
+                                    DocumentsContract.Document.COLUMN_LAST_MODIFIED
+                                )
+                                if (sizeColumn < 0 || modifiedColumn < 0 ||
+                                    cursor.isNull(sizeColumn) || cursor.isNull(modifiedColumn)
+                                ) return@use null
+                                val size = cursor.getLong(sizeColumn)
+                                val modified = cursor.getLong(modifiedColumn)
+                                if (size <= 0L || modified <= 0L) null
+                                else mapOf("size" to size, "modified" to modified)
+                            }
+                            result.success(revision)
+                        } catch (_: Exception) {
+                            result.success(null) // Fallback: no persistent SAF cache
+                        }
+                    }
                 }
                 "releaseUriPermission" -> {
                     handleReleaseUriPermission(call, result)

@@ -3,7 +3,7 @@ import 'dart:io';
 
 /// Cache key scoped to source path, selected audio stream, and local file
 /// version (size + mtime). For content URIs, stat/version is unavailable;
-/// those caches remain scoped to URI and track until SAF stat support.
+/// versioned SAF metadata is supplied explicitly where available.
 class WaveformCacheIdentity {
   const WaveformCacheIdentity._();
 
@@ -12,6 +12,7 @@ class WaveformCacheIdentity {
     required int subtitleCollectionId,
     required String sourcePath,
     String? audioTrackId,
+    String? sourceRevision,
   }) async {
     final track = audioTrackId == null ||
             audioTrackId.isEmpty || audioTrackId == 'auto'
@@ -30,7 +31,8 @@ class WaveformCacheIdentity {
     }
     var hash = 0x811c9dc5;
     for (final byte in utf8.encode(
-        sourcePath + '|' + track + sourceVersion)) {
+        sourcePath + '|' + track + sourceVersion +
+        (sourceRevision == null ? '' : '|revision:' + sourceRevision))) {
       hash = ((hash ^ byte) * 0x01000193) & 0xffffffff;
     }
     final name = 'waveform_audio_' + subtitleCollectionId.toString() +

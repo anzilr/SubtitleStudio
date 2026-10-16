@@ -9,6 +9,7 @@ import 'package:subtitle_studio/features/waveform/services/zoom_buffer_generator
 import 'package:subtitle_studio/features/waveform/services/waveform_cache_identity.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_processing_metrics.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_peak_cache.dart';
+import 'package:subtitle_studio/features/waveform/services/waveform_source_revision.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_cache_coordinator.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_peak_cache_janitor.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_ffmpeg_plan.dart';
@@ -241,16 +242,22 @@ class AudioProcessor {
 
     final temp = await getTemporaryDirectory();
     checkActive();
+    final isSaf = sourcePath.startsWith('content://');
+    final revision = isSaf
+        ? await WaveformSourceRevision.forSafUri(sourcePath)
+        : null;
+    checkActive();
     final key = await WaveformCacheIdentity.pcmPath(
       temporaryDirectory: temp.path,
       subtitleCollectionId: subtitleCollectionId ?? 0,
       sourcePath: sourcePath,
       audioTrackId: audioTrackId,
+      sourceRevision: revision,
     );
     checkActive();
     final cachePath = key.replaceFirst(RegExp(r'\.raw$'), '.pk1');
     final cacheFile = File(cachePath);
-    final persistent = !sourcePath.startsWith('content://');
+    final persistent = !isSaf || revision != null;
 
     // Coordinate even across distinct AudioProcessor instances in this
     // isolate; jobs for different audio files are not needlessly serialized.
@@ -288,7 +295,7 @@ class AudioProcessor {
         // Existing projects may have a very large legacy PCM cache (the
         // reported Android device held ~660 MB). Reduce that file *as a stream*
         // instead of readAsBytes(), and avoid decoding the same movie again.
-        if (persistent && subtitleCollectionId != null) {
+        if (!isSaf && subtitleCollectionId != null) {
           final legacy = await _preferences.getWaveformCache(subtitleCollectionId);
           checkActive();
           if (legacy != null &&
@@ -327,7 +334,7 @@ class AudioProcessor {
         return output;
       } finally {
         if (!persistent) {
-          // A cancelled or failed SAF decode must not leave a reusable cache.
+          // Unversioned SAF decoding must never leave a reusable cache.
           // Keep this inside the source-scoped lock to avoid racing a new job.
           try {
             if (await cacheFile.exists()) await cacheFile.delete();
@@ -494,6 +501,7 @@ class AudioProcessor {
           inputPath: normalizedPath,
           outputPath: outputPath,
           selectedTrackId: audioTrackId,
+          pcmSampleRate: reduceToPeaks ? WaveformPeakCache.outputRate : 44100,
         );
         final args = plan.arguments();
         if (kDebugMode) {
@@ -528,6 +536,7 @@ class AudioProcessor {
           inputPath: inputPath,
           outputPath: outputPath,
           selectedTrackId: audioTrackId,
+          pcmSampleRate: reduceToPeaks ? WaveformPeakCache.outputRate : 44100,
         );
         final command = plan.ffmpegKitCommand();
 
@@ -584,6 +593,7 @@ class AudioProcessor {
           }
           return await WaveformPeakCache.build(
             pcmFile: file, cacheFile: File(peakCachePath),
+            inputAlreadyReduced: true,
             isCancelled: () => extractionEpoch != _requestEpoch);
         } finally {
           if (await file.exists()) await file.delete();

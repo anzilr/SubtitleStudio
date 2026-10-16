@@ -18,22 +18,23 @@ class WaveformPeakCache {
   static const int maxFrames = 60000000; // Hard cap against corrupt metadata.
   static const int _magic = 0x4B505753; // 'SWPK' in little-endian
   static const int _version = 1;
+  static const int _reducedVersion = 2;
 
   const WaveformPeakCache._();
 
   static int _hash(int hash, int byte) =>
       ((hash ^ byte) * 0x01000193) & 0xffffffff;
 
-  static Uint8List _header(int count, int checksum) {
+  static Uint8List _header(int count, int checksum, {bool reduced = false}) {
     final data = ByteData(headerBytes);
     data.setUint32(0, _magic, Endian.little);
-    data.setUint16(4, _version, Endian.little);
-    data.setUint16(6, frameSize, Endian.little);
-    data.setUint32(8, inputRate, Endian.little);
+    data.setUint16(4, reduced ? _reducedVersion : _version, Endian.little);
+    data.setUint16(6, reduced ? 1 : frameSize, Endian.little);
+    data.setUint32(8, reduced ? outputRate : inputRate, Endian.little);
     data.setUint32(12, outputRate, Endian.little);
     data.setUint32(16, count, Endian.little);
     data.setUint32(20, checksum, Endian.little);
-    data.setUint32(24, bytesPerFrame, Endian.little);
+    data.setUint32(24, reduced ? 2 : bytesPerFrame, Endian.little);
     return data.buffer.asUint8List();
   }
 
@@ -43,12 +44,14 @@ class WaveformPeakCache {
     required File pcmFile,
     required File cacheFile,
     bool Function()? isCancelled,
+    bool inputAlreadyReduced = false,
   }) async {
     final bytes = await pcmFile.length();
     if (bytes.isOdd) {
       throw const FormatException('PCM contains a truncated 16-bit sample.');
     }
-    final frames = bytes ~/ (frameSize * 2);
+    final effectiveFrameSize = inputAlreadyReduced ? 1 : frameSize;
+    final frames = bytes ~/ (effectiveFrameSize * 2);
     if (frames < 1 || frames > maxFrames) {
       throw const FormatException('PCM frame count outside safe bounds.');
     }
@@ -67,8 +70,8 @@ class WaveformPeakCache {
     final batch = BytesBuilder(copy: false);
 
     try {
-      await writer.writeFrom(_header(frames, 0));
-      await for (final chunk in pcmFile.openRead(0, frames * frameSize * 2)) {
+      await writer.writeFrom(_header(frames, 0, reduced: inputAlreadyReduced));
+      await for (final chunk in pcmFile.openRead(0, frames * effectiveFrameSize * 2)) {
         if (isCancelled?.call() ?? false) {
           throw StateError('Waveform peak generation was cancelled.');
         }
@@ -84,14 +87,16 @@ class WaveformPeakCache {
           low = math.min(low, sample);
           high = math.max(high, sample);
           inputCount++;
-          if (inputCount != frameSize) continue;
+          if (inputCount != effectiveFrameSize) continue;
 
-          final average = (sum / frameSize).round();
+          final average = (sum / effectiveFrameSize).round();
           result[emitted++] = average;
-          final record = ByteData(bytesPerFrame);
+          final record = ByteData(inputAlreadyReduced ? 2 : bytesPerFrame);
           record.setInt16(0, average, Endian.little);
-          record.setInt16(2, low, Endian.little);
-          record.setInt16(4, high, Endian.little);
+          if (!inputAlreadyReduced) {
+            record.setInt16(2, low, Endian.little);
+            record.setInt16(4, high, Endian.little);
+          }
           final recordBytes = record.buffer.asUint8List();
           for (final b in recordBytes) {
             checksum = _hash(checksum, b);
@@ -114,7 +119,7 @@ class WaveformPeakCache {
       }
       if (batch.isNotEmpty) await writer.writeFrom(batch.takeBytes());
       await writer.setPosition(0);
-      await writer.writeFrom(_header(frames, checksum));
+      await writer.writeFrom(_header(frames, checksum, reduced: inputAlreadyReduced));
       await writer.flush();
       await writer.close();
       if (isCancelled?.call() ?? false) {
@@ -145,14 +150,17 @@ class WaveformPeakCache {
       }
       final h = ByteData.sublistView(Uint8List.fromList(headBytes));
       final count = h.getUint32(16, Endian.little);
+      final version = h.getUint16(4, Endian.little);
+      final reduced = version == _reducedVersion;
+      final recordBytes = reduced ? 2 : bytesPerFrame;
       if (h.getUint32(0, Endian.little) != _magic ||
-          h.getUint16(4, Endian.little) != _version ||
-          h.getUint16(6, Endian.little) != frameSize ||
-          h.getUint32(8, Endian.little) != inputRate ||
+          (version != _version && !reduced) ||
+          h.getUint16(6, Endian.little) != (reduced ? 1 : frameSize) ||
+          h.getUint32(8, Endian.little) != (reduced ? outputRate : inputRate) ||
           h.getUint32(12, Endian.little) != outputRate ||
-          h.getUint32(24, Endian.little) != bytesPerFrame ||
+          h.getUint32(24, Endian.little) != recordBytes ||
           count < 1 || count > maxFrames ||
-          length != headerBytes + count * bytesPerFrame) {
+          length != headerBytes + count * recordBytes) {
         throw const FormatException('Invalid peak cache header or length.');
       }
       final stored = h.getUint32(20, Endian.little);
@@ -161,8 +169,8 @@ class WaveformPeakCache {
       var index = 0;
       while (index < count) {
         final countThisChunk = math.min(4096, count - index);
-        final block = await reader.read(countThisChunk * bytesPerFrame);
-        if (block.length != countThisChunk * bytesPerFrame) {
+        final block = await reader.read(countThisChunk * recordBytes);
+        if (block.length != countThisChunk * recordBytes) {
           throw const FormatException('Truncated peak cache payload.');
         }
         final bytes = Uint8List.fromList(block);
@@ -171,12 +179,14 @@ class WaveformPeakCache {
         }
         final data = ByteData.sublistView(bytes);
         for (var i = 0; i < countThisChunk; i++) {
-          final offset = i * bytesPerFrame;
+          final offset = i * recordBytes;
           final mean = data.getInt16(offset, Endian.little);
-          final low = data.getInt16(offset + 2, Endian.little);
-          final high = data.getInt16(offset + 4, Endian.little);
-          if (low > high || mean < low || mean > high) {
-            throw const FormatException('Invalid peak cache amplitude.');
+          if (!reduced) {
+            final low = data.getInt16(offset + 2, Endian.little);
+            final high = data.getInt16(offset + 4, Endian.little);
+            if (low > high || mean < low || mean > high) {
+              throw const FormatException('Invalid peak cache amplitude.');
+            }
           }
           values[index++] = mean;
         }
