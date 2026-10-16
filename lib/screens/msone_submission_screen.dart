@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:subtitle_studio/themes/studio_design_tokens.dart';
 import 'package:flutter/services.dart';
 import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -354,7 +355,7 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
           builder: (context) => AlertDialog(
             backgroundColor: Theme.of(context).colorScheme.surface,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(StudioRadius.sheet),
             ),
             content: Padding(
               padding: const EdgeInsets.all(8.0),
@@ -369,12 +370,12 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.green.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
+                            color: StudioDesignTokens.of(context).editingAccent.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(StudioRadius.input),
                           ),
                           child: Icon(
                             Icons.check_circle_outline,
-                            color: Colors.green,
+                            color: StudioDesignTokens.of(context).editingAccent,
                             size: 28,
                           ),
                         ),
@@ -416,10 +417,10 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Theme.of(context).primaryColor,
-                        foregroundColor: Colors.white,
+                        foregroundColor: StudioDesignTokens.of(context).onPrimaryAction,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(StudioRadius.input),
                         ),
                       ),
                       child: Row(
@@ -541,7 +542,7 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
       appBar: AppBar(
         title: Text(
           'Submit to Msone - ${widget.submissionType == 'main' ? 'Existing Translator' : 'Fresher'}',
-          style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.red, fontSize: 16),
+          style: TextStyle(fontWeight: FontWeight.w600, color: StudioDesignTokens.of(context).onSurface, fontSize: 16),
         ),
         backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         elevation: 2,
@@ -642,7 +643,7 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
                     Expanded(
                       child: Container(
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(StudioRadius.input),
                           border: Border.all(
                             color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
                             width: 1.5,
@@ -652,7 +653,7 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
                           color: Colors.transparent,
                           child: InkWell(
                             onTap: _isSubmitting ? null : _previousStep,
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(StudioRadius.input),
                             child: Container(
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               child: Row(
@@ -687,7 +688,7 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(StudioRadius.input),
                         gradient: LinearGradient(
                           colors: _isSubmitting 
                             ? [
@@ -717,26 +718,26 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
                             : _currentStep < 2 
                               ? _nextStep 
                               : _submitToMsone,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(StudioRadius.input),
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 if (_isSubmitting)
-                                  const SizedBox(
+                                  SizedBox(
                                     height: 20,
                                     width: 20,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                      valueColor: AlwaysStoppedAnimation<Color>(StudioDesignTokens.of(context).onPrimaryAction),
                                     ),
                                   )
                                 else ...[
                                   Text(
                                     _currentStep < 2 ? 'Next' : 'Submit',
-                                    style: const TextStyle(
-                                      color: Colors.white,
+                                    style: TextStyle(
+                                      color: StudioDesignTokens.of(context).onPrimaryAction,
                                       fontWeight: FontWeight.w600,
                                       fontSize: 16,
                                     ),
@@ -745,15 +746,15 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
                                   Icon(
                                     _currentStep < 2 ? Icons.arrow_forward_ios : Icons.send,
                                     size: 18,
-                                    color: Colors.white,
+                                    color: StudioDesignTokens.of(context).onPrimaryAction,
                                   ),
                                 ],
                                 if (_isSubmitting) ...[
                                   const SizedBox(width: 12),
                                   Text(
                                     _currentStep < 2 ? 'Processing...' : 'Submitting...',
-                                    style: const TextStyle(
-                                      color: Colors.white,
+                                    style: TextStyle(
+                                      color: StudioDesignTokens.of(context).onPrimaryAction,
                                       fontWeight: FontWeight.w500,
                                       fontSize: 14,
                                     ),
@@ -806,15 +807,15 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    Colors.blue.withValues(alpha: 0.1),
-                    Colors.blue.withValues(alpha: 0.05),
+                    StudioDesignTokens.of(context).primaryAction.withValues(alpha: 0.1),
+                    StudioDesignTokens.of(context).primaryAction.withValues(alpha: 0.05),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(StudioRadius.card),
                 border: Border.all(
-                  color: Colors.blue.withValues(alpha: 0.2),
+                  color: StudioDesignTokens.of(context).primaryAction.withValues(alpha: 0.2),
                 ),
               ),
               child: Row(
@@ -822,12 +823,12 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.blue.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(12),
+                      color: StudioDesignTokens.of(context).primaryAction.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(StudioRadius.input),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.person_outline,
-                      color: Colors.blue,
+                      color: StudioDesignTokens.of(context).primaryAction,
                       size: 24,
                     ),
                   ),
@@ -840,14 +841,14 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
                           'Translator Information',
                           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                             fontWeight: FontWeight.bold,
-                            color: Colors.blue.shade700,
+                            color: StudioDesignTokens.of(context).onSurface,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           'Tell us about yourself',
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Colors.blue.shade600,
+                            color: StudioDesignTokens.of(context).mutedText,
                           ),
                         ),
                       ],
@@ -866,7 +867,7 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
               icon: Icons.person,
               isRequired: true,
               validator: (value) => _validateRequired(value, 'Name'),
-              color: Colors.green,
+              color: StudioDesignTokens.of(context).editingAccent,
             ),
             const SizedBox(height: 20),
             
@@ -878,7 +879,7 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
               isRequired: true,
               keyboardType: TextInputType.emailAddress,
               validator: _validateEmail,
-              color: Colors.deepOrange,
+              color: StudioDesignTokens.of(context).primaryAction,
             ),
             const SizedBox(height: 20),
             
@@ -889,7 +890,7 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
               icon: Icons.contact_phone,
               isRequired: true,
               validator: (value) => _validateRequired(value, 'Contact ID'),
-              color: Colors.purple,
+              color: StudioDesignTokens.of(context).primaryAction,
             ),
             const SizedBox(height: 32),
             
@@ -898,7 +899,7 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(StudioRadius.input),
                 border: Border.all(
                   color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
                 ),
@@ -993,15 +994,15 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    Colors.purple.withValues(alpha: 0.1),
-                    Colors.purple.withValues(alpha: 0.05),
+                    StudioDesignTokens.of(context).primaryAction.withValues(alpha: 0.1),
+                    StudioDesignTokens.of(context).primaryAction.withValues(alpha: 0.05),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(StudioRadius.card),
                 border: Border.all(
-                  color: Colors.purple.withValues(alpha: 0.2),
+                  color: StudioDesignTokens.of(context).primaryAction.withValues(alpha: 0.2),
                 ),
               ),
               child: Row(
@@ -1009,12 +1010,12 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.purple.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(12),
+                      color: StudioDesignTokens.of(context).primaryAction.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(StudioRadius.input),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.movie_outlined,
-                      color: Colors.purple,
+                      color: StudioDesignTokens.of(context).primaryAction,
                       size: 24,
                     ),
                   ),
@@ -1027,14 +1028,14 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
                           'Movie Information',
                           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                             fontWeight: FontWeight.bold,
-                            color: Colors.purple.shade700,
+                            color: StudioDesignTokens.of(context).onSurface,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           'Details about the movie',
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Colors.purple.shade600,
+                            color: StudioDesignTokens.of(context).mutedText,
                           ),
                         ),
                       ],
@@ -1052,7 +1053,7 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
               icon: Icons.movie,
               isRequired: true,
               validator: (value) => _validateRequired(value, 'Movie name'),
-              color: Colors.red,
+              color: StudioDesignTokens.of(context).dangerText,
             ),
             const SizedBox(height: 20),
             
@@ -1064,7 +1065,7 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
               isRequired: true,
               keyboardType: TextInputType.number,
               validator: _validateYear,
-              color: Colors.teal,
+              color: StudioDesignTokens.of(context).editingAccent,
             ),
             const SizedBox(height: 20),
             
@@ -1075,7 +1076,7 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
               icon: Icons.download,
               isRequired: true,
               validator: (value) => _validateRequired(value, 'Torrent info'),
-              color: Colors.indigo,
+              color: StudioDesignTokens.of(context).primaryAction,
             ),
             const SizedBox(height: 20),
             
@@ -1087,7 +1088,7 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
               isRequired: true,
               keyboardType: TextInputType.url,
               validator: _validateImdbLink,
-              color: Colors.deepOrange,
+              color: StudioDesignTokens.of(context).primaryAction,
             ),
             const SizedBox(height: 20),
             
@@ -1099,7 +1100,7 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
               isRequired: true,
               maxLines: 4,
               validator: (value) => _validateRequired(value, 'Synopsis'),
-              color: Colors.green,
+              color: StudioDesignTokens.of(context).editingAccent,
             ),
             
             const SizedBox(height: 24),
@@ -1149,7 +1150,7 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(StudioRadius.input),
         boxShadow: [
           BoxShadow(
             color: color.withValues(alpha: 0.1),
@@ -1180,32 +1181,32 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
             ),
           ),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(StudioRadius.input),
             borderSide: BorderSide(
               color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
             ),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(StudioRadius.input),
             borderSide: BorderSide(
               color: color.withValues(alpha: 0.3),
             ),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(StudioRadius.input),
             borderSide: BorderSide(
               color: color,
               width: 2,
             ),
           ),
           errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(StudioRadius.input),
             borderSide: BorderSide(
               color: Theme.of(context).colorScheme.error,
             ),
           ),
           focusedErrorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(StudioRadius.input),
             borderSide: BorderSide(
               color: Theme.of(context).colorScheme.error,
               width: 2,
@@ -1238,15 +1239,15 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  Colors.green.withValues(alpha: 0.1),
-                  Colors.green.withValues(alpha: 0.05),
+                  StudioDesignTokens.of(context).editingAccent.withValues(alpha: 0.1),
+                  StudioDesignTokens.of(context).editingAccent.withValues(alpha: 0.05),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(StudioRadius.card),
               border: Border.all(
-                color: Colors.green.withValues(alpha: 0.2),
+                color: StudioDesignTokens.of(context).editingAccent.withValues(alpha: 0.2),
               ),
             ),
             child: Row(
@@ -1254,12 +1255,12 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.green.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
+                    color: StudioDesignTokens.of(context).editingAccent.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(StudioRadius.input),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.folder_outlined,
-                    color: Colors.green,
+                    color: StudioDesignTokens.of(context).editingAccent,
                     size: 24,
                   ),
                 ),
@@ -1272,14 +1273,14 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
                         'File Selection',
                         style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: Colors.green.shade700,
+                          color: StudioDesignTokens.of(context).onSurface,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         'Choose one option: Submit a .msone project file OR submit both original and translated subtitle files',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.green.shade600,
+                          color: StudioDesignTokens.of(context).mutedText,
                         ),
                       ),
                     ],
@@ -1295,12 +1296,12 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: _msoneFilePath != null 
-                ? Colors.purple.withValues(alpha: 0.1)
+                ? StudioDesignTokens.of(context).primaryAction.withValues(alpha: 0.1)
                 : Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(StudioRadius.input),
               border: Border.all(
                 color: _msoneFilePath != null 
-                  ? Colors.purple.withValues(alpha: 0.3)
+                  ? StudioDesignTokens.of(context).primaryAction.withValues(alpha: 0.3)
                   : Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
               ),
             ),
@@ -1311,7 +1312,7 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
                   'Option 1: Submit Msone Project File',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: _msoneFilePath != null ? Colors.purple.shade700 : null,
+                    color: _msoneFilePath != null ? StudioDesignTokens.of(context).onSurface : null,
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -1328,7 +1329,7 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
                     ? 'Selected: ${path.basename(_msoneFilePath!)}'
                     : 'Choose your .msone project file',
                   icon: Icons.folder_special,
-                  gradientColors: [Colors.purple, Colors.purple.shade700],
+                  gradientColors: [StudioDesignTokens.of(context).primaryAction, StudioDesignTokens.of(context).onSurface],
                   isSelected: _msoneFilePath != null,
                   isRequired: false,
                   onTap: _selectMsoneFile,
@@ -1362,12 +1363,12 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: (_translatedSubtitlePath != null || _originalSubtitlePath != null)
-                ? Colors.blue.withValues(alpha: 0.1)
+                ? StudioDesignTokens.of(context).primaryAction.withValues(alpha: 0.1)
                 : Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(StudioRadius.input),
               border: Border.all(
                 color: (_translatedSubtitlePath != null || _originalSubtitlePath != null)
-                  ? Colors.blue.withValues(alpha: 0.3)
+                  ? StudioDesignTokens.of(context).primaryAction.withValues(alpha: 0.3)
                   : Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
               ),
             ),
@@ -1379,7 +1380,7 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: (_translatedSubtitlePath != null || _originalSubtitlePath != null)
-                      ? Colors.blue.shade700 : null,
+                      ? StudioDesignTokens.of(context).onSurface : null,
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -1397,7 +1398,7 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
               ? 'Selected: ${path.basename(_translatedSubtitlePath!)}'
               : 'Choose the translated subtitle file (required)',
             icon: Icons.subtitles,
-            gradientColors: [Colors.blue, Colors.blue.shade700],
+            gradientColors: [StudioDesignTokens.of(context).primaryAction, StudioDesignTokens.of(context).onSurface],
             isSelected: _translatedSubtitlePath != null,
             isRequired: true,
             onTap: () => _selectFile('translated'),
@@ -1464,7 +1465,7 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(StudioRadius.card),
         boxShadow: [
           BoxShadow(
             color: isSelected 
@@ -1479,7 +1480,7 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
         color: Colors.transparent,
         child: InkWell(
           onTap: isLoading ? null : onTap,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(StudioRadius.card),
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -1494,7 +1495,7 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
                   )
                 : null,
               color: !isSelected ? Theme.of(context).colorScheme.surface : null,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(StudioRadius.card),
               border: Border.all(
                 color: isSelected 
                   ? gradientColors.first.withValues(alpha: 0.3)
@@ -1517,7 +1518,7 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(StudioRadius.input),
                   ),
                   child: isLoading
                     ? SizedBox(
@@ -1533,7 +1534,7 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
                     : Icon(
                         isSelected ? Icons.check_circle : icon,
                         color: isSelected 
-                          ? Colors.white
+                          ? StudioDesignTokens.of(context).onPrimaryAction
                           : Theme.of(context).colorScheme.primary,
                         size: 24,
                       ),
