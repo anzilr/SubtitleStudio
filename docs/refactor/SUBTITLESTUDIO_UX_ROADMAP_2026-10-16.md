@@ -1,15 +1,19 @@
 # SubtitleStudio UX roadmap — visual history, plain language, unified design, compact Edit Line
 
-> **Palette selection is now a required gate (October 16, 2026):** CP85 R6
-> Android stability checks are **user-reported complete**. The initial
-> blue-themed UX-1 palette is **not approved** as SubtitleStudio's final
-> identity. Three alternatives—Carbon & Jade, Copper Cinema, and Aster Violet—
-> are available in the [open palette-decision document](STUDIO_PALETTE_DECISION_2026-10-16.md).
-> No production theme changes should be made before selection. The first
-> visual pilot afterward must correct the Edit Line source/target text fields'
-> saturated primary backgrounds, forced white foreground and faint labels.
-> Resume underlying native waveform qualification while later UX rollouts
-> remain dependent on this design gate.
+> **Three-skin UX architecture approved — October 16, 2026:** CP85 R6
+> Android stability is **user-confirmed complete**. The app will offer
+> **Carbon & Jade**, **Copper Cinema**, and **Aster Violet**, each with
+> **Light / Dark / Classic**, for **nine** appearance combinations.
+> Skin and appearance are **independently selected and persisted**; the
+> initial preview is **Carbon & Jade / Dark**. All nine combinations use
+> one semantic widget/component system, not nine unrelated UI layouts.
+> See the [approved architecture and implementation plan](STUDIO_SKINS_IMPLEMENTATION_PLAN_2026-10-16.md)
+> and [reference palette matrix](STUDIO_PALETTE_DECISION_2026-10-16.md).
+> No production theme/model/widget changes are included in this approval.
+> First pilot after token/persistence work: high-contrast Edit Line cue fields,
+> without the current primary-colored input backgrounds or forced white text.
+> Keep **Checkpoint 86 native waveform qualification** on the original
+> technical roadmap; appearance work is its own dependency-gated UX track.
 
 Date: 2026-10-16
 Branch: `refactor/riverpod-architecture`
@@ -28,7 +32,7 @@ At this branch head, the history backend already provides an immutable `Checkpoi
 
 `AppThemes` currently mixes several unrelated colors across light/dark/classic themes; editing widgets also specify additional hard-coded colors. The Edit Line layout uses a dense app bar, fixed-height (~100 px) original/edited text blocks, many inline actions, and differing mobile split-video modes. Most application state is already Riverpod-backed. **Do not rewrite repositories, checkpoint persistence, Media Kit or Isar to do UX work.**
 
-The new visual system and copy are *not* part of the already completed 85 checkpoint fixes. The latest Android regression fixes, Project Settings encoding selector, and Riverpod disposal patch must be quality-gated before any large UI migration.
+The approved three-skin visual system and copy are *not* part of the already completed 85 checkpoint fixes. The latest Android regression fixes, Project Settings encoding selector, and Riverpod disposal patch must be quality-gated before any large UI migration.
 
 ## 1. Product UX principles and guardrails
 
@@ -44,7 +48,9 @@ The new visual system and copy are *not* part of the already completed 85 checkp
 
 Working name: **SubtitleStudio / Frame & Cue**. Signature graphic: a tiny timeline tick + subtitle cue line, reused sparingly in navigation, history and waveform. Minimal, calm, precise, distinctly editing-oriented; no broad gradients or rainbow-coded toolbars.
 
-### Draft semantic palette (review against actual Android screenshots before freezing tokens)
+### Historical UX-1 blue draft (SUPERSEDED by the approved three-skin matrix)
+
+The following table documents the **old blue UX-1 baseline** for migration comparison only; **do not use these values as the final palette**. New UI colors must be resolved from the 9 palettes in [the approved palette matrix](STUDIO_PALETTE_DECISION_2026-10-16.md) and semantic roles in [the implementation plan](STUDIO_SKINS_IMPLEMENTATION_PLAN_2026-10-16.md).
 
 | Role | Light | Dark | Use |
 | --- | --- | --- | --- |
@@ -67,6 +73,8 @@ Color accessibility rules: light primary `#5268D9` is intended for white text; d
 - Core components: `StudioScaffold`, `StudioTopBar`, `StudioCard`, `StudioSectionHeader`, `StudioIconAction`, `StudioPrimaryButton`, `StudioSheet`, `StudioCueField`, `StudioTimeField`, `StudioStatusChip`, `StudioEmptyState`, `StudioConfirmDialog`.
 - Centralize focus/error/disabled/loading treatment, snackbar/dialog styling, bottom sheets, selection, navigation and motion. Honor reduced-motion and large text.
 - Keep light/dark/classic preference data and user-loaded fonts readable; avoid breaking older saved settings. Decide whether legacy Classic remains selectable after migration only after testing.
+
+**Approved skin/mode rollout:** SKIN-0 decision → SKIN-1 resolver/tokens → SKIN-2 independently persistent Isar-backed values → SKIN-3 Appearance Settings/mode cycler → SKIN-4 Edit Line cue fields → SKIN-5 app-wide consistency → SKIN-6 verification. See [implementation plan](STUDIO_SKINS_IMPLEMENTATION_PLAN_2026-10-16.md).
 
 **Rollout order:** inventory/screenshots of Home, Edit, Edit Line, History, Project Settings, Import/Export, Source View, player/waveform and tools → implement tokens and component gallery → migrate one pilot surface (Edit Line or History) behind an opt-in internal flag → migrate all other surfaces in small batches → retire scattered constants and duplicated widgets after regressions pass.
 
@@ -162,7 +170,7 @@ Extract widgets by responsibility from `lib/screens/edit_line/parts/edit_line_la
 | Stage | Deliverable | Gate before proceeding |
 | --- | --- | --- |
 | UX-0: baseline | Finish Android CP85 encoding and Riverpod disposal verification; capture light/dark Android editor/history screenshots; inventory inconsistent colors and screens | Clean analyzer, targeted tests, device smoke check |
-| UX-1: foundation | Design tokens, theme extensions, typography, icon/action/sheet/form components and design guidelines | Widget/golden tests on both modes, contrast, Unicode/custom-font/large-text |
+| UX-1: foundation | Design tokens, theme extensions, typography, icon/action/sheet/form components and design guidelines; extend for nine skin/mode combinations in SKIN-1–3 | Widget/golden tests for all nine combinations, contrast, Unicode/custom-font/large-text, persistence/migration |
 | UX-2: history words | Plain-label catalog, action explanations, confirmations, Help updates; use existing history actions | Exact underlying branch/HEAD behavior unchanged, stale-HEAD and no-data-loss tests |
 | UX-3: history visualization | Mobile timeline lane rail + optional true branch map, node details; maintain classic fallback temporarily | Deterministic lane layout, >=2,501 nodes, performance, semantics, Android portrait/landscape |
 | UX-4: Edit Line pilot | New compact mobile composition behind opt-in toggle; reuse existing controller/Media Kit | Save/cancel/back, marks/comments, edit vs translate, timing, IME, rotation, seek, test with/without video |
