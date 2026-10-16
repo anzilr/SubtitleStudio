@@ -24,3 +24,11 @@ Changes:
 
 Run flutter analyze and complete flutter test -j 1. Native Android and
 Windows acceptance remain manual. Update roadmap after CI.
+
+R8 FINAL CHECK: CI run 38925010484 succeeded with analyzer clean and
+468 Flutter tests passed on code 0ba6b5f. A later dedicated widget test
+test/marked_lines_sheet_checkbox_test.dart now exercises the real 360dp
+marked-lines modal with injected persisted preference: unchecked shows only
+marked cue; checking reveals unmarked comment-only cue; unchecking hides it;
+assert no Show label/filter-list icon. Re-run entire suite against that test
+and previously verified filter, themed floating play/pause, waveform toolbar.
