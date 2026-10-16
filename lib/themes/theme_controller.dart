@@ -94,6 +94,23 @@ class ThemeController extends Notifier<ThemeState> {
   int _skinRevision = 0;
   int _appearanceRevision = 0;
   int _fontRevision = 0;
+  // Serialize each preference independently so rapid taps cannot cause an
+  // older async write to finish after and overwrite the latest selection.
+  Future<void> _skinWrites = Future<void>.value();
+  Future<void> _appearanceWrites = Future<void>.value();
+
+  Future<void> _queueSkin(String id) {
+    final next = _skinWrites.then((_) => _preferences.saveSkinId(id));
+    _skinWrites = next.then<void>((_) {}, onError: (Object _, StackTrace trace) {});
+    return next;
+  }
+
+  Future<void> _queueAppearance(String id) {
+    final next = _appearanceWrites.then((_) => _preferences.saveThemeMode(id));
+    _appearanceWrites = next.then<void>((_) {}, onError: (Object _, StackTrace trace) {});
+    return next;
+  }
+
 
   ThemePreferencesStore get _preferences =>
       ref.read(themePreferencesRepositoryProvider);
@@ -159,7 +176,7 @@ class ThemeController extends Notifier<ThemeState> {
     final revision = ++_skinRevision;
     state = state.copyWith(skinId: skin);
     try {
-      await _preferences.saveSkinId(skin.value);
+      await _queueSkin(skin.value);
     } catch (_) {
       if (ref.mounted && _skinRevision == revision) {
         state = state.copyWith(skinId: previous);
@@ -174,7 +191,7 @@ class ThemeController extends Notifier<ThemeState> {
     final revision = ++_appearanceRevision;
     state = state.copyWith(appearance: appearance);
     try {
-      await _preferences.saveThemeMode(appearance.storageId);
+      await _queueAppearance(appearance.storageId);
     } catch (_) {
       if (ref.mounted && _appearanceRevision == revision) {
         state = state.copyWith(appearance: previous);
