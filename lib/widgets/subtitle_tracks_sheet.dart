@@ -82,7 +82,7 @@ class SubtitleTracksSheet extends StatelessWidget {
                     color:
                         isDark
                             ? onSurfaceColor.withValues(alpha: 0.05)
-                            : Colors.grey.shade50,
+                            : Theme.of(context).colorScheme.surfaceContainerLow,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: borderColor, width: 1),
                   ),
