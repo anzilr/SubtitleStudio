@@ -1,5 +1,23 @@
 # SubtitleStudio Refactor Roadmap v4
 
+> **SKIN-4 R5 CARBON ZERO VISUAL CONSISTENCY VERIFIED — October 16, 2026:**
+> Editor appbar waveform icon and all five Home FAB action icons/labels now
+> follow live on-appbar/on-primary contrast, including Carbon Zero Light,
+> Dark and Classic. Marked Lines replaces hard-coded blue/green/red decoration
+> with semantic roles, and its Project Settings entry opens at full modal
+> height. Go To Line no longer forces a blue slider, no longer waits for
+> diagnostic logging to open, and fits a 360dp portrait viewport. Common
+> red danger and amber warning color roles apply to every built-in skin and
+> deletion/reset/clear operations, while Carbon Zero's ordinary decoration
+> stays achromatic. [Successful CI 38915923306](https://github.com/anzilr/SubtitleStudio/actions/runs/38915923306):
+> **448 Flutter tests passed, 0 analyzer issues** at code `5e0c155`.
+> [R5 report and device checklist](STUDIO_SKIN4_R5_ANDROID_CONTRAST_2026-10-16.md).
+> **NEXT:** repeat real Android visuals and workflow on CPH2381 (360dp),
+> check marked-lines nested modal dismissal, destructive confirmations, and
+> waveform/FAB controls. Flutter CI is not native-device acceptance; Windows
+> and historical Isar acceptance remain separate. No upstream or release
+> branch modified.
+
 > **SKIN-4 R4 CARBON ZERO + RAW SOURCE VERIFIED — October 16, 2026:**
 > Replaced embedded and standalone Source View's per-cue GUI fields with a
 > single raw SRT text editor (colors only; editing/save reconciliation remains
