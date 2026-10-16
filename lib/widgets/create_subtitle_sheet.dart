@@ -344,7 +344,7 @@ class _CreateSubtitleSheetState extends ConsumerState<CreateSubtitleSheet> {
               // File name input
               Container(
                 decoration: BoxDecoration(
-                  color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                  color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: borderColor,
@@ -379,7 +379,7 @@ class _CreateSubtitleSheetState extends ConsumerState<CreateSubtitleSheet> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                      color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: borderColor,
@@ -391,12 +391,12 @@ class _CreateSubtitleSheetState extends ConsumerState<CreateSubtitleSheet> {
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Colors.green,
+                            color: Theme.of(context).colorScheme.primary,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.subtitles_outlined,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                             size: 20,
                           ),
                         ),
@@ -430,7 +430,7 @@ class _CreateSubtitleSheetState extends ConsumerState<CreateSubtitleSheet> {
                         ),
                         Icon(
                           _selectedSrtPath != null ? Icons.check_circle : Icons.chevron_right_rounded,
-                          color: _selectedSrtPath != null ? Colors.green : mutedColor,
+                          color: _selectedSrtPath != null ? Theme.of(context).colorScheme.primary : mutedColor,
                           size: 24,
                         ),
                       ],
@@ -450,7 +450,7 @@ class _CreateSubtitleSheetState extends ConsumerState<CreateSubtitleSheet> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                      color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: borderColor,
@@ -462,12 +462,12 @@ class _CreateSubtitleSheetState extends ConsumerState<CreateSubtitleSheet> {
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Colors.orange,
+                            color: Theme.of(context).colorScheme.tertiary,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.folder_special_outlined,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                             size: 20,
                           ),
                         ),
@@ -501,7 +501,7 @@ class _CreateSubtitleSheetState extends ConsumerState<CreateSubtitleSheet> {
                         ),
                         Icon(
                           _selectedProjectPath != null ? Icons.check_circle : Icons.chevron_right_rounded,
-                          color: _selectedProjectPath != null ? Colors.orange : mutedColor,
+                          color: _selectedProjectPath != null ? Theme.of(context).colorScheme.tertiary : mutedColor,
                           size: 24,
                         ),
                       ],
@@ -514,7 +514,7 @@ class _CreateSubtitleSheetState extends ConsumerState<CreateSubtitleSheet> {
               // Encoding dropdown
               Container(
                 decoration: BoxDecoration(
-                  color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                  color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: borderColor,
@@ -559,7 +559,7 @@ class _CreateSubtitleSheetState extends ConsumerState<CreateSubtitleSheet> {
                   onPressed: _isLoading ? null : _createSubtitle,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,
-                    foregroundColor: Colors.white,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -571,7 +571,7 @@ class _CreateSubtitleSheetState extends ConsumerState<CreateSubtitleSheet> {
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.onPrimary),
                           ),
                         )
                       : const Row(
