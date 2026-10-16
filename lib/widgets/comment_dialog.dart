@@ -204,12 +204,12 @@ class CommentDialogState extends State<CommentDialog> {
                   Container(
                     padding: EdgeInsets.all(compactLayout ? 8 : 12),
                     decoration: BoxDecoration(
-                      color: Colors.blue.withValues(alpha: 0.1),
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
                       Icons.comment_outlined,
-                      color: Colors.blue,
+                      color: Theme.of(context).colorScheme.primary,
                       size: 28,
                     ),
                   ),
@@ -247,7 +247,7 @@ class CommentDialogState extends State<CommentDialog> {
                           padding: const EdgeInsets.all(8),
                           child: Icon(
                             Icons.delete_outline,
-                            color: Colors.red,
+                            color: Theme.of(context).colorScheme.error,
                             size: 24,
                           ),
                         ),
@@ -263,10 +263,10 @@ class CommentDialogState extends State<CommentDialog> {
               Container(
                 padding: EdgeInsets.all(compactLayout ? 8 : 16),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.08),
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: Colors.blue.withValues(alpha: 0.2),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
                     width: 1,
                   ),
                 ),
@@ -278,7 +278,7 @@ class CommentDialogState extends State<CommentDialog> {
                       children: [
                         Icon(
                           Icons.subtitles_outlined,
-                          color: Colors.blue,
+                          color: Theme.of(context).colorScheme.primary,
                           size: 20,
                         ),
                         const SizedBox(width: 8),
@@ -288,7 +288,7 @@ class CommentDialogState extends State<CommentDialog> {
                             : 'Subtitle Line',
                           style: Theme.of(context).textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w600,
-                            color: Colors.blue,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                         ),
                         const Spacer(),
@@ -308,7 +308,7 @@ class CommentDialogState extends State<CommentDialog> {
                                         Text('Subtitle text copied to clipboard'),
                                       ],
                                     ),
-                                    backgroundColor: Colors.green,
+                                    backgroundColor: Theme.of(context).colorScheme.primary,
                                     duration: const Duration(seconds: 2),
                                     behavior: SnackBarBehavior.floating,
                                   ),
@@ -323,14 +323,14 @@ class CommentDialogState extends State<CommentDialog> {
                                 children: [
                                   Icon(
                                     Icons.copy,
-                                    color: Colors.green,
+                                    color: Theme.of(context).colorScheme.primary,
                                     size: 16,
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
                                     'Copy',
                                     style: TextStyle(
-                                      color: Colors.green,
+                                      color: Theme.of(context).colorScheme.primary,
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -352,7 +352,7 @@ class CommentDialogState extends State<CommentDialog> {
                           color: surfaceColor,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: _isEditingSubtitleText ? Colors.blue : borderColor,
+                            color: _isEditingSubtitleText ? Theme.of(context).colorScheme.primary : borderColor,
                             width: _isEditingSubtitleText ? 2 : 1,
                           ),
                         ),
@@ -402,14 +402,14 @@ class CommentDialogState extends State<CommentDialog> {
                                             children: [
                                               Icon(
                                                 _isEditingSubtitleText ? Icons.check : Icons.edit,
-                                                color: Colors.blue,
+                                                color: Theme.of(context).colorScheme.primary,
                                                 size: 16,
                                               ),
                                               const SizedBox(width: 4),
                                               Text(
                                                 _isEditingSubtitleText ? 'Save' : 'Edit',
                                                 style: TextStyle(
-                                                  color: Colors.blue,
+                                                  color: Theme.of(context).colorScheme.primary,
                                                   fontSize: 12,
                                                   fontWeight: FontWeight.w600,
                                                 ),
@@ -438,14 +438,14 @@ class CommentDialogState extends State<CommentDialog> {
                                             children: [
                                               Icon(
                                                 Icons.close,
-                                                color: Colors.red,
+                                                color: Theme.of(context).colorScheme.error,
                                                 size: 16,
                                               ),
                                               const SizedBox(width: 4),
                                               Text(
                                                 'Cancel',
                                                 style: TextStyle(
-                                                  color: Colors.red,
+                                                  color: Theme.of(context).colorScheme.error,
                                                   fontSize: 12,
                                                   fontWeight: FontWeight.w600,
                                                 ),
@@ -535,7 +535,7 @@ class CommentDialogState extends State<CommentDialog> {
             // Comment Input Field
             Container(
               decoration: BoxDecoration(
-                color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: borderColor,
@@ -578,12 +578,12 @@ class CommentDialogState extends State<CommentDialog> {
                         : 'Enter your comment here...',
                     prefixIcon: Icon(
                       Icons.edit_note,
-                      color: Colors.blue,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                     labelStyle: TextStyle(
-                      color: Colors.blue,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
                   enabled: !_isLoading,
@@ -640,7 +640,7 @@ class CommentDialogState extends State<CommentDialog> {
                       onPressed: _isLoading ? null : _saveComment,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryColor,
-                        foregroundColor: Colors.white,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -652,7 +652,7 @@ class CommentDialogState extends State<CommentDialog> {
                               height: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.onPrimary),
                               ),
                             )
                           : Row(
