@@ -387,7 +387,10 @@ void showGotToLineModal({
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          child: Row(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Row(
+                            mainAxisSize: MainAxisSize.min,
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
@@ -405,11 +408,12 @@ void showGotToLineModal({
                                 ),
                               ),
                             ],
+                            ),
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: Container(
                         height: 50,
@@ -423,7 +427,10 @@ void showGotToLineModal({
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          child: Row(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Row(
+                            mainAxisSize: MainAxisSize.min,
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               const Icon(Icons.arrow_upward_rounded, size: 20),
@@ -436,6 +443,7 @@ void showGotToLineModal({
                                 ),
                               ),
                             ],
+                            ),
                           ),
                         ),
                       ),
