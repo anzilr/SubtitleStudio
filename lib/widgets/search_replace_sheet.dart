@@ -859,7 +859,7 @@ class _SearchReplaceSheetState extends ConsumerState<SearchReplaceSheet> {
                                                               style: GoogleFonts.spaceMono(
                                                                 textStyle: TextStyle(
                                                                   fontWeight: FontWeight.w600,
-                                                                  color: Colors.white,
+                                                                  color: Theme.of(context).colorScheme.onPrimary,
                                                                   fontSize: 11,
                                                                 ),
                                                               ),
@@ -888,7 +888,7 @@ class _SearchReplaceSheetState extends ConsumerState<SearchReplaceSheet> {
                                                               text: matchText,
                                                               style: TextStyle(
                                                                 backgroundColor: matchBackgroundColor,
-                                                                color: Colors.white,
+                                                                color: Theme.of(context).colorScheme.onPrimary,
                                                                 fontWeight: FontWeight.bold,
                                                               ),
                                                             ),
