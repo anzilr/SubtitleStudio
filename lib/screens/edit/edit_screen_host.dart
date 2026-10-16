@@ -28,7 +28,14 @@ class _EditScreenHostState extends State<EditScreenHost> {
   // A theme change may rebuild the Navigator's route builder: recreating
   // overrideWithValue(EditConfiguration(...)) would dispose the editor
   // controller and cause another "Loading..." gate.
-  late List<Override> _stableOverrides;
+  late var _stableOverrides = [
+    editConfigurationProvider.overrideWithValue(
+      EditConfiguration(
+        subtitleCollectionId: widget.subtitleCollectionId,
+        sessionId: widget.sessionId,
+      ),
+    ),
+  ];
 
   @override
   void initState() {
