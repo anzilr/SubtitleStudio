@@ -1,17 +1,10 @@
-SubtitleStudio SKIN-4 R3-B P1 R2 / DESIGN-2 constrained-modal regression gate | 2026-10-16
-Flutter analyze + full test suite only (no native platform builds).
-Migrate single-line and batch delete confirmation sheets, index range selection
-and selected-time shift sheets to shared StudioDesignTokens and component
-geometry. Project Settings modal header/surface uses the same tokens.
-Destructive actions use danger semantics; ordinary primary actions inherit
-the uniform FilledButton theme. Preserve index validation and zero-based
-range results, Navigator dismissal, async time-shift callback behavior and
-keyboard confirmation without repeated batch delete invocation.
-Exercise all nine built-in appearance modes and action callback regressions.
-Remain on refactor/riverpod-architecture only. Keep ThemeState live skin
-activation gated pending remaining toolbars, overlays and editing lifecycle
-audit, plus native Android/Windows visual acceptance. CP86 waveform stays
-separate.
-
-R2 correction: single-delete sheet must scroll when modal height is constrained;
-widget regression scrolls to the Delete action before tapping. CI gate rerun.
+SubtitleStudio SKIN-4 R3-B P2 screen contrast pre-activation gate | 2026-10-16
+Flutter analyze + full tests only.
+Audit Source View (standalone and Editor embedded), Help documentation and
+MSone submission form surfaces/actions, while retaining source SRT editing,
+MSone workflow/data/form validators and Help navigation/expansion semantics.
+Migrate Edit Line unsaved/original-warning dialogs to semantic action roles.
+Verify nine-skin Help chip foreground and Source View multilingual edit stability.
+Current production theme remains legacy during this pre-activation gate.
+Next gate: globally apply catalog-resolved skin ThemeData with retained widget,
+edit focus, media and route state; physical device validation only afterwards.
