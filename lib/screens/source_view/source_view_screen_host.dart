@@ -92,7 +92,7 @@ class _SourceViewRiverpodHost extends ConsumerWidget {
                         ScaffoldMessenger.of(context).hideCurrentSnackBar();
                         controller.saveAsFile();
                       },
-                      child: const Text(
+                      child: Text(
                         'Tap here to save to a new location ➤',
                         style: TextStyle(
                           decoration: TextDecoration.underline,
