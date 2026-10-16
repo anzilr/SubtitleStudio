@@ -21,10 +21,10 @@ abstract final class StudioSkinValidator {
     if (id.isBuiltIn) {
       throw const FormatException('Imported skins may not replace built-ins');
     }
-    if (author != null && author!.length > 100) {
+    if (author != null && author.length > 100) {
       throw const FormatException('Skin author is too long');
     }
-    if (description != null && description!.length > 500) {
+    if (description != null && description.length > 500) {
       throw const FormatException('Skin description is too long');
     }
     for (final mode in StudioAppearance.values) {
