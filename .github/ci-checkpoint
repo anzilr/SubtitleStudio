@@ -1,5 +1,6 @@
-SubtitleStudio CP85 R3 theme-switch lifecycle verification | 2026-10-16
-Flutter analyzer + flutter test -j 1. Fix Riverpod 3 Override
-type inference in stable Editor/Edit Line host scopes. Recheck
-captured Navigator arguments and unified light/dark theme palette.
-CI analyze/tests only; real Android smoke testing pending.
+SubtitleStudio CP85 R4 lifecycle regression tests | 2026-10-16
+Analyzer + full flutter test -j 1. Inject fake controllers inside
+the actual Editor/Edit Line ProviderScope during widget theme
+rebuild tests; preserve stable route configuration, captured Navigator
+arguments, neutral light surfaces and simplified settings accents.
+No native build matrix or Isar code generation.
