@@ -16,6 +16,14 @@ Related: [Refactor roadmap v4](REFACTOR_ROADMAP_V4.md), [UX roadmap](SUBTITLESTU
 
 ## Decision record — user-approved requirements
 
+**SKIN-4 R3-A verified (October 16, 2026):** Shared semantic Editor/Edit
+Line popup rows, theme-aware subtitle cards, formatting controls, unsaved
+changes sheet and dictionary/app-bar colors are implemented. [CI gate
+38894453717](https://github.com/anzilr/SubtitleStudio/actions/runs/38894453717)
+passed **429 tests and 0 analyzer issues**. [R3-A report and remaining R3-B
+activation blockers](STUDIO_SKIN4_R3A_EDITOR_CONTRAST_2026-10-16.md).
+App-wide palette activation is **not yet enabled**.
+
 **Component consistency milestone:** DESIGN-1 R4 is now [CI verified](https://github.com/anzilr/SubtitleStudio/actions/runs/38892274970)
 with **424 tests passed, zero analyzer issues**. Uniform Material
 defaults and tokens now span the current and new themes. A subtitle-action
