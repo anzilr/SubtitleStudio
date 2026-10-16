@@ -1,7 +1,7 @@
-SubtitleStudio DESIGN-1 R2 component theme API compatibility gate | 2026-10-16
-Flutter analyzer and full unit/widget/integration tests. Use supported MenuStyle
-textStyle rather than nonexistent foregroundColor in Flutter material menus;
-verify canonical modal/dialog/popup/dropdown/slider/filled/outlined/text/icon/
-segmented themes for all nine built-in palettes plus three legacy themes.
-Subtitle action sheet pilot and docs included. No skin activation or native
-platform builds. Previous run 38891429719 stopped during analyze.
+SubtitleStudio DESIGN-1 R3 shared controls gate | 2026-10-16
+Flutter analyze and all tests. Eliminate unsupported MenuStyle foregroundColor
+and textStyle properties; rely on PopupMenuTheme/DropdownMenuTheme typography
+and inherited Material defaults. Verify uniform bottom sheet/dialog/popup/menu,
+dropdown, sliders and buttons across 9 palettes plus legacy themes; subtitle
+action sheet pilot. First two runs stopped at analyzer on MenuStyle API, no
+test execution; fix only unsupported API props. No platform builds.
