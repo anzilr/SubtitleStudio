@@ -56,9 +56,7 @@ class _Loader13State extends State<Loader13> with TickerProviderStateMixin {
                     width: 10,
                     height: 10,
                     decoration: BoxDecoration(
-                      color: Theme.of(context).brightness == Brightness.light
-                          ? const Color.fromARGB(255, 0, 45, 54)
-                          : Colors.white,
+                      color: Theme.of(context).colorScheme.primary,
                       shape: BoxShape.circle,
                     ),
                   ),
