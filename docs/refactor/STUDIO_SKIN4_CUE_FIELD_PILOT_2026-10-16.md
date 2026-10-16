@@ -2,9 +2,9 @@
 
 Date: 2026-10-16
 Branch: `refactor/riverpod-architecture`
-Status: **R2 code committed; full verification in progress**
+Status: **SKIN-4 R2 PILOT COMPLETE — Flutter CI-verified; global palette activation pending R3**
 R1 run (failed solely on two new timing-of-theme-animation widget test assertions): https://github.com/anzilr/SubtitleStudio/actions/runs/38889022163 (420 tests passed, 2 failed)
-R2 quality gate: https://github.com/anzilr/SubtitleStudio/actions/runs/38889494374 (pending)
+R2 **successful** quality gate: https://github.com/anzilr/SubtitleStudio/actions/runs/38889494374 — **422 tests passing and zero analyzer issues**. Verified code commit `535eb07a9197299aebbad66cfa2a07d623e60a41`.
 Previous complete: [SKIN-3 appearance UI](STUDIO_SKIN3_APPEARANCE_SETTINGS_2026-10-16.md)
 
 ## Implemented — production Edit Line pilot
@@ -48,4 +48,4 @@ Some special colors have functional meaning (subtitle formatting, color selectio
 
 ## Known test result context
 
-R1's two new widget test failures were **assertions read during Flutter's normal theme animation**, not older regression failures. The existing tests passed; analyzer step returned success but two warnings were printed. R2 makes theme tests deterministic and removes warnings. Claim R2 complete only on successful CI.
+R1's two new widget test failures were **assertions read during Flutter's normal theme animation**, not older regression failures. The existing tests passed; analyzer step returned success but two warnings were printed. R2 makes theme tests deterministic and removes warnings. R2 subsequently passed all 422 tests and the analyzer reported no issues. R1's failures were deterministic-test issues corrected in R2; no related regression remains in this CI gate.
