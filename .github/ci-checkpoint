@@ -67,3 +67,5 @@ CP87 R6: add route-return frame diagnostics and Flutter back widget regression, 
 CP87 R7 2026-10-17: prioritize user-observed MSone Back UI freeze BEFORE operator hot restart; clean stale root cue-scroll loading overlay on editor return and track first 5 post-return pointer events. Add route-return overlay blocking regression. Native SIGSEGV after manual restart remains independent.
 
 CP87 R7 test correction: route pop widget hit test must await animation settling; initial test tap was at negative x while editor was still translating onscreen, not a regression in loader cleanup.
+
+CP87 R8: user device log confirms staleLoader=false, page-to-home Back succeeds, 3 home sessions load, but touch handlers not invoked; phase route handoff until popup/sheet/form TransitionRoute.completed to guarantee modal barriers removed, plus debug-only root pointer and navigator diagnostics. Add true popup-menu-to-sheet/form/home widget regression.

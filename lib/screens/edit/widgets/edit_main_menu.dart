@@ -11,8 +11,12 @@ Future<String?> showEditMainMenu({
   required bool hasSecondarySubtitles,
   required bool showSecondarySubtitles,
   required bool isMsoneEnabled,
-}) {
-  return showMenu<String>(
+}) async {
+  // A pop result resolves before the popup's EXIT animation finishes.
+  // The modal barrier can still intercept taps at that point. Capture
+  // the popup route from its MSone menu item and wait for completed.
+  ModalRoute<dynamic>? popupRoute;
+  final selection = await showMenu<String>(
     context: context,
     position: RelativeRect.fromLTRB(
       MediaQuery.of(context).size.width - 10,
@@ -30,8 +34,14 @@ Future<String?> showEditMainMenu({
             hasSecondarySubtitles: hasSecondarySubtitles,
             showSecondarySubtitles: showSecondarySubtitles,
             isMsoneEnabled: isMsoneEnabled,
+            onMenuRouteMounted: (route) => popupRoute = route,
           ),
   );
+  if (selection == 'submit_msone' && popupRoute != null) {
+    await popupRoute!.completed;
+    debugPrint('MSone flow: main menu modal barrier removed');
+  }
+  return selection;
 }
 
 List<PopupMenuEntry<String>> _timelineItems({
@@ -42,6 +52,7 @@ List<PopupMenuEntry<String>> _timelineItems({
   required bool hasSecondarySubtitles,
   required bool showSecondarySubtitles,
   required bool isMsoneEnabled,
+  required ValueChanged<ModalRoute<dynamic>> onMenuRouteMounted,
 }) {
   return <PopupMenuEntry<String>>[
     const PopupMenuItem<String>(
@@ -203,11 +214,18 @@ List<PopupMenuEntry<String>> _timelineItems({
           title: 'Malayalam Normalize',
         ),
       ),
-      const PopupMenuItem<String>(
+      PopupMenuItem<String>(
         value: 'submit_msone',
-        child: StudioMenuItemContent(
-          icon: Icons.cloud_upload,
-          title: 'Submit to Msone',
+        child: Builder(
+          builder: (menuContext) {
+            // This context belongs to PopupMenuRoute rather than the editor.
+            final menuRoute = ModalRoute.of(menuContext);
+            if (menuRoute != null) onMenuRouteMounted(menuRoute);
+            return const StudioMenuItemContent(
+              icon: Icons.cloud_upload,
+              title: 'Submit to Msone',
+            );
+          },
         ),
       ),
     ],

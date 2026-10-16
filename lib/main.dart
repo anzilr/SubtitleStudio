@@ -18,7 +18,8 @@
 // - Custom logging system for debugging and error tracking
 // - Modular widget structure for reusable components
 
-import 'package:flutter/material.dart';         // Core Flutter framework
+import 'package:flutter/material.dart';
+import 'package:subtitle_studio/screens/msone_input_diagnostics.dart';         // Core Flutter framework
 import 'package:flutter/services.dart';        // System services (orientation, clipboard)
 import 'package:flutter/foundation.dart';      // Platform detection
 import 'package:flutter_riverpod/flutter_riverpod.dart'; // Riverpod root
@@ -240,6 +241,19 @@ class MainApp extends ConsumerWidget {
       title: 'Subtitle Studio ${AppInfo.version}',
       theme: ref.watch(liveStudioThemeProvider),
       home: _getInitialScreen(),
+      // Debug-only root hit test and Navigator route tracking: if platform
+      // touches arrive but Editor/Home do not receive them, determine
+      // whether input is swallowed by an Overlay/modal barrier.
+      builder: kDebugMode
+          ? (context, child) => Listener(
+                behavior: HitTestBehavior.translucent,
+                onPointerDown: MsoneInputDiagnostics.onRootPointer,
+                child: child ?? const SizedBox.shrink(),
+              )
+          : null,
+      navigatorObservers: kDebugMode
+          ? <NavigatorObserver>[MsoneDebugNavigatorObserver()]
+          : <NavigatorObserver>[],
       debugShowCheckedModeBanner: false,
     );
   }

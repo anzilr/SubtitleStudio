@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:subtitle_studio/screens/msone_submission_screen.dart';
+import 'package:subtitle_studio/screens/msone_input_diagnostics.dart';
 
 /// The choice sheet and submission page are *two different routes*. Await the
 /// bottom sheet's selection result before pushing the submission route from the
@@ -14,13 +15,16 @@ Future<void> showMsoneSubmissionFlow({
   @visibleForTesting
   Widget Function(BuildContext, String)? destinationBuilder,
 }) async {
+  ModalRoute<dynamic>? choiceRoute;
   final selected = await showModalBottomSheet<String>(
     context: context,
     isScrollControlled: true,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
     ),
-    builder: (sheetContext) => Padding(
+    builder: (sheetContext) {
+      choiceRoute ??= ModalRoute.of(sheetContext);
+      return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -48,8 +52,17 @@ Future<void> showMsoneSubmissionFlow({
           const SizedBox(height: 16),
         ],
       ),
-    ),
+    );
+    },
   );
+
+  // Future from showModalBottomSheet resolves at pop request, not after its
+  // barrier exits the root Overlay. Never push the next route before the
+  // previous barrier is completely removed.
+  if (choiceRoute != null) {
+    await choiceRoute!.completed;
+    debugPrint('MSone flow: choice sheet modal barrier removed');
+  }
 
   // When Android Back dismisses only the sheet, do not push any route.
   if (!context.mounted || selected == null) {
@@ -58,7 +71,7 @@ Future<void> showMsoneSubmissionFlow({
   }
   debugPrint('MSone flow: opening submission type=$selected');
   final navigator = Navigator.of(context);
-  await navigator.push<void>(MaterialPageRoute<void>(
+  final submissionRoute = MaterialPageRoute<void>(
     builder: (routeContext) => destinationBuilder?.call(
           routeContext,
           selected,
@@ -67,11 +80,17 @@ Future<void> showMsoneSubmissionFlow({
           submissionType: selected,
           subtitleCollectionId: subtitleCollectionId,
         ),
-  ));
-  // This fires for *normal Android Back*. Hot restart does not unwind a
-  // Navigator route, so its absence helps distinguish a native crash.
+  );
+  await navigator.push<void>(submissionRoute);
+  // Back can complete Navigator.push before the route is fully disposed and
+  // its outgoing overlay/transition has been removed. Wait for that boundary.
+  await submissionRoute.completed;
+  debugPrint('MSone flow: submission route overlay removed');
+  // A Flutter hot restart never unwinds a Navigator route, so these
+  // diagnostics distinguish successful Back navigation from isolate restart.
   debugPrint('MSone flow: returned to editor; mounted=${context.mounted}');
   if (context.mounted) {
+    MsoneInputDiagnostics.watchAfterReturn();
     onReturnToEditor?.call();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (context.mounted) {
