@@ -1,5 +1,7 @@
 # SubtitleStudio Refactor Roadmap v4
 
+> **CP87 R8 — CROSS-ROUTE TOUCH FREEZE:** On Android CPH2381, after MSone Back, Editor fails to accept taps although `staleLoader=false`, `mounted=true` and a frame rendered; system Back successfully exits Editor, Home loads all 3 sessions but also fails to accept taps. The stale cue-scroll loader hypothesis from R7 is refuted for this reproduction. R8 explicitly synchronizes menu→sheet→form route handoffs against `TransitionRoute.completed`, the documented signal that modal barriers have been removed. A debug-only root hit-test / Navigator probe and popup→sheet→form→Editor→Home touch regression were added. **Candidate mitigation only; device confirmation pending.** [R8 report](CHECKPOINT87_R8_CROSS_ROUTE_TOUCH_FREEZE_2026-10-17.md).
+
 > **CP87 R7 — MSone BACK FREEZE IS THE PRIMARY DEFECT (October 17, 2026):**
 > **Flutter quality gate passed:** [CI 38970979346](https://github.com/anzilr/SubtitleStudio/actions/runs/38970979346) — **535 Flutter tests passed, zero analyzer issues**, code `3c2abbb`. Does **not** prove device freeze fixed.
 > The user explicitly confirms **the editor became unresponsive immediately
