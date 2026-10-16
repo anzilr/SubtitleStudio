@@ -93,9 +93,9 @@ Future<void> showEditorSettingsSheet({
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-    ),
+    useSafeArea: true,
+    showDragHandle: false,
+    shape: const RoundedRectangleBorder(),
     builder: (context) => SettingsSheet(
       onSettingsChanged: onSettingsChanged,
     ),
