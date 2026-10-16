@@ -13,29 +13,8 @@ extension _EditLineOriginalSection on EditSubtitleScreenState {
                                             if (_showOriginalTextField) ...[
                                               Stack(
                                                 children: [
-                                                  Container(
-                                                    height: 100,
-                                                    width: double.infinity,
-                                                    padding: const EdgeInsets.all(
-                                                      8.0,
-                                                    ),
-                                                    decoration: BoxDecoration(
-                                                      color:
-                                                          Theme.of(
-                                                            context,
-                                                          ).colorScheme.primary,
-                                                      border: Border.all(
-                                                        color: const Color(
-                                                          0xFF0A9396,
-                                                        ),
-                                                        width: 1.5,
-                                                      ),
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            4.0,
-                                                          ),
-                                                    ),
-                                                    child:
+                                                  StudioCueFieldSurface(
+child:
                                                         isRawEnabled
                                                             ? CustomHtmlText(
                                                               htmlContent:
@@ -48,13 +27,7 @@ extension _EditLineOriginalSection on EditSubtitleScreenState {
                                                               textAlign:
                                                                   TextAlign
                                                                       .center,
-                                                              defaultStyle:
-                                                                  TextStyle(
-                                                                    color:
-                                                                        Colors
-                                                                            .white,
-                                                                    fontSize: 16,
-                                                                  ),
+                                                              defaultStyle: StudioCueFieldStyle.text(context),
                                                             )
                                                             : TextField(
                                                               controller:
@@ -71,25 +44,9 @@ extension _EditLineOriginalSection on EditSubtitleScreenState {
                                                               inputFormatters: [
                                                                 UnicodeTextInputFormatter(),
                                                               ],
-                                                              decoration: const InputDecoration(
-                                                                border:
-                                                                    InputBorder
-                                                                        .none,
-                                                                contentPadding:
-                                                                    EdgeInsets.fromLTRB(
-                                                                      8.0,
-                                                                      8.0,
-                                                                      60.0,
-                                                                      8.0,
-                                                                    ), // Add right padding for icon buttons
+                                                              decoration: StudioCueFieldStyle.decoration(padding: const EdgeInsets.fromLTRB(8, 8, 60, 8)),
                                                               ),
-                                                              style:
-                                                                  const TextStyle(
-                                                                    fontSize: 16,
-                                                                    color: Color(
-                                                                      0xFFFFFFFF,
-                                                                    ),
-                                                                  ),
+                                                              style: StudioCueFieldStyle.text(context),
                                                               scrollPhysics:
                                                                   const ClampingScrollPhysics(), // Enable scrolling
                                                               // Ultra-optimized settings for maximum keyboard responsiveness
@@ -150,17 +107,7 @@ extension _EditLineOriginalSection on EditSubtitleScreenState {
                                                     left: 4,
                                                     child: Text(
                                                       'Original',
-                                                      style: const TextStyle(
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        color: Color.fromARGB(
-                                                          100,
-                                                          255,
-                                                          255,
-                                                          255,
-                                                        ),
-                                                        fontSize: 12,
-                                                      ),
+                                                      style: StudioCueFieldStyle.label(context),
                                                     ),
                                                   ),
                                                   // Index/total count positioned at bottom-left
@@ -169,19 +116,7 @@ extension _EditLineOriginalSection on EditSubtitleScreenState {
                                                     left: 4,
                                                     child: Text(
                                                       "${_subtitleLine?.index ?? 1}/${_subtitle?.lines.length ?? 0}",
-                                                      style: const TextStyle(
-                                                        color: Color.fromARGB(
-                                                          125,
-                                                          255,
-                                                          255,
-                                                          255,
-                                                        ),
-                                                        fontStyle:
-                                                            FontStyle.italic,
-                                                        fontWeight:
-                                                            FontWeight.normal,
-                                                        fontSize: 12,
-                                                      ),
+                                                      style: StudioCueFieldStyle.index(context),
                                                     ),
                                                   ),
                                                   // Copy button and edit button positioned at top-right as a column
@@ -221,9 +156,7 @@ extension _EditLineOriginalSection on EditSubtitleScreenState {
                                                             Icons.copy,
                                                             size: 16,
                                                           ),
-                                                          color: const Color(
-                                                            0xFFCA6702,
-                                                          ),
+                                                          color: StudioDesignTokens.of(context).primaryAction,
                                                         ),
                                                         IconButton(
                                                           constraints:
@@ -243,14 +176,7 @@ extension _EditLineOriginalSection on EditSubtitleScreenState {
                                                             Icons.edit,
                                                             size: 16,
                                                           ),
-                                                          color:
-                                                              isEditingEnabled
-                                                                  ? const Color(
-                                                                    0xFFBB3E03,
-                                                                  )
-                                                                  : const Color(
-                                                                    0xFFCA6702,
-                                                                  ),
+                                                          color: StudioDesignTokens.of(context).primaryAction,
                                                           tooltip:
                                                               "Toggle Edit Mode",
                                                         ),
