@@ -11,6 +11,7 @@ import 'package:subtitle_studio/utils/responsive_layout.dart';
 import 'feedback_widget.dart';
 import 'log_management_widget.dart';
 import 'package:file_picker/file_picker.dart';
+import '../themes/studio_appearance_settings.dart';
 import '../themes/theme_controller.dart';
 import 'package:flutter_gemini/flutter_gemini.dart';
 import 'package:subtitle_studio/services/gemini_models_service.dart';
@@ -169,6 +170,14 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Appearance has independent persisted skin and
+                      // Light/Dark/Classic choices. Palette previews are
+                      // scoped until SKIN-4 safely migrates Edit Line.
+                      const StudioAppearanceSettings(),
+                      const SizedBox(height: 20),
+                      const Divider(),
+                      const SizedBox(height: 8),
+
                       // MSone Features Setting
                       ListTile(
                         leading: const Icon(Icons.auto_awesome, color: Colors.blue),
