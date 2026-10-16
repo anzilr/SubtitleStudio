@@ -439,7 +439,7 @@ class _MalayalamNormalizationSheetState extends ConsumerState<MalayalamNormaliza
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
             fontFamily: 'monospace',
             backgroundColor: isHighlighted 
-                ? Colors.red.withValues(alpha: 0.3) 
+                ? Theme.of(context).colorScheme.error.withValues(alpha: 0.3) 
                 : null,
             fontWeight: isHighlighted ? FontWeight.bold : null,
           ),
@@ -557,7 +557,7 @@ class _MalayalamNormalizationSheetState extends ConsumerState<MalayalamNormaliza
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close),
+                      icon: Icon(Icons.close),
                       color: mutedColor,
                       onPressed: () => Navigator.pop(context),
                     ),
@@ -579,21 +579,21 @@ class _MalayalamNormalizationSheetState extends ConsumerState<MalayalamNormaliza
                           Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: Colors.orange.withValues(alpha: 0.1),
+                              color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: Colors.orange.withValues(alpha: 0.3),
+                                color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.3),
                               ),
                             ),
                             child: Row(
                               children: [
-                                Icon(Icons.warning, color: Colors.orange),
+                                Icon(Icons.warning, color: Theme.of(context).colorScheme.tertiary),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Text(
                                     'No Malayalam text detected in current subtitles. This feature is specifically designed for Malayalam text normalization.',
                                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      color: Colors.orange.shade800,
+                                      color: Theme.of(context).colorScheme.tertiary,
                                     ),
                                   ),
                                 ),
@@ -637,7 +637,7 @@ class _MalayalamNormalizationSheetState extends ConsumerState<MalayalamNormaliza
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                            color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: borderColor),
                           ),
@@ -678,7 +678,7 @@ class _MalayalamNormalizationSheetState extends ConsumerState<MalayalamNormaliza
                             onPressed: _isAnalyzing ? null : _analyzeChanges,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: primaryColor,
-                              foregroundColor: Colors.white,
+                              foregroundColor: Theme.of(context).colorScheme.onPrimary,
                               elevation: 0,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -686,10 +686,10 @@ class _MalayalamNormalizationSheetState extends ConsumerState<MalayalamNormaliza
                             ),
                             child: Text(
                               _isAnalyzing ? 'Analyzing...' : 'Analyze Changes',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 15,
-                                color: Colors.white,
+                                color: Theme.of(context).colorScheme.onPrimary,
                               ),
                             ),
                           ),
@@ -835,13 +835,13 @@ class _MalayalamNormalizationSheetState extends ConsumerState<MalayalamNormaliza
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                           decoration: BoxDecoration(
-                                            color: Colors.red,
+                                            color: Theme.of(context).colorScheme.error,
                                             borderRadius: BorderRadius.circular(8),
                                           ),
                                           child: Text(
                                             'BEFORE',
                                             style: TextStyle(
-                                              color: Colors.white,
+                                              color: Theme.of(context).colorScheme.onPrimary,
                                               fontSize: 12,
                                               fontWeight: FontWeight.w600,
                                             ),
@@ -852,10 +852,10 @@ class _MalayalamNormalizationSheetState extends ConsumerState<MalayalamNormaliza
                                           width: double.infinity,
                                           padding: const EdgeInsets.all(12),
                                           decoration: BoxDecoration(
-                                            color: Colors.red.withValues(alpha: 0.1),
+                                            color: Theme.of(context).colorScheme.error.withValues(alpha: 0.1),
                                             borderRadius: BorderRadius.circular(8),
                                             border: Border.all(
-                                              color: Colors.red.withValues(alpha: 0.3),
+                                              color: Theme.of(context).colorScheme.error.withValues(alpha: 0.3),
                                             ),
                                           ),
                                           child: _buildHighlightedText(
@@ -872,13 +872,13 @@ class _MalayalamNormalizationSheetState extends ConsumerState<MalayalamNormaliza
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                           decoration: BoxDecoration(
-                                            color: Colors.green,
+                                            color: Theme.of(context).colorScheme.primary,
                                             borderRadius: BorderRadius.circular(8),
                                           ),
                                           child: Text(
                                             'AFTER',
                                             style: TextStyle(
-                                              color: Colors.white,
+                                              color: Theme.of(context).colorScheme.onPrimary,
                                               fontSize: 12,
                                               fontWeight: FontWeight.w600,
                                             ),
@@ -889,10 +889,10 @@ class _MalayalamNormalizationSheetState extends ConsumerState<MalayalamNormaliza
                                           width: double.infinity,
                                           padding: const EdgeInsets.all(12),
                                           decoration: BoxDecoration(
-                                            color: Colors.green.withValues(alpha: 0.1),
+                                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                                             borderRadius: BorderRadius.circular(8),
                                             border: Border.all(
-                                              color: Colors.green.withValues(alpha: 0.3),
+                                              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
                                             ),
                                           ),
                                           child: _buildHighlightedText(
@@ -945,13 +945,13 @@ class _MalayalamNormalizationSheetState extends ConsumerState<MalayalamNormaliza
                               Container(
                                 padding: const EdgeInsets.all(20),
                                 decoration: BoxDecoration(
-                                  color: Colors.green.withValues(alpha: 0.1),
+                                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                                   shape: BoxShape.circle,
                                 ),
                                 child: Icon(
                                   Icons.check_circle,
                                   size: 48,
-                                  color: Colors.green,
+                                  color: Theme.of(context).colorScheme.primary,
                                 ),
                               ),
                               const SizedBox(height: 16),
@@ -959,7 +959,7 @@ class _MalayalamNormalizationSheetState extends ConsumerState<MalayalamNormaliza
                                 'Normalization Complete!',
                                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.green,
+                                  color: Theme.of(context).colorScheme.primary,
                                 ),
                               ),
                               const SizedBox(height: 8),
@@ -976,7 +976,7 @@ class _MalayalamNormalizationSheetState extends ConsumerState<MalayalamNormaliza
                                   onPressed: () => Navigator.pop(context),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: primaryColor,
-                                    foregroundColor: Colors.white,
+                                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                                     elevation: 0,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),
@@ -1057,7 +1057,7 @@ class _MalayalamNormalizationSheetState extends ConsumerState<MalayalamNormaliza
                             onPressed: _selectedChangesCount > 0 ? _applySelectedChanges : null,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: primaryColor,
-                              foregroundColor: Colors.white,
+                              foregroundColor: Theme.of(context).colorScheme.onPrimary,
                               elevation: 0,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -1069,7 +1069,7 @@ class _MalayalamNormalizationSheetState extends ConsumerState<MalayalamNormaliza
                                     height: 20,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                      valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.onPrimary),
                                     ),
                                   )
                                 : Row(
@@ -1116,20 +1116,20 @@ class _MalayalamNormalizationSheetState extends ConsumerState<MalayalamNormaliza
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
               color: isDarkMode 
-                  ? Colors.red.withValues(alpha: 0.2) 
-                  : Colors.red.withValues(alpha: 0.1),
+                  ? Theme.of(context).colorScheme.error.withValues(alpha: 0.2) 
+                  : Theme.of(context).colorScheme.error.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(4),
               border: Border.all(
                 color: isDarkMode 
-                    ? Colors.red.withValues(alpha: 0.5) 
-                    : Colors.red.withValues(alpha: 0.3)
+                    ? Theme.of(context).colorScheme.error.withValues(alpha: 0.5) 
+                    : Theme.of(context).colorScheme.error.withValues(alpha: 0.3)
               ),
             ),
             child: Text(
               before,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 fontFamily: 'monospace',
-                color: isDarkMode ? Colors.red[100] : Colors.red[900],
+                color: isDarkMode ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.error,
                 fontWeight: FontWeight.w500,
               ),
               textDirection: TextDirection.ltr,
@@ -1143,7 +1143,7 @@ class _MalayalamNormalizationSheetState extends ConsumerState<MalayalamNormaliza
           child: Icon(
             Icons.arrow_forward,
             size: 16,
-            color: isDarkMode ? Colors.green[300] : Colors.green[700],
+            color: isDarkMode ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.primary,
           ),
         ),
         
@@ -1154,20 +1154,20 @@ class _MalayalamNormalizationSheetState extends ConsumerState<MalayalamNormaliza
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
               color: isDarkMode 
-                  ? Colors.green.withValues(alpha: 0.2) 
-                  : Colors.green.withValues(alpha: 0.1),
+                  ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.2) 
+                  : Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(4),
               border: Border.all(
                 color: isDarkMode 
-                    ? Colors.green.withValues(alpha: 0.5) 
-                    : Colors.green.withValues(alpha: 0.3)
+                    ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.5) 
+                    : Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)
               ),
             ),
             child: Text(
               after,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 fontFamily: 'monospace',
-                color: isDarkMode ? Colors.green[100] : Colors.green[900],
+                color: isDarkMode ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.primary,
                 fontWeight: FontWeight.w500,
               ),
               textDirection: TextDirection.ltr,
