@@ -574,7 +574,7 @@ class _CreateSubtitleSheetState extends ConsumerState<CreateSubtitleSheet> {
                             valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.onPrimary),
                           ),
                         )
-                      : const Row(
+                      : Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.add, size: 20, color: Theme.of(context).colorScheme.onPrimary),
