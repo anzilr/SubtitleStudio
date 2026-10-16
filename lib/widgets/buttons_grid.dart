@@ -39,6 +39,7 @@ class CustomButtonGrid extends StatelessWidget {
   /// - [icon]: The IconData to display
   /// - [onTap]: Callback function executed when button is pressed
   Widget _buildButton({
+    required BuildContext context,
     required String name,
     required IconData icon,
     required VoidCallback onTap,
