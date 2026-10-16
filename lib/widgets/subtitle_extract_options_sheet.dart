@@ -1174,7 +1174,7 @@ class _SubtitleExtractOptionsSheetState
                         ),
                         child: Icon(
                           Icons.video_file_outlined,
-                          color: Colors.white,
+                           color: Theme.of(context).colorScheme.onPrimary,
                           size: 20,
                         ),
                       ),
@@ -1278,7 +1278,7 @@ class _SubtitleExtractOptionsSheetState
                             _subtitleTracks.isEmpty
                                 ? Icons.warning_outlined
                                 : Icons.subtitles_outlined,
-                            color: Colors.white,
+                             color: _subtitleTracks.isEmpty ? Theme.of(context).colorScheme.onTertiary : Theme.of(context).colorScheme.onPrimary,
                             size: 20,
                           ),
                         ),
@@ -1444,9 +1444,7 @@ class _SubtitleExtractOptionsSheetState
                             height: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.white,
-                              ),
+                              valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.onPrimary),
                             ),
                           )
                           : Row(
