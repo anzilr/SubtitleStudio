@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:subtitle_studio/themes/studio_design_tokens.dart';
 
 Future<bool> showUnsavedChangesSheet({
   required BuildContext context,
@@ -11,31 +12,30 @@ Future<bool> showUnsavedChangesSheet({
         isScrollControlled: true,
         enableDrag: true,
         isDismissible: true,
-        backgroundColor: Colors.transparent,
+        backgroundColor: StudioDesignTokens.of(context).surface,
         builder: (sheetContext) {
-          final primaryColor = Theme.of(sheetContext).primaryColor;
-          final onSurfaceColor =
-              Theme.of(sheetContext).colorScheme.onSurface;
-          final mutedColor =
-              onSurfaceColor.withValues(alpha: 0.6);
+          final tokens = StudioDesignTokens.of(sheetContext);
+          final primaryColor = tokens.primaryAction;
+          final onSurfaceColor = tokens.onSurface;
+          final mutedColor = tokens.mutedText;
 
           return Container(
             margin: const EdgeInsets.all(16),
             child: AlertDialog(
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(StudioRadius.sheet),
               ),
               title: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.orange.withValues(alpha: 0.1),
+                      color: tokens.caution.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.warning_amber_rounded,
-                      color: Colors.orange,
+                      color: tokens.caution,
                       size: 24,
                     ),
                   ),
@@ -83,7 +83,7 @@ Future<bool> showUnsavedChangesSheet({
                     onLeaveWithoutSaving();
                   },
                   style: TextButton.styleFrom(
-                    foregroundColor: Colors.red,
+                    foregroundColor: tokens.dangerText,
                   ),
                   child: const Text('Leave Without Saving'),
                 ),
@@ -97,7 +97,7 @@ Future<bool> showUnsavedChangesSheet({
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,
-                    foregroundColor: Colors.white,
+                    foregroundColor: tokens.onPrimaryAction,
                   ),
                   child: const Text('Save & Leave'),
                 ),
@@ -119,22 +119,20 @@ Future<void> showOriginalLineWarningSheet({
     isDismissible: false,
     isScrollControlled: true,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(StudioRadius.sheet)),
     ),
     builder: (sheetContext) {
-      final isDark =
-          Theme.of(sheetContext).brightness == Brightness.dark;
-      final primaryColor = Theme.of(sheetContext).primaryColor;
-      final onSurfaceColor =
-          Theme.of(sheetContext).colorScheme.onSurface;
-      final mutedColor = onSurfaceColor.withValues(alpha: 0.6);
-      final borderColor = onSurfaceColor.withValues(alpha: 0.12);
+      final tokens = StudioDesignTokens.of(sheetContext);
+      final primaryColor = tokens.primaryAction;
+      final onSurfaceColor = tokens.onSurface;
+      final mutedColor = tokens.mutedText;
+      final borderColor = tokens.outline;
 
       return Container(
         decoration: BoxDecoration(
-          color: Theme.of(sheetContext).colorScheme.surface,
+          color: tokens.surface,
           borderRadius:
-              const BorderRadius.vertical(top: Radius.circular(20)),
+              const BorderRadius.vertical(top: Radius.circular(StudioRadius.sheet)),
         ),
         child: SingleChildScrollView(
           child: Padding(
@@ -150,12 +148,12 @@ Future<void> showOriginalLineWarningSheet({
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color:
-                              Colors.orange.withValues(alpha: 0.1),
+                              tokens.caution.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.warning_amber_rounded,
-                          color: Colors.orange,
+                          color: tokens.caution,
                           size: 28,
                         ),
                       ),
@@ -193,9 +191,7 @@ Future<void> showOriginalLineWarningSheet({
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: isDark
-                        ? onSurfaceColor.withValues(alpha: 0.05)
-                        : Colors.grey.shade50,
+                    color: tokens.fieldSurface,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: borderColor,
@@ -309,7 +305,7 @@ Future<void> showOriginalLineWarningSheet({
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: primaryColor,
-                            foregroundColor: Colors.white,
+                            foregroundColor: tokens.onPrimaryAction,
                             elevation: 0,
                             shape: RoundedRectangleBorder(
                               borderRadius:
@@ -323,7 +319,7 @@ Future<void> showOriginalLineWarningSheet({
                               Icon(
                                 Icons.check,
                                 size: 20,
-                                color: onSurfaceColor,
+                                color: tokens.onPrimaryAction,
                               ),
                               const SizedBox(width: 8),
                               const Text(
