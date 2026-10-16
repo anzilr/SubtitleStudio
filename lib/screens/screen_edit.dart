@@ -820,7 +820,9 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
                     _videoPlayerKey.currentState!.playOrPause();
                   }
                 },
-                backgroundColor: Colors.blue,
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                 foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                 tooltip: 'Play or pause video',
                 child: StreamBuilder<bool>(
                   stream: _videoPlayerKey.currentState!.player.stream.playing,
                   builder: (context, snapshot) {
