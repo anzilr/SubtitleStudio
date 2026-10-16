@@ -72,7 +72,7 @@ Future<bool?> showSaveLocationSheet(BuildContext context) {
               decoration: BoxDecoration(
                 color: isDark
                     ? onSurfaceColor.withValues(alpha: 0.05)
-                    : Colors.grey.shade50,
+                    : Theme.of(context).colorScheme.surfaceContainerLow,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: borderColor),
               ),
@@ -164,7 +164,7 @@ Future<bool?> showSaveLocationSheet(BuildContext context) {
                       onPressed: () => Navigator.of(sheetContext).pop(true),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryColor,
-                        foregroundColor: Colors.white,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
