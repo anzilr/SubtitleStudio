@@ -471,7 +471,7 @@ extension _HomeConfirmationDialogs on _HomeScreenContentState {
                               scaffoldMessenger.showSnackBar(
                                 SnackBar(
                                   content: Text('All sessions cleared successfully!'),
-                                  backgroundColor: Colors.green,
+                                  backgroundColor: Theme.of(dialogContext).colorScheme.primary,
                                   duration: Duration(seconds: 2),
                                 ),
                               );
