@@ -181,7 +181,7 @@ class WaveformPainter extends CustomPainter {
             channelSpacing +
             dynamicChannelHeight / 2;
         final centerLinePaint = Paint()
-          ..color = Colors.white24
+          ..color = waveformColor.withValues(alpha: 0.24)
           ..strokeWidth = 1.0
           ..style = PaintingStyle.stroke;
         canvas.drawLine(
@@ -290,21 +290,21 @@ class WaveformPainter extends CustomPainter {
     
     // Highlighted subtitle paint (same as list)
     final highlightedSubtitlePaint = Paint()
-      ..color = const Color.fromARGB(200, 244, 163, 97).withValues(alpha: 0.3)
+      ..color = subtitleHighlightColor ?? subtitleColor.withValues(alpha: 0.3)
       ..style = PaintingStyle.fill;
     
     final highlightedSubtitleBorderPaint = Paint()
-      ..color = const Color.fromARGB(200, 244, 163, 97)
+      ..color = subtitleHighlightColor ?? subtitleColor
       ..strokeWidth = 1.0 // Reduced from 3.0 to 1.0 for thinner border
       ..style = PaintingStyle.stroke;
     
     // Highlighted edit mode paint - dark colors
     final editHighlightPaint = Paint()
-      ..color = const Color(0xFF2E7D32).withValues(alpha: 0.3) // Dark green
+      ..color = waveformColor.withValues(alpha: 0.3) // Dark green
       ..style = PaintingStyle.fill;
     
     final editBorderPaint = Paint()
-      ..color = const Color(0xFF2E7D32) // Dark green
+      ..color = waveformColor // Dark green
       ..strokeWidth = 1.0 // Reduced from 3.0 to 1.0 for thinner border
       ..style = PaintingStyle.stroke;
 
@@ -410,7 +410,7 @@ class WaveformPainter extends CustomPainter {
   /// Draw draggable bars at start and end of selected subtitle
   void _drawDraggableBars(Canvas canvas, Size size, double left, double right) {
     const barWidth = 1.0; // Reduced from 8.0 to 3.0 for less waveform coverage
-    const barColor = Colors.amber;
+    final barColor = subtitleColor;
     const handleSize = 16.0;
     
     final barPaint = Paint()
@@ -567,11 +567,11 @@ class WaveformPainter extends CustomPainter {
     final rect = Rect.fromLTWH(left, topOffset, width, boxHeight);
     
     final overlayPaint = Paint()
-      ..color = const Color(0xFF00695C).withValues(alpha: 0.3) // Dark teal
+      ..color = waveformColor.withValues(alpha: 0.3) // Dark teal
       ..style = PaintingStyle.fill;
     
     final borderPaint = Paint()
-      ..color = const Color(0xFF00695C) // Dark teal
+      ..color = waveformColor // Dark teal
       ..strokeWidth = 1.0 // Reduced from 3.0 to 1.0 for thinner border
       ..style = PaintingStyle.stroke;
     
@@ -638,7 +638,7 @@ class WaveformPainter extends CustomPainter {
   /// Draw draggable bars at start and end of add line overlay
   void _drawAddLineBars(Canvas canvas, Size size, double left, double right) {
     const barWidth = 1.0; // Reduced from 8.0 to 3.0 for less waveform coverage
-    final barColor = const Color(0xFF00695C); // Dark teal
+    final barColor = waveformColor; // Dark teal
     const handleSize = 16.0;
     
     final barPaint = Paint()
