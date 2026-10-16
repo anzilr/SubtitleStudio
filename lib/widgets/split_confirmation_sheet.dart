@@ -89,10 +89,10 @@ class SplitConfirmationSheet extends StatelessWidget {
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.blue.withValues(alpha: 0.1),
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: Colors.blue.withValues(alpha: 0.3),
+                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
                             width: 1,
                           ),
                         ),
@@ -104,7 +104,7 @@ class SplitConfirmationSheet extends StatelessWidget {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: Colors.blue,
+                                    color: Theme.of(context).colorScheme.primary,
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Text(
@@ -123,7 +123,7 @@ class SplitConfirmationSheet extends StatelessWidget {
                               children: [
                                 Icon(
                                   Icons.access_time,
-                                  color: Colors.blue.shade600,
+                                  color: Theme.of(context).colorScheme.primary,
                                   size: 16,
                                 ),
                                 const SizedBox(width: 4),
@@ -133,7 +133,7 @@ class SplitConfirmationSheet extends StatelessWidget {
                                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                       fontFamily: 'monospace',
                                       fontSize: 12,
-                                      color: Colors.blue.shade700,
+                                      color: Theme.of(context).colorScheme.primary,
                                     ),
                                   ),
                                 ),
@@ -158,10 +158,10 @@ class SplitConfirmationSheet extends StatelessWidget {
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.green.withValues(alpha: 0.1),
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: Colors.green.withValues(alpha: 0.3),
+                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
                             width: 1,
                           ),
                         ),
@@ -173,7 +173,7 @@ class SplitConfirmationSheet extends StatelessWidget {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: Colors.green,
+                                    color: Theme.of(context).colorScheme.primary,
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Text(
@@ -192,7 +192,7 @@ class SplitConfirmationSheet extends StatelessWidget {
                               children: [
                                 Icon(
                                   Icons.access_time,
-                                  color: Colors.green.shade600,
+                                  color: Theme.of(context).colorScheme.primary,
                                   size: 16,
                                 ),
                                 const SizedBox(width: 6),
@@ -202,7 +202,7 @@ class SplitConfirmationSheet extends StatelessWidget {
                                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                       fontFamily: 'monospace',
                                       fontSize: 12,
-                                      color: Colors.green.shade700,
+                                      color: Theme.of(context).colorScheme.primary,
                                     ),
                                   ),
                                 ),
@@ -277,7 +277,7 @@ class SplitConfirmationSheet extends StatelessWidget {
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primaryColor,
-                          foregroundColor: Colors.white,
+                          foregroundColor: Theme.of(context).colorScheme.onPrimary,
                           elevation: 0,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
