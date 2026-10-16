@@ -521,13 +521,13 @@ class _SessionSelectionSheetState extends ConsumerState<SessionSelectionSheet> {
                             Icon(
                               Icons.folder,
                               size: 14,
-                              color: Colors.orange,
+                              color: Theme.of(context).colorScheme.tertiary,
                             ),
                             const SizedBox(width: 4),
                             Text(
                               'Project',
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Colors.orange,
+                                color: Theme.of(context).colorScheme.tertiary,
                                 fontWeight: FontWeight.w400,
                               ),
                             ),
@@ -723,7 +723,7 @@ class _SessionSelectionSheetState extends ConsumerState<SessionSelectionSheet> {
                       onPressed: (_isReplacing || _isCreating) ? null : _importAsNewSession,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryColor,
-                        foregroundColor: Colors.white,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -734,13 +734,13 @@ class _SessionSelectionSheetState extends ConsumerState<SessionSelectionSheet> {
                               height: 18,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.onPrimary),
                               ),
                             )
                           : Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(
+                                Icon(
                                   Icons.add,
                                   size: 20,
                                   color: Colors.white,
@@ -748,7 +748,7 @@ class _SessionSelectionSheetState extends ConsumerState<SessionSelectionSheet> {
                                 const SizedBox(width: 4),
                                 Text(
                                   'Import as New',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontWeight: FontWeight.w600,
                                     fontSize: 13,
                                     color: Colors.white,
