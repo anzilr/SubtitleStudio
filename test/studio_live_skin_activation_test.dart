@@ -62,9 +62,11 @@ void main() {
         for (final mode in StudioAppearance.values)
           (skin, mode),
     ];
-    var index = 0;
-    await tester.pumpWidget(StatefulBuilder(
-      builder: (context, setAppearance) {
+    final selected = ValueNotifier<int>(0);
+    addTearDown(selected.dispose);
+    await tester.pumpWidget(ValueListenableBuilder<int>(
+      valueListenable: selected,
+      builder: (context, index, child) {
         final (skin, mode) = combinations[index];
         return MaterialApp(
           themeAnimationDuration: Duration.zero,
@@ -73,23 +75,12 @@ void main() {
             appearance: mode,
           ).themeDataFor(StudioSkinCatalog()),
           home: Scaffold(
-            body: Column(
-              children: [
-                TextButton(
-                  key: const ValueKey('cycle-live-skin'),
-                  onPressed: () => setAppearance(
-                    () => index = (index + 1) % combinations.length,
-                  ),
-                  child: const Text('Change appearance'),
-                ),
-                TextField(
-                  key: const ValueKey('editing-cue'),
-                  controller: text,
-                  focusNode: focus,
-                  undoController: undo,
-                  maxLines: 2,
-                ),
-              ],
+            body: TextField(
+              key: const ValueKey('editing-cue'),
+              controller: text,
+              focusNode: focus,
+              undoController: undo,
+              maxLines: 2,
             ),
           ),
         );
@@ -97,15 +88,21 @@ void main() {
     ));
     await tester.tap(find.byKey(const ValueKey('editing-cue')));
     await tester.pump();
+    expect(focus.hasFocus, isTrue);
+    text.selection = TextSelection.collapsed(offset: text.text.length);
+    final originalSelection = text.selection;
+
     for (var i = 0; i < combinations.length; i++) {
-      final previous = text.text;
-      await tester.tap(find.byKey(const ValueKey('cycle-live-skin')));
+      selected.value = i;
       await tester.pumpAndSettle();
       final field =
           tester.widget<TextField>(find.byKey(const ValueKey('editing-cue')));
       expect(field.controller, same(text));
       expect(field.undoController, same(undo));
-      expect(text.text, previous);
+      expect(focus.hasFocus, isTrue,
+          reason: 'Palette changes must retain active editing focus');
+      expect(text.selection, originalSelection);
+      expect(text.text, 'മലയാളം مرحبا');
       expect(tester.takeException(), isNull);
     }
     expect(text.text, 'മലയാളം مرحبا');
