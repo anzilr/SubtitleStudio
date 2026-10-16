@@ -1,42 +1,11 @@
-SubtitleStudio R8: Marked Lines filter / themed editor FAB / narrow waveform toolbar — 2026-10-16
-
-Device: OnePlus CPH2381, Android 14, 360dp. User confirms R7 Riverpod
-provider lifecycle exception resolved; latest log shows successful compact
-waveform generation, navigation/playback, and RenderFlex overflowed by 23px
-on the right in waveform_rendering.dart toolbar at 304dp width.
-
-Changes:
-- MarkedLinesFilter pure predicate: unchecked always only .marked==true;
-  checked additionally includes unique nonblank commented cues even if
-  unmarked; ignore stale duplicate source rows, preserve marked row, sort.
-  One canonical list drives visible rows and total/resolved counts.
-- Async persisted showAllComments preference cannot overwrite a user checkbox
-  tap after modal opens. Remove redundant "Show:" text and filter icon,
-  preserve resolved/unresolved chips, scrolling and comment CRUD.
-- Editor floating play/pause extracted into theme-aware widget using
-  colorScheme.primary/onPrimary for all four skins in Light/Dark/Classic;
-  retain existing video play/pause callback and stream UI.
-- Waveform toolbar on 360dp horizontally scrollable rather than overflowing,
-  with action colors from ColorScheme instead of orange/blue/teal/red.
-- Regression tests: comment-only vs marked filtering, deduplication and
-  resolved count; all 12 skin/mode floating play/pause contrast, toggles and
-  callback; 360dp ready-waveform toolbar scroll and overflow.
-
-Run flutter analyze and complete flutter test -j 1. Native Android and
-Windows acceptance remain manual. Update roadmap after CI.
-
-R8 FINAL CHECK: CI run 38925010484 succeeded with analyzer clean and
-468 Flutter tests passed on code 0ba6b5f. A later dedicated widget test
-test/marked_lines_sheet_checkbox_test.dart now exercises the real 360dp
-marked-lines modal with injected persisted preference: unchecked shows only
-marked cue; checking reveals unmarked comment-only cue; unchecking hides it;
-assert no Show label/filter-list icon. Re-run entire suite against that test
-and previously verified filter, themed floating play/pause, waveform toolbar.
-
-R8 final R2: run 38925474773 clean analyzer and 468 passed; real checkbox
-widget test failed only due 360dp marked sheet UI overflows (57dp resolved
-count Row and 111dp cue timestamp Row). Fix: make resolved summary flexible
-and wrapping, show start/end timestamps stacked inside remaining row width
-instead of demanding a long one-line range. Keep full start/end precision.
-Re-run full tests, including the real toggled checkbox assertions, without
-relaxing any overflow expectations.
+SubtitleStudio THEME AUDIT FINAL PASS — October 16, 2026
+User requests audit UI hardcoded color overrides, theme-respecting cleanup,
+then pause theme work and return to technical roadmap. Scope: UI accents,
+surfaces, text, action/warning/success/error states; preserve user-authored
+subtitle colors, video overlay luminance/contrast, palette definitions, and
+non-theme diagnostic/status encodings. First batch: dictionary search,
+comment dialog, two banner settings sheets, split confirmation, buttons
+grid, search/replace and checkpoint sheet. Replace hardcoded violet/blue/
+orange/green/red with live Material ColorScheme semantic roles.
+Analyze and full regression; further batches and audit exception inventory
+will follow before freeze gate.
