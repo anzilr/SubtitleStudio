@@ -74,27 +74,27 @@ abstract final class StudioCueFieldStyle {
 
   static TextStyle text(BuildContext context) {
     final tokens = StudioDesignTokens.of(context);
-    return TextStyle(
-      color: tokens.onSurface,
-      fontSize: 16,
-    );
+    return (Theme.of(context).textTheme.bodyLarge ?? const TextStyle())
+        .copyWith(color: tokens.onSurface, fontSize: 16);
   }
 
   static TextStyle label(BuildContext context) {
     final tokens = StudioDesignTokens.of(context);
-    return TextStyle(
-      color: tokens.mutedText,
-      fontSize: 12,
-      fontWeight: FontWeight.w600,
-    );
+    return (Theme.of(context).textTheme.labelSmall ?? const TextStyle())
+        .copyWith(
+          color: tokens.mutedText,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        );
   }
 
   static TextStyle index(BuildContext context) {
     final tokens = StudioDesignTokens.of(context);
-    return TextStyle(
-      color: tokens.mutedText,
-      fontSize: 12,
-      fontStyle: FontStyle.italic,
-    );
+    return (Theme.of(context).textTheme.labelSmall ?? const TextStyle())
+        .copyWith(
+          color: tokens.mutedText,
+          fontSize: 12,
+          fontStyle: FontStyle.italic,
+        );
   }
 }
