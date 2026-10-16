@@ -441,7 +441,7 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                      color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: borderColor,
@@ -453,7 +453,7 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: _selectedFilePath != null ? Colors.green : primaryColor,
+                            color: _selectedFilePath != null ? Theme.of(context).colorScheme.primary : primaryColor,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Icon(
@@ -515,7 +515,7 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
                   OutlinedButton.icon(
                     key: const ValueKey('source-encoding-picker'),
                     onPressed: _isLoading ? null : _chooseEncoding,
-                    icon: const Icon(Icons.manage_search),
+                    icon: Icon(Icons.manage_search),
                     label: Text('Source encoding: ' + _encodingChoice),
                   ),
                   OutlinedButton.icon(
@@ -523,7 +523,7 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
                     onPressed: _isLoading || _previewLoading ||
                             _selectedFilePath == null
                         ? null : _showEncodingPreview,
-                    icon: const Icon(Icons.preview_outlined),
+                    icon: Icon(Icons.preview_outlined),
                     label: Text(_previewLoading ? 'Loading preview...' : 'Preview'),
                   ),
                 ],
@@ -547,7 +547,7 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                      color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: borderColor,
@@ -559,7 +559,7 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: _selectedProjectPath != null ? Colors.orange : primaryColor,
+                            color: _selectedProjectPath != null ? Theme.of(context).colorScheme.tertiary : primaryColor,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Icon(
@@ -620,7 +620,7 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                  color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: borderColor,
@@ -664,7 +664,7 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: _removeHearingImpairedLines
-                                    ? const Icon(
+                                    ? Icon(
                                         Icons.check,
                                         color: Colors.white,
                                         size: 16,
@@ -725,7 +725,7 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: _mergeOverlappingSubtitles
-                                    ? const Icon(
+                                    ? Icon(
                                         Icons.check,
                                         color: Colors.white,
                                         size: 16,
@@ -771,19 +771,19 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
                   onPressed: _isLoading ? null : _processAndImport,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,
-                    foregroundColor: Colors.white,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                   child: _isLoading
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.onPrimary),
                           ),
                         )
                       : Row(
