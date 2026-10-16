@@ -64,12 +64,12 @@ class _FileReplaceDialogState extends State<FileReplaceDialog> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.orange.withValues(alpha: 0.1),
+                      color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
                       Icons.warning_outlined,
-                      color: Colors.orange,
+                      color: Theme.of(context).colorScheme.tertiary,
                       size: 28,
                     ),
                   ),
@@ -103,7 +103,7 @@ class _FileReplaceDialogState extends State<FileReplaceDialog> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: borderColor),
               ),
@@ -150,7 +150,7 @@ class _FileReplaceDialogState extends State<FileReplaceDialog> {
             if (_isRenaming) ...[
               Container(
                 decoration: BoxDecoration(
-                  color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                  color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: borderColor),
                 ),
@@ -227,7 +227,7 @@ class _FileReplaceDialogState extends State<FileReplaceDialog> {
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primaryColor,
-                          foregroundColor: Colors.white,
+                          foregroundColor: Theme.of(context).colorScheme.onPrimary,
                           elevation: 0,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -268,7 +268,7 @@ class _FileReplaceDialogState extends State<FileReplaceDialog> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                      color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: borderColor),
                     ),
@@ -282,7 +282,7 @@ class _FileReplaceDialogState extends State<FileReplaceDialog> {
                           ),
                           child: Icon(
                             Icons.edit_outlined,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                             size: 20,
                           ),
                         ),
@@ -332,7 +332,7 @@ class _FileReplaceDialogState extends State<FileReplaceDialog> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                      color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: borderColor),
                     ),
@@ -341,12 +341,12 @@ class _FileReplaceDialogState extends State<FileReplaceDialog> {
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Colors.orange,
+                            color: Theme.of(context).colorScheme.tertiary,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Icon(
                             Icons.swap_horiz,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                             size: 20,
                           ),
                         ),
