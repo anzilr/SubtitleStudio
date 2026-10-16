@@ -61,7 +61,7 @@ class RepeatRangeDialogState extends State<RepeatRangeDialog> {
     }
 
     return AlertDialog(
-      title: const Row(
+      title: Row(
         children: [
           Icon(Icons.repeat_one, color: Theme.of(context).colorScheme.tertiary, size: 20),
           SizedBox(width: 8),
