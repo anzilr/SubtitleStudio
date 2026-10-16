@@ -63,7 +63,7 @@ class RepeatRangeDialogState extends State<RepeatRangeDialog> {
     return AlertDialog(
       title: const Row(
         children: [
-          Icon(Icons.repeat_one, color: Colors.orange, size: 20),
+          Icon(Icons.repeat_one, color: Theme.of(context).colorScheme.tertiary, size: 20),
           SizedBox(width: 8),
           Text(
             'Custom Repeat Range',
@@ -138,22 +138,22 @@ class RepeatRangeDialogState extends State<RepeatRangeDialog> {
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
           style: TextButton.styleFrom(
-            foregroundColor: Colors.grey[600],
+            foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
           child: const Text('Cancel'),
         ),
         TextButton(
           onPressed: _enableNormalRepeat,
           style: TextButton.styleFrom(
-            foregroundColor: Colors.grey[600],
+            foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
           child: const Text('Normal Repeat'),
         ),
         ElevatedButton(
           onPressed: () => _applyCustomRange(subtitleCount),
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.orange,
-            foregroundColor: Colors.white,
+            backgroundColor: Theme.of(context).colorScheme.tertiary,
+            foregroundColor: Theme.of(context).colorScheme.onPrimary,
           ),
           child: const Text('Apply Range'),
         ),
@@ -172,7 +172,7 @@ class RepeatRangeDialogState extends State<RepeatRangeDialog> {
       children: [
         Text(
           label,
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
         TextField(
@@ -212,20 +212,20 @@ class RepeatRangeDialogState extends State<RepeatRangeDialog> {
         children: [
           Text(
             'Range: ${_endIndex - _startIndex + 1} subtitle(s)',
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.bold,
-              color: Colors.orange,
+              color: Theme.of(context).colorScheme.tertiary,
             ),
           ),
           const SizedBox(height: 4),
           if (subtitles.isNotEmpty) ...[
             Text(
               'Start: ${_formatDuration(subtitles[_startIndex].start)}',
-              style: const TextStyle(fontSize: 12),
+              style: TextStyle(fontSize: 12),
             ),
             Text(
               'End: ${_formatDuration(subtitles[_endIndex].end)}',
-              style: const TextStyle(fontSize: 12),
+              style: TextStyle(fontSize: 12),
             ),
           ],
         ],
