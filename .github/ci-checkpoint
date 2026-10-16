@@ -1,45 +1,22 @@
-SubtitleStudio SKIN-4 R5 Android visual consistency | 2026-10-16
-Flutter analyze + complete widget and integration tests, native device not in CI.
-1. Editor appbar waveform toggle uses appbar foreground with visible disabled fade.
-2. Home expanding FAB action text/icon uses onPrimary against selected primary.
-3. Marked-lines sheet removes fixed blue/green/red for ordinary status; uses
-   semantic primary, surface, muted/outline, safety error for comment delete.
-   Remove repeated DEBUG prints during marked-lines list rebuild.
-4. Project Settings opens Marked Lines in full-height modal (not .7 sheet).
-5. Go-to-line slider uses StudioDesignTokens action/outline/value text; no
-   separate blue light/dark override.
-6. Shared danger/warning colors across Carbon Zero and the other skins through
-   StudioStatusColors (functional red and amber exceptions to grayscale
-   decoration). Session delete/clear, line/batch delete, reset/app-data clear
-   and marked comment deletion derive from theme's error/onError roles.
-Manual Android check: 360dp phone, Carbon Zero Light/Dark/Classic, modal
-pop without closing underlying Project Settings, slider contrast, 5 FAB
-actions, delete/cancel actions, source/project editing and waveform toggle.
+SubtitleStudio SKIN-4 R6 Android waveform crash containment | 2026-10-16
 
-R5 final gate: previous run 38913706270 passed analyzer and all 444 tests.
-Newly added test/studio_status_colors_test.dart verifies shared functional
-red/amber contrasts across all twelve variants; new
-test/carbon_zero_goto_slider_test.dart exercises the actual Go To Line
-route's slider track/thumb colors in Carbon Zero Light/Dark/Classic.
-Re-run full analyzer/test suite for those additions. Do not run native
-builds in CI. Real Android sign-off remains separate.
+Device evidence: Android 14 OnePlus CPH2381 (360dp), video pane height
+177.2dp with a fixed 180dp waveform plus divider; Flutter reported 3.8dp
+bottom RenderFlex overflow at edit_responsive_layout.dart:363 (twice).
+Then large legacy PCM cache 330,198,104 samples (~660MB PCM) was read and
+25 eager zoom levels generated, followed by device connection loss. The log
+does not establish an AndroidRuntime native exception or definite OOM.
+Correct both bounded layout and high-memory loading paths.
 
-R5 final R2: run 38914235371: clean analyzer, 445 passed; only three
-Go To Line modal widget tests failed to find Slider. The opening handler
-had awaited a diagnostic logging future before calling showModalBottomSheet.
-Now log asynchronously without gating the visible route. This also ensures
-the dialog remains responsive when app logging is slow. Waveform-settings
-performance-warning card now uses shared amber caution (tertiary) semantics.
-Re-run the full gate (including GoTo theme test); no native build.
-
-R5 final R3: run 38914770625 analyzed clean and 445 other tests
-passed; three Go To Line widget tests exposed a 35px horizontal RenderFlex
-overflow in the actual modal at 390dp. Keep those tests and use tighter
-outer/slider-card margins plus flexible header title. Recheck all tests.
-
-R5 final R4, device-width assurance: CI 38915501196 passed all 448
-tests, 0 analyzer issues at prior commit 965191a. Attached Android
-device reports smallestScreenWidthDp=360, not 390: tighten Go To Line
-slider widget test to 360dp; wrap both action-row contents with
-scale-down fitting to avoid cramped Cancel/Jump label RenderFlex issues.
-Rerun analyzer and full suite at this exact device-width acceptance gate.
+- Vertical ResizableSplitView accepts minimum first-pane logical extent;
+  clamps persisted 0.25 ratio for waveform visibility in live constraints
+  and during drag without overwriting saved ratio on mere appearance.
+- AdaptiveWaveformPane keeps >=120dp video, caps 180dp waveform, and
+  suppresses non-fitting waveform rendering in very short viewports.
+- Android AudioProcessor defaults to compact tiled waveform pipeline; other
+  platforms retain legacy default and explicit useTiledZoom overrides.
+- Upgrade existing same-source PCM cache by streaming WaveformPeakCache.build
+  to .pk1 without readAsBytes 660MB and without an FFmpeg second decode.
+- Test previous exact 177.2dp layout, .25486577 persisted ratio, short
+  viewport and existing waveform peak/tiling parity; flutter analyze and
+  full suite. No native phone test in CI; Android acceptance separately.
