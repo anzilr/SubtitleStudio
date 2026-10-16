@@ -96,7 +96,7 @@ class StudioSkinCatalog {
   StudioSkinDefinition? find(StudioSkinId id) => _definitions[id];
 
   StudioSkinDefinition resolveOrDefault(StudioSkinId? id) =>
-      _definitions[id] ?? _definitions[StudioSkinId.carbonJade]!;
+      _definitions[id] ?? _definitions[StudioSkinId.carbonZero]!;
 
   /// Returns a new catalog. The old one remains safe for existing consumers.
   StudioSkinCatalog install(StudioSkinDefinition definition) {
