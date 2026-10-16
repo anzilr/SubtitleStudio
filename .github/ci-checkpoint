@@ -1,8 +1,5 @@
-SubtitleStudio CP85 R2 theme lifecycle + restrained Studio visuals | 2026-10-16
-Flutter analyze and flutter test -j 1. Stabilize Editor/Edit Line
-route-scoped Riverpod overrides on inherited theme rebuild;
-capture line route data before async Navigator builders and guard
-post-navigation callbacks; white light surfaces, unified primary
-and neutral app styling; simplify Project Settings colors.
-Native Android verification still required. No five-platform builds,
-schema generation, upstream changes, or release tags.
+SubtitleStudio CP85 R3 theme-switch lifecycle verification | 2026-10-16
+Flutter analyzer + flutter test -j 1. Fix Riverpod 3 Override
+type inference in stable Editor/Edit Line host scopes. Recheck
+captured Navigator arguments and unified light/dark theme palette.
+CI analyze/tests only; real Android smoke testing pending.
