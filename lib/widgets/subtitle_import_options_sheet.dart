@@ -789,7 +789,7 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
                       : Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.download, size: 20, color: Colors.white),
+                            Icon(Icons.download, size: 20, color: Theme.of(context).colorScheme.onPrimary),
                             const SizedBox(width: 8),
                             Text(
                               _selectedProjectPath != null ? "Import & Save Project" : "Import Subtitle",

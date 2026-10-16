@@ -33,3 +33,5 @@ CP86 R1 — 2026-10-16: waveform native qualification hardening (Windows verifie
 CP86 R2 2026-10-16: optimized low-rate compact PCM FFmpeg extraction and Android versioned SAF cache reuse. Verify V1/V2 cache format compatibility, Flutter analyzer/tests; Android Kotlin and speed must be qualified on device.
 
 CP86 R3 2026-10-16: restore original role-coded waveform controllers, correct dictionary white-on-white Search buttons, and use Material for checkbox ListTile in dictionary headers. Full analyzer/tests gate required.
+
+CP86 R3 import-contrast follow-up: Import Subtitle raised primary action previously forced white download icon; use onPrimary for Carbon Zero Dark/Classic. Re-run complete analyze/test before accepting this reported issue.
