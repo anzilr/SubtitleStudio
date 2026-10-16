@@ -1,7 +1,7 @@
-SubtitleStudio SKIN-1 R3 open-source community skin foundation | 2026-10-16
-Run Flutter analyzer and all committed tests. Community skin identities no longer
-require an enum case; shared theme renderer supports validated skin definitions,
-immutable catalog with built-in conflict protection and colors-only v1 portable
-JSON codec with strict schema, contrast and payload validation. Existing three
-built-ins × three modes remain. Production MainApp/theme preferences and native
-media stay unchanged. No Isar schema changes or platform builds.
+SubtitleStudio SKIN-2 R1 persisted appearance and legacy migration gate | 2026-10-16
+Flutter analyzer and unit/widget/Isar integration tests only.
+Add nullable namespaced Preferences.skinId with pinned Isar generated schema;
+keep saved Light/Dark/Classic mode strings and custom fonts intact.
+Guard Riverpod startup hydration against concurrent user changes; persist
+skin and mode independently; keep old legacy theme renderer until SKIN-4.
+No native platform builds, media changes or branch/tag updates.
