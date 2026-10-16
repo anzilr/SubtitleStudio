@@ -1,5 +1,19 @@
 # SubtitleStudio Refactor Roadmap v4
 
+> **SKIN-1 R2 COMPLETE — October 16, 2026:** The approved nine-appearance
+> design system is implemented behind an **opt-in theme factory**: 3 skin
+> palettes × Light / Dark / Classic, semantic editing/input contrast tokens,
+> and a reusable read-only 9-preview gallery. [Successful CI run
+> 38867646977](https://github.com/anzilr/SubtitleStudio/actions/runs/38867646977)
+> verified **392 passing tests and zero analyzer issues** against code
+> `fa6aa09`. See the [SKIN-1 report](STUDIO_SKIN1_THEME_FOUNDATION_2026-10-16.md).
+> **Not activated in MainApp**; old saved modes, controller lifecycle,
+> Editor/Edit Line input fields, Isar schema, player and waveform are unchanged.
+> Next SKIN checkpoint: SKIN-2 isolated appearance preference persistence and
+> controller migration, with generated-Isar compatibility testing and custom
+> font/legacy preference retention. The original technical CP86 waveform
+> qualification remains independent.
+
 > **Approved — SubtitleStudio three-skin appearance system (October 16, 2026):**
 > **Carbon & Jade**, **Copper Cinema**, and **Aster Violet**, with independent
 > **Light / Dark / Classic** modes in every skin (**nine appearances**).
