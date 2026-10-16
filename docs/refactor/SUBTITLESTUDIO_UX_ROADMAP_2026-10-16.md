@@ -1,5 +1,16 @@
 # SubtitleStudio UX roadmap — visual history, plain language, unified design, compact Edit Line
 
+> **SKIN-2 R2 complete (October 16, 2026):** Built-in and future
+> community skin IDs can now be stored as independent namespaced values
+> alongside `light/dark/classic` in one Isar Preferences row; real Isar
+> tests, guarded Riverpod startup, custom-font retention, rapid mode switching
+> and migration tests passed. [Verified quality gate 38870812828](https://github.com/anzilr/SubtitleStudio/actions/runs/38870812828):
+> **411 tests / 0 analyzer issues**. [Detailed report](STUDIO_SKIN2_PERSISTENCE_2026-10-16.md).
+> The current UI still uses legacy Material palettes until SKIN-4 fixes
+> Original/Edited text field semantics. **Next UX:** SKIN-3 Appearance Settings,
+> 3×3 built-in previews and independent selectors; community file importing and
+> the web Skin Creator remain later SKIN-EXT-2/3 phases.
+
 > **SKIN-EXT-1 COMPLETE, CI verified:** Community skin IDs, immutable
 > palette definitions/catalog, generic theme factory, import-file v1 JSON
 > validator, schema and tests are committed. [GitHub Actions 38868963345](https://github.com/anzilr/SubtitleStudio/actions/runs/38868963345):
