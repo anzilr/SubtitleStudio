@@ -242,26 +242,40 @@ extension _EditSubtitleActions on _EditScreenState {
       startVideoPosition = parseTimeString(subtitleLines[index].startTime);
     }
     
+    // A route builder may be called again after an inherited theme changes.
+    // Capture all Riverpod-backed values before pushing the route: never
+    // read this parent screen's ref from a later builder invocation.
+    final lineCollectionId = widget.subtitleCollectionId;
+    final lineSessionId = widget.sessionId;
+    final lineVideoPath = _selectedVideoPath;
+    final lineHasVideo = _isVideoLoaded;
+    final lineSecondarySubtitles = _originalSecondarySubtitles.isNotEmpty
+        ? List<SimpleSubtitleLine>.of(_originalSecondarySubtitles)
+        : null;
+
     final result = await Navigator.push<int?>(
       context,
-      MaterialPageRoute(        builder: (context) => EditSubtitleScreenHost(
-          subtitleId: widget.subtitleCollectionId,
+      MaterialPageRoute(
+        builder: (_) => EditSubtitleScreenHost(
+          subtitleId: lineCollectionId,
           index: index + 1,
-          sessionId: widget.sessionId,
-          editMode: isEditMode, // Pass the session's edit mode
-          videoPath: _selectedVideoPath,
-          isVideoLoaded: _isVideoLoaded,
+          sessionId: lineSessionId,
+          editMode: isEditMode,
+          videoPath: lineVideoPath,
+          isVideoLoaded: lineHasVideo,
           startVideoPosition: startVideoPosition,
-          secondarySubtitles: _originalSecondarySubtitles.isNotEmpty ? _originalSecondarySubtitles : null,
+          secondarySubtitles: lineSecondarySubtitles,
         ),
       ),
     );
+    if (!mounted) return;
 
     // Re-register hotkey shortcuts after returning from EditSubtitleScreen
     // This is necessary because EditSubtitleScreen unregisters some shortcuts on dispose
     debugPrint('DEBUG: Re-registering EditScreen hotkeys after returning from EditSubtitleScreen');
     await _registerHotkeyShortcuts();
-    
+    if (!mounted) return;
+
     // Force re-register shared shortcuts that might have been overridden
     debugPrint('DEBUG: Force re-registering shared shortcuts');
     await hotkey.MSoneHotkeyManager.instance.forceRegisterSharedShortcuts(
@@ -270,14 +284,16 @@ extension _EditSubtitleActions on _EditScreenState {
       onNextLine: _handleNextLineShortcut,
       onPreviousLine: _handlePreviousLineShortcut,
     );
+    if (!mounted) return;
     debugPrint('DEBUG: Hotkey re-registration complete');
 
     if (result != null) {
       _refreshSubtitleLines();
       // Use the returned index from EditSubtitleScreen (result is 0-based, so add 1)
       await _scrollToIndexWithLoading(result + 1);
+      if (!mounted) return;
     }
-    
+
     // Reload secondary subtitles after returning from EditSubtitleScreen
     // This ensures any changes made in EditSubtitleScreen are reflected here
     await _loadSavedSecondarySubtitle(subtitleLines);
@@ -310,35 +326,49 @@ extension _EditSubtitleActions on _EditScreenState {
           _videoPlayerKey.currentState!.pause();
         }
         
+        if (!mounted) return;
+        final newCollectionId = widget.subtitleCollectionId;
+        final newSessionId = widget.sessionId;
+        final newVideoPath = _selectedVideoPath;
+        final newHasVideo = _isVideoLoaded;
+        final newSecondarySubtitles = _originalSecondarySubtitles.isNotEmpty
+            ? List<SimpleSubtitleLine>.of(_originalSecondarySubtitles)
+            : null;
+
         final result = await Navigator.push<bool>(
           context,
-          MaterialPageRoute(            builder: (context) => EditSubtitleScreenHost(
-              subtitleId: widget.subtitleCollectionId,
-              index: 1, // First subtitle
-              sessionId: widget.sessionId,
-              isNewSubtitle: true, // Mark as new subtitle
-              videoPath: _selectedVideoPath,
-              isVideoLoaded: _isVideoLoaded,
-              secondarySubtitles: _originalSecondarySubtitles.isNotEmpty ? _originalSecondarySubtitles : null,
+          MaterialPageRoute(
+            builder: (_) => EditSubtitleScreenHost(
+              subtitleId: newCollectionId,
+              index: 1,
+              sessionId: newSessionId,
+              isNewSubtitle: true,
+              videoPath: newVideoPath,
+              isVideoLoaded: newHasVideo,
+              secondarySubtitles: newSecondarySubtitles,
             ),
           ),
         );
+        if (!mounted) return;
 
         // Re-register hotkey shortcuts after returning from EditSubtitleScreen
         // This is necessary because EditSubtitleScreen unregisters some shortcuts on dispose
         debugPrint('DEBUG: Re-registering EditScreen hotkeys after returning from EditSubtitleScreen (new subtitle path)');
         await _registerHotkeyShortcuts();
-        
+        if (!mounted) return;
+
         // Force re-register shared shortcuts that might have been overridden
         debugPrint('DEBUG: Force re-registering shared shortcuts (new subtitle path)');
         await hotkey.MSoneHotkeyManager.instance.forceRegisterSharedShortcuts(
           onHelp: _handleHelpShortcut,
           onSettings: _handleSettingsShortcut,
         );
+        if (!mounted) return;
         debugPrint('DEBUG: Hotkey re-registration complete (new subtitle path)');
 
         if (result == true) {
           await _controller.refreshSubtitleLines();
+          if (!mounted) return;
           final updatedSubtitles = subtitleLines;
 
           if (!mounted) return;
