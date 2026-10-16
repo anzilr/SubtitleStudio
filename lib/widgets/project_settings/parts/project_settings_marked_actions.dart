@@ -12,12 +12,12 @@ extension _ProjectSettingsMarkedActions on _ProjectSettingsSheetState {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        minChildSize: 0.5,
-        maxChildSize: 0.9,
-        builder: (context, scrollController) => MarkedLinesSheet(
+      useSafeArea: true,
+      showDragHandle: false,
+      shape: const RoundedRectangleBorder(),
+      builder: (sheetContext) => SizedBox(
+        height: MediaQuery.sizeOf(sheetContext).height,
+        child: MarkedLinesSheet(
           markedLines: _markedLines,
           allLinesWithComments: allLinesWithComments,
           onLineSelected: (index) {
