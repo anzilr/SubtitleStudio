@@ -44,7 +44,7 @@ class _LocateSrtSheet extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                      color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: borderColor,
@@ -89,7 +89,7 @@ class _LocateSrtSheet extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: borderColor,
@@ -104,10 +104,10 @@ class _LocateSrtSheet extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: Colors.orange,
+                          color: Theme.of(context).colorScheme.tertiary,
                           borderRadius: BorderRadius.circular(6),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.info_outline,
                           color: Colors.white,
                           size: 16,
@@ -142,7 +142,7 @@ class _LocateSrtSheet extends StatelessWidget {
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                 height: 1.5,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.orange,
+                                color: Theme.of(context).colorScheme.tertiary,
                               ),
                             ),
                             TextSpan(
@@ -166,7 +166,7 @@ class _LocateSrtSheet extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                        color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                           color: borderColor,
@@ -206,10 +206,10 @@ class _LocateSrtSheet extends StatelessWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.blue.withValues(alpha: 0.1) : Colors.blue.shade50,
+                  color: isDark ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1) : Theme.of(context).colorScheme.primary,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: Colors.blue.withValues(alpha: 0.3),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
                     width: 1,
                   ),
                 ),
@@ -221,10 +221,10 @@ class _LocateSrtSheet extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
-                            color: Colors.blue,
+                            color: Theme.of(context).colorScheme.primary,
                             borderRadius: BorderRadius.circular(6),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.folder_outlined,
                             color: Colors.white,
                             size: 16,
@@ -293,10 +293,10 @@ class _LocateSrtSheet extends StatelessWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.green.withValues(alpha: 0.1) : Colors.green.shade50,
+                  color: isDark ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1) : Theme.of(context).colorScheme.primary,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: Colors.green.withValues(alpha: 0.3),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
                     width: 1,
                   ),
                 ),
@@ -308,10 +308,10 @@ class _LocateSrtSheet extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
-                            color: Colors.green,
+                            color: Theme.of(context).colorScheme.primary,
                             borderRadius: BorderRadius.circular(6),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.folder_outlined,
                             color: Colors.white,
                             size: 16,
@@ -387,8 +387,8 @@ class _LocateSrtSheet extends StatelessWidget {
                     child: ElevatedButton(
                       onPressed: () => Navigator.of(context).pop('use_existing_project'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -397,7 +397,7 @@ class _LocateSrtSheet extends StatelessWidget {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.account_tree, size: 20),
+                          Icon(Icons.account_tree, size: 20),
                           const SizedBox(width: 8),
                           Text(
                             "Use Current Project Path",
@@ -421,8 +421,8 @@ class _LocateSrtSheet extends StatelessWidget {
                     child: ElevatedButton(
                       onPressed: () => Navigator.of(context).pop('use_importing_file'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -431,7 +431,7 @@ class _LocateSrtSheet extends StatelessWidget {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.download, size: 20),
+                          Icon(Icons.download, size: 20),
                           const SizedBox(width: 8),
                           Text(
                             "Use Importing File Path",
@@ -464,7 +464,7 @@ class _LocateSrtSheet extends StatelessWidget {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.folder_open, size: 20),
+                        Icon(Icons.folder_open, size: 20),
                         const SizedBox(width: 8),
                         Text(
                           "Create New SRT File",
