@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:subtitle_studio/themes/studio_design_tokens.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -132,9 +133,9 @@ class _HelpScreenState extends State<HelpScreen> with TickerProviderStateMixin {
                 child: Text(
                   'MSone website',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).primaryColor,
+                    color: StudioDesignTokens.of(context).primaryAction,
                     decoration: TextDecoration.underline,
-                    decorationColor: Theme.of(context).primaryColor,
+                    decorationColor: StudioDesignTokens.of(context).primaryAction,
                   ),
                 ),
               ),
@@ -187,10 +188,10 @@ class _HelpScreenState extends State<HelpScreen> with TickerProviderStateMixin {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: StudioDesignTokens.of(context).surface,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: StudioDesignTokens.of(context).outline.withValues(alpha: 0.25),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -223,7 +224,7 @@ class _HelpScreenState extends State<HelpScreen> with TickerProviderStateMixin {
                     )
                   : null,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(StudioRadius.card),
                 borderSide: BorderSide.none,
               ),
               filled: true,
@@ -276,7 +277,7 @@ class _HelpScreenState extends State<HelpScreen> with TickerProviderStateMixin {
             return _buildCategoryChip(
               'All',
               Icons.apps,
-              Theme.of(context).primaryColor,
+              StudioDesignTokens.of(context).primaryAction,
               _selectedCategoryIndex == -1,
               () {
                 setState(() {
@@ -312,6 +313,7 @@ class _HelpScreenState extends State<HelpScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildCategoryChip(String label, IconData icon, Color color, bool isSelected, VoidCallback onTap) {
+    final tokens = StudioDesignTokens.of(context);
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: GestureDetector(
@@ -320,15 +322,15 @@ class _HelpScreenState extends State<HelpScreen> with TickerProviderStateMixin {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
-            color: isSelected ? color : Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(20),
+            color: isSelected ? tokens.primaryAction : tokens.surface,
+            borderRadius: BorderRadius.circular(StudioRadius.card),
             border: Border.all(
-              color: isSelected ? color : Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+              color: isSelected ? tokens.primaryAction : tokens.outline,
             ),
             boxShadow: isSelected
                 ? [
                     BoxShadow(
-                      color: color.withValues(alpha: 0.3),
+                      color: tokens.primaryAction.withValues(alpha: 0.14),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -341,13 +343,13 @@ class _HelpScreenState extends State<HelpScreen> with TickerProviderStateMixin {
               Icon(
                 icon,
                 size: 18,
-                color: isSelected ? Colors.white : color,
+                color: isSelected ? tokens.onPrimaryAction : tokens.primaryAction,
               ),
               const SizedBox(width: 6),
               Text(
                 label,
                 style: TextStyle(
-                  color: isSelected ? Colors.white : Theme.of(context).textTheme.bodyMedium?.color,
+                  color: isSelected ? tokens.onPrimaryAction : tokens.onSurface,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                   fontSize: 13,
                 ),
@@ -391,7 +393,7 @@ class _HelpScreenState extends State<HelpScreen> with TickerProviderStateMixin {
           Text(
             'No results found',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              color: StudioDesignTokens.of(context).mutedText,
             ),
           ),
           const SizedBox(height: 8),
@@ -410,18 +412,18 @@ class _HelpScreenState extends State<HelpScreen> with TickerProviderStateMixin {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(StudioRadius.card)),
       child: ExpansionTile(
         initiallyExpanded: _selectedCategoryIndex == categoryIndex || _searchQuery.isNotEmpty,
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: category.color.withValues(alpha: 0.1),
+            color: StudioDesignTokens.of(context).primaryAction.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(
             category.icon,
-            color: category.color,
+            color: StudioDesignTokens.of(context).primaryAction,
             size: 24,
           ),
         ),
@@ -443,11 +445,11 @@ class _HelpScreenState extends State<HelpScreen> with TickerProviderStateMixin {
       // ExpansionTile uses a ListTile whose ink must paint on a Material
       // ancestor unobscured by background-colored DecoratedBoxes.
       child: Material(
-        color: Theme.of(context).colorScheme.surface,
+        color: StudioDesignTokens.of(context).surface,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(StudioRadius.card),
           side: BorderSide(
-            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+            color: StudioDesignTokens.of(context).outline,
           ),
         ),
         clipBehavior: Clip.antiAlias,
@@ -457,7 +459,7 @@ class _HelpScreenState extends State<HelpScreen> with TickerProviderStateMixin {
           section.title,
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
             fontWeight: FontWeight.w600,
-            color: categoryColor,
+            color: StudioDesignTokens.of(context).primaryAction,
           ),
         ),
         children: [
@@ -480,7 +482,7 @@ class _HelpScreenState extends State<HelpScreen> with TickerProviderStateMixin {
                     'Step-by-step guide:',
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w600,
-                      color: categoryColor,
+                      color: StudioDesignTokens.of(context).primaryAction,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -496,14 +498,14 @@ class _HelpScreenState extends State<HelpScreen> with TickerProviderStateMixin {
                             width: 24,
                             height: 24,
                             decoration: BoxDecoration(
-                              color: categoryColor,
+                              color: StudioDesignTokens.of(context).primaryAction,
                               shape: BoxShape.circle,
                             ),
                             child: Center(
                               child: Text(
                                 '${index + 1}',
-                                style: const TextStyle(
-                                  color: Colors.white,
+                                style: TextStyle(
+                                  color: StudioDesignTokens.of(context).onPrimaryAction,
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -533,7 +535,7 @@ class _HelpScreenState extends State<HelpScreen> with TickerProviderStateMixin {
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(StudioRadius.sheet)),
       ),
       builder: (context) => FractionallySizedBox(
         heightFactor: 0.7,
@@ -546,7 +548,7 @@ class _HelpScreenState extends State<HelpScreen> with TickerProviderStateMixin {
                 children: [
                   Icon(
                     Icons.menu_book_outlined,
-                    color: Theme.of(context).primaryColor,
+                    color: StudioDesignTokens.of(context).primaryAction,
                   ),
                   const SizedBox(width: 8),
                   Text(
@@ -571,7 +573,7 @@ class _HelpScreenState extends State<HelpScreen> with TickerProviderStateMixin {
                     return ListTile(
                       leading: Icon(
                         category.icon,
-                        color: category.color,
+                        color: StudioDesignTokens.of(context).primaryAction,
                       ),
                       title: Text(category.title),
                       subtitle: Text('${category.sections.length} sections'),
@@ -588,14 +590,14 @@ class _HelpScreenState extends State<HelpScreen> with TickerProviderStateMixin {
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(12),
+                  color: StudioDesignTokens.of(context).surface,
+                  borderRadius: BorderRadius.circular(StudioRadius.card),
                 ),
                 child: Column(
                   children: [
                     Icon(
                       Icons.info_outline,
-                      color: Theme.of(context).primaryColor,
+                      color: StudioDesignTokens.of(context).primaryAction,
                       size: 32,
                     ),
                     const SizedBox(height: 8),
@@ -608,7 +610,7 @@ class _HelpScreenState extends State<HelpScreen> with TickerProviderStateMixin {
                     Text(
                       'Professional Subtitle Editing Tool',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        color: StudioDesignTokens.of(context).mutedText,
                       ),
                     ),
                   ],
