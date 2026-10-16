@@ -12,11 +12,15 @@ class EditScreenHost extends StatefulWidget {
   final int? lastEditedIndex;
   final int sessionId;
 
+  @visibleForTesting
+  final EditController Function()? controllerFactory;
+
   const EditScreenHost({
     super.key,
     required this.subtitleCollectionId,
     this.lastEditedIndex,
     required this.sessionId,
+    this.controllerFactory,
   });
 
   @override
@@ -35,6 +39,8 @@ class _EditScreenHostState extends State<EditScreenHost> {
         sessionId: widget.sessionId,
       ),
     ),
+    if (widget.controllerFactory != null)
+      editControllerProvider.overrideWith(widget.controllerFactory!),
   ];
 
   @override
@@ -51,6 +57,8 @@ class _EditScreenHostState extends State<EditScreenHost> {
           sessionId: widget.sessionId,
         ),
       ),
+      if (widget.controllerFactory != null)
+        editControllerProvider.overrideWith(widget.controllerFactory!),
     ];
   }
 
@@ -58,7 +66,8 @@ class _EditScreenHostState extends State<EditScreenHost> {
   void didUpdateWidget(covariant EditScreenHost oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.subtitleCollectionId != widget.subtitleCollectionId ||
-        oldWidget.sessionId != widget.sessionId) {
+        oldWidget.sessionId != widget.sessionId ||
+        oldWidget.controllerFactory != widget.controllerFactory) {
       _resetOverrides();
     }
   }
