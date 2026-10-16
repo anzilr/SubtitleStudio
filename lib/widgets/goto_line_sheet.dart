@@ -303,8 +303,8 @@ void showGotToLineModal({
                                   ),
                                   child: Text(
                                     'Line ${value.round()}',
-                                    style: const TextStyle(
-                                      color: Colors.white,
+                                    style: TextStyle(
+                                      color: Theme.of(context).colorScheme.onPrimary,
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
                                     ),
