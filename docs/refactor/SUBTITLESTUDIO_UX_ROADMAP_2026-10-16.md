@@ -1,5 +1,16 @@
 # SubtitleStudio UX roadmap — visual history, plain language, unified design, compact Edit Line
 
+> **Palette selection is now a required gate (October 16, 2026):** CP85 R6
+> Android stability checks are **user-reported complete**. The initial
+> blue-themed UX-1 palette is **not approved** as SubtitleStudio's final
+> identity. Three alternatives—Carbon & Jade, Copper Cinema, and Aster Violet—
+> are available in the [open palette-decision document](STUDIO_PALETTE_DECISION_2026-10-16.md).
+> No production theme changes should be made before selection. The first
+> visual pilot afterward must correct the Edit Line source/target text fields'
+> saturated primary backgrounds, forced white foreground and faint labels.
+> Resume underlying native waveform qualification while later UX rollouts
+> remain dependent on this design gate.
+
 Date: 2026-10-16
 Branch: `refactor/riverpod-architecture`
 Status: **Approved roadmap requirements / proposed execution**, not implemented UI
