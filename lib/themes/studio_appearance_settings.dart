@@ -144,7 +144,7 @@ class StudioAppearanceSettings extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Text(
-              'Your saved skin is not installed. Showing Carbon & Jade '
+              'Your saved skin is not installed. Showing Carbon Zero '
               'in the app; the saved skin ID is preserved.',
               key: const ValueKey('studio-missing-skin-warning'),
               style: theme.textTheme.bodySmall?.copyWith(
