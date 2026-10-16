@@ -40,3 +40,12 @@ git pull --ff-only origin refactor/riverpod-architecture
 ```
 
 If it freezes again, **do not hot restart**. Record Flutter console and Logcat while tapping both screens and using Android Back. Look for `MSone flow: main menu modal barrier removed`, `choice sheet modal barrier removed`, `submission route overlay removed`, `MSone input: ROOT pointer-down`, and `EditScreen MSone: editor received pointer`. The absence/presence of each will separate Navigator barriers, platform input dispatch and editor widget interception.
+
+## Automated verification completed
+
+**[CI 38975383284 — SUCCESS](https://github.com/anzilr/SubtitleStudio/actions/runs/38975383284)** at `6a90cb8801d327f394f8e776500605d943ff417a`:
+
+- **536 Flutter tests passed, 0 analyzer issues.**
+- New `msone_popup_chain_overlay_regression_test.dart`: passed, including actual popup menu selection, choice sheet, form Back, editor tap, Home Back, Home tap, and explicit modal-overlay removal at each step.
+- Original editor route-navigation tests and existing 535-regression baseline passed.
+- This is **automated verification only**. Android CPH2381 touch-freeze issue remains **OPEN** until physical-device retest confirms both Editor and Home are responsive.
