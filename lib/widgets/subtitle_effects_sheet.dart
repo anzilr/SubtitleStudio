@@ -538,7 +538,9 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
               width: 1,
             ),
           ),
-          child: ListTile(
+          child: Material(
+            type: MaterialType.transparency,
+            child: ListTile(
             leading: Container(
               width: 32,
               height: 32,
@@ -566,6 +568,7 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
               color: onSurfaceColor,
             ),
             onTap: _showKaraokeColorPicker,
+            ),
           ),
         ),
 
@@ -613,7 +616,9 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
                 child: Row(
                   children: [
                     Expanded(
-                      child: RadioListTile<String>(
+                      child: Material(
+                         type: MaterialType.transparency,
+                         child: RadioListTile<String>(
                         title: Text(
                           "Word",
                           style: TextStyle(color: onSurfaceColor),
@@ -625,10 +630,13 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
                         value: 'word',
                         dense: true,
                         contentPadding: EdgeInsets.zero,
+                         ),
                       ),
                     ),
                     Expanded(
-                      child: RadioListTile<String>(
+                      child: Material(
+                         type: MaterialType.transparency,
+                         child: RadioListTile<String>(
                         title: Text(
                           "Character",
                           style: TextStyle(color: onSurfaceColor),
@@ -640,6 +648,7 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
                         value: 'character',
                         dense: true,
                         contentPadding: EdgeInsets.zero,
+                         ),
                       ),
                     ),
                   ],
@@ -734,7 +743,9 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
               width: 1,
             ),
           ),
-          child: ListTile(
+          child: Material(
+            type: MaterialType.transparency,
+            child: ListTile(
             leading: Container(
               width: 32,
               height: 32,
@@ -762,6 +773,7 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
               color: onSurfaceColor,
             ),
             onTap: _showTypewriterColorPicker,
+            ),
           ),
         ),
 

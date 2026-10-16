@@ -409,7 +409,9 @@ class _BannerConfigurationSheetState extends State<BannerConfigurationSheet> {
                             Text('• End: ${_formatDuration(_recommendedPositions!.endPosition)}', 
                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.primary)),
                             const SizedBox(height: 12),
-                            CheckboxListTile(
+                            Material(
+                              type: MaterialType.transparency,
+                              child: CheckboxListTile(
                               title: Text(
                                 'Use recommended positions',
                                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -438,6 +440,7 @@ class _BannerConfigurationSheetState extends State<BannerConfigurationSheet> {
                               controlAffinity: ListTileControlAffinity.leading,
                               contentPadding: EdgeInsets.zero,
                               dense: true,
+                              ),
                             ),
                           ],
                         ),

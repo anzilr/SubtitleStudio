@@ -59,3 +59,5 @@ CP87 R4C source replacement order: all three secondary-selection flows now save 
 CP87 R5: fix submission modal transition using two-stage choice-result navigation (parent context only); add Android Back widget regressions. Fix two checkbox ListTiles in extraction options with Material instead of opaque decorated Container, per real CPH2381 assertion. Native mpv hot restart SIGSEGV remains vendor/plugin-level blocker.
 
 CP87 R5 final code gate 2026-10-17: route sheet-result navigation tests, Material-backed processing CheckboxListTiles, disposal breadcrumbs, and log-confirmed Android native hot-restart libmpv SIGSEGV as an independent unresolved blocker.
+
+CP87 R5R2 controls: fix decorated panel containing Karaoke effect RadioListTiles (zero contentPadding), its color picker ListTiles and both Banner recommended-position checkbox tiles via local Material ancestors; Carbon Zero Dark/Classic widget-level regression tests.

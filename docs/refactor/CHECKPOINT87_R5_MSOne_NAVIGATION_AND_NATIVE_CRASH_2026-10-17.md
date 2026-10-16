@@ -79,3 +79,17 @@ Independent upstream references:
 
 **Do not** run `adb shell pm clear`, uninstall, or clear application data:
 the recovered project and checkpoint history remain valuable.
+
+## R5 supplemental Material isolation
+
+A closer match to the user's repeated `ListTile` assertion is the
+`contentPadding: EdgeInsets.zero` of the Karaoke Effect `RadioListTile`
+controls, inside a decorated panel using precisely the reported ~5%-opaque
+`onSurface` color and 12%-opaque border. The Karaoke/Typewriter color-picker
+`ListTile` controls and both recommended-position banner
+`CheckboxListTile` controls also used decorated ancestors without a local
+Material. This checkpoint now gives all those tiles an immediate transparent
+`Material` ancestor so ink is painted above their decorated panels.
+A widget regression renders the Karaoke radio controls under Carbon Zero Dark
+and Classic to catch the actual framework assertion, rather than relying
+only on source-level tests.
