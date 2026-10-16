@@ -31,17 +31,17 @@ void main() {
         reason: 'Classic is not a disguised Flutter system theme');
 
     const start = StudioAppearanceSelection.defaultSelection;
-    expect(start.skin, StudioSkin.carbonJade);
+    expect(start.skin, StudioSkinId.carbonJade);
     expect(start.mode, StudioAppearance.dark);
-    final copper = start.copyWith(skin: StudioSkin.copperCinema);
-    expect(copper.skin, StudioSkin.copperCinema);
+    final copper = start.copyWith(skin: StudioSkinId.copperCinema);
+    expect(copper.skin, StudioSkinId.copperCinema);
     expect(copper.mode, StudioAppearance.dark);
     expect(copper.copyWith(mode: StudioAppearance.classic).skin,
-        StudioSkin.copperCinema);
-    expect(copper.copyWith(skin: StudioSkin.asterViolet).mode,
+        StudioSkinId.copperCinema);
+    expect(copper.copyWith(skin: StudioSkinId.asterViolet).mode,
         StudioAppearance.dark);
     expect(start, const StudioAppearanceSelection(
-      skin: StudioSkin.carbonJade,
+      skin: StudioSkinId.carbonJade,
       mode: StudioAppearance.dark,
     ));
   });
