@@ -7,6 +7,7 @@ import 'package:subtitle_studio/utils/subtitle_parser.dart';
 import 'package:subtitle_studio/utils/saf_file_handler.dart';
 import 'package:subtitle_studio/utils/macos_bookmark_manager.dart';
 import 'package:subtitle_studio/core/file_access/studio_file_identity.dart';
+import 'package:subtitle_studio/core/file_access/secondary_subtitle_storage.dart';
 
 /// Repository layer for video-related operations
 /// 
@@ -102,21 +103,37 @@ class VideoRepository {
         logInfo('VideoRepository: Using original text as secondary subtitle');
         return SecondarySubtitleData(useOriginal: true);
       } else if (secondaryPath != null) {
-        logInfo('VideoRepository: Loading secondary subtitle from file: $secondaryPath');
-        // Parse the secondary subtitle file
-        final subtitles = await _parseSubtitleFile(secondaryPath);
-        return SecondarySubtitleData(
-          useOriginal: false,
-          externalPath: secondaryPath,
-          subtitles: subtitles,
-        );
+        // Secondary media is optional: never lose access to primary edits
+        // because Android evicted a temporary extracted subtitle.
+        try {
+          final subtitles = await _parseSubtitleFile(secondaryPath);
+          return SecondarySubtitleData(
+            useOriginal: false,
+            externalPath: secondaryPath,
+            subtitles: subtitles,
+          );
+        } catch (error) {
+          logWarning('VideoRepository: Secondary file unavailable '
+              '(${error.runtimeType}); primary collection remains usable.');
+          if (SecondarySubtitleStorage.isLegacyEphemeralExtraction(secondaryPath) &&
+              !await File(secondaryPath).exists()) {
+            try {
+              await _preferences.removeSecondarySubtitlePath(collectionId);
+            } catch (clearError) {
+              logWarning('VideoRepository: Could not clear stale secondary '
+                  'reference (${clearError.runtimeType}).');
+            }
+          }
+          return null;
+        }
       }
       
       logInfo('VideoRepository: No secondary subtitle configured');
       return null;
-    } catch (e) {
-      logError('VideoRepository: Error loading secondary subtitle: $e');
-      rethrow;
+    } catch (error) {
+      logWarning('VideoRepository: Optional secondary preferences unavailable '
+          '(${error.runtimeType}); continuing with primary subtitles.');
+      return null;
     }
   }
 

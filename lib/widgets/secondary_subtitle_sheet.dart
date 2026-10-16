@@ -10,6 +10,8 @@ import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:subtitle_studio/widgets/video_player_widget.dart';
 import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:subtitle_studio/core/file_access/secondary_subtitle_storage.dart';
 
 class SecondarySubtitleSheet extends ConsumerWidget {
   final List<SubtitleLine> originalSubtitles;
@@ -323,11 +325,7 @@ class SecondarySubtitleSheet extends ConsumerWidget {
         try {
           final existingPath = await ref.read(editorPreferencesRepositoryProvider).getSecondarySubtitlePath(subtitleCollectionId);
           if (existingPath != null && existingPath.isNotEmpty) {
-            final existingFile = File(existingPath);
-            if (await existingFile.exists() && existingPath.contains('extracted_subtitle_')) {
-              await existingFile.delete();
-              print('Deleted previous extracted subtitle file: $existingPath');
-            }
+            await SecondarySubtitleStorage.deleteOwnedFileIfPresent(existingPath);
           }
         } catch (e) {
           print('Warning: Failed to delete previous extracted subtitle file: $e');
@@ -382,11 +380,7 @@ class SecondarySubtitleSheet extends ConsumerWidget {
       try {
         final existingPath = await ref.read(editorPreferencesRepositoryProvider).getSecondarySubtitlePath(subtitleCollectionId);
         if (existingPath != null && existingPath.isNotEmpty) {
-          final existingFile = File(existingPath);
-          if (await existingFile.exists() && existingPath.contains('extracted_subtitle_')) {
-            await existingFile.delete();
-            print('Deleted previous extracted subtitle file: $existingPath');
-          }
+          await SecondarySubtitleStorage.deleteOwnedFileIfPresent(existingPath);
         }
       } catch (e) {
         print('Warning: Failed to delete previous extracted subtitle file: $e');
@@ -698,37 +692,29 @@ class SecondarySubtitleSheet extends ConsumerWidget {
         loadingDialogOpen = false;
       }
       
-      // Delete any existing extracted subtitle file before creating a new one
+      // Persistent dependency: never save extracted tracks under code_cache.
+      // Save atomically, then update the preference, then clean up old files.
       try {
-        final existingPath = await ref.read(editorPreferencesRepositoryProvider).getSecondarySubtitlePath(subtitleCollectionId);
-        if (existingPath != null && existingPath.isNotEmpty) {
-          final existingFile = File(existingPath);
-          if (await existingFile.exists() && existingPath.contains('extracted_subtitle_')) {
-            await existingFile.delete();
-            print('Deleted previous extracted subtitle file: $existingPath');
+        final preferences = ref.read(editorPreferencesRepositoryProvider);
+        final previousPath = await preferences.getSecondarySubtitlePath(subtitleCollectionId);
+        final persistedPath = await SecondarySubtitleStorage.persist(
+          supportDirectory: await getApplicationSupportDirectory(),
+          collectionId: subtitleCollectionId,
+          content: subtitleContent,
+          extension: detectedFormat,
+        );
+        await preferences.saveSecondarySubtitlePath(subtitleCollectionId, persistedPath);
+        try {
+          if (previousPath != persistedPath) {
+            await SecondarySubtitleStorage.deleteOwnedFileIfPresent(previousPath);
           }
+        } catch (_) {
+          // Cleanup is optional; keep the new successfully persisted source.
         }
-      } catch (e) {
-        print('Warning: Failed to delete previous extracted subtitle file: $e');
+      } catch (error) {
+        debugPrint('Secondary subtitle persistence failed: ${error.runtimeType}');
       }
-      
-      // Save extracted content to a temporary file for future reloading
-      try {
-        final tempDir = Directory.systemTemp;
-        final trackTitle = track['title'] ?? 'Track_${track['index']}';
-        final sanitizedTitle = trackTitle.replaceAll(RegExp(r'[^\w\s-]'), '').replaceAll(' ', '_');
-        final tempFileName = 'extracted_subtitle_${subtitleCollectionId}_${sanitizedTitle}_${DateTime.now().millisecondsSinceEpoch}.$detectedFormat';
-        final tempFile = File('${tempDir.path}${Platform.pathSeparator}$tempFileName');
-        
-        await tempFile.writeAsString(subtitleContent);
-        
-        // Save the temp file path to SharedPreferences for future reloading
-        await ref.read(editorPreferencesRepositoryProvider).saveSecondarySubtitlePath(subtitleCollectionId, tempFile.path);
-      } catch (e) {
-        // If saving to temp file fails, continue anyway but log the error
-        print('Warning: Failed to save extracted subtitle to temp file: $e');
-      }
-      
+
       // Successfully parsed subtitles
       onSecondarySubtitlesLoaded(parsedSubtitles);
       
