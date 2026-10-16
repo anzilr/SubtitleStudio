@@ -1,5 +1,29 @@
 # SubtitleStudio Refactor Roadmap v4
 
+> **SKIN-5 FINAL UI COLOR AUDIT / APPEARANCE FREEZE — October 16, 2026:**
+> Reviewed ~203 UI-facing Dart files; migrated fixed decorative, primary,
+> success, caution and error colors in more than 50 UI source files to the
+> selected skin's semantic color roles. Includes Editor/Home, dictionary,
+> history, comments, feedback, logging, import/export, dialogs, waveform,
+> video controls, utility/settings sheets and progress states. Deliberately
+> retained user-authored subtitle colors, video-composited black/white
+> contrasts, media artwork, shadows, skin palette definitions and fallback
+> paints for context-free waveform test callers. Added a 31-surface static
+> regression test preventing fixed branded accents from returning.
+> [GitHub Actions 38933989670](https://github.com/anzilr/SubtitleStudio/actions/runs/38933989670):
+> **470 Flutter tests passed, 0 analyzer issues** at code `5068731f`.
+> [Complete color audit, exceptions and freeze policy](STUDIO_SKIN5_FINAL_UI_COLOR_AUDIT_AND_FREEZE_2026-10-16.md).
+> **APPEARANCE WORK PAUSED:** No new skin or broad UI migration work during
+> technical refactoring. Fix only reproduced contrast/accessibility/UI
+> regressions; real-device 360dp Android, Windows and all 12 skin/mode visual
+> acceptance are still separate. No upstream merge or release sign-off.
+> **NEXT TECHNICAL CHECKPOINT: CP86** native waveform qualification on Android
+> and Windows (large-file compact/tiled peaks, SAF content URI vs path,
+> track switching, cancellation/disposal, playback sync and cache integrity),
+> followed by typed file identity/persistence, Editor ownership, logging and
+> isolated platform toolchain updates. UX history map, compact Edit Line,
+> community skin creator and desktop workspace remain deferred.
+
 > **R8 MARKED-LINES + EDITOR FLOATING CONTROL + WAVEFORM TOOLBAR VERIFIED — October 16, 2026:**
 > User confirmed the R7 Riverpod build-phase waveform exception is resolved
 > on Android. The next 360dp device log showed successful compact waveform
