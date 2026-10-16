@@ -7,7 +7,7 @@ extension _SettingsWaveformSection on _SettingsSheetState {
         // Waveform Settings Section
         ExpansionTile(
           key: _waveformSectionKey,
-          leading: const Icon(Icons.graphic_eq, color: Colors.purple),
+          leading: Icon(Icons.graphic_eq, color: Theme.of(context).colorScheme.primary),
           title: const Text('Waveform Settings'),
           subtitle: const Text('Configure waveform zoom detail and performance'),
           tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -15,12 +15,12 @@ extension _SettingsWaveformSection on _SettingsSheetState {
           children: [
             // Warning Card
             Card(
-              color: Colors.orange.withValues(alpha: 0.1),
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Row(
                   children: [
-                    const Icon(Icons.warning, color: Colors.orange, size: 20),
+                    Icon(Icons.warning, color: Theme.of(context).colorScheme.primary, size: 20),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -145,7 +145,7 @@ extension _SettingsWaveformSection on _SettingsSheetState {
               'Note: Waveform cache will be cleared on next video load to apply changes.',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 fontStyle: FontStyle.italic,
-                color: Colors.grey,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
               textAlign: TextAlign.center,
             ),
@@ -181,8 +181,8 @@ extension _SettingsWaveformSection on _SettingsSheetState {
               icon: const Icon(Icons.restore),
               label: const Text('Reset to Defaults'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                foregroundColor: Colors.white,
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
               ),
             ),
           ],
