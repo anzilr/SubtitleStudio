@@ -97,7 +97,7 @@ class MergeConfirmationSheet extends StatelessWidget {
                             width: double.infinity,
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                              color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
                                 color: borderColor,
@@ -109,7 +109,7 @@ class MergeConfirmationSheet extends StatelessWidget {
                                 Container(
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                    color: Colors.green,
+                                    color: Theme.of(context).colorScheme.primary,
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Icon(
@@ -167,7 +167,7 @@ class MergeConfirmationSheet extends StatelessWidget {
                             width: double.infinity,
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                              color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
                                 color: borderColor,
@@ -179,7 +179,7 @@ class MergeConfirmationSheet extends StatelessWidget {
                                 Container(
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                    color: Colors.orange,
+                                    color: Theme.of(context).colorScheme.tertiary,
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Icon(
