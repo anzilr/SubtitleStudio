@@ -221,7 +221,7 @@ class _ProjectSettingsSheetState extends ConsumerState<ProjectSettingsSheet> wit
         SnackbarHelper.showSnackBar(
           context,
           'Could not refresh project data. Please try again.',
-          backgroundColor: Colors.red,
+          backgroundColor: Theme.of(context).colorScheme.error,
         );
       }
     } finally {
@@ -249,7 +249,7 @@ class _ProjectSettingsSheetState extends ConsumerState<ProjectSettingsSheet> wit
         SnackbarHelper.showSnackBar(
           context,
           'Could not refresh secondary subtitle data. Please try again.',
-          backgroundColor: Colors.red,
+          backgroundColor: Theme.of(context).colorScheme.error,
         );
       }
     }
@@ -275,7 +275,7 @@ class _ProjectSettingsSheetState extends ConsumerState<ProjectSettingsSheet> wit
         SnackbarHelper.showSnackBar(
           context,
           'Could not refresh session information. Please try again.',
-          backgroundColor: Colors.red,
+          backgroundColor: Theme.of(context).colorScheme.error,
         );
       }
     }
@@ -307,7 +307,7 @@ class _ProjectSettingsSheetState extends ConsumerState<ProjectSettingsSheet> wit
         SnackbarHelper.showSnackBar(
           context,
           'Could not load project settings. Please try again.',
-          backgroundColor: Colors.red,
+          backgroundColor: Theme.of(context).colorScheme.error,
         );
       }
     }
