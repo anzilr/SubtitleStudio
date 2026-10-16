@@ -15,6 +15,7 @@
 // Parameters: term, strict, matchCase, limit, page, multiPage
 
 import 'package:flutter/material.dart';
+import 'package:subtitle_studio/widgets/dictionary_search_action.dart';
 import 'package:flutter/services.dart'; // For Clipboard
 import 'package:dio/dio.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
@@ -206,12 +207,10 @@ class _UrbanDictionaryWidgetState extends State<UrbanDictionaryWidget> {
         child: Column(
           children: [
             // Sticky header section
-            Container(
-              decoration: BoxDecoration(
-                color: surfaceColor,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-              ),
-              child: Padding(
+            Material(
+            color: surfaceColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            child: Padding(
                 padding: const EdgeInsets.all(24.0),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -225,7 +224,7 @@ class _UrbanDictionaryWidgetState extends State<UrbanDictionaryWidget> {
                     _buildSearchField(isDark, primaryColor, onSurfaceColor, borderColor),
                     
                     // Search button under the text field
-                    _buildSearchButton(primaryColor, onSurfaceColor),
+                    _buildSearchButton(),
                     
                     // Search filter options
                     _buildSearchFilters(onSurfaceColor),
@@ -353,36 +352,13 @@ class _UrbanDictionaryWidgetState extends State<UrbanDictionaryWidget> {
     );
   }
 
-  /// Build the search button
-  Widget _buildSearchButton(Color primaryColor, Color onSurfaceColor) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 12),
-      child: SizedBox(
-        width: double.infinity,
-        child: ElevatedButton.icon(
-          onPressed: _performSearch,
-          icon: Icon(Icons.search, color: Colors.white),
-          label: const Text(
-            'Search',
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 16,
-              color: Colors.white,
-            ),
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: primaryColor,
-            foregroundColor: Theme.of(context).colorScheme.onPrimary,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            elevation: 0,
-          ),
-        ),
-      ),
-    );
-  }
+  Widget _buildSearchButton() => Padding(
+    padding: const EdgeInsets.only(top: 12),
+    child: SizedBox(
+      width: double.infinity,
+      child: DictionarySearchAction(onPressed: _performSearch),
+    ),
+  );
 
   /// Build search filter controls
   Widget _buildSearchFilters(Color onSurfaceColor) {

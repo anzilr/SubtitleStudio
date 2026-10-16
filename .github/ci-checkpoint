@@ -31,3 +31,5 @@ THEME FREEZE R2: CI 38933686514 exposed a single analyzer const expression in su
 CP86 R1 — 2026-10-16: waveform native qualification hardening (Windows verified global stream debug logging; SAF URI fail-closed input; no legacy SAF cache reuse; cancelled peak-cache staging regression). Appearance work remains frozen. Analyze and run full Flutter tests; native Android/Windows measurements remain a separate gate.
 
 CP86 R2 2026-10-16: optimized low-rate compact PCM FFmpeg extraction and Android versioned SAF cache reuse. Verify V1/V2 cache format compatibility, Flutter analyzer/tests; Android Kotlin and speed must be qualified on device.
+
+CP86 R3 2026-10-16: restore original role-coded waveform controllers, correct dictionary white-on-white Search buttons, and use Material for checkbox ListTile in dictionary headers. Full analyzer/tests gate required.
