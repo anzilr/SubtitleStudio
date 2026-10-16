@@ -34,7 +34,7 @@ void main() {
           (context) => showBatchDeleteConfirmationSheet(
             context: context,
             selectedCount: 3,
-            onConfirm: () async => confirmed++,
+            onConfirm: () async { confirmed++; },
           ),
         ));
         await tester.tap(find.text('Open'));
@@ -64,7 +64,7 @@ void main() {
       (context) => showBatchDeleteConfirmationSheet(
         context: context,
         selectedCount: 2,
-        onConfirm: () async => count++,
+        onConfirm: () async { count++; },
       ),
     ));
     await tester.tap(find.text('Open'));
