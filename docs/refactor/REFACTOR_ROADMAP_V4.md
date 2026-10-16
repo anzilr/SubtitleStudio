@@ -1,6 +1,7 @@
 # SubtitleStudio Refactor Roadmap v4
 
 > **CP87 R7 — MSone BACK FREEZE IS THE PRIMARY DEFECT (October 17, 2026):**
+> **Flutter quality gate passed:** [CI 38970979346](https://github.com/anzilr/SubtitleStudio/actions/runs/38970979346) — **535 Flutter tests passed, zero analyzer issues**, code `3c2abbb`. Does **not** prove device freeze fixed.
 > The user explicitly confirms **the editor became unresponsive immediately
 > after Android Back from MSone** and only then initiated Flutter hot restart
 > in an attempt to recover. Our previous description of this as a

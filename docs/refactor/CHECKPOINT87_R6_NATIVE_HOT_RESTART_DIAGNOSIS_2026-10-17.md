@@ -103,3 +103,7 @@ staleLoader=<true|false>` and the following first five editor pointer logs.
 If staleLoader is false and events still fail, further investigate
 Navigator barriers, route focus, editor isolate stalls and native playback.
 **R7 is not an on-device confirmed fix.**
+
+## R7 automated gate — passing
+
+[GitHub Actions 38970979346](https://github.com/anzilr/SubtitleStudio/actions/runs/38970979346): **535 passing tests and 0 analyzer issues** at commit `3c2abbb`. The widget regression simulates a blocking `IsolatedLoaderController` overlay surviving the MSone screen and checks that the return hook removes it before accepting a new editor tap. Test animations are fully settled before hit testing (initial early-tap fixture error fixed). This is a hypothesis-driven software fix, not physical CPH2381 sign-off.
