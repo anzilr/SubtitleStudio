@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:subtitle_studio/widgets/custom_text_render.dart';
+import 'package:subtitle_studio/themes/studio_cue_field.dart';
+import 'package:subtitle_studio/themes/studio_design_tokens.dart';
 
 class CharacterCountWidget extends StatelessWidget {
   final int count;
@@ -13,13 +15,12 @@ class CharacterCountWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = StudioDesignTokens.of(context);
     return Text(
       '$count chars',
       style: TextStyle(
         fontSize: 11,
-        color: hasLongLine
-            ? Colors.red
-            : Colors.white.withValues(alpha: 0.5),
+        color: hasLongLine ? tokens.dangerText : tokens.mutedText,
         fontWeight: hasLongLine ? FontWeight.bold : FontWeight.normal,
       ),
     );
@@ -61,27 +62,13 @@ class _OptimizedTextFieldState extends State<OptimizedTextField> {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        Container(
-          height: 100,
-          width: double.infinity,
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primary,
-            border: Border.all(
-              color: const Color(0xFF0A9396),
-              width: 1.5,
-            ),
-            borderRadius: BorderRadius.circular(4),
-          ),
+        StudioCueFieldSurface(
           child: widget.isRawEnabled
               ? CustomHtmlText(
                   htmlContent:
                       widget.controller.text.replaceAll('\n', '<br>'),
                   textAlign: TextAlign.center,
-                  defaultStyle: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                  ),
+                  defaultStyle: StudioCueFieldStyle.text(context),
                 )
               : TextField(
                   controller: widget.controller,
@@ -90,14 +77,8 @@ class _OptimizedTextFieldState extends State<OptimizedTextField> {
                   readOnly: widget.readOnly,
                   maxLines: null,
                   expands: true,
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.fromLTRB(8, 8, 30, 8),
-                  ),
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Color(0xFFFFFFFF),
-                  ),
+                  decoration: StudioCueFieldStyle.decoration(padding: const EdgeInsets.fromLTRB(8, 8, 30, 8)),
+                  style: StudioCueFieldStyle.text(context),
                   scrollPhysics: const BouncingScrollPhysics(),
                   autocorrect: false,
                   enableSuggestions: true,
@@ -119,11 +100,7 @@ class _OptimizedTextFieldState extends State<OptimizedTextField> {
           left: 4,
           child: Text(
             widget.title,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Color.fromARGB(100, 255, 255, 255),
-              fontSize: 12,
-            ),
+            style: StudioCueFieldStyle.label(context),
           ),
         ),
         Positioned(
@@ -131,11 +108,7 @@ class _OptimizedTextFieldState extends State<OptimizedTextField> {
           left: 4,
           child: Text(
             widget.indexText,
-            style: const TextStyle(
-              color: Color.fromARGB(125, 255, 255, 255),
-              fontStyle: FontStyle.italic,
-              fontSize: 12,
-            ),
+            style: StudioCueFieldStyle.index(context),
           ),
         ),
         Positioned(
@@ -152,7 +125,7 @@ class _OptimizedTextFieldState extends State<OptimizedTextField> {
                 padding: EdgeInsets.zero,
                 onPressed: () {},
                 icon: const Icon(Icons.copy, size: 16),
-                color: const Color(0xFFCA6702),
+                color: StudioDesignTokens.of(context).primaryAction,
               ),
               if (widget.showEditButton)
                 IconButton(
@@ -163,9 +136,7 @@ class _OptimizedTextFieldState extends State<OptimizedTextField> {
                   padding: EdgeInsets.zero,
                   onPressed: () {},
                   icon: const Icon(Icons.edit, size: 16),
-                  color: widget.isEditingEnabled
-                      ? const Color(0xFFBB3E03)
-                      : const Color(0xFFCA6702),
+                  color: StudioDesignTokens.of(context).primaryAction,
                   tooltip: 'Toggle Edit Mode',
                 ),
               if (widget.showPasteButton)
@@ -177,7 +148,7 @@ class _OptimizedTextFieldState extends State<OptimizedTextField> {
                   padding: EdgeInsets.zero,
                   onPressed: () {},
                   icon: const Icon(Icons.paste, size: 16),
-                  color: const Color(0xFFCA6702),
+                  color: StudioDesignTokens.of(context).primaryAction,
                   tooltip: 'Paste Original',
                 ),
             ],
