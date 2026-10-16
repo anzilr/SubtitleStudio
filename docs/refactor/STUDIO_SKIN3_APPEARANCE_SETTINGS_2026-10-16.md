@@ -2,8 +2,8 @@
 
 Date: 2026-10-16
 Branch: `refactor/riverpod-architecture`
-Status: **Code committed; CI gate pending**
-Quality gate: https://github.com/anzilr/SubtitleStudio/actions/runs/38872349945
+Status: **SKIN-3 R1 COMPLETE — committed and Flutter CI verified**
+Quality gate: https://github.com/anzilr/SubtitleStudio/actions/runs/38872349945 — **418 passing tests; analyzer step successful**, verified code commit `06eb58421757c883b9bea01b0f0297cb1125b25d`.
 
 ## Implementation
 
@@ -28,7 +28,7 @@ A runtime-injected catalog may include validated community skins already in memo
 
 - [x] UI widgets and Settings integration committed.
 - [x] Widget regression test coverage added.
-- [ ] GitHub Flutter analyzer and full test gate green.
+- [x] GitHub Flutter analyzer and full test gate green (418 tests).
 - [ ] Physical Android/Windows visual review at release-integration gate.
 - [ ] SKIN-4: reusable accessible Original/Edited/Time fields; then enable the new skin resolver globally.
 - [ ] SKIN-5/6: remaining screens, accessibility, full-platform smoke and device safety.
