@@ -175,7 +175,7 @@ class _FontSizeExpandableControlState extends State<_FontSizeExpandableControl> 
             margin: const EdgeInsets.only(top: 8),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: widget.isDark ? widget.onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+              color: widget.isDark ? widget.onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: widget.onSurfaceColor.withValues(alpha: 0.12),
@@ -265,7 +265,7 @@ class _FontSizeExpandableControlState extends State<_FontSizeExpandableControl> 
                         });
                       },
                       child: Text('Reset', 
-                        style: TextStyle(color: Colors.orange),
+                        style: TextStyle(color: Theme.of(context).colorScheme.primary),
                       ),
                     ),
                     Text(
