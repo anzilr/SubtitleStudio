@@ -1,5 +1,20 @@
 # SubtitleStudio UX roadmap — visual history, plain language, unified design, compact Edit Line
 
+> **Design-system consistency gate — October 16, 2026:** One uniform
+> set of modal sheets, dialogs, popups/context menus, dropdown menus,
+> sliders, segmented controls and button variants across **all nine**
+> appearances and future validated community skins. Avoid different radii,
+> icon sizes, button heights, scrim surfaces and unrelated decorative action
+> colors per screen. [Canonical component styles, audit and migration gates](STUDIO_COMPONENT_SYSTEM_2026-10-16.md):
+> DESIGN-0 inventory/contract, DESIGN-1 shared Material defaults in legacy
+> and new skins, DESIGN-2 incrementally remove local style overrides and
+> introduce reusable sheet/dialog/action primitives where required,
+> DESIGN-3 320dp/tablet/Windows/accessibility acceptance. First pilot:
+> subtitle action bottom sheet. Complete contrast-critical menu/dialog
+> migrations **before SKIN-4 R3 global palette activation**; remaining
+> consistency cleanup accompanies SKIN-5, final verification SKIN-6.
+> Current UI migration is **partial**; completion must be evidence-based.
+
 > **SKIN-4 R2 Edit Line readability pilot complete (October 16, 2026):**
 > Original/Edited subtitle field surfaces, labels, character counters, editing
 > actions and start/end timing inputs use semantic colors and visible focus
