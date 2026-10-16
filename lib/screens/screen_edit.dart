@@ -772,7 +772,8 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
                       onPressed: _toggleWaveform,
                       icon: Icon(
                         _isWaveformVisible ? Icons.graphic_eq : Icons.graphic_eq_outlined,
-                        color: Colors.white.withValues(alpha: _isWaveformVisible ? 1.0 : 0.5),
+                        color: Theme.of(context).appBarTheme.foregroundColor?.withValues(alpha: _isWaveformVisible ? 1.0 : 0.75)
+                            ?? Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                   IconButton(
