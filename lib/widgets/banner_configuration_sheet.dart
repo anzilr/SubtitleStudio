@@ -582,7 +582,7 @@ class _BannerConfigurationSheetState extends State<BannerConfigurationSheet> {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.add_circle_outline, size: 20, color: Colors.white),
+                                  Icon(Icons.add_circle_outline, size: 20, color: Theme.of(context).colorScheme.onPrimary),
                                   const SizedBox(width: 8),
                                   Flexible(
                                     child: Text(
