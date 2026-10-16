@@ -238,7 +238,7 @@ class MainApp extends ConsumerWidget {
 
     return MaterialApp(
       title: 'Subtitle Studio ${AppInfo.version}',
-      theme: themeState.themeData,
+      theme: ref.watch(liveStudioThemeProvider),
       home: _getInitialScreen(),
       debugShowCheckedModeBanner: false,
     );
