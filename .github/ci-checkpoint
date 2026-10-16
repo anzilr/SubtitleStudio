@@ -1,7 +1,7 @@
-SubtitleStudio DESIGN-1 R3 shared controls gate | 2026-10-16
-Flutter analyze and all tests. Eliminate unsupported MenuStyle foregroundColor
-and textStyle properties; rely on PopupMenuTheme/DropdownMenuTheme typography
-and inherited Material defaults. Verify uniform bottom sheet/dialog/popup/menu,
-dropdown, sliders and buttons across 9 palettes plus legacy themes; subtitle
-action sheet pilot. First two runs stopped at analyzer on MenuStyle API, no
-test execution; fix only unsupported API props. No platform builds.
+SubtitleStudio DESIGN-1 R4 uniform component theme final regression gate | 2026-10-16
+Flutter analyzer and all tests. Shared modal/dialog/menu/dropdown/slider/button
+defaults cover both old themes and 9 built-in skin/mode palettes. Existing
+subtitle action sheet semantic pilot and future skin restrictions remain.
+R3 had 423 passing tests with one new test failure: tester.pageBack expected
+an absent back button; corrected to dismiss modal routes via scrim tapping.
+No native build, app-wide skin palette activation or media/Isar changes.
