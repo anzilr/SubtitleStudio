@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'studio_component_themes.dart';
 import 'studio_design_tokens.dart';
 import 'studio_palette.dart';
 import 'studio_skin_catalog.dart';
@@ -98,7 +99,7 @@ abstract final class StudioThemeFactory {
       borderSide: BorderSide(color: palette.danger),
     );
 
-    return ThemeData(
+    final base = ThemeData(
       useMaterial3: true,
       brightness: palette.brightness,
       colorScheme: scheme,
@@ -178,10 +179,7 @@ abstract final class StudioThemeFactory {
           borderRadius: BorderRadius.circular(StudioRadius.sheet),
         ),
       ),
-      bottomSheetTheme: BottomSheetThemeData(
-        backgroundColor: palette.surface,
-        modalBackgroundColor: palette.surface,
-      ),
     );
+    return StudioComponentThemes.apply(base);
   }
 }
