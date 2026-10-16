@@ -15,6 +15,8 @@ class _FakeThemeStore implements ThemePreferencesStore {
   String? fontName;
   bool rejectMode = false;
   bool rejectSkin = false;
+  Completer<void>? holdFirstModeWrite;
+  final modeWriteAttempts = <String>[];
 
   @override
   Future<ThemePreferenceSnapshot> load() => initial.future;
@@ -27,6 +29,10 @@ class _FakeThemeStore implements ThemePreferencesStore {
 
   @override
   Future<void> saveThemeMode(String mode) async {
+    modeWriteAttempts.add(mode);
+    if (modeWriteAttempts.length == 1 && holdFirstModeWrite != null) {
+      await holdFirstModeWrite!.future;
+    }
     if (rejectMode) throw StateError('Appearance persistence failed');
     savedMode = mode;
   }
@@ -93,6 +99,34 @@ void main() {
     expect(selected.skinId, StudioSkinId.carbonJade);
     expect(selected.appearance, StudioAppearance.classic);
     expect(prefs.savedSkin, StudioSkinId.carbonJade.value);
+    expect(prefs.savedMode, 'classic');
+  });
+
+  test('rapid appearance changes commit to disk in user action order',
+      () async {
+    final prefs = _FakeThemeStore()
+      ..holdFirstModeWrite = Completer<void>()
+      ..initial.complete(const ThemePreferenceSnapshot(
+        exists: true,
+        skinId: 'builtin.carbonJade',
+        themeMode: 'light',
+      ));
+    final container = ProviderContainer(overrides: [
+      themePreferencesRepositoryProvider.overrideWithValue(prefs),
+    ]);
+    addTearDown(container.dispose);
+    final notifier = container.read(themeControllerProvider.notifier);
+    await _flush();
+    final first = notifier.setAppearance(StudioAppearance.dark);
+    final second = notifier.setAppearance(StudioAppearance.classic);
+    await _flush();
+    expect(prefs.modeWriteAttempts, ['dark']);
+    expect(container.read(themeControllerProvider).appearance,
+        StudioAppearance.classic);
+
+    prefs.holdFirstModeWrite!.complete();
+    await Future.wait([first, second]);
+    expect(prefs.modeWriteAttempts, ['dark', 'classic']);
     expect(prefs.savedMode, 'classic');
   });
 
