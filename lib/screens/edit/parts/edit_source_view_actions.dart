@@ -11,6 +11,7 @@ extension _EditSourceViewActions on _EditScreenState {
     _setEditorState(() {
       _isSourceView = state.isSourceView;
       _sourceViewEntries = state.sourceViewEntries;
+      _sourceViewRawText = RawSrtDocument.compose(_sourceViewEntries);
       _sourceViewDirty = false;
     });
   }
@@ -104,6 +105,7 @@ extension _EditSourceViewActions on _EditScreenState {
     } else {
       final currentLines = _editState.subtitleLines;
       _sourceViewEntries = _convertSubtitleLinesToEntries(currentLines);
+      _sourceViewRawText = RawSrtDocument.compose(_sourceViewEntries);
     }
 
     if (mounted) {
@@ -128,8 +130,11 @@ extension _EditSourceViewActions on _EditScreenState {
   /// Sync source view entries back to the database
   Future<void> _syncSourceViewToDatabase() async {
     try {
-      // Riverpod migration - delegate to the Riverpod controller
-      await _controller.syncSourceViewToDatabase(_sourceViewEntries);
+      // Parse the *current raw document* only at Save. Never persist a stale
+      // cue list when the source contains an unfinished/invalid edit.
+      final parsed = RawSrtDocument.parseStrict(_sourceViewRawText);
+      await _controller.syncSourceViewToDatabase(parsed);
+      _sourceViewEntries = parsed;
 
       await _refreshSubtitleLines();
 
