@@ -1,5 +1,14 @@
 # SubtitleStudio UX roadmap — visual history, plain language, unified design, compact Edit Line
 
+> **DESIGN-1 R4 component foundation verified:** All built-in skins and
+> legacy themes share Material defaults for sheets, dialogs, popups, dropdowns,
+> sliders and core button variants, with one reusable size/radius contract.
+> The subtitle actions sheet is the first feature-local migration pilot.
+> [CI run 38892274970](https://github.com/anzilr/SubtitleStudio/actions/runs/38892274970):
+> **424 tests passing, analyzer clean**. [UI contract and remaining audit](STUDIO_COMPONENT_SYSTEM_2026-10-16.md).
+> DESIGN-2 must still migrate the custom-painted/screen-specific controls
+> before global skins; DESIGN-3 physical Android/Windows reviews remain.
+
 > **Design-system consistency gate — October 16, 2026:** One uniform
 > set of modal sheets, dialogs, popups/context menus, dropdown menus,
 > sliders, segmented controls and button variants across **all nine**
