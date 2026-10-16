@@ -206,9 +206,9 @@ extension _WaveformRendering on WaveformWidgetState {
                               trackHeight: 2,
                               thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
                               overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
-                              activeTrackColor: Theme.of(context).colorScheme.primary,
+                              activeTrackColor: WaveformControlColors.zoom,
                               inactiveTrackColor: Theme.of(context).colorScheme.outline,
-                              thumbColor: Theme.of(context).colorScheme.primary,
+                              thumbColor: WaveformControlColors.zoom,
                             ),
                             child: Slider(
                               // Invert value: slider right (max) = index 0 (zoomed in), slider left (min) = max index (zoomed out)
@@ -277,7 +277,7 @@ extension _WaveformRendering on WaveformWidgetState {
                         icon: Icon(
                           Icons.swap_horiz,
                           size: 20,
-                          color: state.allowOverlap ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurfaceVariant,
+                          color: state.allowOverlap ? WaveformControlColors.overlap : Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                         tooltip: state.allowOverlap ? 'Overlap Enabled' : 'Overlap Disabled',
                         onPressed: () => ref.read(waveformControllerProvider.notifier).dispatch(const ToggleOverlapMode()),
@@ -292,7 +292,7 @@ extension _WaveformRendering on WaveformWidgetState {
                           width: 20,
                           height: 20,
                           colorFilter: ColorFilter.mode(
-                            state.magnetSnapEnabled ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurfaceVariant,
+                            state.magnetSnapEnabled ? WaveformControlColors.magnet : Theme.of(context).colorScheme.onSurfaceVariant,
                             BlendMode.srcIn,
                           ),
                         ),
@@ -308,7 +308,7 @@ extension _WaveformRendering on WaveformWidgetState {
                           icon: Icon(
                             Icons.add_circle_outline,
                             size: 20,
-                            color: Theme.of(context).colorScheme.primary,
+                            color: WaveformControlColors.addLine,
                           ),
                           tooltip: 'Add New Subtitle Line',
                           onPressed: () => _triggerAddLineMode(state),
@@ -321,7 +321,7 @@ extension _WaveformRendering on WaveformWidgetState {
                       // Apply and Cancel buttons (shown when in edit mode)
                       if (state.isEditMode) ...[
                         IconButton(
-                          icon: Icon(Icons.check, size: 20, color: Theme.of(context).colorScheme.primary),
+                          icon: Icon(Icons.check, size: 20, color: WaveformControlColors.confirm),
                           tooltip: 'Apply Time Changes',
                           onPressed: () => _applyTimeChanges(state),
                           padding: EdgeInsets.zero,
@@ -329,7 +329,7 @@ extension _WaveformRendering on WaveformWidgetState {
                         ),
                         if (smallSpacing > 0) SizedBox(width: smallSpacing),
                         IconButton(
-                          icon: Icon(Icons.close, size: 20, color: Theme.of(context).colorScheme.onSurface),
+                          icon: Icon(Icons.close, size: 20, color: WaveformControlColors.cancel),
                           tooltip: 'Cancel Edit Mode',
                           onPressed: () => ref.read(waveformControllerProvider.notifier).dispatch(const ExitTimeEditMode()),
                           padding: EdgeInsets.zero,
@@ -340,7 +340,7 @@ extension _WaveformRendering on WaveformWidgetState {
                       // Add and Close buttons (shown when in add line mode)
                       if (state.isAddLineMode) ...[
                         IconButton(
-                          icon: Icon(Icons.check, size: 20, color: Theme.of(context).colorScheme.primary),
+                          icon: Icon(Icons.check, size: 20, color: WaveformControlColors.confirm),
                           tooltip: 'Add Line with Selected Times',
                           onPressed: () => _confirmAddLine(state),
                           padding: EdgeInsets.zero,
@@ -348,7 +348,7 @@ extension _WaveformRendering on WaveformWidgetState {
                         ),
                         if (smallSpacing > 0) SizedBox(width: smallSpacing),
                         IconButton(
-                          icon: Icon(Icons.close, size: 20, color: Theme.of(context).colorScheme.onSurface),
+                          icon: Icon(Icons.close, size: 20, color: WaveformControlColors.cancel),
                           tooltip: 'Cancel Add Line Mode',
                           onPressed: () => ref.read(waveformControllerProvider.notifier).dispatch(const ExitAddLineMode()),
                           padding: EdgeInsets.zero,
@@ -399,7 +399,7 @@ extension _WaveformRendering on WaveformWidgetState {
                             Icon(
                               state.autoScroll ? Icons.sync : Icons.sync_disabled,
                               size: 20,
-                              color: state.autoScroll ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurfaceVariant,
+                              color: state.autoScroll ? WaveformControlColors.autoScroll : Theme.of(context).colorScheme.onSurfaceVariant,
                             ),
                             const SizedBox(width: 12),
                             Text(state.autoScroll ? 'Disable Auto-Scroll' : 'Enable Auto-Scroll'),
@@ -477,8 +477,8 @@ extension _WaveformRendering on WaveformWidgetState {
                                   samplesPerPixel: state.samplesPerPixel,
                                   verticalZoom: state.verticalZoom,
                                   waveformColor: _getWaveformColor(context),
-                                  subtitleColor: Theme.of(context).colorScheme.primary,
-                                  playbackColor: Theme.of(context).colorScheme.error,
+                                  subtitleColor: WaveformControlColors.editBars,
+                                  playbackColor: WaveformControlColors.playhead,
                                   backgroundColor: Theme.of(context).colorScheme.surface,
                                   showSubtitlesOnly: false,
                                   showWaveformOnly: true,
@@ -538,8 +538,8 @@ extension _WaveformRendering on WaveformWidgetState {
                                   samplesPerPixel: state.samplesPerPixel,
                                   verticalZoom: state.verticalZoom,
                                   waveformColor: _getWaveformColor(context),
-                                  subtitleColor: Theme.of(context).colorScheme.primary,
-                                  playbackColor: Theme.of(context).colorScheme.error,
+                                  subtitleColor: WaveformControlColors.editBars,
+                                  playbackColor: WaveformControlColors.playhead,
                                   backgroundColor: Colors.transparent,
                                   showSubtitlesOnly: true,
                                   showWaveformOnly: false,
@@ -572,7 +572,7 @@ extension _WaveformRendering on WaveformWidgetState {
                               child: Text(
                                 _formatDisplayTime(state),
                                 style: TextStyle(
-                                  color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.55),
+                                  color: WaveformControlColors.timeReadout,
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
                                   letterSpacing: 1.0,
@@ -644,29 +644,11 @@ extension _WaveformRendering on WaveformWidgetState {
     );
   }
 
-  /// Get waveform color based on current theme
-  Color _getWaveformColor(BuildContext context) {
-    final brightness = Theme.of(context).brightness;
+  Color _getWaveformColor(BuildContext context) =>
+      WaveformControlColors.waveform(Theme.of(context));
 
-    if (brightness == Brightness.dark) {
-      return Theme.of(context).colorScheme.primary;
-    }
-    
-    // For light mode, use theme secondary color
-    return Theme.of(context).colorScheme.secondary;
-  }
-
-  /// Get subtitle highlight color for waveform background regions
-  Color _getSubtitleHighlightColor(BuildContext context) {
-    final brightness = Theme.of(context).brightness;
-    
-    // Use a more vibrant contrasting color
-    if (brightness == Brightness.dark) {
-      return Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.4);
-    }
-    
-    return Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.45);
-  }
+  Color _getSubtitleHighlightColor(BuildContext context) =>
+      WaveformControlColors.subtitleHighlight(Theme.of(context));
 }
 
 /// Bouncing dot widget for Loader13-style animation
