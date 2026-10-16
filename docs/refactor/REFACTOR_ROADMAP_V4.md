@@ -1,5 +1,18 @@
 # SubtitleStudio Refactor Roadmap v4
 
+> **SKIN-4 R3-B PART 1 VERIFIED — October 16, 2026:** Confirmation,
+> index-selection and selected-time shift sheets now use the unified
+> semantic component contract. Batch delete Enter handling is guarded;
+> single-delete content scrolls in constrained sheet height. The Project
+> Settings root surface/header uses design tokens. [Successful CI
+> 38900494194](https://github.com/anzilr/SubtitleStudio/actions/runs/38900494194)
+> verified **434 Flutter tests passed, 0 analyzer issues** against
+> `7fa7f002`. [P1 report](STUDIO_SKIN4_R3B_P1_SELECTION_SHEETS_2026-10-16.md).
+> **R3-B still open:** remaining Editor/Edit Line toolbar, selection and
+> playback-overlay contrasts; full edit-state regressions; safe global
+> theme factory activation. Android/Windows native acceptance and CP86
+> waveform qualification remain separate.
+
 > **SKIN-4 R3-A COMPLETE — October 16, 2026:** Editor/Editing popup menus
 > use one semantic `StudioMenuItemContent` (preserving original action
 > values); subtitle cards now inherit readable semantic text, selection and
