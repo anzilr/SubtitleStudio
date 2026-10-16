@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'studio_skin.dart';
 import 'theme_controller.dart';
 
 class ThemeSwitcherButton extends ConsumerStatefulWidget {
@@ -45,16 +46,11 @@ class ThemeSwitcherButtonState extends ConsumerState<ThemeSwitcherButton>
     ));
   }
 
-  IconData _getIconForTheme(ThemeMode mode) {
-    switch (mode) {
-      case ThemeMode.light:
-        return Icons.wb_sunny_outlined;
-      case ThemeMode.dark:
-        return Icons.nights_stay_outlined;
-      case ThemeMode.system:
-        return Icons.auto_awesome;
-    }
-  }
+  IconData _getIconForTheme(StudioAppearance mode) => switch (mode) {
+        StudioAppearance.light => Icons.wb_sunny_outlined,
+        StudioAppearance.dark => Icons.nights_stay_outlined,
+        StudioAppearance.classic => Icons.auto_awesome,
+      };
 
   @override
   void dispose() {
@@ -62,32 +58,33 @@ class ThemeSwitcherButtonState extends ConsumerState<ThemeSwitcherButton>
     super.dispose();
   }
 
-  void _switchTheme() {
-    final state = ref.read(themeControllerProvider);
-    final controller = ref.read(themeControllerProvider.notifier);
+  Future<void> _switchTheme() async {
+    final current = ref.read(themeControllerProvider).appearance;
+    final next = switch (current) {
+      StudioAppearance.light => StudioAppearance.dark,
+      StudioAppearance.dark => StudioAppearance.classic,
+      StudioAppearance.classic => StudioAppearance.light,
+    };
 
-    switch (state.themeMode) {
-      case ThemeMode.light:
-        controller.setTheme(ThemeMode.dark);
-        break;
-      case ThemeMode.dark:
-        controller.setTheme(ThemeMode.system);
-        break;
-      case ThemeMode.system:
-        controller.setTheme(ThemeMode.light);
-        break;
+    try {
+      await ref.read(themeControllerProvider.notifier).setAppearance(next);
+      if (mounted) _controller.forward(from: 0);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        const SnackBar(content: Text('Could not save the appearance mode.')),
+      );
     }
-
-    _controller.forward(from: 0);
   }
 
   @override
   Widget build(BuildContext context) {
     final themeState = ref.watch(themeControllerProvider);
-    final currentIcon = _getIconForTheme(themeState.themeMode);
+    final currentIcon = _getIconForTheme(themeState.appearance);
 
     return IconButton(
-      onPressed: _switchTheme,
+      tooltip: 'Theme: ${themeState.appearance.label}. Tap to switch mode',
+      onPressed: themeState.isLoaded ? _switchTheme : null,
       icon: AnimatedBuilder(
         animation: _controller,
         builder: (context, child) {
@@ -105,10 +102,7 @@ class ThemeSwitcherButtonState extends ConsumerState<ThemeSwitcherButton>
           } else {
             return Transform.scale(
               scale: _sparkleAnimation.value,
-              child: Icon(
-                currentIcon,
-                color: Colors.white,
-              ),
+              child: Icon(currentIcon),
             );
           }
         },
