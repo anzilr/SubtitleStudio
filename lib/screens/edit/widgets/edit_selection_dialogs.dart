@@ -1,113 +1,151 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:subtitle_studio/themes/studio_design_tokens.dart';
 
 Future<void> showBatchDeleteConfirmationSheet({
   required BuildContext context,
   required int selectedCount,
   required Future<void> Function() onConfirm,
 }) {
-  Future<void> confirm(BuildContext sheetContext) async {
-    Navigator.pop(sheetContext);
-    await onConfirm();
-  }
-
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    builder: (_) => _BatchDeleteConfirmationSheet(
+      selectedCount: selectedCount,
+      onConfirm: onConfirm,
     ),
-    builder: (sheetContext) => KeyboardListener(
-      focusNode: FocusNode()..requestFocus(),
+  );
+}
+
+class _BatchDeleteConfirmationSheet extends StatefulWidget {
+  final int selectedCount;
+  final Future<void> Function() onConfirm;
+
+  const _BatchDeleteConfirmationSheet({
+    required this.selectedCount,
+    required this.onConfirm,
+  });
+
+  @override
+  State<_BatchDeleteConfirmationSheet> createState() =>
+      _BatchDeleteConfirmationSheetState();
+}
+
+class _BatchDeleteConfirmationSheetState
+    extends State<_BatchDeleteConfirmationSheet> {
+  final FocusNode _focusNode = FocusNode();
+  bool _confirming = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _focusNode.requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  Future<void> _confirm() async {
+    if (_confirming) return;
+    _confirming = true;
+    // Match the existing callback contract: dismiss before asynchronous work.
+    Navigator.pop(context);
+    await widget.onConfirm();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = StudioDesignTokens.of(context);
+    final text = Theme.of(context).textTheme;
+    return KeyboardListener(
+      focusNode: _focusNode,
       onKeyEvent: (event) {
         if (event is KeyDownEvent &&
             event.logicalKey == LogicalKeyboardKey.enter) {
-          confirm(sheetContext);
+          unawaited(_confirm());
         }
       },
-      child: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(sheetContext).colorScheme.surface,
-          borderRadius:
-              const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
+      child: SafeArea(
+        child: Container(
+          decoration: BoxDecoration(
+            color: tokens.surface,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(StudioRadius.sheet),
+            ),
+          ),
+          padding: const EdgeInsets.all(StudioSpacing.lg),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.delete,
-                        color: Colors.red,
-                        size: 28,
-                      ),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(StudioSpacing.sm),
+                    decoration: BoxDecoration(
+                      color: tokens.dangerText.withValues(alpha: 0.10),
+                      borderRadius: BorderRadius.circular(StudioRadius.card),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Delete Selected Subtitles',
-                            style: Theme.of(sheetContext)
-                                .textTheme
-                                .titleLarge
-                                ?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'This action cannot be undone',
-                            style: Theme.of(sheetContext)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(
-                                  color: Theme.of(sheetContext)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.6),
-                                ),
-                          ),
-                        ],
-                      ),
+                    child: Icon(
+                      Icons.delete,
+                      color: tokens.dangerText,
+                      size: 28,
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.red.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: Colors.red.withValues(alpha: 0.3),
                   ),
+                  const SizedBox(width: StudioSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Delete Selected Subtitles',
+                          style: text.titleLarge?.copyWith(
+                            color: tokens.onSurface,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: StudioSpacing.xxs),
+                        Text(
+                          'This action cannot be undone',
+                          style: text.bodyMedium?.copyWith(
+                            color: tokens.mutedText,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: StudioSpacing.lg),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(StudioSpacing.md),
+                decoration: BoxDecoration(
+                  color: tokens.fieldSurface,
+                  borderRadius: BorderRadius.circular(StudioRadius.card),
+                  border: Border.all(color: tokens.outline),
                 ),
                 child: Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.warning_outlined,
-                      color: Colors.red,
-                      size: 20,
+                      color: tokens.dangerText,
+                      size: StudioSizing.icon,
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: StudioSpacing.xs),
                     Expanded(
                       child: Text(
-                        'Are you sure you want to delete $selectedCount subtitle lines? This action cannot be undone.',
-                        style: TextStyle(
-                          color: Colors.red.shade700,
+                        'Are you sure you want to delete '
+                        '${widget.selectedCount} subtitle lines? '
+                        'This action cannot be undone.',
+                        style: text.bodyMedium?.copyWith(
+                          color: tokens.onSurface,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -115,92 +153,37 @@ Future<void> showBatchDeleteConfirmationSheet({
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: StudioSpacing.lg),
               Row(
                 children: [
                   Expanded(
-                    child: SizedBox(
-                      height: 50,
-                      child: OutlinedButton(
-                        onPressed: () =>
-                            Navigator.pop(sheetContext),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Theme.of(sheetContext)
-                              .colorScheme
-                              .onSurface,
-                          side: BorderSide(
-                            color: Theme.of(sheetContext)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.3),
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: const Row(
-                          mainAxisAlignment:
-                              MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.close, size: 20),
-                            SizedBox(width: 8),
-                            Text(
-                              'Cancel',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 15,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                    child: OutlinedButton.icon(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close),
+                      label: const Text('Cancel'),
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: StudioSpacing.md),
                   Expanded(
-                    child: SizedBox(
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: () => confirm(sheetContext),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: const Row(
-                          mainAxisAlignment:
-                              MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.delete, size: 20),
-                            SizedBox(width: 8),
-                            Text(
-                              'Delete All',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 15,
-                              ),
-                            ),
-                          ],
-                        ),
+                    child: FilledButton.icon(
+                      onPressed: _confirm,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: tokens.dangerText,
+                        foregroundColor: tokens.surface,
                       ),
+                      icon: const Icon(Icons.delete),
+                      label: const Text('Delete All'),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
             ],
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
-
 
 Future<List<int>?> showSelectByIndexSheet({
   required BuildContext context,
@@ -210,7 +193,7 @@ Future<List<int>?> showSelectByIndexSheet({
     context: context,
     isScrollControlled: true,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(StudioRadius.sheet)),
     ),
     builder: (_) => _SelectByIndexSheet(totalLines: totalLines),
   );
@@ -258,14 +241,13 @@ class _SelectByIndexSheetState extends State<_SelectByIndexSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = StudioDesignTokens.of(context);
 
     return Container(
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius:
-            const BorderRadius.vertical(top: Radius.circular(20)),
+            const BorderRadius.vertical(top: Radius.circular(StudioRadius.sheet)),
       ),
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom + 24,
@@ -281,12 +263,12 @@ class _SelectByIndexSheetState extends State<_SelectByIndexSheet> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.1),
+                  color: colors.primaryAction.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.format_list_numbered,
-                  color: Colors.orange,
+                  color: colors.primaryAction,
                   size: 28,
                 ),
               ),
@@ -317,7 +299,6 @@ class _SelectByIndexSheetState extends State<_SelectByIndexSheet> {
                   'Start Index',
                   '1',
                   Icons.play_arrow,
-                  isDark,
                 ),
               ),
               const SizedBox(width: 16),
@@ -327,7 +308,6 @@ class _SelectByIndexSheetState extends State<_SelectByIndexSheet> {
                   'End Index',
                   '${widget.totalLines}',
                   Icons.stop,
-                  isDark,
                 ),
               ),
             ],
@@ -336,7 +316,7 @@ class _SelectByIndexSheetState extends State<_SelectByIndexSheet> {
             const SizedBox(height: 12),
             Text(
               _errorMessage!,
-              style: const TextStyle(color: Colors.red),
+              style: TextStyle(color: colors.dangerText),
             ),
           ],
           const SizedBox(height: 24),
@@ -367,38 +347,36 @@ class _SelectByIndexSheetState extends State<_SelectByIndexSheet> {
     String label,
     String hint,
     IconData icon,
-    bool isDark,
   ) {
-    final colors = Theme.of(context).colorScheme;
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark
-            ? colors.onSurface.withValues(alpha: 0.05)
-            : Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: colors.onSurface.withValues(alpha: 0.12),
+    final tokens = StudioDesignTokens.of(context);
+    final radius = BorderRadius.circular(StudioRadius.input);
+    return TextField(
+      controller: controller,
+      style: TextStyle(color: tokens.onSurface),
+      keyboardType: TextInputType.number,
+      onSubmitted: (_) => _submit(),
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: tokens.fieldSurface,
+        labelText: label,
+        hintText: hint,
+        prefixIcon: Icon(icon, color: tokens.primaryAction),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: radius,
+          borderSide: BorderSide(color: tokens.fieldBorder),
         ),
-      ),
-      child: TextField(
-        controller: controller,
-        keyboardType: TextInputType.number,
-        onSubmitted: (_) => _submit(),
-        decoration: InputDecoration(
-          labelText: label,
-          hintText: hint,
-          prefixIcon: Icon(icon, color: Theme.of(context).primaryColor),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 16,
-          ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: radius,
+          borderSide: BorderSide(color: tokens.focusBorder, width: 2),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: StudioSpacing.md,
+          vertical: StudioSpacing.md,
         ),
       ),
     );
   }
 }
-
 
 Future<void> showShiftSelectedTimesSheet({
   required BuildContext context,
@@ -413,7 +391,7 @@ Future<void> showShiftSelectedTimesSheet({
     context: context,
     isScrollControlled: true,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(StudioRadius.sheet)),
     ),
     builder: (_) => _ShiftSelectedTimesSheet(
       initialStartTime: initialStartTime,
@@ -481,16 +459,14 @@ class _ShiftSelectedTimesSheetState
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    final muted = colors.onSurface.withValues(alpha: 0.6);
-    final border = colors.onSurface.withValues(alpha: 0.12);
-    final isDark = theme.brightness == Brightness.dark;
+    final colors = StudioDesignTokens.of(context);
+    final muted = colors.mutedText;
 
     return Container(
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius:
-            const BorderRadius.vertical(top: Radius.circular(20)),
+            const BorderRadius.vertical(top: Radius.circular(StudioRadius.sheet)),
       ),
       child: Padding(
         padding: EdgeInsets.only(
@@ -508,12 +484,12 @@ class _ShiftSelectedTimesSheetState
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.orange.withValues(alpha: 0.1),
+                      color: colors.primaryAction.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.timer,
-                      color: Colors.orange,
+                      color: colors.primaryAction,
                       size: 28,
                     ),
                   ),
@@ -551,15 +527,11 @@ class _ShiftSelectedTimesSheetState
               _timeField(
                 controller: _startController,
                 label: 'First selected subtitle starts at:',
-                isDark: isDark,
-                borderColor: border,
               ),
               const SizedBox(height: 16),
               _timeField(
                 controller: _endController,
                 label: 'Last selected subtitle ends at:',
-                isDark: isDark,
-                borderColor: border,
               ),
               const SizedBox(height: 24),
               Row(
@@ -579,19 +551,15 @@ class _ShiftSelectedTimesSheetState
                   Expanded(
                     child: SizedBox(
                       height: 50,
-                      child: ElevatedButton(
+                      child: FilledButton(
                         onPressed: _isProcessing ? null : _apply,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange,
-                          foregroundColor: Colors.white,
-                        ),
                         child: _isProcessing
-                            ? const SizedBox(
+                            ? SizedBox(
                                 width: 20,
                                 height: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  color: Colors.white,
+                                  color: colors.onPrimaryAction,
                                 ),
                               )
                             : const Text('Apply'),
@@ -610,41 +578,39 @@ class _ShiftSelectedTimesSheetState
   Widget _timeField({
     required TextEditingController controller,
     required String label,
-    required bool isDark,
-    required Color borderColor,
   }) {
-    final colors = Theme.of(context).colorScheme;
+    final tokens = StudioDesignTokens.of(context);
+    final radius = BorderRadius.circular(StudioRadius.input);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: tokens.onSurface,
                 fontWeight: FontWeight.w600,
               ),
         ),
-        const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            color: isDark
-                ? colors.onSurface.withValues(alpha: 0.05)
-                : Colors.grey.shade50,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: borderColor),
-          ),
-          child: TextField(
-            controller: controller,
-            decoration: InputDecoration(
-              hintText: '00:00:00,000',
-              prefixIcon: Icon(
-                Icons.access_time,
-                color: Theme.of(context).primaryColor,
-              ),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 16,
-              ),
+        const SizedBox(height: StudioSpacing.xs),
+        TextField(
+          controller: controller,
+          style: TextStyle(color: tokens.onSurface),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: tokens.fieldSurface,
+            hintText: '00:00:00,000',
+            prefixIcon: Icon(Icons.access_time, color: tokens.primaryAction),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: radius,
+              borderSide: BorderSide(color: tokens.fieldBorder),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: radius,
+              borderSide: BorderSide(color: tokens.focusBorder, width: 2),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: StudioSpacing.md,
+              vertical: StudioSpacing.md,
             ),
           ),
         ),
