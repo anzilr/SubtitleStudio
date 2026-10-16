@@ -177,6 +177,8 @@ void main() {
       tester.widget<Icon>(find.byIcon(Icons.warning_amber_rounded)).color,
       tokens.dangerText,
     );
+    await tester.ensureVisible(find.text('Delete'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Delete'));
     await tester.pumpAndSettle();
     expect(deleted, 1);
