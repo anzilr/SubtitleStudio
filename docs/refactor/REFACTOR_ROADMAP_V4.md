@@ -1,5 +1,15 @@
 # SubtitleStudio Refactor Roadmap v4
 
+> **October 16, 2026 — CP85 R5 Android theme regressions addressed in code:**
+> [CI run 38861456875](https://github.com/anzilr/SubtitleStudio/actions/runs/38861456875):
+> **386 tests passing; no analyzer issues.** Stable Editor/Edit Line
+> Riverpod scopes and guarded route arguments address the `Loading...`
+> reset and deactivated-ref crashes. Light surfaces are now white, with
+> neutral Studio palette and unified Project Settings accents.
+> **Real-device confirmation still required.** Other screens' hard-coded
+> rainbow accents remain a planned per-screen UX cleanup, not yet complete.
+> See [CP85 R5 Android theme-switch report](CP85_R5_THEME_SWITCH_AND_PALETTE_2026-10-16.md).
+
 > **UX-1 foundation verified — October 16, 2026:** Studio semantic
 > light/dark/Classic tokens, shared Material components and the first
 > Project Settings encoding-selector visual pilot are committed.
