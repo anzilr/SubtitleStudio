@@ -16,6 +16,17 @@ Related: [Refactor roadmap v4](REFACTOR_ROADMAP_V4.md), [UX roadmap](SUBTITLESTU
 
 ## Decision record — user-approved requirements
 
+**New non-negotiable UX requirement (October 16, 2026):** Built-in
+and community skins must share uniform modal bottom sheets, dialog surfaces,
+popup/context menus, dropdown controls, slider geometry, button shapes/sizes
+and visual interaction states. Skin colors remain the only user-customizable
+input in v1. A central `StudioComponentThemes.apply` defines Material themes
+for both legacy and skin factories; one-off styling and bespoke per-screen
+modals must be migrated incrementally under DESIGN-0–3. See the
+[component design contract and audit](STUDIO_COMPONENT_SYSTEM_2026-10-16.md).
+Finish contrast-sensitive sheets/menus/buttons before SKIN-4 R3; complete
+broader consistency with SKIN-5 and verify at SKIN-6.
+
 1. Three built-in skins: **Carbon & Jade**, **Copper Cinema**, **Aster Violet**.
 2. Each skin has three appearance modes: **Light**, **Dark**, **Classic** (3 × 3 = **9** combinations).
 3. Skin and appearance mode are **independent user settings**. Both must persist across restarts.
