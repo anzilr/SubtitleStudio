@@ -1,6 +1,7 @@
 # SubtitleStudio Refactor Roadmap v4
 
 > **CP87 R2–R4 ANDROID SESSION RECOVERY & CONTRAST AUDIT — October 16, 2026:**
+> **Flutter CI passed:** [38965180956](https://github.com/anzilr/SubtitleStudio/actions/runs/38965180956) — **527 tests passed, 0 analyzer issues**, verified at code `7ed20ab`. The latest fix ensures all secondary-selection flows commit the new reference before deleting the previous app-owned file.
 > A real CPH2381 relaunch log proved the original subtitle collection still
 > held **895 lines**, but an optional embedded secondary track pointed to a
 > missing Android `code_cache/extracted_subtitle_*.srt` file. `EditController`

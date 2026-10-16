@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-16
 **Branch:** `refactor/riverpod-architecture`
-**Flutter gate:** See the most recent workflow run on this branch, triggered by the accompanying `.github/ci-checkpoint` update. Do not equate Flutter CI with native acceptance.
+**Flutter gate:** [GitHub Actions 38965180956](https://github.com/anzilr/SubtitleStudio/actions/runs/38965180956) — **SUCCESS, 527 Flutter tests passed, 0 analyzer issues** at code `7ed20ab`. This verifies Dart/Flutter code only, not native Android/Windows acceptance.
 **Appearance policy:** Still frozen. Only user-reported contrast failures are corrected.
 
 ## Incident diagnosis — primary data was available
@@ -30,6 +30,9 @@ cache data **cannot be proven**.
   using a same-directory staging file and flush before rename.
 - The new preference is saved **after** the file exists, and the previous
   app-owned extract is deleted only after new persistence succeeds.
+- The same write-before-cleanup ordering now also applies when switching to
+  an external secondary file or switching back to original text; a failed
+  preference write cannot leave a previously referenced extract deleted.
 - Automatic cleanup requires the known app support root or matches a
   strictly identified Android private old-cache path. External files
   are never deleted simply because their name starts `extracted_subtitle_`.
@@ -99,3 +102,5 @@ Typed read/write results and file grant metadata, Source View access migration,
 platform bookmark-safe persistence, and Editor lifetime testing. No changes
 to Isar collection schemas, data-reset workflows, new themes or desktop
 workspace were performed here.
+
+**Final Flutter quality gate:** 527 tests and 0 analyzer issues ([CI](https://github.com/anzilr/SubtitleStudio/actions/runs/38965180956)); root-cause attribution for the unlogged MSone freeze and all physical native QA remain pending.
