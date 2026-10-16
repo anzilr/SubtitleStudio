@@ -79,7 +79,8 @@ class MarkedLinesSheet extends ConsumerStatefulWidget {
 
 class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
   late List<SubtitleLine> _currentMarkedLines;
-  bool _showAllComments = false; // Toggle to show all lines with comments
+  bool _showAllComments = false; // Toggle to include unmarked comment lines
+  bool _commentFilterTouched = false; // Prevent async saved preference overwriting a tap.
   String _resolvedFilter = 'all'; // Filter: 'all', 'resolved', 'unresolved'
   int? _editingLineIndex; // Track which line is being edited
   final Map<int, TextEditingController> _textControllers = {}; // Controllers for each line
@@ -141,91 +142,35 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
     final showAllComments = await ref
         .read(appPreferencesRepositoryProvider)
         .getShowAllComments();
-    if (mounted) {
+    if (mounted && !_commentFilterTouched) {
       setState(() {
         _showAllComments = showAllComments;
       });
     }
   }
 
-  /// Get count of resolved comments from all available lines
-  int get _resolvedCount {
-    List<SubtitleLine> allLines;
-    if (_showAllComments && widget.allLinesWithComments != null) {
-      final Set<int> seenIndices = {};
-      final List<SubtitleLine> mergedLines = [];
-      for (final line in _currentMarkedLines) {
-        mergedLines.add(line);
-        seenIndices.add(line.index);
-      }
-      for (final line in widget.allLinesWithComments!) {
-        if (!seenIndices.contains(line.index)) {
-          mergedLines.add(line);
-        }
-      }
-      allLines = mergedLines;
-    } else {
-      allLines = _currentMarkedLines;
-    }
-    return allLines.where((line) => line.resolved).length;
-  }
+  /// Use one predicate for the list and its counts, so unchecking the
+  /// comment option never leaves comment-only (unmarked) cues displayed.
+  List<SubtitleLine> get _allVisibleLines =>
+      MarkedLinesFilter.apply(
+        markedLines: _currentMarkedLines,
+        allLinesWithComments: widget.allLinesWithComments,
+        includeUnmarkedComments: _showAllComments,
+      );
 
-  /// Get total count of all available lines
-  int get _totalCount {
-    if (_showAllComments && widget.allLinesWithComments != null) {
-      final Set<int> seenIndices = {};
-      int count = 0;
-      for (final line in _currentMarkedLines) {
-        seenIndices.add(line.index);
-        count++;
-      }
-      for (final line in widget.allLinesWithComments!) {
-        if (!seenIndices.contains(line.index)) {
-          count++;
-        }
-      }
-      return count;
-    }
-    return _currentMarkedLines.length;
-  }
+  int get _resolvedCount =>
+      _allVisibleLines.where((line) => line.resolved).length;
+
+  int get _totalCount => _allVisibleLines.length;
 
   List<SubtitleLine> get _displayedLines {
-    List<SubtitleLine> lines;
-    
-    if (_showAllComments && widget.allLinesWithComments != null) {
-      // Merge marked lines and lines with comments
-      final Set<int> seenIndices = {};
-      final List<SubtitleLine> mergedLines = [];
-      
-      // Add all marked lines first
-      for (final line in _currentMarkedLines) {
-        mergedLines.add(line);
-        seenIndices.add(line.index);
-      }
-      
-      // Add lines with comments that aren't already marked
-      for (final line in widget.allLinesWithComments!) {
-        if (!seenIndices.contains(line.index)) {
-          mergedLines.add(line);
-          seenIndices.add(line.index);
-        }
-      }
-      
-      // Sort by index to maintain proper order
-      mergedLines.sort((a, b) => a.index.compareTo(b.index));
-      
-      lines = mergedLines;
-    } else {
-      lines = _currentMarkedLines;
-    }
-    
-    // Apply resolved filter
+    final lines = _allVisibleLines;
     if (_resolvedFilter == 'resolved') {
       return lines.where((line) => line.resolved).toList();
-    } else if (_resolvedFilter == 'unresolved') {
+    }
+    if (_resolvedFilter == 'unresolved') {
       return lines.where((line) => !line.resolved).toList();
     }
-    
     return lines;
   }
 
@@ -347,6 +292,7 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
                             final newValue = value ?? false;
                             setState(() {
                               _showAllComments = newValue;
+                              _commentFilterTouched = true;
                             });
                             // Save the preference
                             await ref
@@ -374,25 +320,13 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
                     children: [
-                      Icon(
-                        Icons.filter_list,
-                        size: 20,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Show:',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
                       // Radio buttons for filter
-                      Wrap(
-                        spacing: 8,
-                        children: [
+                      Expanded(
+                        child: Wrap(
+                          alignment: WrapAlignment.start,
+                          spacing: 8,
+                          runSpacing: 4,
+                          children: [
                           _buildFilterChip(
                             context,
                             label: 'All',
@@ -413,7 +347,8 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
                             icon: Icons.radio_button_unchecked,
                             color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
-                        ],
+                          ],
+                        ),
                       ),
                     ],
                   ),
