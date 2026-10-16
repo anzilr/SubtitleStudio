@@ -1,7 +1,7 @@
-SubtitleStudio CP85 R5 theme-switch regression gate | 2026-10-16
-Analyzer and full Flutter test suite. Theme-route lifecycle widget
-tests now advance bounded frames (fake loading indicators animate
-forever), retaining strict controller identity checks across theme
-switches. Also covers stable Riverpod scopes, async navigation
-guards, unified light surfaces, and project settings colors.
-No native build jobs.
+SubtitleStudio SKIN-1 nine-palette resolver quality gate | 2026-10-16
+Analyzer and full Flutter unit/widget suite. New immutable palette matrix,
+independent skin/mode types, semantic editing field focus/selection tokens,
+single Material theme resolver, WCAG contrast tests for all 9 combinations,
+custom font inheritance and text preservation during preview swaps.
+New theme factory is not yet wired into MainApp, theme preferences or live
+Editor/Edit Line. No Isar schema changes; no native build jobs.
