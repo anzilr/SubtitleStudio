@@ -1,4 +1,4 @@
-SubtitleStudio SKIN-4 R3-B P1 / DESIGN-2 modal and selection gate | 2026-10-16
+SubtitleStudio SKIN-4 R3-B P1 R2 / DESIGN-2 constrained-modal regression gate | 2026-10-16
 Flutter analyze + full test suite only (no native platform builds).
 Migrate single-line and batch delete confirmation sheets, index range selection
 and selected-time shift sheets to shared StudioDesignTokens and component
@@ -12,3 +12,6 @@ Remain on refactor/riverpod-architecture only. Keep ThemeState live skin
 activation gated pending remaining toolbars, overlays and editing lifecycle
 audit, plus native Android/Windows visual acceptance. CP86 waveform stays
 separate.
+
+R2 correction: single-delete sheet must scroll when modal height is constrained;
+widget regression scrolls to the Delete action before tapping. CI gate rerun.
