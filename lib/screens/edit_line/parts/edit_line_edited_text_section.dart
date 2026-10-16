@@ -4,28 +4,8 @@ extension _EditLineEditedTextSection on EditSubtitleScreenState {
   Widget _buildEditedTextStack(BuildContext context) {
     return Stack(
                                             children: [
-                                              Container(
-                                                height:
-                                                    100, // Set a fixed height for the TextField
-                                                width: double.infinity,
-                                                padding: const EdgeInsets.all(
-                                                  8.0,
-                                                ),
-                                                decoration: BoxDecoration(
-                                                  color:
-                                                      Theme.of(
-                                                        context,
-                                                      ).colorScheme.primary,
-                                                  border: Border.all(
-                                                    color: const Color(
-                                                      0xFF0A9396,
-                                                    ),
-                                                    width: 1.5,
-                                                  ),
-                                                  borderRadius:
-                                                      BorderRadius.circular(4.0),
-                                                ),
-                                                child:
+                                              StudioCueFieldSurface(
+child:
                                                     isRawEnabled &&
                                                             _editedController
                                                                 .text
@@ -40,10 +20,7 @@ extension _EditLineEditedTextSection on EditSubtitleScreenState {
                                                                   ),
                                                           textAlign:
                                                               TextAlign.center,
-                                                          defaultStyle: TextStyle(
-                                                            color: Colors.white,
-                                                            fontSize: 16,
-                                                          ),
+                                                          defaultStyle: StudioCueFieldStyle.text(context),
                                                         )
                                                         : TextField(
                                                           controller:
@@ -63,23 +40,9 @@ extension _EditLineEditedTextSection on EditSubtitleScreenState {
                                                           inputFormatters: [
                                                             UnicodeTextInputFormatter(),
                                                           ],
-                                                          decoration: const InputDecoration(
-                                                            border:
-                                                                InputBorder.none,
-                                                            contentPadding:
-                                                                EdgeInsets.fromLTRB(
-                                                                  8.0,
-                                                                  8.0,
-                                                                  30.0,
-                                                                  8.0,
-                                                                ), // Add right padding for icon buttons
+                                                          decoration: StudioCueFieldStyle.decoration(padding: const EdgeInsets.fromLTRB(8, 8, 30, 8)),
                                                           ),
-                                                          style: const TextStyle(
-                                                            fontSize: 16,
-                                                            color: Color(
-                                                              0xFFFFFFFF,
-                                                            ),
-                                                          ),
+                                                          style: StudioCueFieldStyle.text(context),
                                                           scrollPhysics:
                                                               const ClampingScrollPhysics(), // Enable scrolling
                                                           // Balanced settings for normal keyboard with good performance
@@ -143,16 +106,7 @@ extension _EditLineEditedTextSection on EditSubtitleScreenState {
                                                   _isEditMode
                                                       ? 'Subtitle Text'
                                                       : 'Edited',
-                                                  style: const TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Color.fromARGB(
-                                                      100,
-                                                      255,
-                                                      255,
-                                                      255,
-                                                    ),
-                                                    fontSize: 12,
-                                                  ),
+                                                  style: StudioCueFieldStyle.label(context),
                                                 ),
                                               ),
                                               // Index/total count positioned at bottom-left
@@ -161,17 +115,7 @@ extension _EditLineEditedTextSection on EditSubtitleScreenState {
                                                 left: 4,
                                                 child: Text(
                                                   "${_subtitleLine?.index ?? 1}/${_subtitle?.lines.length ?? 0}",
-                                                  style: const TextStyle(
-                                                    color: Color.fromARGB(
-                                                      120,
-                                                      255,
-                                                      255,
-                                                      255,
-                                                    ),
-                                                    fontStyle: FontStyle.italic,
-                                                    fontWeight: FontWeight.normal,
-                                                    fontSize: 12,
-                                                  ),
+                                                  style: StudioCueFieldStyle.index(context),
                                                 ),
                                               ),
                                               // Copy/paste buttons positioned at top-right as a column
@@ -209,9 +153,7 @@ extension _EditLineEditedTextSection on EditSubtitleScreenState {
                                                         Icons.copy,
                                                         size: 16,
                                                       ),
-                                                      color: const Color(
-                                                        0xFFCA6702,
-                                                      ),
+                                                      color: StudioDesignTokens.of(context).primaryAction,
                                                     ),
                                                     // Only show paste original button in translation mode
                                                     if (!_isEditMode)
@@ -234,9 +176,7 @@ extension _EditLineEditedTextSection on EditSubtitleScreenState {
                                                           Icons.paste,
                                                           size: 16,
                                                         ),
-                                                        color: const Color(
-                                                          0xFFCA6702,
-                                                        ),
+                                                        color: StudioDesignTokens.of(context).primaryAction,
                                                         tooltip: "Paste Original",
                                                       ),
                                                   ],
