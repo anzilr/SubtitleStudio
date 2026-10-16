@@ -1,5 +1,24 @@
 # SubtitleStudio Refactor Roadmap v4
 
+> **WAVEFORM R6 ANDROID CRASH CONTAINMENT — October 16, 2026:**
+> The Android 14/360dp device log exposed a definite 3.8dp vertical overflow
+> caused by fixed 180dp waveform content in a 177.2dp split pane; the video
+> collapsed to zero height. The same run read 330,198,104 samples (~660MB)
+> from a legacy PCM cache before disconnecting, but the exact native cause
+> of connection loss was not captured. The Editor now reserves sufficient
+> leading pane height while waveform is shown and uses a bounded adaptive
+> video/waveform composition; tiny viewports never overflow.
+> Android now defaults to compact/tiled waveform processing, and matching
+> existing PCM caches can be streamed into the peak-cache format without
+> a full PCM allocation or another FFmpeg decode. Other platforms retain
+> their prior default. [CI 38918789679](https://github.com/anzilr/SubtitleStudio/actions/runs/38918789679):
+> **450 Flutter tests passed, zero analyzer issues** at code `72261563`.
+> [R6 diagnostic report and Android retest instructions](STUDIO_WAVEFORM_R6_ANDROID_CRASH_CONTAINMENT_2026-10-16.md).
+> **NEXT:** real-device Android verification of waveform on the existing
+> large-media session, split dragging, show/hide, zoom and cache lifecycle;
+> inspect crash/ANR logcat if the device connection still drops. The code
+> is CI-verified, not native accepted; no release sign-off.
+
 > **SKIN-4 R5 CARBON ZERO VISUAL CONSISTENCY VERIFIED — October 16, 2026:**
 > Editor appbar waveform icon and all five Home FAB action icons/labels now
 > follow live on-appbar/on-primary contrast, including Carbon Zero Light,
