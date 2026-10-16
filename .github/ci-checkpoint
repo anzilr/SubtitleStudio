@@ -1,7 +1,10 @@
-SubtitleStudio SKIN-4 R2 cue/time field pilot rerun | 2026-10-16
-Flutter analyzer and all unit/widget/integration tests. Previous R1 test-only
-failures arose from asserting colors during animated ThemeData transitions;
-R2 settles zero-duration palette transitions and clears analyzer warnings.
-Semantic cue typography now inherits selected custom app font. Live palette
-factory remains gated; existing editor routes, media and preference schemas
-are unchanged. No native platform builds.
+SubtitleStudio DESIGN-1 unified component contract quality gate | 2026-10-16
+Run Flutter analyzer and full test suite. Apply one shared Material theme
+contract to legacy AppThemes and all nine new skin palettes: sheets, dialogs,
+popup menus, dropdown menus, sliders, filled/elevated/outlined/text/icon and
+segmented buttons. Verify shared radius/surface/touch sizes across legacy and
+built-in skins and successful modal/dialog interactions. Pilot uniform semantic
+icons and sheet geometry in subtitle action bottom sheet.
+No global skin palette activation, player/waveform changes, Isar migration or
+native platform builds; remaining feature-local style overrides tracked in
+docs/refactor/STUDIO_COMPONENT_SYSTEM_2026-10-16.md.
