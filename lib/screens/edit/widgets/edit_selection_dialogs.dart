@@ -330,7 +330,7 @@ class _SelectByIndexSheetState extends State<_SelectByIndexSheet> {
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: ElevatedButton(
+                child: FilledButton(
                   onPressed: _submit,
                   child: const Text('Select'),
                 ),
