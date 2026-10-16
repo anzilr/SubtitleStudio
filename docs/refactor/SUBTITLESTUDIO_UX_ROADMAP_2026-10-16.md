@@ -1,5 +1,15 @@
 # SubtitleStudio UX roadmap — visual history, plain language, unified design, compact Edit Line
 
+> **SKIN-4 R3-A / DESIGN-2 contrast migration CI verified:** Theme-aware
+> Editor cards, shared Edit Line/Editor popup rows, formatting menus and
+> confirmation, unsaved-changes actions, and Edit Line app bar/dictionary
+> icons have been migrated with retained callbacks. The [successful Actions
+> run 38894453717](https://github.com/anzilr/SubtitleStudio/actions/runs/38894453717)
+> passed **429 tests with zero analyzer issues**. [Detailed R3-A audit/report](STUDIO_SKIN4_R3A_EDITOR_CONTRAST_2026-10-16.md).
+> Remaining dialogs, toolbar/icon foregrounds and confirmation sheets must
+> migrate before **R3-B global skin activation**; broader DESIGN-2/3 and
+> physical Android/Windows checks are pending.
+
 > **DESIGN-1 R4 component foundation verified:** All built-in skins and
 > legacy themes share Material defaults for sheets, dialogs, popups, dropdowns,
 > sliders and core button variants, with one reusable size/radius contract.
