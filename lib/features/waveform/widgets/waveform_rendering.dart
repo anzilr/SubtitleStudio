@@ -186,8 +186,11 @@ extension _WaveformRendering on WaveformWidgetState {
                       ),
                     ),
                   ),
-                  child: Row(
-                    children: [
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
                       // Zoom out button (- icon for less detail)
                       IconButton(
                         icon: const Icon(Icons.remove, size: 20),
@@ -207,9 +210,9 @@ extension _WaveformRendering on WaveformWidgetState {
                               trackHeight: 2,
                               thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
                               overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
-                              activeTrackColor: Colors.orange,
-                              inactiveTrackColor: Colors.grey[700],
-                              thumbColor: Colors.orange,
+                              activeTrackColor: Theme.of(context).colorScheme.primary,
+                              inactiveTrackColor: Theme.of(context).colorScheme.outline,
+                              thumbColor: Theme.of(context).colorScheme.primary,
                             ),
                             child: Slider(
                               // Invert value: slider right (max) = index 0 (zoomed in), slider left (min) = max index (zoomed out)
@@ -278,7 +281,7 @@ extension _WaveformRendering on WaveformWidgetState {
                         icon: Icon(
                           Icons.swap_horiz,
                           size: 20,
-                          color: state.allowOverlap ? Colors.orange : Colors.grey,
+                          color: state.allowOverlap ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                         tooltip: state.allowOverlap ? 'Overlap Enabled' : 'Overlap Disabled',
                         onPressed: () => ref.read(waveformControllerProvider.notifier).dispatch(const ToggleOverlapMode()),
@@ -293,7 +296,7 @@ extension _WaveformRendering on WaveformWidgetState {
                           width: 20,
                           height: 20,
                           colorFilter: ColorFilter.mode(
-                            state.magnetSnapEnabled ? Colors.red : Colors.grey,
+                            state.magnetSnapEnabled ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurfaceVariant,
                             BlendMode.srcIn,
                           ),
                         ),
@@ -306,10 +309,10 @@ extension _WaveformRendering on WaveformWidgetState {
                       // Add line button (hidden when in edit or add line mode)
                       if (!state.isEditMode && !state.isAddLineMode)
                         IconButton(
-                          icon: const Icon(
+                          icon: Icon(
                             Icons.add_circle_outline,
                             size: 20,
-                            color: Color(0xFF00695C), // Dark teal - matches add line overlay
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                           tooltip: 'Add New Subtitle Line',
                           onPressed: () => _triggerAddLineMode(state),
@@ -322,7 +325,7 @@ extension _WaveformRendering on WaveformWidgetState {
                       // Apply and Cancel buttons (shown when in edit mode)
                       if (state.isEditMode) ...[
                         IconButton(
-                          icon: const Icon(Icons.check, size: 20, color: Colors.green),
+                          icon: Icon(Icons.check, size: 20, color: Theme.of(context).colorScheme.primary),
                           tooltip: 'Apply Time Changes',
                           onPressed: () => _applyTimeChanges(state),
                           padding: EdgeInsets.zero,
@@ -330,7 +333,7 @@ extension _WaveformRendering on WaveformWidgetState {
                         ),
                         if (smallSpacing > 0) SizedBox(width: smallSpacing),
                         IconButton(
-                          icon: const Icon(Icons.close, size: 20, color: Colors.red),
+                          icon: Icon(Icons.close, size: 20, color: Theme.of(context).colorScheme.onSurface),
                           tooltip: 'Cancel Edit Mode',
                           onPressed: () => ref.read(waveformControllerProvider.notifier).dispatch(const ExitTimeEditMode()),
                           padding: EdgeInsets.zero,
@@ -341,7 +344,7 @@ extension _WaveformRendering on WaveformWidgetState {
                       // Add and Close buttons (shown when in add line mode)
                       if (state.isAddLineMode) ...[
                         IconButton(
-                          icon: const Icon(Icons.check, size: 20, color: Colors.green),
+                          icon: Icon(Icons.check, size: 20, color: Theme.of(context).colorScheme.primary),
                           tooltip: 'Add Line with Selected Times',
                           onPressed: () => _confirmAddLine(state),
                           padding: EdgeInsets.zero,
@@ -349,7 +352,7 @@ extension _WaveformRendering on WaveformWidgetState {
                         ),
                         if (smallSpacing > 0) SizedBox(width: smallSpacing),
                         IconButton(
-                          icon: const Icon(Icons.close, size: 20, color: Colors.red),
+                          icon: Icon(Icons.close, size: 20, color: Theme.of(context).colorScheme.onSurface),
                           tooltip: 'Cancel Add Line Mode',
                           onPressed: () => ref.read(waveformControllerProvider.notifier).dispatch(const ExitAddLineMode()),
                           padding: EdgeInsets.zero,
@@ -358,6 +361,7 @@ extension _WaveformRendering on WaveformWidgetState {
                         if (smallSpacing > 0) SizedBox(width: smallSpacing),
                       ],
                     ],
+                    ),
                   ),
                 ),
               ),
