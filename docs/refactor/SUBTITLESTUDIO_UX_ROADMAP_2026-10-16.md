@@ -1,5 +1,15 @@
 # SubtitleStudio UX roadmap — visual history, plain language, unified design, compact Edit Line
 
+> **SKIN-1 R2 COMPLETE (October 16, 2026):** The shared nine-theme
+> palette resolver, semantic field/caret/focus/selection tokens, and read-only
+> nine-preview gallery are implemented and [CI-verified with 392 passing
+> tests](https://github.com/anzilr/SubtitleStudio/actions/runs/38867646977)
+> (zero analyzer issues). The new theme resolver is **not yet wired to MainApp**;
+> no saved preferences or live editing widgets were changed. [Implementation
+> report](STUDIO_SKIN1_THEME_FOUNDATION_2026-10-16.md). Next: SKIN-2 safe
+> independent persistence/controller migration, then SKIN-3 Appearance Settings
+> and SKIN-4 text-field redesign before rollout.
+
 > **Three-skin UX architecture approved — October 16, 2026:** CP85 R6
 > Android stability is **user-confirmed complete**. The app will offer
 > **Carbon & Jade**, **Copper Cinema**, and **Aster Violet**, each with
