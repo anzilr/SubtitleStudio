@@ -76,7 +76,7 @@ On 2026-10-16, [GitHub Actions 38945025518](https://github.com/anzilr/SubtitleSt
 ## CP86 R4 — Overlay color separation and second Android run
 
 **Code:** [`3f0346f`](https://github.com/anzilr/SubtitleStudio/commit/3f0346f83cf7dcdd5839bdf022de820bfa775744).  
-**Verification:** [Flutter CI 38954079893](https://github.com/anzilr/SubtitleStudio/actions/runs/38954079893) (verify completion on that run).  
+**Verification:** [Flutter CI 38954079893](https://github.com/anzilr/SubtitleStudio/actions/runs/38954079893) — **SUCCESS**, 492 Flutter tests passed, 0 analyzer issues at code `3f0346f`.  
 **Appearance policy:** Only user-reproduced functional role colors changed; the global theme/skin factory is not reopened.
 
 The waveform line remains blue. Existing subtitle duration boxes and their

@@ -9,7 +9,8 @@
 > red playhead. Both overlay and combined painter passes now invalidate on
 > color changes; appearance factory and skins remain frozen.
 > [Flutter CI](https://github.com/anzilr/SubtitleStudio/actions/runs/38954079893)
-> checks color-role and layered repaint regressions.
+> **passed: 492 Flutter tests, 0 analyzer issues** at code `3f0346f`;
+> covers color-role and layered repaint regressions.
 >
 > **NEW ANDROID NATIVE QUALIFICATION EVIDENCE:** CPH2381 Android 14 debug
 > release from `703529b` measured cold load **145,942 ms** and warm
