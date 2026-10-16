@@ -1,5 +1,21 @@
 # SubtitleStudio Refactor Roadmap v4
 
+> **SKIN-4 R4 CARBON ZERO + RAW SOURCE VERIFIED — October 16, 2026:**
+> Replaced embedded and standalone Source View's per-cue GUI fields with a
+> single raw SRT text editor (colors only; editing/save reconciliation remains
+> validated). Four built-in skins now include the signature grayscale-only
+> **Carbon Zero** (Light/Dark/Classic) as the default for unset preferences;
+> all explicitly saved skins remain respected. Home/Editor/Edit Line Settings
+> opens fullscreen and its Appearance section starts collapsed. Narrow
+> positioning-sheet overflows reported on Android have been addressed with a
+> scrollable content surface and viewport spacing. [GitHub CI 38910767459](https://github.com/anzilr/SubtitleStudio/actions/runs/38910767459)
+> verified **444 Flutter tests passed, 0 analyzer issues**, code checkpoint
+> `dd4d53aa`. [R4 report](STUDIO_SKIN4_R4_CARBON_ZERO_RAW_SOURCE_2026-10-16.md).
+> **NEXT:** debug/profile Android native acceptance of Source View,
+> Settings, all 12 appearance combinations, keyboard-constrained positioning,
+> and the still-unlocated ListTile ink assertion in user logs. Windows and
+> historical Isar upgrade acceptance remain separate; no release sign-off yet.
+
 > **SKIN-4 R3-B LIVE ACTIVATION VERIFIED — October 16, 2026:** Saved
 > skin ID and Light/Dark/Classic now drive the live MaterialApp through the
 > injectable skin catalog and the same StudioThemeFactory used by previews
