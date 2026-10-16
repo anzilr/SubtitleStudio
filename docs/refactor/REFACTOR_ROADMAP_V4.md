@@ -1,5 +1,21 @@
 # SubtitleStudio Refactor Roadmap v4
 
+> **Open-source community skin architecture — October 16, 2026:**
+> User-created skins are a required future feature, including a web-based Skin
+> Creator and importable `.sskin.json` files. The theme factory must remain
+> **data-driven**, not permanently tied to the three built-in enum values.
+> SKIN-EXT-1 introduces namespaced `StudioSkinId`, an immutable catalog of
+> `StudioSkinDefinition` data, generic palette rendering, strict colors-only
+> v1 JSON serialization/validation and a public [JSON Schema](../../schemas/subtitlestudio-skin-v1.schema.json).
+> [Format and future milestones](COMMUNITY_SKIN_FORMAT_V1.md):
+> **SKIN-EXT-2** native import/export/install; **SKIN-EXT-3** open-source,
+> client-side web creator; optional advanced customization later.
+> Neither the website nor app installer is currently implemented. Keep
+> SKIN-2's persisted skin preference a **namespaced string ID**, not an enum.
+> Preserve built-in color modes, editor lifecycle, local data and CP86 waveform
+> plans. Community skin files must not contain executable code, CSS, assets or
+> external network references.
+
 > **SKIN-1 R2 COMPLETE — October 16, 2026:** The approved nine-appearance
 > design system is implemented behind an **opt-in theme factory**: 3 skin
 > palettes × Light / Dark / Classic, semantic editing/input contrast tokens,
