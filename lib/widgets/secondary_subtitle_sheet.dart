@@ -248,7 +248,7 @@ class SecondarySubtitleSheet extends ConsumerWidget {
           backgroundColor: Theme.of(context).colorScheme.error,
           action: SnackBarAction(
             label: 'Settings',
-            textColor: Colors.white,
+            textColor: Theme.of(context).colorScheme.onError,
             onPressed: () {
               openAppSettings();
             },
