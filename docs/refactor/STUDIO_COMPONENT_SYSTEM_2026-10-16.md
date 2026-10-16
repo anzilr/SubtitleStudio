@@ -58,6 +58,14 @@ The styling contract preserves **interaction behavior**: keyboard shortcuts, foc
 
 ## Migration gates
 
+**DESIGN-2 Editor pilot expanded (R3-A, CI verified):** Both Editor menus
+now reuse `StudioMenuItemContent`, the Edit Line dictionary popup inherits
+the shared popup theme, the formatting confirmation/unsaved changes sheets
+use semantic colors and standard controls, and subtitle cards use meaningful
+selection/status roles. [SKIN-4 R3-A CI](https://github.com/anzilr/SubtitleStudio/actions/runs/38894453717):
+**429 tests passed, analyzer clean**. Further custom sheets/dialogs, and
+the global-skin activation gate remain pending. [Implementation report](STUDIO_SKIN4_R3A_EDITOR_CONTRAST_2026-10-16.md).
+
 | Milestone | Description | Status |
 |---|---|---|
 | **DESIGN-0 — inventory/contract** | Approve component types, sizing, semantics, platform adaptations and a concrete UI-debt ledger | **Started** |
