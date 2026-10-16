@@ -55,29 +55,39 @@ In every mode, the Original and Edited cue fields use a **neutral fieldSurface w
 ### Domain types
 
 ```dart
-enum StudioSkin { carbonJade, copperCinema, asterViolet }
+enum StudioSkin { carbonJade, copperCinema, asterViolet } // built-in presets
 enum StudioAppearance { light, dark, classic }
 
+// Value-object identity, NOT an enum: built-in + community.<opaque-id>.
 class StudioAppearanceSelection {
-  final StudioSkin skin;
+  final StudioSkinId skin;
   final StudioAppearance mode;
   const StudioAppearanceSelection({required this.skin, required this.mode});
 }
 ```
 
-IDs for persistence must be stable lowercase strings (`carbonJade` / `copperCinema` / `asterViolet` or an explicit snake-case serializer) and not derived from localized display names. The public UI uses friendly labels. Unknown persisted values fall back safely and are logged in debug-only diagnostics.
+Persist the **namespaced `StudioSkinId.value` string** (`builtin.carbonJade`, `builtin.copperCinema`, `builtin.asterViolet`, `community.<opaque-id>`), never an enum ordinal or display name. Legacy built-in identifiers (`carbonJade`, etc.) remain parseable. Missing imported skins fall back safely to Carbon & Jade **with a future user-visible explanation** while retaining the unrecognized ID for relinking.
+
+**Open-source extensibility (SKIN-EXT):** `StudioSkinDefinition` contains data-only Light/Dark/Classic palettes, `StudioSkinCatalog` registers built-ins + validated community definitions, and `StudioThemeFactory.fromPalette` renders all skins through one factory. File contract: [community skin v1 specification](COMMUNITY_SKIN_FORMAT_V1.md) and [machine-readable JSON Schema](../../schemas/subtitlestudio-skin-v1.schema.json). The importer/website are later milestones, not enabled by SKIN-1.
 
 ### Shared theme resolver
 
 ```dart
-ThemeData resolveStudioTheme(
-  StudioSkin skin,
+// All skins, including future imported ones, feed the same renderer.
+ThemeData StudioThemeFactory.fromPalette(
+  StudioPalette palette, {
+  String? fontFamily,
+});
+
+// Built-ins retain a convenience factory:
+ThemeData StudioThemeFactory.resolve(
+  StudioSkin builtInSkin,
   StudioAppearance mode, {
   String? fontFamily,
 });
 ```
 
-Make a single factory build `ThemeData` from `StudioPalette(skin, mode)` and `StudioDesignTokens`; share component/theme typography and spacing. Do **not** keep a separate `ThemeData` implementation per combination. Define all 9 palette **data** combinations and test exhaustive resolution; cache pure theme data when practical, while custom-font overrides remain safe.
+The future injected catalog resolves `StudioSkinId` to `StudioSkinDefinition` then `StudioPalette`. Make a single factory build `ThemeData` from palette data and `StudioDesignTokens`; share component/theme typography and spacing. Do **not** keep a separate `ThemeData` implementation per combination. Define all 9 palette **data** combinations and test exhaustive resolution; cache pure theme data when practical, while custom-font overrides remain safe.
 
 Semantic roles at minimum:
 - canvas, surface, raisedSurface, fieldSurface, onSurface, mutedText;
@@ -92,7 +102,7 @@ Semantic roles at minimum:
 
 ### Independent persisted settings — recommended approach
 
-**Recommended canonical solution:** retain `Preferences.themeMode` as the mode field and add a new nullable `Preferences.skinId` (or `studioSkin`) field to the **same existing Isar Preferences collection**, accessed **only** via `PreferencesStore` / `ThemePreferencesRepository`. This gives two genuinely independent persisted values without fragmenting preferences into Isar and SharedPreferences. It requires one isolated Isar schema/code-generation change. Do **not** change subtitle collection/checkpoint schemas or project documents.
+**Recommended canonical solution:** retain `Preferences.themeMode` as the mode field and add a new nullable **namespaced `String? Preferences.skinId`** field to the **same existing Isar Preferences collection**, accessed **only** via `PreferencesStore` / `ThemePreferencesRepository`. This gives two genuinely independent persisted values without fragmenting preferences into Isar and SharedPreferences. It requires one isolated Isar schema/code-generation change. Do **not** change subtitle collection/checkpoint schemas or project documents.
 
 Implementation gate:
 1. Confirm compatibility and generated `models.g.dart` output with the pinned `isar_community` generator. If generation isn't possible in the execution environment, use the normal local build_runner process and obtain/verify the generated file rather than manually editing it.
@@ -145,9 +155,11 @@ Do not advance SKIN-4 until SKIN-1–3 and Editor lifecycle tests are green. Kee
 | Accessibility | 200% text scale, screen reader semantics, non-color status, >=48dp important touch actions |
 | Isar upgrade | Old projects/checkpoints unaffected; generated schema consistent and restore works |
 
-## Out of scope
+## Community extensibility — required future milestones
 
-- A customizable fourth skin or custom user-picked hex palette.
+- **SKIN-EXT-1:** typed namespaced skin IDs, immutable definitions/catalog, shared data-only renderer, portable JSON v1 codec, validation and public schema. Code implementation precedes SKIN-2 so the database stores a generic string instead of an enum.\n- **SKIN-EXT-2:** local preview/import/export on Android/desktop, safe app-owned storage, duplicate-ID collision handling, missing-file fallback and accessibility tests.\n- **SKIN-EXT-3:** open-source, client-side web Skin Creator for editing the 12 semantic color roles across all three modes, live Editor preview, contrast help, schema validation and portable export. No account/backend required for v1.\n- **SKIN-EXT-4:** optional future advanced customizations subject to security, accessibility and user testing. Executable code or arbitrary CSS/HTML is not in v1.\n\nFull spec: [Community skin format and creator roadmap](COMMUNITY_SKIN_FORMAT_V1.md).\n\n## Out of scope
+
+- A fourth **bundled** skin is not planned. Community-created skins and local imports **are supported architectural requirements**, implemented later in SKIN-EXT-2, while the v1 format supports custom semantic colors.
 - Automated skin changes based on time of day.
 - A fourth `Follow System` mode (can be proposed separately).
 - Desktop-specific shell redesign or storage rewrite.
