@@ -448,7 +448,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
+                Row(
                   children: [
                     Icon(Icons.camera_alt, color: Theme.of(context).colorScheme.tertiary, size: 28),
                     SizedBox(width: 12),
