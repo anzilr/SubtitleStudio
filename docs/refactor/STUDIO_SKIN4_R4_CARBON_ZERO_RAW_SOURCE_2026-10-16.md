@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-16  
 **Branch:** `refactor/riverpod-architecture`  
-**Flutter quality gate:** [R4 run 38909487358](https://github.com/anzilr/SubtitleStudio/actions/runs/38909487358) (verification status to be confirmed after workflow completion).  
+**Flutter quality gate:** [Successful R4 run 38910767459](https://github.com/anzilr/SubtitleStudio/actions/runs/38910767459), verified at code checkpoint `dd4d53aa7d01c8f1c4aff384a60a4a67e864d4c6`: **444 Flutter tests passed; analyzer reported no issues**.  
 **Native Android/Windows acceptance:** NOT YET PERFORMED.
 
 ## Intent and behavior
@@ -25,3 +25,13 @@
 - No upstream/default branch or release tag mutation.
 - No Isar schema regeneration, audio decoder, waveform signal-processing or online MSone submission changes.
 - Native Android, Windows, and historical on-disk Isar upgrade acceptance remain user-operated checkpoints.
+
+## CI gate history
+
+- R4 first gates encountered invalid `const` expressions in theme-aware Settings and positioning controls. Corrected without relaxing analyzer rules.
+- Run 38908851588: 443 passed, one 360dp positioning test overflowed to the right by 41px.
+- Run 38909487358: 443 passed, same test narrowed to 8.7px.
+- Run 38910251362: 443 passed, same test narrowed to 0.7px.
+- **Run 38910767459:** all **444 passed**, analyzer clean. No device build executed in CI.
+
+**Release gate:** Android native debug/profile manual acceptance is next; log's `ListTile` Material-ink assertion has not been positively traced to a specific widget and should be monitored on device. Dependency compatibility warnings from Gradle/AGP/Kotlin are nonblocking for the preceding debug build but require a separate upgrade plan.
