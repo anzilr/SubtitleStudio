@@ -87,7 +87,7 @@ void main() {
     addTearDown(container.dispose);
     final notifier = container.read(themeControllerProvider.notifier);
     // These choices intentionally equal the startup fallback values.
-    await notifier.setSkin(StudioSkinId.carbonJade);
+    await notifier.setSkin(StudioSkinId.carbonZero);
     await notifier.setAppearance(StudioAppearance.classic);
     prefs.initial.complete(const ThemePreferenceSnapshot(
       exists: true,
@@ -96,9 +96,9 @@ void main() {
     ));
     await _flush();
     final selected = container.read(themeControllerProvider);
-    expect(selected.skinId, StudioSkinId.carbonJade);
+    expect(selected.skinId, StudioSkinId.carbonZero);
     expect(selected.appearance, StudioAppearance.classic);
-    expect(prefs.savedSkin, StudioSkinId.carbonJade.value);
+    expect(prefs.savedSkin, StudioSkinId.carbonZero.value);
     expect(prefs.savedMode, 'classic');
   });
 
@@ -130,7 +130,7 @@ void main() {
     expect(prefs.savedMode, 'classic');
   });
 
-  test('legacy modes remain exact and a missing skin becomes Carbon & Jade',
+  test('legacy modes remain exact and a missing skin becomes Carbon Zero',
       () async {
     for (final mode in ['light', 'dark', 'classic']) {
       final prefs = _FakeThemeStore()
@@ -145,7 +145,7 @@ void main() {
       await _flush();
       final state = container.read(themeControllerProvider);
       expect(state.appearance.storageId, mode);
-      expect(state.skinId, StudioSkinId.carbonJade);
+      expect(state.skinId, StudioSkinId.carbonZero);
       expect(state.isLoaded, isTrue);
       container.dispose();
     }
