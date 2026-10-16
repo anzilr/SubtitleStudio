@@ -86,7 +86,7 @@ class _IsolatedLoaderState extends State<IsolatedLoader>
           height: 8,
           width: width,
           decoration: BoxDecoration(
-            color: isActive ? Colors.blue : Colors.white,
+            color: isActive ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(8),
           ),
         );
