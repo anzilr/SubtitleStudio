@@ -1,5 +1,19 @@
 # SubtitleStudio Refactor Roadmap v4
 
+> **Visual identity decision gate — October 16, 2026 (OPEN):** The user
+> reports CP85 R6 Android stability testing **completed**; this is
+> user-reported device validation, separate from the last successful
+> CP85 R5 CI gate (386 tests / analyzer clean). Before further visual
+> implementation, evaluate three **unselected** palette families—
+> **Carbon & Jade**, **Copper Cinema**, and **Aster Violet**—in Light,
+> Dark, and genuinely differentiated near-black Classic modes.
+> See [Studio palette decision document](STUDIO_PALETTE_DECISION_2026-10-16.md).
+> **Do not apply an accent in production before user selection.**
+> Pilot redesigned neutral, high-contrast original/edited Edit Line fields
+> before broader styling; fix field use of `colorScheme.primary` as a
+> background and forced white helper/text colors. Resume the original
+> waveform/native qualification roadmap once palette direction is approved.
+
 > **October 16, 2026 — CP85 R5 Android theme regressions addressed in code:**
 > [CI run 38861456875](https://github.com/anzilr/SubtitleStudio/actions/runs/38861456875):
 > **386 tests passing; no analyzer issues.** Stable Editor/Edit Line
