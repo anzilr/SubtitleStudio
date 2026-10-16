@@ -104,7 +104,7 @@ Future<void> _tapMode(WidgetTester tester, StudioAppearance mode) async {
 }
 
 void main() {
-  testWidgets('shows nine built-in swatches and an honest preview-only notice',
+  testWidgets('shows nine built-in swatches and an live appearance notice',
       (tester) async {
     final store = _AppearanceStore();
     await _pumpSettings(tester, store, width: 320);
@@ -117,7 +117,7 @@ void main() {
         findsOneWidget);
     expect(find.byKey(const ValueKey('studio-editor-preview')),
         findsOneWidget);
-    expect(find.byKey(const ValueKey('studio-preview-only-notice')),
+    expect(find.byKey(const ValueKey('studio-live-skin-notice')),
         findsOneWidget);
     expect(tester.takeException(), isNull);
   });
