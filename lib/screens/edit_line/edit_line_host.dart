@@ -19,6 +19,9 @@ class EditSubtitleScreenHost extends StatefulWidget {
   final Duration? startVideoPosition;
   final List<SimpleSubtitleLine>? secondarySubtitles;
 
+  @visibleForTesting
+  final EditLineController Function()? controllerFactory;
+
   const EditSubtitleScreenHost({
     super.key,
     required this.subtitleId,
@@ -30,6 +33,7 @@ class EditSubtitleScreenHost extends StatefulWidget {
     this.isVideoLoaded = false,
     this.startVideoPosition,
     this.secondarySubtitles,
+    this.controllerFactory,
   });
 
   @override
@@ -54,6 +58,8 @@ class _EditSubtitleScreenHostState extends State<EditSubtitleScreenHost> {
         secondarySubtitles: widget.secondarySubtitles,
       ),
     ),
+    if (widget.controllerFactory != null)
+      editLineControllerProvider.overrideWith(widget.controllerFactory!),
   ];
 
   @override
@@ -76,6 +82,8 @@ class _EditSubtitleScreenHostState extends State<EditSubtitleScreenHost> {
           secondarySubtitles: widget.secondarySubtitles,
         ),
       ),
+      if (widget.controllerFactory != null)
+        editLineControllerProvider.overrideWith(widget.controllerFactory!),
     ];
   }
 
@@ -89,7 +97,8 @@ class _EditSubtitleScreenHostState extends State<EditSubtitleScreenHost> {
         oldWidget.editMode != widget.editMode ||
         oldWidget.videoPath != widget.videoPath ||
         oldWidget.isVideoLoaded != widget.isVideoLoaded ||
-        !identical(oldWidget.secondarySubtitles, widget.secondarySubtitles)) {
+        !identical(oldWidget.secondarySubtitles, widget.secondarySubtitles) ||
+        oldWidget.controllerFactory != widget.controllerFactory) {
       _resetOverrides();
     }
   }
