@@ -39,12 +39,12 @@ extension _HomeConfirmationDialogs on _HomeScreenContentState {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.red.withValues(alpha: 0.1),
+                        color: Theme.of(context).colorScheme.error.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
                         Icons.delete_outline,
-                        color: Colors.red,
+                        color: Theme.of(context).colorScheme.error,
                         size: 28,
                       ),
                     ),
@@ -80,10 +80,10 @@ extension _HomeConfirmationDialogs on _HomeScreenContentState {
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.red.withValues(alpha: 0.05),
+                  color: Theme.of(context).colorScheme.error.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: Colors.red.withValues(alpha: 0.2),
+                    color: Theme.of(context).colorScheme.error.withValues(alpha: 0.2),
                     width: 1,
                   ),
                 ),
@@ -94,14 +94,14 @@ extension _HomeConfirmationDialogs on _HomeScreenContentState {
                       children: [
                         Icon(
                           Icons.warning_amber_rounded,
-                          color: Colors.red.shade600,
+                          color: Theme.of(context).colorScheme.error,
                           size: 20,
                         ),
                         const SizedBox(width: 8),
                         Text(
                           "Warning",
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: Colors.red.shade700,
+                            color: Theme.of(context).colorScheme.error,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -111,7 +111,7 @@ extension _HomeConfirmationDialogs on _HomeScreenContentState {
                     Text(
                       'You are about to permanently delete the session:',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.red.shade700,
+                        color: Theme.of(context).colorScheme.error,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -119,7 +119,7 @@ extension _HomeConfirmationDialogs on _HomeScreenContentState {
                       width: double.infinity,
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.red.withValues(alpha: 0.1),
+                        color: Theme.of(context).colorScheme.error.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -135,7 +135,7 @@ extension _HomeConfirmationDialogs on _HomeScreenContentState {
                     Text(
                       'All subtitle lines, edits, and progress will be permanently lost.',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.red.shade600,
+                        color: Theme.of(context).colorScheme.error,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -165,7 +165,7 @@ extension _HomeConfirmationDialogs on _HomeScreenContentState {
                           children: [
                             Icon(
                               Icons.close,
-                              color: Theme.of(context).colorScheme.onSurface,
+                              color: Theme.of(context).colorScheme.onError,
                               size: 20,
                             ),
                             const SizedBox(width: 8),
@@ -191,8 +191,8 @@ extension _HomeConfirmationDialogs on _HomeScreenContentState {
                           _deleteSession(session);
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          foregroundColor: Colors.white,
+                          backgroundColor: Theme.of(context).colorScheme.error,
+                          foregroundColor: Theme.of(context).colorScheme.onError,
                           elevation: 0,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -266,12 +266,12 @@ extension _HomeConfirmationDialogs on _HomeScreenContentState {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.red.withValues(alpha: 0.1),
+                        color: Theme.of(context).colorScheme.error.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.delete_sweep,
-                        color: Colors.red,
+                        color: Theme.of(context).colorScheme.error,
                         size: 32,
                       ),
                     ),
@@ -290,7 +290,7 @@ extension _HomeConfirmationDialogs on _HomeScreenContentState {
                           Text(
                             'This action cannot be undone',
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Colors.red,
+                              color: Theme.of(context).colorScheme.error,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -308,10 +308,10 @@ extension _HomeConfirmationDialogs on _HomeScreenContentState {
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.red.withValues(alpha: 0.05),
+                  color: Theme.of(context).colorScheme.error.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: Colors.red.withValues(alpha: 0.2),
+                    color: Theme.of(context).colorScheme.error.withValues(alpha: 0.2),
                     width: 1,
                   ),
                 ),
@@ -320,16 +320,16 @@ extension _HomeConfirmationDialogs on _HomeScreenContentState {
                   children: [
                     Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.warning_amber,
-                          color: Colors.red,
+                          color: Theme.of(context).colorScheme.error,
                           size: 20,
                         ),
                         const SizedBox(width: 8),
                         Text(
                           'WARNING',
                           style: TextStyle(
-                            color: Colors.red.shade700,
+                            color: Theme.of(context).colorScheme.error,
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
                           ),
@@ -340,7 +340,7 @@ extension _HomeConfirmationDialogs on _HomeScreenContentState {
                     Text(
                       'You are about to permanently delete:',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.red.shade700,
+                        color: Theme.of(context).colorScheme.error,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -349,7 +349,7 @@ extension _HomeConfirmationDialogs on _HomeScreenContentState {
                       width: double.infinity,
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.red.withValues(alpha: 0.1),
+                        color: Theme.of(context).colorScheme.error.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Column(
@@ -417,7 +417,7 @@ extension _HomeConfirmationDialogs on _HomeScreenContentState {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.cancel_outlined, size: 20, color: Colors.red),
+                            Icon(Icons.cancel_outlined, size: 20, color: Theme.of(context).colorScheme.onSurface),
                             SizedBox(width: 8),
                             Text(
                               "Cancel",
@@ -469,7 +469,7 @@ extension _HomeConfirmationDialogs on _HomeScreenContentState {
                               
                               // Show success message
                               scaffoldMessenger.showSnackBar(
-                                const SnackBar(
+                                SnackBar(
                                   content: Text('All sessions cleared successfully!'),
                                   backgroundColor: Colors.green,
                                   duration: Duration(seconds: 2),
@@ -485,7 +485,7 @@ extension _HomeConfirmationDialogs on _HomeScreenContentState {
                               scaffoldMessenger.showSnackBar(
                                 SnackBar(
                                   content: Text('Failed to clear sessions: ${e.toString()}'),
-                                  backgroundColor: Colors.red,
+                                  backgroundColor: Theme.of(context).colorScheme.error,
                                   duration: const Duration(seconds: 3),
                                 ),
                               );
@@ -493,8 +493,8 @@ extension _HomeConfirmationDialogs on _HomeScreenContentState {
                           }
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          foregroundColor: Colors.white,
+                          backgroundColor: Theme.of(context).colorScheme.error,
+                          foregroundColor: Theme.of(context).colorScheme.onError,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
