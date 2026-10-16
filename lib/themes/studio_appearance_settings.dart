@@ -15,7 +15,9 @@ import 'theme_controller.dart';
 /// are saved independently but are preview-only until SKIN-4 replaces the
 /// white-on-primary Edit Line fields and activates StudioThemeFactory globally.
 class StudioAppearanceSettings extends ConsumerWidget {
-  const StudioAppearanceSettings({super.key});
+  const StudioAppearanceSettings({super.key, this.showTitle = true});
+
+  final bool showTitle;
 
   Future<void> _selectSkin(
     BuildContext context,
@@ -61,17 +63,16 @@ class StudioAppearanceSettings extends ConsumerWidget {
       key: const ValueKey('studio-appearance-settings'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            Icon(Icons.palette_outlined, color: theme.colorScheme.primary),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text('Appearance',
-                  style: theme.textTheme.titleLarge),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
+        if (showTitle) ...[
+          Row(
+            children: [
+              Icon(Icons.palette_outlined, color: theme.colorScheme.primary),
+              const SizedBox(width: 8),
+              Expanded(child: Text('Appearance', style: theme.textTheme.titleLarge)),
+            ],
+          ),
+          const SizedBox(height: 8),
+        ],
         Text(
           'Choose a skin and a theme mode separately.',
           style: theme.textTheme.bodySmall,
