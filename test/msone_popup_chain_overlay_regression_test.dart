@@ -10,12 +10,15 @@ void main() {
     'real popup menu -> selection sheet -> form Back retains '
     'editor and home touch handling',
     (tester) async {
+      final routeObserver = _MsoneModalBarrierObserver();
       var editorTaps = 0;
       var homeTaps = 0;
       var formReturns = 0;
       var choiceComplete = false;
+      var formOverlayGoneAtReturn = false;
 
       await tester.pumpWidget(MaterialApp(
+        navigatorObservers: [routeObserver],
         home: Scaffold(
           appBar: AppBar(title: const Text('Home')),
           body: Builder(builder: (homeContext) {
@@ -48,6 +51,9 @@ void main() {
                                   onReturnToEditor: () {
                                     formReturns++;
                                     choiceComplete = true;
+                                    formOverlayGoneAtReturn = routeObserver
+                                        .submissionRoute!.overlayEntries
+                                        .every((entry) => !entry.mounted);
                                   },
                                   destinationBuilder: (_, mode) =>
                                       Scaffold(
@@ -93,6 +99,12 @@ void main() {
       await tester.pumpAndSettle();
       expect(choiceComplete, isTrue);
       expect(formReturns, 1);
+      expect(routeObserver.menuBarrierGoneBeforeSheet, isTrue,
+          reason: 'The popup menu barrier must exit before choice sheet opens');
+      expect(routeObserver.sheetBarrierGoneBeforeForm, isTrue,
+          reason: 'The choice sheet barrier must exit before form opens');
+      expect(formOverlayGoneAtReturn, isTrue,
+          reason: 'The form transition must finish before editor resumes');
       expect(find.text('Editor'), findsOneWidget);
 
       // App navigation alone is insufficient: actual pointer taps must work.
@@ -110,4 +122,34 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+}
+
+class _MsoneModalBarrierObserver extends NavigatorObserver {
+  Route<dynamic>? menuRoute;
+  Route<dynamic>? sheetRoute;
+  Route<dynamic>? submissionRoute;
+  bool menuBarrierGoneBeforeSheet = false;
+  bool sheetBarrierGoneBeforeForm = false;
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (route is PopupRoute) {
+      if (menuRoute == null) {
+        menuRoute = route;
+      } else if (sheetRoute == null) {
+        menuBarrierGoneBeforeSheet = menuRoute!.overlayEntries
+            .every((entry) => !entry.mounted);
+        sheetRoute = route;
+      }
+      return;
+    }
+
+    if (route is MaterialPageRoute &&
+        sheetRoute != null &&
+        submissionRoute == null) {
+      sheetBarrierGoneBeforeForm = sheetRoute!.overlayEntries
+          .every((entry) => !entry.mounted);
+      submissionRoute = route;
+    }
+  }
 }
