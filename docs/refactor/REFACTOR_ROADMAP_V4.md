@@ -1,5 +1,18 @@
 # SubtitleStudio Refactor Roadmap v4
 
+> **SKIN-EXT-1 COMPLETE — October 16, 2026:** The open-source community
+> skin foundation is implemented and verified: namespaced skin IDs, a registry
+> for built-in and user-defined palettes, a shared `ThemeData` factory,
+> portable colors-only JSON v1 codec, contrast checks and public JSON Schema.
+> [Successful Actions run 38868963345](https://github.com/anzilr/SubtitleStudio/actions/runs/38868963345):
+> **400 tests passed, 0 analyzer issues** against code commit `26a2ece`.
+> [Community skin format/roadmap](COMMUNITY_SKIN_FORMAT_V1.md).
+> **Future only:** native installation/export UI (SKIN-EXT-2) and the open-source
+> client-side Skin Creator website (SKIN-EXT-3). No app setting was switched,
+> no imported files are installed and no project/media/Isar schema changed.
+> SKIN-2 should persist the namespaced string ID and current appearance mode
+> separately; CP86 waveform stays the original next technical checkpoint.
+
 > **Open-source community skin architecture — October 16, 2026:**
 > User-created skins are a required future feature, including a web-based Skin
 > Creator and importable `.sskin.json` files. The theme factory must remain
