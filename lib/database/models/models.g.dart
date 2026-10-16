@@ -179,68 +179,69 @@ const PreferencesSchema = CollectionSchema(
       name: r'showSubtitleBackground',
       type: IsarType.bool,
     ),
+    r'skinId': PropertySchema(id: 33, name: r'skinId', type: IsarType.string),
     r'skipDurationSeconds': PropertySchema(
-      id: 33,
+      id: 34,
       name: r'skipDurationSeconds',
       type: IsarType.long,
     ),
     r'snapshotInterval': PropertySchema(
-      id: 34,
+      id: 35,
       name: r'snapshotInterval',
       type: IsarType.long,
     ),
     r'subtitleFontPath': PropertySchema(
-      id: 35,
+      id: 36,
       name: r'subtitleFontPath',
       type: IsarType.string,
     ),
     r'subtitleFontSize': PropertySchema(
-      id: 36,
+      id: 37,
       name: r'subtitleFontSize',
       type: IsarType.double,
     ),
     r'switchLayout': PropertySchema(
-      id: 37,
+      id: 38,
       name: r'switchLayout',
       type: IsarType.string,
     ),
     r'themeMode': PropertySchema(
-      id: 38,
+      id: 39,
       name: r'themeMode',
       type: IsarType.string,
     ),
     r'translatorContactId': PropertySchema(
-      id: 39,
+      id: 40,
       name: r'translatorContactId',
       type: IsarType.string,
     ),
     r'translatorEmail': PropertySchema(
-      id: 40,
+      id: 41,
       name: r'translatorEmail',
       type: IsarType.string,
     ),
     r'translatorName': PropertySchema(
-      id: 41,
+      id: 42,
       name: r'translatorName',
       type: IsarType.string,
     ),
     r'videoVolume': PropertySchema(
-      id: 42,
+      id: 43,
       name: r'videoVolume',
       type: IsarType.double,
     ),
     r'waveformMaxPixels': PropertySchema(
-      id: 43,
+      id: 44,
       name: r'waveformMaxPixels',
       type: IsarType.long,
     ),
     r'waveformSampleRateFactor': PropertySchema(
-      id: 44,
+      id: 45,
       name: r'waveformSampleRateFactor',
       type: IsarType.long,
     ),
     r'waveformZoomMultiplier': PropertySchema(
-      id: 45,
+      id: 46,
       name: r'waveformZoomMultiplier',
       type: IsarType.double,
     ),
@@ -308,6 +309,12 @@ int _preferencesEstimateSize(
   }
   {
     final value = object.olamLastUpdateDate;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  {
+    final value = object.skinId;
     if (value != null) {
       bytesCount += 3 + value.length * 3;
     }
@@ -385,19 +392,20 @@ void _preferencesSerialize(
   writer.writeBool(offsets[30], object.showOriginalLine);
   writer.writeBool(offsets[31], object.showOriginalTextField);
   writer.writeBool(offsets[32], object.showSubtitleBackground);
-  writer.writeLong(offsets[33], object.skipDurationSeconds);
-  writer.writeLong(offsets[34], object.snapshotInterval);
-  writer.writeString(offsets[35], object.subtitleFontPath);
-  writer.writeDouble(offsets[36], object.subtitleFontSize);
-  writer.writeString(offsets[37], object.switchLayout);
-  writer.writeString(offsets[38], object.themeMode);
-  writer.writeString(offsets[39], object.translatorContactId);
-  writer.writeString(offsets[40], object.translatorEmail);
-  writer.writeString(offsets[41], object.translatorName);
-  writer.writeDouble(offsets[42], object.videoVolume);
-  writer.writeLong(offsets[43], object.waveformMaxPixels);
-  writer.writeLong(offsets[44], object.waveformSampleRateFactor);
-  writer.writeDouble(offsets[45], object.waveformZoomMultiplier);
+  writer.writeString(offsets[33], object.skinId);
+  writer.writeLong(offsets[34], object.skipDurationSeconds);
+  writer.writeLong(offsets[35], object.snapshotInterval);
+  writer.writeString(offsets[36], object.subtitleFontPath);
+  writer.writeDouble(offsets[37], object.subtitleFontSize);
+  writer.writeString(offsets[38], object.switchLayout);
+  writer.writeString(offsets[39], object.themeMode);
+  writer.writeString(offsets[40], object.translatorContactId);
+  writer.writeString(offsets[41], object.translatorEmail);
+  writer.writeString(offsets[42], object.translatorName);
+  writer.writeDouble(offsets[43], object.videoVolume);
+  writer.writeLong(offsets[44], object.waveformMaxPixels);
+  writer.writeLong(offsets[45], object.waveformSampleRateFactor);
+  writer.writeDouble(offsets[46], object.waveformZoomMultiplier);
 }
 
 Preferences _preferencesDeserialize(
@@ -447,19 +455,20 @@ Preferences _preferencesDeserialize(
     showOriginalLine: reader.readBoolOrNull(offsets[30]) ?? false,
     showOriginalTextField: reader.readBoolOrNull(offsets[31]) ?? true,
     showSubtitleBackground: reader.readBoolOrNull(offsets[32]) ?? true,
-    skipDurationSeconds: reader.readLongOrNull(offsets[33]) ?? 10,
-    snapshotInterval: reader.readLongOrNull(offsets[34]) ?? 10,
-    subtitleFontPath: reader.readStringOrNull(offsets[35]),
-    subtitleFontSize: reader.readDoubleOrNull(offsets[36]) ?? 16.0,
-    switchLayout: reader.readStringOrNull(offsets[37]) ?? 'layout1',
-    themeMode: reader.readStringOrNull(offsets[38]),
-    translatorContactId: reader.readStringOrNull(offsets[39]),
-    translatorEmail: reader.readStringOrNull(offsets[40]),
-    translatorName: reader.readStringOrNull(offsets[41]),
-    videoVolume: reader.readDoubleOrNull(offsets[42]) ?? 100.0,
-    waveformMaxPixels: reader.readLongOrNull(offsets[43]),
-    waveformSampleRateFactor: reader.readLongOrNull(offsets[44]),
-    waveformZoomMultiplier: reader.readDoubleOrNull(offsets[45]),
+    skinId: reader.readStringOrNull(offsets[33]),
+    skipDurationSeconds: reader.readLongOrNull(offsets[34]) ?? 10,
+    snapshotInterval: reader.readLongOrNull(offsets[35]) ?? 10,
+    subtitleFontPath: reader.readStringOrNull(offsets[36]),
+    subtitleFontSize: reader.readDoubleOrNull(offsets[37]) ?? 16.0,
+    switchLayout: reader.readStringOrNull(offsets[38]) ?? 'layout1',
+    themeMode: reader.readStringOrNull(offsets[39]),
+    translatorContactId: reader.readStringOrNull(offsets[40]),
+    translatorEmail: reader.readStringOrNull(offsets[41]),
+    translatorName: reader.readStringOrNull(offsets[42]),
+    videoVolume: reader.readDoubleOrNull(offsets[43]) ?? 100.0,
+    waveformMaxPixels: reader.readLongOrNull(offsets[44]),
+    waveformSampleRateFactor: reader.readLongOrNull(offsets[45]),
+    waveformZoomMultiplier: reader.readDoubleOrNull(offsets[46]),
   );
   object.id = id;
   return object;
@@ -544,17 +553,17 @@ P _preferencesDeserializeProp<P>(
     case 32:
       return (reader.readBoolOrNull(offset) ?? true) as P;
     case 33:
-      return (reader.readLongOrNull(offset) ?? 10) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 34:
       return (reader.readLongOrNull(offset) ?? 10) as P;
     case 35:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readLongOrNull(offset) ?? 10) as P;
     case 36:
-      return (reader.readDoubleOrNull(offset) ?? 16.0) as P;
-    case 37:
-      return (reader.readStringOrNull(offset) ?? 'layout1') as P;
-    case 38:
       return (reader.readStringOrNull(offset)) as P;
+    case 37:
+      return (reader.readDoubleOrNull(offset) ?? 16.0) as P;
+    case 38:
+      return (reader.readStringOrNull(offset) ?? 'layout1') as P;
     case 39:
       return (reader.readStringOrNull(offset)) as P;
     case 40:
@@ -562,12 +571,14 @@ P _preferencesDeserializeProp<P>(
     case 41:
       return (reader.readStringOrNull(offset)) as P;
     case 42:
-      return (reader.readDoubleOrNull(offset) ?? 100.0) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 43:
-      return (reader.readLongOrNull(offset)) as P;
+      return (reader.readDoubleOrNull(offset) ?? 100.0) as P;
     case 44:
       return (reader.readLongOrNull(offset)) as P;
     case 45:
+      return (reader.readLongOrNull(offset)) as P;
+    case 46:
       return (reader.readDoubleOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -3028,6 +3039,170 @@ extension PreferencesQueryFilter
     });
   }
 
+  QueryBuilder<Preferences, Preferences, QAfterFilterCondition> skinIdIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'skinId'),
+      );
+    });
+  }
+
+  QueryBuilder<Preferences, Preferences, QAfterFilterCondition>
+  skinIdIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'skinId'),
+      );
+    });
+  }
+
+  QueryBuilder<Preferences, Preferences, QAfterFilterCondition> skinIdEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'skinId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<Preferences, Preferences, QAfterFilterCondition>
+  skinIdGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'skinId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<Preferences, Preferences, QAfterFilterCondition> skinIdLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'skinId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<Preferences, Preferences, QAfterFilterCondition> skinIdBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'skinId',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<Preferences, Preferences, QAfterFilterCondition>
+  skinIdStartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'skinId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<Preferences, Preferences, QAfterFilterCondition> skinIdEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'skinId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<Preferences, Preferences, QAfterFilterCondition> skinIdContains(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'skinId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<Preferences, Preferences, QAfterFilterCondition> skinIdMatches(
+    String pattern, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'skinId',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<Preferences, Preferences, QAfterFilterCondition>
+  skinIdIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'skinId', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<Preferences, Preferences, QAfterFilterCondition>
+  skinIdIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'skinId', value: ''),
+      );
+    });
+  }
+
   QueryBuilder<Preferences, Preferences, QAfterFilterCondition>
   skipDurationSecondsEqualTo(int value) {
     return QueryBuilder.apply(this, (query) {
@@ -4916,6 +5091,18 @@ extension PreferencesQuerySortBy
     });
   }
 
+  QueryBuilder<Preferences, Preferences, QAfterSortBy> sortBySkinId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'skinId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Preferences, Preferences, QAfterSortBy> sortBySkinIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'skinId', Sort.desc);
+    });
+  }
+
   QueryBuilder<Preferences, Preferences, QAfterSortBy>
   sortBySkipDurationSeconds() {
     return QueryBuilder.apply(this, (query) {
@@ -5541,6 +5728,18 @@ extension PreferencesQuerySortThenBy
     });
   }
 
+  QueryBuilder<Preferences, Preferences, QAfterSortBy> thenBySkinId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'skinId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Preferences, Preferences, QAfterSortBy> thenBySkinIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'skinId', Sort.desc);
+    });
+  }
+
   QueryBuilder<Preferences, Preferences, QAfterSortBy>
   thenBySkipDurationSeconds() {
     return QueryBuilder.apply(this, (query) {
@@ -5961,6 +6160,14 @@ extension PreferencesQueryWhereDistinct
     });
   }
 
+  QueryBuilder<Preferences, Preferences, QDistinct> distinctBySkinId({
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'skinId', caseSensitive: caseSensitive);
+    });
+  }
+
   QueryBuilder<Preferences, Preferences, QDistinct>
   distinctBySkipDurationSeconds() {
     return QueryBuilder.apply(this, (query) {
@@ -6295,6 +6502,12 @@ extension PreferencesQueryProperty
   showSubtitleBackgroundProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'showSubtitleBackground');
+    });
+  }
+
+  QueryBuilder<Preferences, String?, QQueryOperations> skinIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'skinId');
     });
   }
 
