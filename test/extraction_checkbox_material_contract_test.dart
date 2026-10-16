@@ -2,17 +2,16 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('checkbox tiles in extraction options use Material ink surface', () {
+  test('both extraction checkbox tiles have a dedicated Material ink surface',
+      () {
     final text = File('lib/widgets/subtitle_extract_options_sheet.dart')
         .readAsStringSync();
-    expect(RegExp(r'Material\\([\\s\\S]*?child: CheckboxListTile\\(')
-        .hasMatch(text), isTrue);
-    // Flutter asserts when a decorated Container backgrounds CheckboxListTile
-    // without a local Material ancestor owning its ink splashes.
-    expect(RegExp(
-      r'Container\\(\\s*decoration: BoxDecoration\\([\\s\\S]*?'
-      r'border: Border\\.all\\(color: borderColor, width: 1\\),\\s*'
-      r'\\),\\s*child: CheckboxListTile\\(',
-    ).hasMatch(text), isFalse);
+    final tiles = RegExp(r'child: CheckboxListTile\(');
+    final safeWrappers = RegExp(
+      r'Material\([\s\S]*?clipBehavior: Clip.antiAlias,\s*'
+      r'child: CheckboxListTile\(',
+    );
+    expect(tiles.allMatches(text).length, 2);
+    expect(safeWrappers.allMatches(text).length, 2);
   });
 }
