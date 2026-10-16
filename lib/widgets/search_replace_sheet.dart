@@ -115,9 +115,7 @@ class _SearchReplaceSheetState extends ConsumerState<SearchReplaceSheet> {
     if (searchTerm.isEmpty) return;
 
     final theme = Theme.of(context);
-    final highlightColor = theme.brightness == Brightness.dark
-        ? Color(0xFFE9C46A)  // Yellow for dark mode
-        : Color(0xFF2A9D8F); // Teal for light mode
+    final highlightColor = Theme.of(context).colorScheme.primary; // Teal for light mode
 
     final shouldReplace = await showDialog<bool>(
       context: context,
@@ -131,8 +129,8 @@ class _SearchReplaceSheetState extends ConsumerState<SearchReplaceSheet> {
               'Cancel',
               style: TextStyle(
                 color: theme.brightness == Brightness.dark 
-                    ? Colors.white70 
-                    : Colors.black87,
+                    ? Theme.of(context).colorScheme.onSurfaceVariant 
+                    : Theme.of(context).colorScheme.onSurface,
               ),
             ),
           ),
@@ -221,9 +219,7 @@ class _SearchReplaceSheetState extends ConsumerState<SearchReplaceSheet> {
     final replaceTerm = _replaceController.text;
 
     final theme = Theme.of(context);
-    final highlightColor = theme.brightness == Brightness.dark
-        ? Color(0xFFE9C46A)  // Yellow for dark mode
-        : Color(0xFF2A9D8F); // Teal for light mode
+    final highlightColor = Theme.of(context).colorScheme.primary; // Teal for light mode
 
     final shouldReplace = await showDialog<bool>(
       context: context,
@@ -237,8 +233,8 @@ class _SearchReplaceSheetState extends ConsumerState<SearchReplaceSheet> {
               'Cancel',
               style: TextStyle(
                 color: theme.brightness == Brightness.dark 
-                    ? Colors.white70 
-                    : Colors.black87,
+                    ? Theme.of(context).colorScheme.onSurfaceVariant 
+                    : Theme.of(context).colorScheme.onSurface,
               ),
             ),
           ),
@@ -324,17 +320,11 @@ class _SearchReplaceSheetState extends ConsumerState<SearchReplaceSheet> {
     final borderColor = onSurfaceColor.withValues(alpha: 0.12);
 
     // Legacy highlight colors for search functionality
-    final highlightColor = isDark
-        ? Color(0xFFE9C46A)
-        : Color(0xFF2A9D8F);
+    final highlightColor = Theme.of(context).colorScheme.primary;
 
-    final selectedCardColor = isDark
-        ? Color(0xFF2A9D8F).withValues(alpha:0.3)
-        : Color(0xFF2A9D8F).withValues(alpha:0.2);
+    final selectedCardColor = Theme.of(context).colorScheme.primary.withValues(alpha: 0.2);
 
-    final matchBackgroundColor = isDark
-        ? Color(0xFF4CAF50)  // Green for dark mode - changed color
-        : Color(0xFF2196F3); // Blue for light mode - changed color
+    final matchBackgroundColor = Theme.of(context).colorScheme.primary;
 
     return SafeArea(
       child: Scaffold(
@@ -402,7 +392,7 @@ class _SearchReplaceSheetState extends ConsumerState<SearchReplaceSheet> {
                   // Search Input Section
                   Container(
                     decoration: BoxDecoration(
-                      color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                      color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                         color: borderColor,
@@ -434,7 +424,7 @@ class _SearchReplaceSheetState extends ConsumerState<SearchReplaceSheet> {
                   // Replace Input Section
                   Container(
                     decoration: BoxDecoration(
-                      color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                      color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                         color: borderColor,
@@ -466,7 +456,7 @@ class _SearchReplaceSheetState extends ConsumerState<SearchReplaceSheet> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                      color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                         color: borderColor,
@@ -543,7 +533,7 @@ class _SearchReplaceSheetState extends ConsumerState<SearchReplaceSheet> {
                       onPressed: _performSearch,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryColor,
-                        foregroundColor: Colors.white,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
@@ -577,8 +567,8 @@ class _SearchReplaceSheetState extends ConsumerState<SearchReplaceSheet> {
                             child: ElevatedButton(
                               onPressed: _searchResults.isNotEmpty ? _startSelectionMode : null,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: _searchResults.isNotEmpty ? Colors.orange : onSurfaceColor.withValues(alpha: 0.3),
-                                foregroundColor: Colors.white,
+                                backgroundColor: _searchResults.isNotEmpty ? Theme.of(context).colorScheme.tertiary : onSurfaceColor.withValues(alpha: 0.3),
+                                foregroundColor: Theme.of(context).colorScheme.onPrimary,
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
@@ -612,8 +602,8 @@ class _SearchReplaceSheetState extends ConsumerState<SearchReplaceSheet> {
                             child: ElevatedButton(
                               onPressed: _searchResults.isNotEmpty ? _replaceAll : null,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: _searchResults.isNotEmpty ? Colors.green : onSurfaceColor.withValues(alpha: 0.3),
-                                foregroundColor: Colors.white,
+                                backgroundColor: _searchResults.isNotEmpty ? Theme.of(context).colorScheme.primary : onSurfaceColor.withValues(alpha: 0.3),
+                                foregroundColor: Theme.of(context).colorScheme.onPrimary,
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
@@ -690,8 +680,8 @@ class _SearchReplaceSheetState extends ConsumerState<SearchReplaceSheet> {
                             child: ElevatedButton(
                               onPressed: _selectedIndices.isNotEmpty ? _replaceSelected : null,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: _selectedIndices.isNotEmpty ? Colors.green : onSurfaceColor.withValues(alpha: 0.3),
-                                foregroundColor: Colors.white,
+                                backgroundColor: _selectedIndices.isNotEmpty ? Theme.of(context).colorScheme.primary : onSurfaceColor.withValues(alpha: 0.3),
+                                foregroundColor: Theme.of(context).colorScheme.onPrimary,
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
@@ -739,7 +729,7 @@ class _SearchReplaceSheetState extends ConsumerState<SearchReplaceSheet> {
                           margin: const EdgeInsets.only(bottom: 8),
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                            color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
                               color: borderColor,
@@ -831,7 +821,7 @@ class _SearchReplaceSheetState extends ConsumerState<SearchReplaceSheet> {
                                                   decoration: BoxDecoration(
                                                     color: _selectionMode && _selectedIndices.contains(index)
                                                         ? selectedCardColor
-                                                        : (isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50),
+                                                        : (isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow),
                                                     borderRadius: BorderRadius.circular(12),
                                                     border: Border.all(
                                                       color: _selectionMode && _selectedIndices.contains(index)
@@ -867,7 +857,7 @@ class _SearchReplaceSheetState extends ConsumerState<SearchReplaceSheet> {
                                                             child: Text(
                                                               'Line ${result.line.index}',
                                                               style: GoogleFonts.spaceMono(
-                                                                textStyle: const TextStyle(
+                                                                textStyle: TextStyle(
                                                                   fontWeight: FontWeight.w600,
                                                                   color: Colors.white,
                                                                   fontSize: 11,
