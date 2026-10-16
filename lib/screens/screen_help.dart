@@ -277,7 +277,6 @@ class _HelpScreenState extends State<HelpScreen> with TickerProviderStateMixin {
             return _buildCategoryChip(
               'All',
               Icons.apps,
-              StudioDesignTokens.of(context).primaryAction,
               _selectedCategoryIndex == -1,
               () {
                 setState(() {
@@ -295,7 +294,6 @@ class _HelpScreenState extends State<HelpScreen> with TickerProviderStateMixin {
           return _buildCategoryChip(
             category.title,
             category.icon,
-            category.color,
             isSelected,
             () {
               setState(() {
@@ -312,7 +310,7 @@ class _HelpScreenState extends State<HelpScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildCategoryChip(String label, IconData icon, Color color, bool isSelected, VoidCallback onTap) {
+  Widget _buildCategoryChip(String label, IconData icon, bool isSelected, VoidCallback onTap) {
     final tokens = StudioDesignTokens.of(context);
     return Padding(
       padding: const EdgeInsets.only(right: 8),
@@ -434,12 +432,12 @@ class _HelpScreenState extends State<HelpScreen> with TickerProviderStateMixin {
           ),
         ),
         childrenPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        children: category.sections.map((section) => _buildSectionCard(section, category.color)).toList(),
+        children: category.sections.map((section) => _buildSectionCard(section)).toList(),
       ),
     );
   }
 
-  Widget _buildSectionCard(HelpSection section, Color categoryColor) {
+  Widget _buildSectionCard(HelpSection section) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       // ExpansionTile uses a ListTile whose ink must paint on a Material
