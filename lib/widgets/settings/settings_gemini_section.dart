@@ -42,7 +42,7 @@ extension _SettingsGeminiSection on _SettingsSheetState {
       children: [
         // Gemini AI Settings Section
         ListTile(
-          leading: const Icon(Icons.auto_awesome, color: Colors.deepPurple),
+          leading: Icon(Icons.auto_awesome, color: Theme.of(context).colorScheme.primary),
           title: const Text('Gemini AI Settings'),
           subtitle: const Text('Configure AI explanation features (accessible in dictionary menu)'),
         ),
@@ -59,7 +59,7 @@ extension _SettingsGeminiSection on _SettingsSheetState {
                   labelText: 'Gemini API Key',
                   hintText: 'Enter your Gemini API key',
                   border: const OutlineInputBorder(),
-                  prefixIcon: const Icon(Icons.vpn_key, color: Colors.deepPurple),
+                  prefixIcon: Icon(Icons.vpn_key, color: Theme.of(context).colorScheme.primary),
                   suffixIcon: _geminiApiKey != null && _geminiApiKey!.isNotEmpty
                       ? IconButton(
                           icon: const Icon(Icons.clear),
@@ -111,14 +111,14 @@ extension _SettingsGeminiSection on _SettingsSheetState {
                       Icon(
                         Icons.info_outline,
                         size: 16,
-                        color: Colors.grey[600],
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         'Get your API key from ',
                         style: TextStyle(
                           fontSize: 12,
-                          color: Colors.grey[600],
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
                       Text(
@@ -152,7 +152,7 @@ extension _SettingsGeminiSection on _SettingsSheetState {
               // Title Row
               Row(
                 children: [
-                  const Icon(Icons.model_training, color: Colors.purple, size: 24),
+                  Icon(Icons.model_training, color: Theme.of(context).colorScheme.primary, size: 24),
                   const SizedBox(width: 16),
                   const Text(
                     'AI Model',
