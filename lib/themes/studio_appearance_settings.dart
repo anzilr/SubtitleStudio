@@ -145,7 +145,7 @@ class StudioAppearanceSettings extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Text(
               'Your saved skin is not installed. Showing Carbon & Jade '
-              'as a preview; the saved skin ID is preserved.',
+              'in the app; the saved skin ID is preserved.',
               key: const ValueKey('studio-missing-skin-warning'),
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.error,
@@ -163,10 +163,9 @@ class StudioAppearanceSettings extends ConsumerWidget {
         ),
         const SizedBox(height: 10),
         Text(
-          'Skin colors are preview-only for now. Your skin choice is saved, '
-          'but the Editor and Edit Line will use it after the text-field '
-          'redesign in the next checkpoint.',
-          key: const ValueKey('studio-preview-only-notice'),
+          'Skin and theme mode changes apply throughout the app. '
+          'Your saved selection is restored when you reopen SubtitleStudio.',
+          key: const ValueKey('studio-live-skin-notice'),
           style: theme.textTheme.bodySmall,
         ),
       ],
