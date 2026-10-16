@@ -325,19 +325,10 @@ class SecondarySubtitleSheet extends ConsumerWidget {
       }
 
       if (parsedSubtitles.isNotEmpty) {
-        // Delete any existing extracted subtitle file before loading a new one
-        try {
-          final existingPath = await ref.read(editorPreferencesRepositoryProvider).getSecondarySubtitlePath(subtitleCollectionId);
-          if (existingPath != null && existingPath.isNotEmpty) {
-            await SecondarySubtitleStorage.deleteOwnedFileIfPresent(
-              existingPath, supportDirectory: await getApplicationSupportDirectory());
-          }
-        } catch (e) {
-          print('Warning: Failed to delete previous extracted subtitle file: $e');
-        }
-        
-        onSecondarySubtitlesLoaded(parsedSubtitles);
-        
+        final preferences = ref.read(editorPreferencesRepositoryProvider);
+        final previousPath =
+            await preferences.getSecondarySubtitlePath(subtitleCollectionId);
+
         // On Android, save the SAF URI instead of display path for proper file access
         String pathToSave = filePath;
         if (Platform.isAndroid && safUri != null) {
@@ -345,9 +336,20 @@ class SecondarySubtitleSheet extends ConsumerWidget {
           print('Saving SAF URI for secondary subtitle: $pathToSave');
         }
         
-        // Persist the path (or URI on Android) and mark that secondary is not original
-        await ref.read(editorPreferencesRepositoryProvider).saveSecondarySubtitlePath(subtitleCollectionId, pathToSave);
-        await ref.read(editorPreferencesRepositoryProvider).setSecondaryIsOriginal(subtitleCollectionId, false);
+        // Replace the preference before deleting any previous managed track.
+        await preferences.saveSecondarySubtitlePath(subtitleCollectionId, pathToSave);
+        await preferences.setSecondaryIsOriginal(subtitleCollectionId, false);
+        onSecondarySubtitlesLoaded(parsedSubtitles);
+        if (previousPath != pathToSave) {
+          try {
+            await SecondarySubtitleStorage.deleteOwnedFileIfPresent(
+              previousPath,
+              supportDirectory: await getApplicationSupportDirectory(),
+            );
+          } catch (error) {
+            debugPrint('Previous secondary cleanup skipped: ${error.runtimeType}');
+          }
+        }
         if (context.mounted) {
           Navigator.pop(context);
         }
@@ -381,22 +383,21 @@ class SecondarySubtitleSheet extends ConsumerWidget {
     }
 
     if (originalTextSubtitles.isNotEmpty) {
-      // Delete any existing extracted subtitle file when switching to original text
-      try {
-        final existingPath = await ref.read(editorPreferencesRepositoryProvider).getSecondarySubtitlePath(subtitleCollectionId);
-        if (existingPath != null && existingPath.isNotEmpty) {
-          await SecondarySubtitleStorage.deleteOwnedFileIfPresent(
-              existingPath, supportDirectory: await getApplicationSupportDirectory());
-        }
-      } catch (e) {
-        print('Warning: Failed to delete previous extracted subtitle file: $e');
-      }
-      
+      final preferences = ref.read(editorPreferencesRepositoryProvider);
+      final previousPath =
+          await preferences.getSecondarySubtitlePath(subtitleCollectionId);
+      // Original text wins on reload even if a process dies before cleanup.
+      await preferences.setSecondaryIsOriginal(subtitleCollectionId, true);
+      await preferences.removeSecondarySubtitlePath(subtitleCollectionId);
       onSecondarySubtitlesLoaded(originalTextSubtitles);
-  // Persist that secondary subtitles should be the original text for this collection
-  await ref.read(editorPreferencesRepositoryProvider).setSecondaryIsOriginal(subtitleCollectionId, true);
-  // Also clear any saved external path
-  await ref.read(editorPreferencesRepositoryProvider).removeSecondarySubtitlePath(subtitleCollectionId);
+      try {
+        await SecondarySubtitleStorage.deleteOwnedFileIfPresent(
+          previousPath,
+          supportDirectory: await getApplicationSupportDirectory(),
+        );
+      } catch (error) {
+        debugPrint('Previous secondary cleanup skipped: ${error.runtimeType}');
+      }
       if (context.mounted) {
         Navigator.pop(context);
       }

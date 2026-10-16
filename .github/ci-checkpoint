@@ -53,3 +53,5 @@ CP87 R4 MSone screen lifecycle: asynchronous file pick and submit callbacks guar
 CP87 R4B Isar integration: lost legacy code_cache reference is safely cleared while primary editor can continue; non-ephemeral missing user-picked path retained for re-pick; durable secondary file parses. Owned secondary cleanup now requires app support root (plus strictly private Android cache location).
 
 CP87 R4 consolidated regression gate 2026-10-16: native Android session recovery, persistent embedded secondary, high-contrast popup icons, MSone route lifecycle checks and Isar integration tests. Flutter analyze/tests. Native acceptance pending.
+
+CP87 R4C source replacement order: all three secondary-selection flows now save new preference before deleting previously managed extracted subtitles; avoiding stale preference on failed write/route interruption.
