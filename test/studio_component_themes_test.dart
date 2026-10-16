@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:subtitle_studio/themes/studio_design_tokens.dart';
-import 'package:subtitle_studio/themes/studio_palette.dart';
 import 'package:subtitle_studio/themes/studio_skin.dart';
 import 'package:subtitle_studio/themes/studio_theme_factory.dart';
 import 'package:subtitle_studio/themes/theme.dart';
@@ -29,11 +28,11 @@ void main() {
       expect(dialog, isA<RoundedRectangleBorder>(), reason: context);
       expect(popup, isA<RoundedRectangleBorder>(), reason: context);
       final sheetRadius =
-          (sheet! as RoundedRectangleBorder).borderRadius.resolve(null);
+          (sheet! as RoundedRectangleBorder).borderRadius.resolve(TextDirection.ltr);
       final dialogRadius =
-          (dialog! as RoundedRectangleBorder).borderRadius.resolve(null);
+          (dialog! as RoundedRectangleBorder).borderRadius.resolve(TextDirection.ltr);
       final popupRadius =
-          (popup! as RoundedRectangleBorder).borderRadius.resolve(null);
+          (popup! as RoundedRectangleBorder).borderRadius.resolve(TextDirection.ltr);
       expect(sheetRadius.topLeft.x, StudioRadius.sheet, reason: context);
       expect(sheetRadius.bottomLeft.x, 0, reason: context);
       expect(dialogRadius.topLeft.x, StudioRadius.sheet, reason: context);
