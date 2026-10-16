@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'studio_component_themes.dart';
 import 'studio_design_tokens.dart';
 
 /// A restrained Material theme for the whole application. Feature widgets
@@ -58,7 +59,7 @@ class AppThemes {
       bodyColor: scheme.onSurface,
       displayColor: scheme.onSurface,
     );
-    return ThemeData(
+    final base = ThemeData(
       useMaterial3: true,
       brightness: scheme.brightness,
       colorScheme: scheme,
@@ -108,6 +109,7 @@ class AppThemes {
         foregroundColor: scheme.onPrimary,
       ),
     );
+    return StudioComponentThemes.apply(base);
   }
 
   // Keep the light canvas pure white; elevated components are distinguished
