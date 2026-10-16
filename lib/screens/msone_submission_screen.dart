@@ -1411,7 +1411,7 @@ class _MsoneSubmissionScreenState extends ConsumerState<MsoneSubmissionScreen> {
               ? 'Selected: ${path.basename(_originalSubtitlePath!)}'
               : 'Choose the original subtitle file (required)',
             icon: Icons.subtitles_outlined,
-            gradientColors: [Colors.orange, Colors.orange.shade700],
+            gradientColors: [StudioDesignTokens.of(context).primaryAction, StudioDesignTokens.of(context).primaryAction],
             isSelected: _originalSubtitlePath != null,
             isRequired: true,
             onTap: () => _selectFile('original'),
