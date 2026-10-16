@@ -86,7 +86,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
         checkpoint: checkpoint,
         children: [], // No nested children in simplified view
         depth: 0, // All at same depth (linear)
-        branchColor: Colors.blue,
+        branchColor: Theme.of(context).colorScheme.primary,
       );
     }).toList();
   }
@@ -197,7 +197,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                   children: [
                     Icon(
                       futureCheckpointsCount > 0 ? Icons.warning_amber : Icons.restore,
-                      color: futureCheckpointsCount > 0 ? Colors.orange : Theme.of(context).primaryColor,
+                      color: futureCheckpointsCount > 0 ? Theme.of(context).colorScheme.tertiary : Theme.of(context).primaryColor,
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -220,22 +220,22 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.orange.withValues(alpha: 0.1),
+                      color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                      border: Border.all(color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.3)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.info_outline, size: 16, color: Colors.orange.shade700),
+                            Icon(Icons.info_outline, size: 16, color: Theme.of(context).colorScheme.tertiary),
                             const SizedBox(width: 8),
                             Text(
                               'Note',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: Colors.orange.shade700,
+                                color: Theme.of(context).colorScheme.tertiary,
                               ),
                             ),
                           ],
@@ -245,7 +245,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                           '$futureCheckpointsCount newer change${futureCheckpointsCount > 1 ? 's are' : ' is'} preserved as alternate history. Making a new edit from here creates a new branch.',
                           style: TextStyle(
                             fontSize: 13,
-                            color: Colors.orange.shade900,
+                            color: Theme.of(context).colorScheme.tertiary,
                           ),
                         ),
                       ],
@@ -276,7 +276,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                       onPressed: () => Navigator.pop(context, true),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Theme.of(context).primaryColor,
-                        foregroundColor: Colors.white,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
                       ),
                       child: const Text('Undo to Here'),
                     ),
@@ -406,7 +406,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                       onPressed: () => Navigator.pop(context, nameController.text),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Theme.of(context).primaryColor,
-                        foregroundColor: Colors.white,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
                       ),
                       child: const Text('Create'),
                     ),
@@ -450,7 +450,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
               children: [
                 const Row(
                   children: [
-                    Icon(Icons.camera_alt, color: Colors.orange, size: 28),
+                    Icon(Icons.camera_alt, color: Theme.of(context).colorScheme.tertiary, size: 28),
                     SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -467,22 +467,22 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.1),
+                    color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                    border: Border.all(color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.3)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.info_outline, size: 16, color: Colors.orange.shade700),
+                          Icon(Icons.info_outline, size: 16, color: Theme.of(context).colorScheme.tertiary),
                           const SizedBox(width: 8),
                           Text(
                             'What is an In-app Snapshot?',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              color: Colors.orange.shade700,
+                              color: Theme.of(context).colorScheme.tertiary,
                             ),
                           ),
                         ],
@@ -492,7 +492,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                         'Saves a snapshot in this project\'s edit history. It does not create a separate backup file. Export your project for an independent copy.',
                         style: TextStyle(
                           fontSize: 13,
-                          color: Colors.orange.shade900,
+                          color: Theme.of(context).colorScheme.tertiary,
                         ),
                       ),
                     ],
@@ -525,8 +525,8 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                     ElevatedButton(
                       onPressed: () => Navigator.pop(context, nameController.text),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                        foregroundColor: Colors.white,
+                        backgroundColor: Theme.of(context).colorScheme.tertiary,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
                       ),
                       child: const Text('Create'),
                     ),
@@ -626,19 +626,19 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
     if (checkpointType == 'snapshot') {
       return {
         'icon': Icons.save, // Full Backup icon
-        'color': Colors.orange,
+        'color': Theme.of(context).colorScheme.tertiary,
         'size': 20.0,
       };
     } else if (operationType == 'manual') {
       return {
         'icon': Icons.bookmark_add, // Save Point icon
-        'color': Colors.purple,
+        'color': Theme.of(context).colorScheme.secondary,
         'size': 18.0,
       };
     } else {
       return {
         'icon': Icons.circle,
-        'color': Colors.blue,
+        'color': Theme.of(context).colorScheme.primary,
         'size': 12.0,
       };
     }
@@ -677,7 +677,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                 bottom: 0,
                 child: Container(
                   width: 2,
-                  color: Colors.blue.withValues(alpha: 0.3),
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
                 ),
               ),
               // Hide line at top for first item
@@ -724,11 +724,11 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                   typeDetails['icon'],
                   size: dotSize,
                   color: isCurrentCheckpoint 
-                      ? Colors.amber 
+                      ? Theme.of(context).colorScheme.tertiary 
                       : typeDetails['color'],
                   shadows: isCurrentCheckpoint ? [
                     Shadow(
-                      color: Colors.amber.withValues(alpha: 0.5),
+                      color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.5),
                       blurRadius: 8,
                     ),
                   ] : null,
@@ -751,18 +751,18 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: isCurrentCheckpoint
-                            ? (isDark ? onSurfaceColor.withValues(alpha: 0.08) : Colors.grey.shade100)
+                            ? (isDark ? onSurfaceColor.withValues(alpha: 0.08) : Theme.of(context).colorScheme.surfaceContainerLow)
                             : (isDark ? onSurfaceColor.withValues(alpha: 0.03) : Colors.white),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: isCurrentCheckpoint 
-                              ? Colors.amber.withValues(alpha: 0.5)
+                              ? Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.5)
                               : borderColor,
                           width: isCurrentCheckpoint ? 2 : 1,
                         ),
                         boxShadow: isCurrentCheckpoint ? [
                           BoxShadow(
-                            color: Colors.amber.withValues(alpha: 0.15),
+                            color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.15),
                             blurRadius: 8,
                             spreadRadius: 0,
                           ),
@@ -1056,7 +1056,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                           foregroundColor: onSurfaceColor,
                           side: BorderSide(color: borderColor),
                         ),
-                        icon: const Icon(Icons.close, size: 18),
+                        icon: Icon(Icons.close, size: 18),
                         label: const Text('Close'),
                       ),
                     ),
@@ -1069,10 +1069,10 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                     child: ElevatedButton.icon(
                       onPressed: _createSnapshot,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                        foregroundColor: Colors.white,
+                        backgroundColor: Theme.of(context).colorScheme.tertiary,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
                       ),
-                      icon: const Icon(Icons.save, size: 18),
+                      icon: Icon(Icons.save, size: 18),
                       label: const Text('Snapshot'),
                     ),
                   ),
@@ -1085,9 +1085,9 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                       onPressed: _createManualCheckpoint,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Theme.of(context).primaryColor,
-                        foregroundColor: Colors.white,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
                       ),
-                      icon: const Icon(Icons.bookmark_add, size: 18),
+                      icon: Icon(Icons.bookmark_add, size: 18),
                       label: const Text('Save Point'),
                     ),
                   ),
