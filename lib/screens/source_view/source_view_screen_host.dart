@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:subtitle_studio/themes/studio_design_tokens.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/screens/source_view/source_view_controller.dart';
@@ -64,6 +65,7 @@ class _SourceViewRiverpodHost extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(sourceViewControllerProvider);
+    final tokens = StudioDesignTokens.of(context);
     final controller = ref.read(sourceViewControllerProvider.notifier);
 
     ref.listen<SourceViewState>(sourceViewControllerProvider, (previous, next) {
@@ -94,14 +96,14 @@ class _SourceViewRiverpodHost extends ConsumerWidget {
                         'Tap here to save to a new location ➤',
                         style: TextStyle(
                           decoration: TextDecoration.underline,
-                          color: Colors.white,
+                          color: tokens.onCaution,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
                   ],
                 ),
-                backgroundColor: Colors.orange[700],
+                backgroundColor: tokens.caution,
                 duration: const Duration(seconds: 8),
                 behavior: SnackBarBehavior.floating,
               ),
@@ -139,6 +141,7 @@ class _SourceViewWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = StudioDesignTokens.of(context);
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
@@ -152,7 +155,7 @@ class _SourceViewWidget extends StatelessWidget {
       child: _SourceViewShortcuts(
         controller: controller,
         child: Scaffold(
-          backgroundColor: Theme.of(context).colorScheme.surface,
+          backgroundColor: tokens.surface,
           resizeToAvoidBottomInset: true,
           appBar: _buildAppBar(context),
           body: _buildBody(context),
@@ -163,11 +166,12 @@ class _SourceViewWidget extends StatelessWidget {
 
   /// Build the app bar with save functionality
   AppBar _buildAppBar(BuildContext context) {
+    final tokens = StudioDesignTokens.of(context);
     return AppBar(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      foregroundColor: Theme.of(context).colorScheme.onSurface,
+      backgroundColor: tokens.surface,
+      foregroundColor: tokens.onSurface,
       iconTheme: IconThemeData(
-        color: Theme.of(context).colorScheme.onSurface,
+        color: tokens.onSurface,
       ),
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -181,7 +185,7 @@ class _SourceViewWidget extends StatelessWidget {
             style: TextStyle(
               fontSize: 12, 
               fontWeight: FontWeight.normal,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              color: tokens.mutedText,
             ),
           ),
         ],
@@ -191,8 +195,8 @@ class _SourceViewWidget extends StatelessWidget {
           icon: Icon(
             Icons.save,
             color: state.hasUnsavedChanges 
-                ? Theme.of(context).colorScheme.secondary
-                : Theme.of(context).colorScheme.onSurface,
+                ? tokens.primaryAction
+                : tokens.onSurface,
           ),
           tooltip: 'Save Options',
           enabled: !state.isSaving,
@@ -236,6 +240,7 @@ class _SourceViewWidget extends StatelessWidget {
 
   /// Build the main body content based on current state
   Widget _buildBody(BuildContext context) {
+    final tokens = StudioDesignTokens.of(context);
     if (state.isLoading) {
       return const Center(
         child: Column(
@@ -257,14 +262,14 @@ class _SourceViewWidget extends StatelessWidget {
             Icon(
               Icons.error_outline,
               size: 64,
-              color: Theme.of(context).colorScheme.error,
+              color: tokens.dangerText,
             ),
             const SizedBox(height: 16),
             Text(
               state.errorMessage!,
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Theme.of(context).colorScheme.error,
+                color: tokens.dangerText,
                 fontSize: 16,
               ),
             ),
@@ -290,6 +295,7 @@ class _SourceViewWidget extends StatelessWidget {
 
   /// Handle back navigation with unsaved changes check
   Future<bool> _onWillPop(BuildContext context) async {
+    final tokens = StudioDesignTokens.of(context);
     if (!state.hasUnsavedChanges) {
       return true;
     }
@@ -305,7 +311,7 @@ class _SourceViewWidget extends StatelessWidget {
             child: Text(
               'Cancel',
               style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface,
+                color: tokens.onSurface,
               ),
             ),
           ),
@@ -314,7 +320,7 @@ class _SourceViewWidget extends StatelessWidget {
             child: Text(
               'Discard',
               style: TextStyle(
-                color: Theme.of(context).colorScheme.error,
+                color: tokens.dangerText,
               ),
             ),
           ),
@@ -329,7 +335,7 @@ class _SourceViewWidget extends StatelessWidget {
             child: Text(
               'Save',
               style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface,
+                color: tokens.onSurface,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -459,6 +465,7 @@ class _SimpleSubtitleTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = StudioDesignTokens.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 8.0),
       child: Column(
@@ -472,7 +479,7 @@ class _SimpleSubtitleTile extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
+                color: tokens.primaryAction,
                 fontFamily: 'monospace',
               ),
               decoration: const InputDecoration(
@@ -497,7 +504,7 @@ class _SimpleSubtitleTile extends StatelessWidget {
                   initialValue: entry.startTime,
                   style: TextStyle(
                     fontSize: 12,
-                    color: Theme.of(context).colorScheme.secondary,
+                    color: tokens.primaryAction,
                     fontFamily: 'monospace',
                   ),
                   decoration: const InputDecoration(
@@ -515,7 +522,7 @@ class _SimpleSubtitleTile extends StatelessWidget {
                 ' --> ',
                 style: TextStyle(
                   fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  color: tokens.mutedText,
                   fontFamily: 'monospace',
                 ),
               ),
@@ -525,7 +532,7 @@ class _SimpleSubtitleTile extends StatelessWidget {
                   initialValue: entry.endTime,
                   style: TextStyle(
                     fontSize: 12,
-                    color: Theme.of(context).colorScheme.secondary,
+                    color: tokens.primaryAction,
                     fontFamily: 'monospace',
                   ),
                   decoration: const InputDecoration(
@@ -551,7 +558,7 @@ class _SimpleSubtitleTile extends StatelessWidget {
             ],
             style: TextStyle(
               fontSize: 14,
-              color: Theme.of(context).colorScheme.onSurface,
+              color: tokens.onSurface,
               height: 1.4,
             ),
             decoration: const InputDecoration(
