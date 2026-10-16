@@ -1,4 +1,4 @@
-SubtitleStudio SKIN-4 R4 R5 device candidate | 2026-10-16
+SubtitleStudio SKIN-4 R4 R6 device candidate | 2026-10-16
 Analyze plus full Flutter test suite only. No Android/iOS/desktop native Actions.
 Finish full-screen Settings entry points on Home, Editor, Edit Line.
 Appearance is collapsed on first open, with no duplicated nested heading.
@@ -21,3 +21,7 @@ padding for 360px portrait screen while retaining vertical scrolling.
 R5: 443 tests passed / one 8.7px right overflow remained on 360dp
 positioning dialog at run 38909487358; shave remaining layout insets
 and rerun complete analyzer/test gate before device testing.
+
+R6: run 38910251362 confirmed all 443 other tests and clean analyze;
+only a 0.7px right overflow persisted in constrained positioning test.
+The remaining horizontal edge insets were removed for safe viewport fit.
