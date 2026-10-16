@@ -9,9 +9,9 @@ extension _EditLineDialogActions on EditSubtitleScreenState {
         showModalBottomSheet(
           context: context,
           isScrollControlled: true,
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(16.0)),
-          ),
+          useSafeArea: true,
+          showDragHandle: false,
+          shape: const RoundedRectangleBorder(),
           builder:
               (context) => SettingsSheet(
                 onSettingsChanged: () {
