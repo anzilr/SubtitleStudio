@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/screens/edit_line/edit_line_controller.dart';
 import 'package:subtitle_studio/utils/time_input_formatter.dart';
+import 'package:subtitle_studio/themes/studio_design_tokens.dart';
+import 'package:subtitle_studio/themes/studio_time_field.dart';
 
 class TimeComponentField extends ConsumerWidget {
   final String label;
@@ -47,8 +49,7 @@ class TimeComponentField extends ConsumerWidget {
         validation.$1 ? validation.$4 : fallbackOrderError;
     final hasError = componentError != null || orderError != null;
 
-    final borderColor =
-        hasError ? Colors.red : const Color(0xFF0A9396);
+    final tokens = StudioDesignTokens.of(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -63,7 +64,7 @@ class TimeComponentField extends ConsumerWidget {
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
-                color: hasError ? Colors.red : null,
+                color: hasError ? tokens.dangerText : tokens.onSurface,
               ),
             ),
             if (isVideoLoaded) ...[
@@ -71,7 +72,7 @@ class TimeComponentField extends ConsumerWidget {
               IconButton(
                 onPressed: onSync,
                 icon: const Icon(Icons.sync),
-                color: const Color(0xFF0A9396),
+                color: tokens.primaryAction,
                 iconSize: 20,
                 padding: const EdgeInsets.all(4),
                 constraints: const BoxConstraints(
@@ -82,7 +83,7 @@ class TimeComponentField extends ConsumerWidget {
                     'Sync ${isStartTime ? 'start' : 'end'} time with current video position',
                 style: IconButton.styleFrom(
                   backgroundColor:
-                      const Color(0xFF0A9396).withValues(alpha: 0.1),
+                      tokens.primaryAction.withValues(alpha: 0.12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(6),
                   ),
@@ -92,54 +93,11 @@ class TimeComponentField extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 12),
-        TextField(
+        StudioTimeField(
           controller: timeController,
-          textAlign: TextAlign.center,
-          keyboardType: TextInputType.number,
-          inputFormatters: [
-            TimeInputFormatter(),
-          ],
-          style: TextStyle(
-            color: hasError ? Colors.red : const Color(0xFFEE9B00),
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1,
-          ),
-          decoration: InputDecoration(
-            hintText: 'HH:mm:ss,SSS',
-            hintStyle: TextStyle(
-              color: Colors.grey[400],
-              fontSize: 14,
-              fontWeight: FontWeight.normal,
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 10,
-              vertical: 12,
-            ),
-            border: const OutlineInputBorder(),
-            enabledBorder: OutlineInputBorder(
-              borderSide: BorderSide(
-                color: borderColor,
-                width: 1.5,
-              ),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderSide: BorderSide(
-                color: borderColor,
-                width: 2,
-              ),
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-          autocorrect: false,
-          enableSuggestions: false,
-          smartDashesType: SmartDashesType.disabled,
-          smartQuotesType: SmartQuotesType.disabled,
-          textInputAction: TextInputAction.next,
-          enableIMEPersonalizedLearning: false,
-          enableInteractiveSelection: true,
-          showCursor: true,
+          label: label,
+          hasError: hasError,
+          inputFormatters: [TimeInputFormatter()],
           onChanged: (value) {
             final controller =
                 ref.read(editLineControllerProvider.notifier);
@@ -148,7 +106,6 @@ class TimeComponentField extends ConsumerWidget {
             } else {
               controller.updateEndTime(value);
             }
-
             WidgetsBinding.instance.addPostFrameCallback((_) {
               onTimeChanged();
             });
@@ -160,7 +117,7 @@ class TimeComponentField extends ConsumerWidget {
           'HH:mm:ss,SSS',
           style: TextStyle(
             fontSize: 11,
-            color: hasError ? Colors.red : Colors.grey[600],
+            color: hasError ? tokens.dangerText : tokens.mutedText,
             fontWeight: FontWeight.w400,
           ),
           textAlign: TextAlign.center,
@@ -169,21 +126,13 @@ class TimeComponentField extends ConsumerWidget {
         if (componentError != null)
           Text(
             componentError,
-            style: const TextStyle(
-              fontSize: 11,
-              color: Colors.red,
-              fontWeight: FontWeight.w500,
-            ),
+            style: TextStyle(fontSize: 11, color: tokens.dangerText, fontWeight: FontWeight.w500),
             textAlign: TextAlign.center,
           )
         else if (orderError != null)
           Text(
             orderError,
-            style: const TextStyle(
-              fontSize: 11,
-              color: Colors.red,
-              fontWeight: FontWeight.w500,
-            ),
+            style: TextStyle(fontSize: 11, color: tokens.dangerText, fontWeight: FontWeight.w500),
             textAlign: TextAlign.center,
           )
         else
