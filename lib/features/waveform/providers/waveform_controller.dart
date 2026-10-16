@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/features/waveform/state/waveform_event.dart';
 import 'package:subtitle_studio/features/waveform/state/waveform_state.dart';
@@ -37,6 +38,7 @@ final waveformControllerProvider =
 class WaveformController extends Notifier<WaveformState> {
   bool _disposed = false;
   int _loadEpoch = 0;
+  int _stateWriteGeneration = 0;
 
   AudioProcessor get _audioProcessor =>
       ref.read(waveformAudioProcessorProvider);
@@ -52,6 +54,7 @@ class WaveformController extends Notifier<WaveformState> {
     final processor = ref.read(waveformAudioProcessorProvider);
     ref.onDispose(() {
       _disposed = true;
+      _stateWriteGeneration++; // Ignore any queued build-phase emissions.
       _loadEpoch++; // Invalidate pending processing and progress callbacks.
       processor.cancelActive();
     });
@@ -59,9 +62,22 @@ class WaveformController extends Notifier<WaveformState> {
   }
 
   void _setState(WaveformState nextState) {
-    if (!_disposed) {
-      state = nextState;
+    if (_disposed) return;
+    final writeGeneration = ++_stateWriteGeneration;
+    if (SchedulerBinding.instance.schedulerPhase ==
+        SchedulerPhase.persistentCallbacks) {
+      // A native audio callback or widget lifecycle hook can arrive while
+      // Flutter is building. Riverpod forbids modifying providers here.
+      // Retain only the latest state; ClearWaveform/new loads invalidate older
+      // queued writes, and provider disposal invalidates the callback.
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (!_disposed && writeGeneration == _stateWriteGeneration) {
+          state = nextState;
+        }
+      });
+      return;
     }
+    state = nextState;
   }
 
   Future<void> dispatch(WaveformEvent event) async {
