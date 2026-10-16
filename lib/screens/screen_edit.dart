@@ -50,6 +50,7 @@ import 'package:subtitle_studio/screens/edit/edit_controller.dart';
 import 'package:subtitle_studio/screens/edit/edit_state.dart';
 import 'package:subtitle_studio/screens/edit/models/subtitle_entry.dart';
 import 'package:subtitle_studio/screens/edit/widgets/source_view_pane.dart';
+import 'package:subtitle_studio/screens/edit/services/raw_srt_document.dart';
 import 'package:subtitle_studio/screens/edit/widgets/edit_main_menu.dart';
 import 'package:subtitle_studio/screens/edit/widgets/edit_placeholders.dart';
 import 'package:subtitle_studio/screens/edit/widgets/subtitle_card.dart';
@@ -166,6 +167,7 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
   bool _isSourceView = false; // Track if we're in source view mode
   List<SubtitleEntry> _sourceViewEntries = []; // Store subtitle entries for source view
   bool _sourceViewDirty = false;
+  String _sourceViewRawText = '';
   final ScrollController _sourceScrollController = ScrollController(); // Separate scroll controller for source view
 
   // Layout switching support
@@ -845,15 +847,18 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
   // Method to add the initial subtitle line
   /// Build source view widget for direct text editing
   Widget _buildSourceView(List<SubtitleLine> subtitleLines) {
-    if (_sourceViewEntries.isEmpty ||
-        _sourceViewEntries.length != subtitleLines.length) {
+    if (!_sourceViewDirty && (_sourceViewEntries.isEmpty ||
+        _sourceViewEntries.length != subtitleLines.length)) {
       _sourceViewEntries = _convertSubtitleLinesToEntries(subtitleLines);
+      _sourceViewRawText = RawSrtDocument.compose(_sourceViewEntries);
     }
 
     return SourceViewPane(
       entries: _sourceViewEntries,
       scrollController: _sourceScrollController,
       onChanged: _onSourceViewContentChanged,
+      rawText: _sourceViewRawText,
+      onRawTextChanged: (source) => _sourceViewRawText = source,
     );
   }
 
