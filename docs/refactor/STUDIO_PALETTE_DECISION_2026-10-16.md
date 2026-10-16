@@ -1,8 +1,10 @@
-# SubtitleStudio — Palette decision gate (candidates, not approved)
+# SubtitleStudio — Approved Three-Skin Palette Matrix
 
 Date: 2026-10-16
 Branch: `refactor/riverpod-architecture`
-Decision: **OPEN — no palette selected; do not change production theme yet**
+Decision: **APPROVED — include all three skins; each has Light / Dark / Classic (9 total)**. Production themes have **not yet been migrated**.
+Preferred first preview: **Carbon & Jade / Dark**.
+Implementation: [Three-skin appearance architecture plan](STUDIO_SKINS_IMPLEMENTATION_PLAN_2026-10-16.md).
 Prerequisite: Checkpoint 85 R6 Android stability gate **reported complete by the user**. The last separately verified GitHub Actions code gate remains CP85 R5 (386 tests, 0 analyzer issues).
 Related: [Refactor roadmap v4](REFACTOR_ROADMAP_V4.md), [Studio UX roadmap](SUBTITLESTUDIO_UX_ROADMAP_2026-10-16.md).
 
@@ -18,7 +20,7 @@ Goals:
 5. Use separate card divider and **input stroke** tokens; editable control outlines should be distinguishable at >=3:1 when relied on for boundary identification.
 6. Do not use palette decisions as permission to change video/FFmpeg, Isar, checkpoints, controller ownership or text persistence.
 
-## Candidate A — Carbon & Jade (recommended to prototype first)
+## Skin A — Carbon & Jade (first preview: Dark)
 
 | Role | Light | Dark | Classic |
 | --- | --- | --- | --- |
@@ -33,7 +35,7 @@ Goals:
 
 Intent: distinct fresh subtitle-editing identity, subtle green-charcoal neutrals, energetic mint accent without neon backgrounds.
 
-## Candidate B — Copper Cinema
+## Skin B — Copper Cinema
 
 | Role | Light | Dark | Classic |
 | --- | --- | --- | --- |
@@ -48,7 +50,7 @@ Intent: distinct fresh subtitle-editing identity, subtle green-charcoal neutrals
 
 Intent: cinematic, warm, professional, less like a generic productivity app. Risk: overly gold/brown if applied too broadly.
 
-## Candidate C — Aster Violet
+## Skin C — Aster Violet
 
 | Role | Light | Dark | Classic |
 | --- | --- | --- | --- |
@@ -90,12 +92,13 @@ Main and muted text ratios exceed 4.5:1. Border ratios exceed 3:1. Final compone
 
 - [x] CP85 R6 Android stability gate — **user-reported**.
 - [x] Source audit and three candidate palette proposals, numerical basic contrast.
-- [ ] User chooses or revises a candidate, particularly Dark and Classic.
-- [ ] Freeze design roles and full token matrix for all three modes; decision recorded as approved.
+- [x] User approved all three skins with independently selectable Light / Dark / Classic modes; Carbon & Jade / Dark is the initial preview.
+- [x] Approve three skin families and the 9-mode reference palette matrix (values still subject to real-device visual/contrast adjustments).
+- [ ] Complete semantic role definitions including focus, selection, disabled, error and warning for all 9 combinations.
 - [ ] Build a narrow **Edit Line input-field pilot** first, behind current theme architecture; no persistence changes.
 - [ ] Android screenshots of original/edited multiline subtitles in dark/classic/light, with keyboard focused and unfocused; user acceptance.
 - [ ] Check contrast, typography, focus, selection, error, disabled, warning, touch size and accessibility; widget/golden tests.
 - [ ] After pilot passes, migrate Main Editor, Project Settings, Home and remaining sheets in small batches. Do not use wholesale search-and-replace for all `Colors.*`.
 - [ ] Continue original technical roadmap, starting with waveform native qualification after this design decision.
 
-**Do not assign a default palette or change current app styling until user approval.**
+**Approved plan only:** implement independent persisted skin + appearance choices with proposed new-install default Carbon & Jade / Dark while preserving existing saved theme modes. No app styling has been changed yet. See [implementation gates](STUDIO_SKINS_IMPLEMENTATION_PLAN_2026-10-16.md).
