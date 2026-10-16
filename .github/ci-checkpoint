@@ -25,3 +25,5 @@ Last guard failure in CI 38930415626 was a lingering Colors.orange
 in fullscreen repeat-control icon; changed that to live colorScheme.primary.
 Verify analyzer, all widget/unit tests and theme-freeze source guard.
 Theme scope ends here unless CI or device reproduces a specific defect.
+
+THEME FREEZE R2: CI 38933686514 exposed a single analyzer const expression in subtitle extraction progress widget. Removed const and corrected Select Subtitle Track primary-button icon to onPrimary. Rerun analyzer + all Flutter tests + fixed accent guard.
