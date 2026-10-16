@@ -348,6 +348,9 @@ extension _EditResponsiveLayout on _EditScreenState {
             maxRatio: 0.8,
             vertical: true, // Vertical split for mobile
             dividerThickness: 6.0, // Increased for mobile touch interaction
+            minFirstPaneExtent: _isWaveformVisible
+                ? AdaptiveWaveformPane.minimumPreferredPaneHeight
+                : null,
             onRatioChanged: (ratio) {
               // Use post frame callback to avoid "Build scheduled during frame" error
               WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -360,11 +363,9 @@ extension _EditResponsiveLayout on _EditScreenState {
               _saveMobileResizeRatio(ratio);
             },
             leftChild: _isVideoVisible && _selectedVideoPath != null
-              ? Column(
-                  children: [
-                    // Video player
-                    Expanded(
-                      child: VideoPlayerWidget(
+              ? AdaptiveWaveformPane(
+                  showWaveform: _isWaveformVisible,
+                  video: VideoPlayerWidget(
                         key: _videoPlayerKey,
                         videoPath: _selectedVideoPath!,
                         subtitleCollectionId: widget.subtitleCollectionId,
@@ -421,15 +422,7 @@ extension _EditResponsiveLayout on _EditScreenState {
                           }
                         },
                       ),
-                    ),
-                    // Waveform section (when visible)
-                    if (_isWaveformVisible) ...[
-                      const Divider(height: 1),
-                      SizedBox(
-                        height: Platform.isWindows || Platform.isMacOS || Platform.isLinux 
-                            ? 240.0 
-                            : 180.0, // Taller on desktop for better visibility
-                        child: WaveformWidget(
+                  waveform: WaveformWidget(
                             key: _waveformKey,
                             subtitles: subtitleLines,
                             playbackPosition: _lastVideoPosition,
@@ -458,9 +451,6 @@ extension _EditResponsiveLayout on _EditScreenState {
                               _openAddLineSheetWithTimes(startTime, endTime);
                             },
                           ),
-                      ),
-                    ],
-                  ],
                 )
               : Container(
                   color: Theme.of(context).colorScheme.surfaceContainer,
