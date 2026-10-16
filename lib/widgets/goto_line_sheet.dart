@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:subtitle_studio/themes/studio_design_tokens.dart';
 import 'package:subtitle_studio/utils/app_logger.dart';
@@ -8,12 +10,13 @@ void showGotToLineModal({
   int hintText = 0,
   String title = 'Input',
   required ValueChanged<String> onSubmitted,
-}) async {
-  await AppLogger.instance.info('Showing goto line modal', context: 'showGotToLineModal', extra: {
+}) {
+  // Opening the modal must not depend on file-based diagnostics I/O.
+  unawaited(AppLogger.instance.info('Showing goto line modal', context: 'showGotToLineModal', extra: {
     'initialValue': initialValue,
     'hintText': hintText,
     'title': title,
-  });
+  }));
   
   // Initialize with default value or provided value
   int initialLineNumber = int.tryParse(initialValue) ?? 1;
