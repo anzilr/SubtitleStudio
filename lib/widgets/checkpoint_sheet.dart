@@ -752,7 +752,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                       decoration: BoxDecoration(
                         color: isCurrentCheckpoint
                             ? (isDark ? onSurfaceColor.withValues(alpha: 0.08) : Theme.of(context).colorScheme.surfaceContainerLow)
-                            : (isDark ? onSurfaceColor.withValues(alpha: 0.03) : Colors.white),
+                            : Theme.of(context).colorScheme.surface,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: isCurrentCheckpoint 
