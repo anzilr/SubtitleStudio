@@ -17,7 +17,7 @@ Related: [Refactor roadmap v4](REFACTOR_ROADMAP_V4.md), [UX roadmap](SUBTITLESTU
 5. **Carbon & Jade / Dark** is the initial review target and proposed new-install starting combination, **not** an instruction to replace an existing user's explicitly saved appearance mode.
 6. Classic is a distinct near-black, high-contrast appearance per skin, **not** an alias for Flutter `ThemeMode.system` or the same scheme as Dark.
 7. All combinations use **one shared semantic design system and widgets**. Do not build nine independent screens or scatter direct hex colors through feature code.
-8. Implement in isolated, reviewable steps and keep checkpoint, native media, Isar financial—none applicable—subtitle project persistence, Android/Windows and other supported platforms behavior unchanged.
+8. Implement in isolated, reviewable steps. Preserve checkpoint/project data, native media behavior, and Android/Windows and other supported platforms.
 9. Keep all work confined to `refactor/riverpod-architecture`; no changes to `development`, `main`, upstream or release tags without separate approval.
 10. UX appearance work is a parallel **design dependency**. The original next technical workstream remains **Checkpoint 86: waveform native qualification**; do not relabel it as a theme milestone.
 
