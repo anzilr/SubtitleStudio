@@ -559,7 +559,7 @@ class _SubtitleExtractOptionsSheetState
                       ),
                       child: Text(
                         path.basename(destinationFile.path),
-                        style: const TextStyle(fontFamily: 'monospace'),
+                        style: TextStyle(fontFamily: 'monospace'),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -1160,7 +1160,7 @@ class _SubtitleExtractOptionsSheetState
                     color:
                         isDark
                             ? onSurfaceColor.withValues(alpha: 0.05)
-                            : Colors.grey.shade50,
+                            : Theme.of(context).colorScheme.surfaceContainerLow,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: borderColor, width: 1),
                   ),
@@ -1172,7 +1172,7 @@ class _SubtitleExtractOptionsSheetState
                           color: primaryColor,
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.video_file_outlined,
                           color: Colors.white,
                           size: 20,
@@ -1247,19 +1247,19 @@ class _SubtitleExtractOptionsSheetState
                       color:
                           _subtitleTracks.isEmpty
                               ? (isDark
-                                  ? Colors.orange.shade900.withValues(
+                                  ? Theme.of(context).colorScheme.tertiary.withValues(
                                     alpha: 0.2,
                                   )
-                                  : Colors.orange.shade50)
+                                  : Theme.of(context).colorScheme.tertiary)
                               : (isDark
-                                  ? Colors.green.shade900.withValues(alpha: 0.2)
-                                  : Colors.green.shade50),
+                                  ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.2)
+                                  : Theme.of(context).colorScheme.primary),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color:
                             _subtitleTracks.isEmpty
-                                ? Colors.orange.withValues(alpha: 0.3)
-                                : Colors.green.withValues(alpha: 0.3),
+                                ? Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.3)
+                                : Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
                         width: 1,
                       ),
                     ),
@@ -1270,8 +1270,8 @@ class _SubtitleExtractOptionsSheetState
                           decoration: BoxDecoration(
                             color:
                                 _subtitleTracks.isEmpty
-                                    ? Colors.orange
-                                    : Colors.green,
+                                    ? Theme.of(context).colorScheme.tertiary
+                                    : Theme.of(context).colorScheme.primary,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Icon(
@@ -1304,8 +1304,8 @@ class _SubtitleExtractOptionsSheetState
                                 ).textTheme.bodyMedium?.copyWith(
                                   color:
                                       _subtitleTracks.isEmpty
-                                          ? Colors.orange.shade700
-                                          : Colors.green.shade700,
+                                          ? Theme.of(context).colorScheme.tertiary
+                                          : Theme.of(context).colorScheme.primary,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
@@ -1315,7 +1315,7 @@ class _SubtitleExtractOptionsSheetState
                         if (_subtitleTracks.isNotEmpty)
                           Icon(
                             Icons.chevron_right_rounded,
-                            color: Colors.green.shade600,
+                            color: Theme.of(context).colorScheme.primary,
                             size: 24,
                           ),
                       ],
@@ -1345,7 +1345,7 @@ class _SubtitleExtractOptionsSheetState
                   color:
                       isDark
                           ? onSurfaceColor.withValues(alpha: 0.05)
-                          : Colors.grey.shade50,
+                          : Theme.of(context).colorScheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: borderColor, width: 1),
                 ),
@@ -1385,7 +1385,7 @@ class _SubtitleExtractOptionsSheetState
                   color:
                       isDark
                           ? onSurfaceColor.withValues(alpha: 0.05)
-                          : Colors.grey.shade50,
+                          : Theme.of(context).colorScheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: borderColor, width: 1),
                 ),
@@ -1431,7 +1431,7 @@ class _SubtitleExtractOptionsSheetState
                           : _viewSubtitleTracks,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,
-                    foregroundColor: Colors.white,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
