@@ -12,6 +12,7 @@ import 'package:subtitle_studio/features/waveform/services/waveform_peak_cache.d
 import 'package:subtitle_studio/features/waveform/services/waveform_cache_coordinator.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_peak_cache_janitor.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_ffmpeg_plan.dart';
+import 'package:subtitle_studio/features/waveform/services/waveform_saf_input.dart';
 import 'package:subtitle_studio/utils/ffmpeg_helper.dart';
 import 'package:ffmpeg_kit_flutter_new_min_gpl/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new_min_gpl/ffmpeg_kit_config.dart';
@@ -254,76 +255,87 @@ class AudioProcessor {
     // Coordinate even across distinct AudioProcessor instances in this
     // isolate; jobs for different audio files are not needlessly serialized.
     return WaveformCacheCoordinator.shared.runExclusive(cachePath, () async {
-      checkActive(); // The request may have been superseded while queued.
-      // Expired caches and abandoned staging files are pruned without
-      // touching this destination or unrelated media/legacy PCM files.
-      await const WaveformPeakCacheJanitor().clean(
-        temp,
-        protectedPaths: {cachePath},
-      );
-      checkActive();
-      if (persistent && await cacheFile.exists()) {
-        try {
-          onProgress?.call(0.1);
-          final cached = await WaveformPeakCache.load(cacheFile);
-          checkActive();
-          onProgress?.call(0.2);
-          return cached;
-        } on FileSystemException {
-          // Regenerate if the recorded cache is no longer accessible.
-        } on FormatException {
-          // Reject truncated/corrupted or mismatched peak caches.
+      try {
+        checkActive(); // The request may have been superseded while queued.
+        // Expired caches and abandoned staging files are pruned without
+        // touching this destination or unrelated media/legacy PCM files.
+        await const WaveformPeakCacheJanitor().clean(
+          temp,
+          protectedPaths: {cachePath},
+        );
+        checkActive();
+        if (!persistent && await cacheFile.exists()) {
+          // SAF documents have no reliable source revision; never reuse a
+          // previous request's compact output, including interrupted builds.
+          await cacheFile.delete();
         }
-        checkActive();
-        if (await cacheFile.exists()) await cacheFile.delete();
-      }
-
-      // Existing projects may have a very large legacy PCM cache (the
-      // reported Android device held ~660 MB). Reduce that file *as a stream*
-      // instead of readAsBytes(), and avoid decoding the same movie again.
-      if (subtitleCollectionId != null) {
-        final legacy = await _preferences.getWaveformCache(subtitleCollectionId);
-        checkActive();
-        if (legacy != null &&
-            legacy.pcmPath == key &&
-            legacy.channels == 1 &&
-            legacy.sampleRate == WaveformPeakCache.inputRate &&
-            legacy.totalSamples > 0) {
-          final pcm = File(legacy.pcmPath);
-          if (await pcm.exists() &&
-              await pcm.length() == legacy.totalSamples * 2) {
-            checkActive();
+        if (persistent && await cacheFile.exists()) {
+          try {
             onProgress?.call(0.1);
-            final reduced = await WaveformPeakCache.build(
-              pcmFile: pcm,
-              cacheFile: cacheFile,
-              isCancelled: () => requestEpoch != _requestEpoch,
-            );
+            final cached = await WaveformPeakCache.load(cacheFile);
             checkActive();
             onProgress?.call(0.2);
-            if (!persistent && await cacheFile.exists()) {
-              await cacheFile.delete();
+            return cached;
+          } on FileSystemException {
+            // Regenerate if the recorded cache is no longer accessible.
+          } on FormatException {
+            // Reject truncated/corrupted or mismatched peak caches.
+          }
+          checkActive();
+          if (await cacheFile.exists()) await cacheFile.delete();
+        }
+
+        // Existing projects may have a very large legacy PCM cache (the
+        // reported Android device held ~660 MB). Reduce that file *as a stream*
+        // instead of readAsBytes(), and avoid decoding the same movie again.
+        if (persistent && subtitleCollectionId != null) {
+          final legacy = await _preferences.getWaveformCache(subtitleCollectionId);
+          checkActive();
+          if (legacy != null &&
+              legacy.pcmPath == key &&
+              legacy.channels == 1 &&
+              legacy.sampleRate == WaveformPeakCache.inputRate &&
+              legacy.totalSamples > 0) {
+            final pcm = File(legacy.pcmPath);
+            if (await pcm.exists() &&
+                await pcm.length() == legacy.totalSamples * 2) {
+              checkActive();
+              onProgress?.call(0.1);
+              final reduced = await WaveformPeakCache.build(
+                pcmFile: pcm,
+                cacheFile: cacheFile,
+                isCancelled: () => requestEpoch != _requestEpoch,
+              );
+              checkActive();
+              onProgress?.call(0.2);
+              return reduced;
             }
-            return reduced;
+          }
+        }
+
+        checkActive();
+        final output = await _extractAudioToPCM(
+          sourcePath,
+          audioTrackId: audioTrackId,
+          reduceToPeaks: true,
+          peakCachePath: cachePath,
+        );
+        checkActive();
+        onProgress?.call(0.2);
+        // SAF content can change without exposing a version; do not retain
+        // this cache beyond the single successful decode.
+        return output;
+      } finally {
+        if (!persistent) {
+          // A cancelled or failed SAF decode must not leave a reusable cache.
+          // Keep this inside the source-scoped lock to avoid racing a new job.
+          try {
+            if (await cacheFile.exists()) await cacheFile.delete();
+          } on FileSystemException {
+            // An inaccessible transient cache is not a valid future hit.
           }
         }
       }
-
-      checkActive();
-      final output = await _extractAudioToPCM(
-        sourcePath,
-        audioTrackId: audioTrackId,
-        reduceToPeaks: true,
-        peakCachePath: cachePath,
-      );
-      checkActive();
-      onProgress?.call(0.2);
-      // SAF content can change without exposing a version; do not retain
-      // this cache beyond the single successful decode.
-      if (!persistent && await cacheFile.exists()) {
-        await cacheFile.delete();
-      }
-      return output;
     });
   }
 
@@ -401,25 +413,14 @@ class AudioProcessor {
     return _downsampleAudio(data);
   }
 
-  /// Convert SAF URI to FFmpeg-compatible parameter for reading (Android only)
-  Future<String> _getSafReadableParameter(String filePath) async {
-    if (Platform.isAndroid && filePath.startsWith('content://')) {
-      try {
-        final safParameter = await FFmpegKitConfig.getSafParameterForRead(filePath);
-        if (safParameter != null) {
-          if (kDebugMode) {
-            print('AudioProcessor: Converted SAF URI to FFmpeg parameter: $safParameter');
-          }
-          return safParameter;
-        }
-      } catch (e) {
-        if (kDebugMode) {
-          print('AudioProcessor: Error converting SAF URI: $e, using original path');
-        }
-      }
-    }
-    return filePath;
-  }
+  /// Use FFmpegKit's Android document grant; never pass an unresolved
+  /// content URI to FFmpeg as if it were an ordinary filesystem path.
+  Future<String> _getSafReadableParameter(String filePath) =>
+      WaveformSafInput.resolve(
+        filePath,
+        android: Platform.isAndroid,
+        safParameterForRead: FFmpegKitConfig.getSafParameterForRead,
+      );
 
   /// Check if FFmpeg is available on the system
   Future<void> _checkFFmpegAvailability() async {
@@ -496,8 +497,8 @@ class AudioProcessor {
         );
         final args = plan.arguments();
         if (kDebugMode) {
-          print('AudioProcessor: Audio ordinal: ' +
-              WaveformFfmpegPlan.audioOrdinal(audioTrackId).toString());
+          print('AudioProcessor: Audio stream map: ' +
+              plan.selectedStreamMap);
         }
 
         final process = await Process.start('ffmpeg', args);

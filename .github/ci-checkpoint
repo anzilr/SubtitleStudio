@@ -27,3 +27,5 @@ Verify analyzer, all widget/unit tests and theme-freeze source guard.
 Theme scope ends here unless CI or device reproduces a specific defect.
 
 THEME FREEZE R2: CI 38933686514 exposed a single analyzer const expression in subtitle extraction progress widget. Removed const and corrected Select Subtitle Track primary-button icon to onPrimary. Rerun analyzer + all Flutter tests + fixed accent guard.
+
+CP86 R1 — 2026-10-16: waveform native qualification hardening (Windows verified global stream debug logging; SAF URI fail-closed input; no legacy SAF cache reuse; cancelled peak-cache staging regression). Appearance work remains frozen. Analyze and run full Flutter tests; native Android/Windows measurements remain a separate gate.

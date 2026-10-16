@@ -133,6 +133,27 @@ void main() {
             .reduce((a, b) => a + b) / 16).round());
   });
 
+  test('cancellation after streaming preserves previous cache and removes staging',
+      () async {
+    final pcm = await _writePcm(directory, List<int>.filled(512, 111));
+    await WaveformPeakCache.build(pcmFile: pcm, cacheFile: cache());
+    final original = await cache().readAsBytes();
+    await pcm.writeAsBytes(List<int>.filled(1024, 0));
+    var cancellationChecks = 0;
+    await expectLater(
+      WaveformPeakCache.build(
+        pcmFile: pcm,
+        cacheFile: cache(),
+        isCancelled: () => ++cancellationChecks >= 2,
+      ),
+      throwsStateError,
+    );
+    expect(cancellationChecks, greaterThanOrEqualTo(2));
+    expect(await cache().readAsBytes(), original);
+    expect(directory.listSync().whereType<File>()
+        .where((file) => file.path.contains('.partial.')), isEmpty);
+  });
+
   test('no half-written destination after invalid source failure', () async {
     final pcm = await _writePcm(directory, List<int>.filled(256, 123));
     await WaveformPeakCache.build(pcmFile: pcm, cacheFile: cache());

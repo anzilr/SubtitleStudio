@@ -55,6 +55,10 @@ class WaveformFfmpegPlan {
     return ordinal == null ? null : '0:a:$ordinal';
   }
 
+  /// The actual stream selector used by FFmpeg, also safe for debug logging.
+  /// A verified global stream ID is not an audio-only ordinal.
+  String get selectedStreamMap => streamMap(selectedTrackId) ?? 'auto';
+
   List<String> arguments() {
     if (inputPath.isEmpty || outputPath.isEmpty) {
       throw const FormatException('Audio input and output paths are required.');

@@ -106,6 +106,14 @@ void main() {
       );
       expect(plan.arguments(), containsAllInOrder(['-map', '0:4']));
       expect(plan.ffmpegKitCommand(), contains('-map 0:4'));
+      expect(plan.selectedStreamMap, '0:4');
+      expect(const WaveformFfmpegPlan(
+        inputPath: 'video.mkv', outputPath: 'audio.raw',
+      ).selectedStreamMap, 'auto');
+      expect(const WaveformFfmpegPlan(
+        inputPath: 'video.mkv', outputPath: 'audio.raw',
+        selectedTrackId: 'ffmpeg:a:2',
+      ).selectedStreamMap, '0:a:2');
     });
 
     test('desktop and FFmpegKit use the same ordered command arguments',
