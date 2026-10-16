@@ -1,5 +1,16 @@
 # SubtitleStudio Refactor Roadmap v4
 
+> **CP87 R6 — NATIVE CRASH ISOLATED (October 17, 2026):**
+> Two complete CPH2381 logs confirm MSone system Back popped and disposed
+> its route at 00:23:41, then at 00:23:52 a separately invoked Flutter
+> hot restart recovered a stale media_kit native handle and triggered
+> **SIGSEGV inside libmpv.so**. The Back route itself did not log a native
+> crash. Flutter's resumed-editor responsiveness still needs an
+> independent no-hot-restart test. Development must now use the
+> clean-process debug launcher in `tool/run_android_clean_debug.ps1`
+> and keep native mpv FFI callback cleanup as an open platform blocker.
+> [R6 report](CHECKPOINT87_R6_NATIVE_HOT_RESTART_DIAGNOSIS_2026-10-17.md).
+>
 > **CP87 R5 — MSone navigation and confirmed hot-restart crash (October 17, 2026):**
 > **Flutter CI succeeded:** [38968179884](https://github.com/anzilr/SubtitleStudio/actions/runs/38968179884) — **533 tests passed, 0 analyzer issues**, at implementation `f121197`. The native hot restart crash is not cleared by this result.
 > The CPH2381 full log confirms `MsoneSubmissionScreen route pop: didPop=true`

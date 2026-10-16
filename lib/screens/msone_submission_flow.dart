@@ -49,7 +49,11 @@ Future<void> showMsoneSubmissionFlow({
   );
 
   // When Android Back dismisses only the sheet, do not push any route.
-  if (!context.mounted || selected == null) return;
+  if (!context.mounted || selected == null) {
+    debugPrint('MSone flow: sheet dismissed; editor mounted=${context.mounted}');
+    return;
+  }
+  debugPrint('MSone flow: opening submission type=$selected');
   final navigator = Navigator.of(context);
   await navigator.push<void>(MaterialPageRoute<void>(
     builder: (routeContext) => destinationBuilder?.call(
@@ -61,6 +65,16 @@ Future<void> showMsoneSubmissionFlow({
           subtitleCollectionId: subtitleCollectionId,
         ),
   ));
+  // This fires for *normal Android Back*. Hot restart does not unwind a
+  // Navigator route, so its absence helps distinguish a native crash.
+  debugPrint('MSone flow: returned to editor; mounted=${context.mounted}');
+  if (context.mounted) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (context.mounted) {
+        debugPrint('MSone flow: editor rendered a frame after Back');
+      }
+    });
+  }
 }
 
 class _SubmissionChoice extends StatelessWidget {
