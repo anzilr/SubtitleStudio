@@ -2,8 +2,8 @@
 
 Date: 2026-10-16
 Branch: `refactor/riverpod-architecture`
-Implementation status: **SKIN-1 R2 committed, final verification pending**
-Initial successful quality gate: https://github.com/anzilr/SubtitleStudio/actions/runs/38867202442 — 391 tests, 0 analyzer issues.\nR2 gallery-inclusive quality gate: https://github.com/anzilr/SubtitleStudio/actions/runs/38867646977 (pending).
+Implementation status: **SKIN-1 R2 COMPLETE — code and CI verified**
+Initial successful quality gate: https://github.com/anzilr/SubtitleStudio/actions/runs/38867202442 — 391 tests, 0 analyzer issues.\nR2 **successful** gallery-inclusive quality gate: https://github.com/anzilr/SubtitleStudio/actions/runs/38867646977 — **392 tests passed, zero Flutter analyzer issues**. Verified code commit: `fa6aa09c887af916104ec03930e85919bcf8d2b2`.
 
 ## What changed
 
