@@ -179,7 +179,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                         childrenPadding: EdgeInsets.symmetric(
                           horizontal: 12, vertical: 8,
                         ),
-                        children: [StudioAppearanceSettings()],
+                        children: [StudioAppearanceSettings(showTitle: false)],
                       ),
                       const Divider(),
                       const SizedBox(height: 8),
