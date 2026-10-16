@@ -1,5 +1,26 @@
 # SubtitleStudio Refactor Roadmap v4
 
+> **CP87 R1 FILE-ACCESS IDENTITY FOUNDATION — October 16, 2026:**
+> Technical Checkpoint 87 has begun *without declaring CP86 native acceptance*.
+> [Code `50bd1c0`](https://github.com/anzilr/SubtitleStudio/commit/50bd1c041ef0ada113937826d9975073cddc7020)
+> introduces `StudioFileIdentity` with native-path, Android SAF document,
+> file-URI, network and opaque-URI classifications. Waveform cache/stat logic,
+> SAF revision resolution, secondary subtitle read dispatch, and a new typed
+> saved-video repository accessor use that identity. Original persisted
+> locations and waveform cache hashing remain unchanged. No Isar migration,
+> grant escalation, or platform bookmark replacement is attempted.
+> An Olam selected-language-tab fix
+> [`999f4a1`](https://github.com/anzilr/SubtitleStudio/commit/999f4a167903a008db1a5aa427b05cb768e1b702)
+> corrects white-on-white `EN-ML` / `ML-EN` / `ML-ML` selection by using
+> dark neutral selected surfaces in achromatic dark/Classic palettes,
+> retaining accent-colored tabs elsewhere.
+> [CP87 full CI](https://github.com/anzilr/SubtitleStudio/actions/runs/38961927133)
+> and [dictionary CI](https://github.com/anzilr/SubtitleStudio/actions/runs/38961699279)
+> verify the regressions; native Android/Windows QA and the prior
+> media-kit/libmpv hot-restart crash remain open. See
+> [CP87 R1 report](CHECKPOINT87_FILE_IDENTITY_AND_DICTIONARY_CONTRAST_2026-10-16.md).
+> **Appearance development remains frozen** beyond this reproduced tab issue.
+
 > **CP86 R4 USER-REPORTED SUBTITLE CONTROL COLLISION — October 16, 2026:**
 > In waveform view the existing subtitle overlays, selected edit region and
 > adjustment handles were all blue like audio. Targeted fix
