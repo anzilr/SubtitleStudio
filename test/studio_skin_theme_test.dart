@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:subtitle_studio/themes/studio_design_tokens.dart';
 import 'package:subtitle_studio/themes/studio_palette.dart';
+import 'package:subtitle_studio/themes/studio_skin_preview.dart';
 import 'package:subtitle_studio/themes/studio_skin.dart';
 import 'package:subtitle_studio/themes/studio_theme_factory.dart';
 
@@ -161,5 +162,33 @@ void main() {
         expect(tester.takeException(), isNull);
       }
     }
+  });
+
+  testWidgets('all nine preview tiles fit a narrow settings viewport',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 740);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(MaterialApp(
+      theme: StudioThemeFactory.resolve(
+        StudioSkin.carbonJade, StudioAppearance.dark,
+      ),
+      home: const Scaffold(
+        body: SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.all(12),
+            child: StudioSkinPreviewGallery(),
+          ),
+        ),
+      ),
+    ));
+
+    expect(find.byType(StudioSkinPreviewTile), findsNWidgets(9));
+    expect(find.text('Carbon & Jade'), findsOneWidget);
+    expect(find.text('Copper Cinema'), findsOneWidget);
+    expect(find.text('Aster Violet'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }
