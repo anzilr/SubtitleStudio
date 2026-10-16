@@ -1,18 +1,23 @@
 # SubtitleStudio Refactor Roadmap v4
 
-> **Visual identity decision gate — October 16, 2026 (OPEN):** The user
-> reports CP85 R6 Android stability testing **completed**; this is
-> user-reported device validation, separate from the last successful
-> CP85 R5 CI gate (386 tests / analyzer clean). Before further visual
-> implementation, evaluate three **unselected** palette families—
-> **Carbon & Jade**, **Copper Cinema**, and **Aster Violet**—in Light,
-> Dark, and genuinely differentiated near-black Classic modes.
-> See [Studio palette decision document](STUDIO_PALETTE_DECISION_2026-10-16.md).
-> **Do not apply an accent in production before user selection.**
-> Pilot redesigned neutral, high-contrast original/edited Edit Line fields
-> before broader styling; fix field use of `colorScheme.primary` as a
-> background and forced white helper/text colors. Resume the original
-> waveform/native qualification roadmap once palette direction is approved.
+> **Approved — SubtitleStudio three-skin appearance system (October 16, 2026):**
+> **Carbon & Jade**, **Copper Cinema**, and **Aster Violet**, with independent
+> **Light / Dark / Classic** modes in every skin (**nine appearances**).
+> Persist the skin and appearance mode **separately**; changing either must
+> preserve the other and preserve the user's custom font and unsaved edits.
+> First visual preview: **Carbon & Jade / Dark**. Proposed new-install default:
+> Carbon & Jade / Dark; keep existing users' explicitly saved mode untouched.
+> Classic is a genuinely separate near-black appearance, **not**
+> `ThemeMode.system` masquerading as Classic.
+> See the [approved implementation plan](STUDIO_SKINS_IMPLEMENTATION_PLAN_2026-10-16.md)
+> and [9-palette reference](STUDIO_PALETTE_DECISION_2026-10-16.md).
+> Execution sequence SKIN-0 (documented) → SKIN-1 tokens/resolver → SKIN-2
+> independently persisted preferences/migration → SKIN-3 Appearance Settings →
+> SKIN-4 Edit Line high-contrast text fields → SKIN-5 UI rollout → SKIN-6 QA.
+> **Production UI, Isar model and theme controller remain unchanged** until
+> implementation work. Do not repurpose **Checkpoint 86**, which remains the
+> original waveform/native qualification milestone. User confirmed **CP85 R6
+> Android stability gate completed**; last separate CI evidence is CP85 R5.
 
 > **October 16, 2026 — CP85 R5 Android theme regressions addressed in code:**
 > [CI run 38861456875](https://github.com/anzilr/SubtitleStudio/actions/runs/38861456875):
