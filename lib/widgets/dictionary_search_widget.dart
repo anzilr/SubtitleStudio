@@ -242,7 +242,7 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
                         height: 28,
                         width: 28,
                         colorFilter: ColorFilter.mode(
-                          Color(0xFF4A90E2),
+                          Theme.of(context).colorScheme.primary,
                           BlendMode.srcIn,
                         ),
                       ),
@@ -386,7 +386,7 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
                           width: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                           ),
                         )
                       : Row(
@@ -436,7 +436,7 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
                   height: 24,
                   width: 24,
                   colorFilter: ColorFilter.mode(
-                    Color(0xFF4A90E2),
+                    Theme.of(context).colorScheme.primary,
                     BlendMode.srcIn,
                   ),
                 ),
@@ -561,7 +561,7 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
                           width: 16,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                           ),
                         )
                       : Row(
