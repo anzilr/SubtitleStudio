@@ -1,7 +1,6 @@
-SubtitleStudio SKIN-1 nine-palette resolver quality gate | 2026-10-16
-Analyzer and full Flutter unit/widget suite. New immutable palette matrix,
-independent skin/mode types, semantic editing field focus/selection tokens,
-single Material theme resolver, WCAG contrast tests for all 9 combinations,
-custom font inheritance and text preservation during preview swaps.
-New theme factory is not yet wired into MainApp, theme preferences or live
-Editor/Edit Line. No Isar schema changes; no native build jobs.
+SubtitleStudio SKIN-1 R2 nine-palette theme foundation gate | 2026-10-16
+Analyzer and full Flutter unit/widget suite. Nine semantic palettes, typed
+independent skin + appearance modes, distinct near-black Classic, contrast
+checks and preview gallery on narrow Android screen width. Preview is
+read-only and does not alter MainApp, Isar preferences, Editor routes or
+native media. No platform builds.
