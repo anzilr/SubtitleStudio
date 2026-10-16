@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:subtitle_studio/themes/studio_design_tokens.dart';
 import 'package:subtitle_studio/utils/subtitle_positioning_parser.dart';
 
 class PositioningButtonsWidget extends StatefulWidget {
@@ -97,16 +98,8 @@ class _PositioningButtonsWidgetState extends State<PositioningButtonsWidget> {
     return iconMap[position] ?? Icons.control_camera;
   }
 
-  Color _getColorForPosition(int position) {
-    // Use a color scheme that differentiates position groups
-    if (position >= 1 && position <= 3) {
-      return Colors.blue; // Bottom positions
-    } else if (position >= 4 && position <= 6) {
-      return Colors.orange; // Middle positions
-    } else {
-      return Colors.green; // Top positions
-    }
-  }
+  Color _getColorForPosition(int position) =>
+      StudioDesignTokens.of(context).primaryAction;
 
   @override
   Widget build(BuildContext context) {
@@ -118,6 +111,7 @@ class _PositioningButtonsWidgetState extends State<PositioningButtonsWidget> {
     final borderColor = onSurfaceColor.withValues(alpha: 0.12);
 
     return SafeArea(
+      child: SingleChildScrollView(
       child: Container(
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
@@ -196,7 +190,7 @@ class _PositioningButtonsWidgetState extends State<PositioningButtonsWidget> {
                       ),
                       child: Icon(
                         _getIconForPosition(_selectedPosition!),
-                        color: Colors.white,
+                        color: StudioDesignTokens.of(context).onPrimaryAction,
                         size: 20,
                       ),
                     ),
@@ -230,8 +224,8 @@ class _PositioningButtonsWidgetState extends State<PositioningButtonsWidget> {
                       ),
                       child: Text(
                         _selectedPosition == 2 ? "Default" : "{\\an$_selectedPosition}",
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: StudioDesignTokens.of(context).onPrimaryAction,
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           fontFamily: 'monospace',
@@ -326,14 +320,14 @@ class _PositioningButtonsWidgetState extends State<PositioningButtonsWidget> {
                           children: [
                             Icon(
                               Icons.clear,
-                              color: Colors.red,
+                              color: StudioDesignTokens.of(context).dangerText,
                               size: 20,
                             ),
                             const SizedBox(width: 8),
                             Text(
                               "Remove Positioning",
                               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                color: Colors.red,
+                                color: StudioDesignTokens.of(context).dangerText,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -355,7 +349,7 @@ class _PositioningButtonsWidgetState extends State<PositioningButtonsWidget> {
                     onPressed: _isLoading ? null : _handleApply,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primaryColor,
-                      foregroundColor: Colors.white,
+                      foregroundColor: StudioDesignTokens.of(context).onPrimaryAction,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -367,7 +361,7 @@ class _PositioningButtonsWidgetState extends State<PositioningButtonsWidget> {
                             height: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor: AlwaysStoppedAnimation<Color>(StudioDesignTokens.of(context).onPrimaryAction),
                             ),
                           )
                         : Row(
@@ -390,6 +384,7 @@ class _PositioningButtonsWidgetState extends State<PositioningButtonsWidget> {
                 const SizedBox(height: 16),
           ],
         ),
+      ),
       ),
     );
   }
