@@ -25,9 +25,12 @@ media_kit_native_event_loop 1.0.9, media_kit_libs_video 1.0.7
   `cp87_msone_back.log` (UTF-16 LE from Windows PowerShell), not only
   by Flutter's `Lost connection to device`.
 
-The **normal Back path is not shown crashing**. A report of the editor
-being unresponsive on return is still unverified independently; a
-successful route pop/dispose does not prove the editor remained responsive.
+The **normal Back path is not shown generating a native crash**, but the
+user confirms the returned editor was already frozen and unresponsive.
+They invoked Flutter hot restart **because of that freeze**. Therefore
+we must treat the **Back-return freeze as the primary incident**. The
+subsequent libmpv SIGSEGV occurred only during the attempted restart.
+The native tombstone does not explain why the editor initially froze.
 
 ## Root-cause hypothesis (not yet a patch)
 
@@ -79,3 +82,24 @@ different development workflows.
    disposal in profile/release too (upstream #1443).
 5. This native issue remains **open**. The 533 Flutter tests in CP87 R5
    cannot exercise the Android mpv FFI callback lifetime.
+
+## R7 correction and mitigation, after direct user clarification
+
+The user explicitly corrected our sequence interpretation: the editor froze
+first; the manually initiated hot restart was a **recovery attempt**. We were
+wrong to frame the normal Back path as unproblematic merely because the
+route popped and disposed. Logcat contains continued Android input delivery
+at 00:23:42.918, 00:23:43.362 and 00:23:43.765 after the 00:23:41.910
+MSone disposal, but the Flutter console contains no correlated editor-side
+interaction. There is no independently recorded ANR in that brief period.
+
+A candidate blocking input path exists in
+`lib/widgets/isolated_loader.dart`: `IsolatedLoaderController.show`
+inserts a full-screen, hit-testable `OverlayEntry` into the Navigator overlay,
+which is not scoped to the editor route. R7 removes a stale entry before and
+on return from the MSone route, and logs whether it was present. The next
+reproduction must check `EditScreen MSone: resumed editor;
+staleLoader=<true|false>` and the following first five editor pointer logs.
+If staleLoader is false and events still fail, further investigate
+Navigator barriers, route focus, editor isolate stalls and native playback.
+**R7 is not an on-device confirmed fix.**

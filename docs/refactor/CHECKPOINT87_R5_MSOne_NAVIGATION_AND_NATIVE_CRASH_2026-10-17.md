@@ -94,3 +94,14 @@ Material. This checkpoint now gives all those tiles an immediate transparent
 A widget regression renders the Karaoke radio controls under Carbon Zero Dark
 and Classic to catch the actual framework assertion, rather than relying
 only on source-level tests.
+
+## User correction (CP87 R7)
+
+The user explicitly reports **editor freeze immediately after MSone Back**;
+**hot restart was attempted to recover from this pre-existing freeze**.
+Earlier wording that made native hot restart sound like the only issue was
+incorrect. The Back-return freeze is the primary incident and needs independent
+resolution, while the subsequent `libmpv.so` SIGSEGV is a separate native
+problem. [R7 candidate remediation](https://github.com/anzilr/SubtitleStudio/commit/326ea12da5e5c743d36098e79950eddc829de3a0)
+clears a potentially stale root-level loader overlay on return and instruments
+post-return pointer dispatch.

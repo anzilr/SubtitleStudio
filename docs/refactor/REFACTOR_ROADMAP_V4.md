@@ -1,13 +1,29 @@
 # SubtitleStudio Refactor Roadmap v4
 
+> **CP87 R7 — MSone BACK FREEZE IS THE PRIMARY DEFECT (October 17, 2026):**
+> The user explicitly confirms **the editor became unresponsive immediately
+> after Android Back from MSone** and only then initiated Flutter hot restart
+> in an attempt to recover. Our previous description of this as a
+> hot-restart-only incident was incorrect. Android delivered three additional
+> input events at 00:23:42–43 after MSone route pop/dispose but the console
+> contains no editor action logs; an ANR has not been captured. At 00:23:52
+> the operator-initiated hot restart subsequently caused the separate
+> `libmpv.so` native SIGSEGV. These are **two problems** with distinct timing.
+> [R7 candidate fix `326ea12`](https://github.com/anzilr/SubtitleStudio/commit/326ea12da5e5c743d36098e79950eddc829de3a0)
+> clears potentially stale full-screen cue-scroll `OverlayEntry` before
+> and after MSone navigation. It also instruments the first five pointer
+> events and records whether a blocking loader was found. This is a
+> **hypothesis-driven mitigation**, not a verified on-device freeze fix.
+> Flutter analyzer/test gate and physical device retesting are separate.
+>
 > **CP87 R6 — NATIVE CRASH ISOLATED (October 17, 2026):**
 > **Code gate green:** [38969567231](https://github.com/anzilr/SubtitleStudio/actions/runs/38969567231) — **534 tests passed and no analyzer issues**. Native Android hot-restart remains blocked.
 > Two complete CPH2381 logs confirm MSone system Back popped and disposed
 > its route at 00:23:41, then at 00:23:52 a separately invoked Flutter
 > hot restart recovered a stale media_kit native handle and triggered
 > **SIGSEGV inside libmpv.so**. The Back route itself did not log a native
-> crash. Flutter's resumed-editor responsiveness still needs an
-> independent no-hot-restart test. Development must now use the
+> crash, but the user reports that the editor became unresponsive immediately
+> after Back and before deciding to hot restart; root cause remains open. Development must now use the
 > clean-process debug launcher in `tool/run_android_clean_debug.ps1`
 > and keep native mpv FFI callback cleanup as an open platform blocker.
 > [R6 report](CHECKPOINT87_R6_NATIVE_HOT_RESTART_DIAGNOSIS_2026-10-17.md).
