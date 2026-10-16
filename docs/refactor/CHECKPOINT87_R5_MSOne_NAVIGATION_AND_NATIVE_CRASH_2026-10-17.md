@@ -5,6 +5,7 @@
 **Android device:** CPH2381 / OnePlus / Android 14  
 **Incident log:** user-provided `Pasted text(20261016-210407).txt` (980 lines)  
 **Source implementation:** [commit `cc0f30b`](https://github.com/anzilr/SubtitleStudio/commit/cc0f30b83fb07087e598ab55368a68d71ebb5d7e)  
+**Flutter gate:** [GitHub Actions 38968179884](https://github.com/anzilr/SubtitleStudio/actions/runs/38968179884) — **SUCCESS, 533 Flutter tests passed and zero analyzer issues** (code `f121197`). Native Android Back/ANR reproduction remains to be qualified.
 **Regression tests:** `test/msone_submission_flow_navigation_test.dart`,
 `test/extraction_checkbox_material_contract_test.dart`
 

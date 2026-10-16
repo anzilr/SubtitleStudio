@@ -1,6 +1,7 @@
 # SubtitleStudio Refactor Roadmap v4
 
 > **CP87 R5 — MSone navigation and confirmed hot-restart crash (October 17, 2026):**
+> **Flutter CI succeeded:** [38968179884](https://github.com/anzilr/SubtitleStudio/actions/runs/38968179884) — **533 tests passed, 0 analyzer issues**, at implementation `f121197`. The native hot restart crash is not cleared by this result.
 > The CPH2381 full log confirms `MsoneSubmissionScreen route pop: didPop=true`
 > *before* the operator triggered `Performing hot restart...`. Then
 > `media_kit: NativeReferenceHolder: Disposing` immediately preceded a
