@@ -109,8 +109,11 @@ void main() {
     IsolatedLoaderController.show(editorContext);
     expect(IsolatedLoaderController.isVisible, isTrue);
     await tester.binding.handlePopRoute();
-    await tester.pump(const Duration(milliseconds: 450));
+    // First pump advances the route-pop animation; settle the transition
+    // before checking hit testing, or the editor remains translated offscreen.
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 450));
+    await tester.pumpAndSettle();
     expect(resumeCount, 1);
     expect(IsolatedLoaderController.isVisible, isFalse);
     expect(find.text('Editor action'), findsOneWidget);

@@ -65,3 +65,5 @@ CP87 R5R2 controls: fix decorated panel containing Karaoke effect RadioListTiles
 CP87 R6: add route-return frame diagnostics and Flutter back widget regression, script for clean Android process (never clear database), UTF16-safe Logcat capture; document independent native libmpv hot-restart SIGSEGV.
 
 CP87 R7 2026-10-17: prioritize user-observed MSone Back UI freeze BEFORE operator hot restart; clean stale root cue-scroll loading overlay on editor return and track first 5 post-return pointer events. Add route-return overlay blocking regression. Native SIGSEGV after manual restart remains independent.
+
+CP87 R7 test correction: route pop widget hit test must await animation settling; initial test tap was at negative x while editor was still translating onscreen, not a regression in loader cleanup.
