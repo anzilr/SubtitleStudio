@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:subtitle_studio/themes/studio_design_tokens.dart';
 import 'package:subtitle_studio/screens/edit/models/subtitle_entry.dart';
 import 'package:subtitle_studio/utils/unicode_text_input_formatter.dart';
 
@@ -22,19 +23,19 @@ class SourceViewPane extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final tokens = StudioDesignTokens.of(context);
 
     return Container(
-      color: colorScheme.surface,
+      color: tokens.surface,
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: colorScheme.surfaceContainer,
+              color: tokens.raisedSurface,
               border: Border(
                 bottom: BorderSide(
-                  color: colorScheme.outline.withValues(alpha: 0.2),
+                  color: tokens.outline,
                 ),
               ),
             ),
@@ -43,7 +44,7 @@ class SourceViewPane extends StatelessWidget {
                 children: [
                   Icon(
                     Icons.code,
-                    color: colorScheme.primary,
+                    color: tokens.primaryAction,
                     size: 20,
                   ),
                   const SizedBox(width: 8),
@@ -53,7 +54,7 @@ class SourceViewPane extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: colorScheme.secondary,
+                        color: tokens.mutedText,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -65,7 +66,7 @@ class SourceViewPane extends StatelessWidget {
                     Text(
                       'Direct text editing mode',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurface.withValues(alpha: 0.6),
+                        color: tokens.mutedText,
                         fontStyle: FontStyle.italic,
                       ),
                     ),
@@ -114,7 +115,7 @@ class _SourceViewSubtitleTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final tokens = StudioDesignTokens.of(context);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
@@ -128,7 +129,7 @@ class _SourceViewSubtitleTile extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
-                color: colorScheme.primary,
+                color: tokens.primaryAction,
                 fontFamily: 'monospace',
               ),
               decoration: const InputDecoration(
@@ -151,7 +152,7 @@ class _SourceViewSubtitleTile extends StatelessWidget {
                   initialValue: entry.startTime,
                   style: TextStyle(
                     fontSize: 12,
-                    color: colorScheme.secondary,
+                    color: tokens.mutedText,
                     fontFamily: 'monospace',
                   ),
                   decoration: const InputDecoration(
@@ -169,7 +170,7 @@ class _SourceViewSubtitleTile extends StatelessWidget {
                 ' --> ',
                 style: TextStyle(
                   fontSize: 12,
-                  color: colorScheme.onSurface.withValues(alpha: 0.6),
+                  color: tokens.mutedText,
                   fontFamily: 'monospace',
                 ),
               ),
@@ -178,7 +179,7 @@ class _SourceViewSubtitleTile extends StatelessWidget {
                   initialValue: entry.endTime,
                   style: TextStyle(
                     fontSize: 12,
-                    color: colorScheme.secondary,
+                    color: tokens.mutedText,
                     fontFamily: 'monospace',
                   ),
                   decoration: const InputDecoration(
@@ -203,7 +204,7 @@ class _SourceViewSubtitleTile extends StatelessWidget {
             ],
             style: TextStyle(
               fontSize: 14,
-              color: colorScheme.onSurface,
+              color: tokens.onSurface,
               height: 1.4,
             ),
             decoration: const InputDecoration(
