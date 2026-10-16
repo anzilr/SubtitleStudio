@@ -15,6 +15,11 @@ class StudioDesignTokens extends ThemeExtension<StudioDesignTokens> {
     required this.onSurface,
     required this.mutedText,
     required this.outline,
+    required this.fieldBorder,
+    required this.focusBorder,
+    required this.selection,
+    required this.caret,
+    required this.disabledText,
     required this.primaryAction,
     required this.onPrimaryAction,
     required this.editingAccent,
@@ -32,6 +37,14 @@ class StudioDesignTokens extends ThemeExtension<StudioDesignTokens> {
   final Color onSurface;
   final Color mutedText;
   final Color outline;
+
+  /// Visible boundaries for source, translated and timing fields.
+  final Color fieldBorder;
+  final Color focusBorder;
+  final Color selection;
+  final Color caret;
+  final Color disabledText;
+
   final Color primaryAction;
   final Color onPrimaryAction;
   final Color editingAccent;
@@ -49,6 +62,11 @@ class StudioDesignTokens extends ThemeExtension<StudioDesignTokens> {
     onSurface: Color(0xFF17223B),
     mutedText: Color(0xFF66728D),
     outline: Color(0xFFD7DEEC),
+    fieldBorder: Color(0xFF66728D),
+    focusBorder: Color(0xFF5268D9),
+    selection: Color(0x445268D9),
+    caret: Color(0xFF5268D9),
+    disabledText: Color(0xFF66728D),
     primaryAction: Color(0xFF5268D9),
     onPrimaryAction: Color(0xFFFFFFFF),
     editingAccent: Color(0xFF14796F),
@@ -67,6 +85,11 @@ class StudioDesignTokens extends ThemeExtension<StudioDesignTokens> {
     onSurface: Color(0xFFEEF2FA),
     mutedText: Color(0xFFB5C0D8),
     outline: Color(0xFF46546C),
+    fieldBorder: Color(0xFFB5C0D8),
+    focusBorder: Color(0xFFA9B6FF),
+    selection: Color(0x44A9B6FF),
+    caret: Color(0xFFA9B6FF),
+    disabledText: Color(0xFFB5C0D8),
     primaryAction: Color(0xFFA9B6FF),
     onPrimaryAction: Color(0xFF111A2C),
     editingAccent: Color(0xFF62DBCA),
@@ -96,6 +119,11 @@ class StudioDesignTokens extends ThemeExtension<StudioDesignTokens> {
     Color? onSurface,
     Color? mutedText,
     Color? outline,
+    Color? fieldBorder,
+    Color? focusBorder,
+    Color? selection,
+    Color? caret,
+    Color? disabledText,
     Color? primaryAction,
     Color? onPrimaryAction,
     Color? editingAccent,
@@ -113,6 +141,11 @@ class StudioDesignTokens extends ThemeExtension<StudioDesignTokens> {
       onSurface: onSurface ?? this.onSurface,
       mutedText: mutedText ?? this.mutedText,
       outline: outline ?? this.outline,
+      fieldBorder: fieldBorder ?? this.fieldBorder,
+      focusBorder: focusBorder ?? this.focusBorder,
+      selection: selection ?? this.selection,
+      caret: caret ?? this.caret,
+      disabledText: disabledText ?? this.disabledText,
       primaryAction: primaryAction ?? this.primaryAction,
       onPrimaryAction: onPrimaryAction ?? this.onPrimaryAction,
       editingAccent: editingAccent ?? this.editingAccent,
@@ -138,6 +171,11 @@ class StudioDesignTokens extends ThemeExtension<StudioDesignTokens> {
       onSurface: Color.lerp(onSurface, other.onSurface, t)!,
       mutedText: Color.lerp(mutedText, other.mutedText, t)!,
       outline: Color.lerp(outline, other.outline, t)!,
+      fieldBorder: Color.lerp(fieldBorder, other.fieldBorder, t)!,
+      focusBorder: Color.lerp(focusBorder, other.focusBorder, t)!,
+      selection: Color.lerp(selection, other.selection, t)!,
+      caret: Color.lerp(caret, other.caret, t)!,
+      disabledText: Color.lerp(disabledText, other.disabledText, t)!,
       primaryAction: Color.lerp(primaryAction, other.primaryAction, t)!,
       onPrimaryAction: Color.lerp(onPrimaryAction, other.onPrimaryAction, t)!,
       editingAccent: Color.lerp(editingAccent, other.editingAccent, t)!,
