@@ -146,7 +146,7 @@ class _AiExplanationButtonState extends ConsumerState<AiExplanationButton> {
                           Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                              color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
                                 color: borderColor,
@@ -180,7 +180,7 @@ class _AiExplanationButtonState extends ConsumerState<AiExplanationButton> {
                                   children: [
                                     Icon(
                                       Icons.check_circle,
-                                      color: Colors.green,
+                                      color: Theme.of(context).colorScheme.primary,
                                       size: 16,
                                     ),
                                     const SizedBox(width: 8),
@@ -258,7 +258,7 @@ class _AiExplanationButtonState extends ConsumerState<AiExplanationButton> {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                            color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: borderColor,
@@ -283,7 +283,7 @@ class _AiExplanationButtonState extends ConsumerState<AiExplanationButton> {
                             onPressed: () => Navigator.of(context).pop(),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: primaryColor,
-                              foregroundColor: Colors.white,
+                              foregroundColor: Theme.of(context).colorScheme.onPrimary,
                               elevation: 0,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -292,7 +292,7 @@ class _AiExplanationButtonState extends ConsumerState<AiExplanationButton> {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(Icons.check, size: 20),
+                                Icon(Icons.check, size: 20),
                                 const SizedBox(width: 8),
                                 Text(
                                   'Got it',
@@ -324,7 +324,7 @@ class _AiExplanationButtonState extends ConsumerState<AiExplanationButton> {
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            const Icon(Icons.error_outline, color: Colors.red),
+            Icon(Icons.error_outline, color: Theme.of(context).colorScheme.error),
             const SizedBox(width: 8),
             const Text('Error'),
           ],
@@ -397,10 +397,10 @@ class _AiExplanationButtonState extends ConsumerState<AiExplanationButton> {
           borderRadius: BorderRadius.circular(8),
           gradient: LinearGradient(
             colors: isLoading
-                ? [Colors.grey.shade300, Colors.grey.shade400]
+                ? [Theme.of(context).colorScheme.outlineVariant, Theme.of(context).colorScheme.outline]
                 : [
-                    Colors.deepPurple.withValues(alpha: 0.1),
-                    Colors.purple.withValues(alpha: 0.1),
+                    Theme.of(context).colorScheme.secondary.withValues(alpha: 0.1),
+                    Theme.of(context).colorScheme.secondary.withValues(alpha: 0.1),
                   ],
           ),
         ),
@@ -424,14 +424,14 @@ class _AiExplanationButtonState extends ConsumerState<AiExplanationButton> {
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
                         valueColor: AlwaysStoppedAnimation<Color>(
-                          Colors.deepPurple,
+                          Theme.of(context).colorScheme.secondary,
                         ),
                       ),
                     )
                   else
-                    const Icon(
+                    Icon(
                       Icons.auto_awesome,
-                      color: Colors.deepPurple,
+                      color: Theme.of(context).colorScheme.secondary,
                       size: 20,
                     ),
                   const SizedBox(width: 8),
@@ -440,7 +440,7 @@ class _AiExplanationButtonState extends ConsumerState<AiExplanationButton> {
                         ? 'Getting AI Explanation...'
                         : 'Explain with AI',
                     style: TextStyle(
-                      color: isLoading ? Colors.grey : Colors.deepPurple,
+                      color: isLoading ? Theme.of(context).colorScheme.onSurfaceVariant : Theme.of(context).colorScheme.secondary,
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
                     ),
