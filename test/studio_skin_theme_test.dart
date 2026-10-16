@@ -41,7 +41,7 @@ void main() {
     expect(copper.copyWith(skin: StudioSkinId.asterViolet).mode,
         StudioAppearance.dark);
     expect(start, const StudioAppearanceSelection(
-      skin: StudioSkinId.carbonJade,
+      skin: StudioSkinId.carbonZero,
       mode: StudioAppearance.dark,
     ));
   });
@@ -102,7 +102,34 @@ void main() {
       expect(classic.canvas.computeLuminance(),
           lessThan(dark.canvas.computeLuminance()));
     }
-    expect(ids, hasLength(9));
+    expect(ids, hasLength(12));
+  });
+
+  test('Carbon Zero uses grayscale only, with true black and white', () {
+    for (final mode in StudioAppearance.values) {
+      final palette = StudioPalette.resolve(StudioSkin.carbonZero, mode);
+      final colors = <Color>[
+        palette.canvas, palette.surface, palette.raisedSurface,
+        palette.fieldSurface, palette.onSurface, palette.mutedText,
+        palette.outline, palette.fieldBorder, palette.accent,
+        palette.onAccent, palette.appBar, palette.onAppBar,
+        palette.caution, palette.danger, palette.success,
+      ];
+      for (final color in colors) {
+        expect((color.r * 255).round(), (color.g * 255).round());
+        expect((color.g * 255).round(), (color.b * 255).round());
+      }
+      expect(_contrast(palette.onAccent, palette.accent),
+          greaterThanOrEqualTo(4.5));
+    }
+    expect(
+      StudioPalette.resolve(StudioSkin.carbonZero, StudioAppearance.light).canvas,
+      const Color(0xFFFFFFFF),
+    );
+    expect(
+      StudioPalette.resolve(StudioSkin.carbonZero, StudioAppearance.classic).canvas,
+      const Color(0xFF000000),
+    );
   });
 
   test('new semantic tokens preserve interpolation and copyWith behavior', () {
@@ -186,6 +213,7 @@ void main() {
     ));
 
     expect(find.byType(StudioSkinPreviewTile), findsNWidgets(12));
+    expect(find.text('Carbon Zero'), findsOneWidget);
     expect(find.text('Carbon & Jade'), findsOneWidget);
     expect(find.text('Copper Cinema'), findsOneWidget);
     expect(find.text('Aster Violet'), findsOneWidget);
