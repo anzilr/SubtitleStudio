@@ -5,7 +5,7 @@
 **User-supplied Android device:** CPH2381 / Android 14 / 360dp  
 **CP87 R0 dictionary fix:** [`999f4a1`](https://github.com/anzilr/SubtitleStudio/commit/999f4a167903a008db1a5aa427b05cb768e1b702)  
 **CP87 R1 technical implementation:** [`50bd1c0`](https://github.com/anzilr/SubtitleStudio/commit/50bd1c041ef0ada113937826d9975073cddc7020)  
-**Flutter CI:** [Dictionary gate 38961699279](https://github.com/anzilr/SubtitleStudio/actions/runs/38961699279); [CP87 gate 38961927133](https://github.com/anzilr/SubtitleStudio/actions/runs/38961927133). Check their completion and test counts.  
+**Flutter CI:** [CP87 gate 38961927133](https://github.com/anzilr/SubtitleStudio/actions/runs/38961927133) — **SUCCESS: 508 Flutter tests passed, 0 analyzer issues**, on code `50bd1c0`. The earlier [dictionary-only gate](https://github.com/anzilr/SubtitleStudio/actions/runs/38961699279) was superseded/cancelled; the successful CP87 gate includes both sets of changes.  
 **CP86:** Android/Windows full native qualification, cold extraction speed and the prior unsymbolicated `libmpv.so` hot-restart SIGSEGV remain open. CP87 does not waive this safety gate.
 
 ## Reproduced Olam dictionary issue: language tabs

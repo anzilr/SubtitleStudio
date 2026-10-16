@@ -15,8 +15,10 @@
 > dark neutral selected surfaces in achromatic dark/Classic palettes,
 > retaining accent-colored tabs elsewhere.
 > [CP87 full CI](https://github.com/anzilr/SubtitleStudio/actions/runs/38961927133)
-> and [dictionary CI](https://github.com/anzilr/SubtitleStudio/actions/runs/38961699279)
-> verify the regressions; native Android/Windows QA and the prior
+> **passed with 508 Flutter tests and 0 analyzer issues** (code `50bd1c0`),
+> covering the dictionary contrast fix and CP87 identity changes together.
+> The older [dictionary-only gate](https://github.com/anzilr/SubtitleStudio/actions/runs/38961699279)
+> was cancelled after the superseding CI run started. Native Android/Windows QA and the prior
 > media-kit/libmpv hot-restart crash remain open. See
 > [CP87 R1 report](CHECKPOINT87_FILE_IDENTITY_AND_DICTIONARY_CONTRAST_2026-10-16.md).
 > **Appearance development remains frozen** beyond this reproduced tab issue.
