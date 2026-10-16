@@ -1,7 +1,7 @@
 # SubtitleStudio community skins — portable v1 contract and open-source roadmap
 
 Date: 2026-10-16
-Status: **Architecture/prototype codec committed; app-side file import and website NOT implemented**
+Status: **SKIN-EXT-1 FOUNDATION VERIFIED** — [CI run 38868963345](https://github.com/anzilr/SubtitleStudio/actions/runs/38868963345), **400 tests passed and zero analyzer issues** against code commit `26a2ece34ee8ca627e8dea9943d09662fa00ea74`. App-side file import and website are **NOT implemented**.
 Branch: `refactor/riverpod-architecture`
 Related: [SKIN implementation plan](STUDIO_SKINS_IMPLEMENTATION_PLAN_2026-10-16.md), [palette matrix](STUDIO_PALETTE_DECISION_2026-10-16.md).
 
@@ -135,7 +135,7 @@ Colors are **semantic**. No script, CSS, image, arbitrary icon, external font, r
 
 ## Future roadmap additions (separate from SKIN-1 and SKIN-2)
 
-**SKIN-EXT-1 (foundation — started):** stable community IDs, definition/catalog, generic factory, colors-only v1 contract/validator and tests. No user-facing installer.
+**SKIN-EXT-1 (foundation — code and CI verified):** stable community IDs, definition/catalog, generic factory, colors-only v1 contract/validator, machine-readable schema and regression tests (400 tests passed). No user-facing installer.
 
 **SKIN-EXT-2 (future app importer/exporter):**
 1. Native file picker for `.sskin.json` on Android/Windows/Linux/macOS/iOS; SAF/desktop file identity handled by the file-access roadmap.
