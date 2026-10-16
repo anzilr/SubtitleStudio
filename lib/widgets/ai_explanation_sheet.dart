@@ -575,7 +575,7 @@ class _AiExplanationSheetContentState extends ConsumerState<_AiExplanationSheetC
                 )
               else if (_availableModels.isEmpty)
                 IconButton(
-                  icon: const Icon(Icons.refresh),
+                  icon: Icon(Icons.refresh),
                   iconSize: 20,
                   onPressed: _fetchAvailableModels,
                   tooltip: 'Refresh models',
@@ -681,13 +681,13 @@ class _AiExplanationSheetContentState extends ConsumerState<_AiExplanationSheetC
               ),
               const Spacer(),
               IconButton(
-                icon: const Icon(Icons.remove),
+                icon: Icon(Icons.remove),
                 iconSize: 20,
                 onPressed: () => _adjustContextLines(-1),
                 tooltip: 'Decrease context',
               ),
               IconButton(
-                icon: const Icon(Icons.add),
+                icon: Icon(Icons.add),
                 iconSize: 20,
                 onPressed: () => _adjustContextLines(1),
                 tooltip: 'Increase context',
@@ -714,7 +714,7 @@ class _AiExplanationSheetContentState extends ConsumerState<_AiExplanationSheetC
             const Spacer(),
             TextButton.icon(
               onPressed: _resetPrompt,
-              icon: const Icon(Icons.restore, size: 16),
+              icon: Icon(Icons.restore, size: 16),
               label: const Text('Reset'),
             ),
           ],
@@ -760,11 +760,11 @@ class _AiExplanationSheetContentState extends ConsumerState<_AiExplanationSheetC
                         _savePrompt();
                         _generateExplanation();
                       },
-                      icon: const Icon(Icons.save, size: 18),
+                      icon: Icon(Icons.save, size: 18),
                       label: const Text('Save & Generate'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryColor,
-                        foregroundColor: Colors.white,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
                     ),
@@ -806,11 +806,11 @@ class _AiExplanationSheetContentState extends ConsumerState<_AiExplanationSheetC
                         _savePrompt();
                         _generateExplanation();
                       },
-                      icon: const Icon(Icons.save, size: 18),
+                      icon: Icon(Icons.save, size: 18),
                       label: const Text('Save & Generate'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryColor,
-                        foregroundColor: Colors.white,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
                     ),
@@ -862,7 +862,7 @@ class _AiExplanationSheetContentState extends ConsumerState<_AiExplanationSheetC
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: !isLightTheme ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+            color: !isLightTheme ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: borderColor, width: 1),
           ),
@@ -887,7 +887,7 @@ class _AiExplanationSheetContentState extends ConsumerState<_AiExplanationSheetC
               ],
               Row(
                 children: [
-                  Icon(Icons.check_circle, color: Colors.green, size: 16),
+                  Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary, size: 16),
                   const SizedBox(width: 8),
                   Text(
                     'Current line',
@@ -969,7 +969,7 @@ class _AiExplanationSheetContentState extends ConsumerState<_AiExplanationSheetC
           width: double.infinity, // Make loading indicator span full width
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: !isLightTheme ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+            color: !isLightTheme ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: borderColor, width: 1),
           ),
@@ -1018,12 +1018,12 @@ class _AiExplanationSheetContentState extends ConsumerState<_AiExplanationSheetC
       return Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.error_outline, color: Colors.red, size: 48),
+          Icon(Icons.error_outline, color: Theme.of(context).colorScheme.error, size: 48),
           const SizedBox(height: 16),
           Text(
             state.message,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.red,
+              color: Theme.of(context).colorScheme.error,
             ),
             textAlign: TextAlign.center,
           ),
@@ -1125,7 +1125,7 @@ class _AiExplanationSheetContentState extends ConsumerState<_AiExplanationSheetC
                   )
                 : ElevatedButton.icon(
                     onPressed: _generateExplanation,
-                    icon: const Icon(Icons.auto_awesome, size: 20),
+                    icon: Icon(Icons.auto_awesome, size: 20),
                     label: const Text(
                       'Generate Explanation',
                       style: TextStyle(
@@ -1135,7 +1135,7 @@ class _AiExplanationSheetContentState extends ConsumerState<_AiExplanationSheetC
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primaryColor,
-                      foregroundColor: Colors.white,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -1152,7 +1152,7 @@ class _AiExplanationSheetContentState extends ConsumerState<_AiExplanationSheetC
               onPressed: () => Navigator.of(context).pop(),
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryColor,
-                foregroundColor: Colors.white,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -1161,7 +1161,7 @@ class _AiExplanationSheetContentState extends ConsumerState<_AiExplanationSheetC
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.check, size: 20),
+                  Icon(Icons.check, size: 20),
                   const SizedBox(width: 8),
                   Text(
                     'Got it',
