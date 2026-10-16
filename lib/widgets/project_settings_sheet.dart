@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:subtitle_studio/themes/studio_design_tokens.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/app/providers/core_providers.dart';
@@ -358,15 +359,14 @@ class _ProjectSettingsSheetState extends ConsumerState<ProjectSettingsSheet> wit
 
   @override
   Widget build(BuildContext context) {
-    // Dynamic color variables for adaptive theming
-    final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
-    final mutedColor = onSurfaceColor.withValues(alpha: 0.6);
+    final tokens = StudioDesignTokens.of(context);
+    final mutedColor = tokens.mutedText;
 
     return SafeArea(
       child: Container(
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          color: tokens.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(StudioRadius.sheet)),
         ),
         child: Padding(
           padding: const EdgeInsets.all(24.0),
@@ -381,12 +381,12 @@ class _ProjectSettingsSheetState extends ConsumerState<ProjectSettingsSheet> wit
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: onSurfaceColor.withValues(alpha: 0.1),
+                        color: tokens.primaryAction.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
                         Icons.settings,
-                        color: onSurfaceColor.withValues(alpha: 0.7),
+                        color: tokens.primaryAction,
                         size: 28,
                       ),
                     ),
