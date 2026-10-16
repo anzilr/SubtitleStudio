@@ -82,7 +82,7 @@ class _SubtitleToggleButtonState extends State<_SubtitleToggleButton> with Widge
           alignment: Alignment.center,
           child: Icon(
             _subtitlesEnabled ? Icons.subtitles : Icons.subtitles_off,
-            color: _isHovered ? Colors.blue.shade200 : Colors.white,
+            color: _isHovered ? Theme.of(context).colorScheme.primary : Colors.white,
             size: 22, // Increased icon size
           ),
         ),
@@ -130,7 +130,7 @@ class _FullscreenButtonState extends State<_FullscreenButton> {
           alignment: Alignment.center,
           child: Icon(
             videoPlayerState._isCustomFullscreen ? Icons.fullscreen_exit : Icons.fullscreen,
-            color: _isHovered ? Colors.blue.shade200 : Colors.white,
+            color: _isHovered ? Theme.of(context).colorScheme.primary : Colors.white,
             size: 22, // Increased icon size
           ),
         ),
