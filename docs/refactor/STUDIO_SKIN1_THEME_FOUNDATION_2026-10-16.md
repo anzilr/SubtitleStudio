@@ -2,8 +2,8 @@
 
 Date: 2026-10-16
 Branch: `refactor/riverpod-architecture`
-Implementation status: **code committed, verification gate in progress**
-Quality workflow: https://github.com/anzilr/SubtitleStudio/actions/runs/38867202442
+Implementation status: **SKIN-1 R2 committed, final verification pending**
+Initial successful quality gate: https://github.com/anzilr/SubtitleStudio/actions/runs/38867202442 — 391 tests, 0 analyzer issues.\nR2 gallery-inclusive quality gate: https://github.com/anzilr/SubtitleStudio/actions/runs/38867646977 (pending).
 
 ## What changed
 
@@ -11,7 +11,7 @@ Quality workflow: https://github.com/anzilr/SubtitleStudio/actions/runs/38867202
 - `lib/themes/studio_palette.dart`: nine immutable `StudioPalette` definitions with canvas, raised/surface/field levels, user text, muted text, action text, fields/input stroke, app bars and functional warning/error semantics. Classic is a **distinct** near-black palette, not an alias for dark.
 - `lib/themes/studio_design_tokens.dart`: new semantic roles `fieldBorder`, `focusBorder`, `selection`, `caret`, `disabledText` in the existing `ThemeExtension`. `copyWith` and `lerp` maintain these fields. The existing light/dark/classic legacy token definitions remain functional.
 - `lib/themes/studio_theme_factory.dart`: one shared `StudioThemeFactory.resolve(skin, appearance, fontFamily: ...)` producing Material3 `ThemeData` with deliberate `ColorScheme`, cue field decoration, type, buttons, app bar, surface, dialogs and selection. No duplicated screen/widget implementations for each palette.
-- `test/studio_skin_theme_test.dart`: all nine palettes, persisted-id type contract, independent selection copy behavior, readability/field-border contrast, distinct Classic, custom-font inheritance and text-controller survival across theme previews.
+- `lib/themes/studio_skin_preview.dart`: a shared **read-only** gallery displaying all three skins in all three modes, designed for later SKIN-3 Settings integration. No persistence or interaction is performed.\n- `test/studio_skin_theme_test.dart`: all nine palettes, persisted-id type contract, independent selection copy behavior, readability/field-border contrast, distinct Classic, custom-font inheritance and text-controller survival across theme previews; compact 320px-wide gallery widget smoke test.
 - `.github/ci-checkpoint`: analyzer + full Flutter suite gate only; no native platform builds.
 
 ## Scope and data safety
