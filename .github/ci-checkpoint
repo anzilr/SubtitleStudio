@@ -19,3 +19,9 @@ Media and waveform theme pass: video progress/hover/track settings adopt primary
 Theme audit pre-freeze: issue-responsive pass completed through project status, common loaders, welcome visuals, Home session badges, screenshot/dictionary, toolbar and waveform. Extra palette-driven foreground fixes in badge icons. Re-run analyzer + full regression now. Exceptions: actual video footage overlays, user-authored subtitle color tags, palette definitions, skin preview swatches and media artwork.
 
 Final static guard included: test/studio_ui_color_freeze_test.dart checks 31 migrated UI surfaces against reintroduction of nonsemantic fixed brand accents. Run analyzer + all Flutter tests and use failed paths to close final remaining exceptions. No release/production branch writes. Skin work to be paused after gate; next technical stream is CP86 native waveform qualification.
+
+FINAL THEME FREEZE RETEST 2026-10-16T15:50:00.000Z:
+Last guard failure in CI 38930415626 was a lingering Colors.orange
+in fullscreen repeat-control icon; changed that to live colorScheme.primary.
+Verify analyzer, all widget/unit tests and theme-freeze source guard.
+Theme scope ends here unless CI or device reproduces a specific defect.
