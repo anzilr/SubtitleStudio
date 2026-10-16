@@ -1,5 +1,30 @@
 # SubtitleStudio Refactor Roadmap v4
 
+> **CP86 R2/R3 ANDROID FEEDBACK — October 16, 2026:**
+> Physical CPH2381 debug log exposed **183,327 ms waveform load** for a
+> long Android SAF MKV: source acquisition **183,294 ms**, zoom metadata only
+> **31 ms**, with 20,637,381 reduced samples. The old compact pipeline
+> still wrote 44.1-kHz PCM (roughly 660 MB raw on this file) and unversioned
+> SAF inputs were redecoded on each load. R2 switched new compact FFmpeg
+> extraction to 2,756-Hz mono and checksummed V2 mean-only peaks (2 bytes per
+> sample; legacy V1 cache remains readable), while Android DocumentsProvider
+> size+last-modified revision support permits cache reuse when both are valid.
+> Source without trustworthy revision metadata stays non-persistent.
+> [R2 Flutter gate 38944366683](https://github.com/anzilr/SubtitleStudio/actions/runs/38944366683):
+> **478 tests passed, analyzer 0**. This is *not* yet a native performance
+> measurement of the new algorithm; first-time extraction still decodes audio.
+> Specific reproduced UI bugs override the theme freeze: original role-coded
+> waveform action colors (zoom orange, magnet red, confirm green, add teal,
+> scroll blue) restored; Olam/Urban dictionary search no longer forces white
+> text/icons on Carbon Zero white-primary buttons; Dictionary CheckboxListTiles
+> use a Material header instead of a colored DecoratedBox; Import Subtitle
+> button icon uses `onPrimary`. R3/R4 UI CI gate:
+> [38945025518](https://github.com/anzilr/SubtitleStudio/actions/runs/38945025518).
+> [Targeted regression and Android retest report](CHECKPOINT86_R2R3_WAVEFORM_PERFORMANCE_AND_CONTRAST_2026-10-16.md).
+> **Appearance remains otherwise paused.** Android/Windows native cache
+> freshness, waveform fidelity/PTS, performance, Dictionary exception removal
+> and physical theme contrast remain pending device acceptance.
+
 > **CP86 R1 NATIVE WAVEFORM QUALIFICATION IN PROGRESS — October 16, 2026:**
 > Code [18ea029](https://github.com/anzilr/SubtitleStudio/commit/18ea02927ed792df3150e4415a8fc34cc64044e6) adds Windows/Linux global FFmpeg stream-map-safe diagnostics,
 > fail-closed Android SAF document read-handle resolution, skips potentially
