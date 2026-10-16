@@ -24,6 +24,7 @@ class CustomButtonGrid extends StatelessWidget {
       itemBuilder: (context, index) {
         final button = buttons[index];
         return _buildButton(
+          context: context,
           name: button.name,
           icon: button.icon,
           onTap: button.onTap,
