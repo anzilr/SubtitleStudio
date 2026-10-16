@@ -3,7 +3,7 @@
 **Date:** October 16, 2026  
 **Scope:** `anzilr/SubtitleStudio`, `refactor/riverpod-architecture` only  
 **Baseline:** R8 [469 Flutter tests and zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/38926044286)  
-**Verification status on document creation:** final theme-audit GitHub Actions gate running; see the most recent `.github/ci-checkpoint` workflow result before claiming CI sign-off.
+**Verification:** [GitHub Actions 38933989670](https://github.com/anzilr/SubtitleStudio/actions/runs/38933989670) **completed successfully — 470 Flutter tests passed, 0 analyzer issues**, verified code commit `5068731f7e1d6b988b950da5b3cd3b6fbbb4c2e0`.
 
 ## Purpose and scan
 
@@ -46,7 +46,7 @@ Fixed status/error/primary decoration is forbidden in migrated normal UI. The ne
 
 ## Remaining acceptance/risk
 
-- Final Flutter analyzer, full tests and static color guard must pass. They do not replace physical visual review on 360dp Android, landscape and Windows.
+- Final Flutter analyzer, 470-test suite and 31-surface static color guard **passed** in CI. They do not replace physical visual review on 360dp Android, landscape and Windows.
 - Semantic color use does not guarantee every status color pair meets enhanced contrast with *custom future imported skins*; the importer must validate v1 token contrasts.
 - Some older feature widgets may still use intentional fixed foregrounds; future bug reports should be corrected specifically, but broad appearance migrations **pause** after this gate.
 - Android Flutter logs warned that the existing Gradle 8.14.0, AGP 8.13.0 and Kotlin 2.2.20 will need eventual isolated toolchain modernization. Do not force an untested native upgrade within a UI refactor.
@@ -61,4 +61,8 @@ Fixed status/error/primary decoration is forbidden in migrated normal UI. The ne
 4. Add focused regression tests for identified native equivalence bugs; keep cancellation/provider lifecycle fixes retained. Do not accidentally restore eager full-length PCM allocation on Android.
 5. Following CP86: remaining typed file identity/SAF consolidation and injected persistence, project/checkpoint store ownership, Editor controller decomposition, logging/performance, and isolated platform toolchain upgrades. History UX, compact Edit Line and community-skin creator remain on UX backlog but are **not** the next workstream.
 
-**Appearance freeze policy:** once CI passes, no new skin features or broad UI recolors during the technical checkpoints; fix only reproduced contrast, accessibility, or regression defects. No upstream merge/release sign-off until native Android/Windows and historical Isar data-compatibility acceptance.
+**Appearance freeze policy (in effect after successful CI):** no new skin features or broad UI recolors during the technical checkpoints; fix only reproduced contrast, accessibility, or regression defects. No upstream merge/release sign-off until native Android/Windows and historical Isar data-compatibility acceptance.
+
+## Final gate corrections
+
+The first guard run found a lone hardcoded orange repeat-mode icon in fullscreen controls; switched it to the selected skin's primary role. The subsequent analyzer gate identified a `const SizedBox` wrapping a runtime theme color in subtitle extraction; removed the invalid `const` and changed the primary action icon's foreground from `onSurface` to `onPrimary`. [Final Actions run 38933989670](https://github.com/anzilr/SubtitleStudio/actions/runs/38933989670) then passed the analyzer and all **470 tests**. These corrections were necessary to ship the freeze in a green state. They do not constitute a native Android/Windows acceptance test.
