@@ -22,7 +22,7 @@ final themeControllerProvider = NotifierProvider<ThemeController, ThemeState>(
 
 /// Live app theme; watches both saved appearance and validated installed skins.
 /// A missing community ID is preserved in preferences but renders the
-/// catalog's safe Carbon & Jade fallback until it is installed again.
+/// catalog's safe Carbon Zero fallback until it is installed again.
 final liveStudioThemeProvider = Provider<ThemeData>((ref) {
   final appearance = ref.watch(themeControllerProvider);
   final catalog = ref.watch(studioSkinCatalogProvider);
@@ -34,7 +34,7 @@ final liveStudioThemeProvider = Provider<ThemeData>((ref) {
 @immutable
 class ThemeState {
   const ThemeState({
-    this.skinId = StudioSkinId.carbonJade,
+    this.skinId = StudioSkinId.carbonZero,
     this.appearance = StudioAppearance.classic,
     this.customFontPath,
     this.customFontName,
@@ -146,7 +146,7 @@ class ThemeController extends Notifier<ThemeState> {
       final current = state;
       state = ThemeState(
         skinId: _skinRevision == 0
-            ? StudioSkinId.parse(saved.skinId) ?? StudioSkinId.carbonJade
+            ? StudioSkinId.parse(saved.skinId) ?? StudioSkinId.carbonZero
             : current.skinId,
         appearance: _appearanceRevision == 0
             ? _appearanceFromSnapshot(saved)
