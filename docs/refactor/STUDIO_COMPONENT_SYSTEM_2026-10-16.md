@@ -1,7 +1,8 @@
 # SubtitleStudio — Unified Component Design Contract
 
 Date: 2026-10-16
-Status: **Approved requirement; shared component theme foundation implemented; full screen-by-screen migration pending**
+Status: **DESIGN-1 R4 CI VERIFIED — shared component themes implemented; full screen-by-screen migration pending**
+Verified CI: [Actions run 38892274970](https://github.com/anzilr/SubtitleStudio/actions/runs/38892274970) — **424 tests passed, zero analyzer issues**; code commit `1b850a6e2fdb25606e4a9396d68167cd7dbd8348`.
 Working branch: `refactor/riverpod-architecture`
 Related: [Refactor Roadmap V4](REFACTOR_ROADMAP_V4.md), [UX Roadmap](SUBTITLESTUDIO_UX_ROADMAP_2026-10-16.md), [Three-Skin Plan](STUDIO_SKINS_IMPLEMENTATION_PLAN_2026-10-16.md), [SKIN-4 R2 Pilot](STUDIO_SKIN4_CUE_FIELD_PILOT_2026-10-16.md).
 
@@ -60,8 +61,8 @@ The styling contract preserves **interaction behavior**: keyboard shortcuts, foc
 | Milestone | Description | Status |
 |---|---|---|
 | **DESIGN-0 — inventory/contract** | Approve component types, sizing, semantics, platform adaptations and a concrete UI-debt ledger | **Started** |
-| **DESIGN-1 — shared styling** | `StudioComponentThemes.apply` shared by old + new theme factories; tests for all 9 new palettes + 3 legacy modes | **Implemented; verify CI** |
-| **DESIGN-2 — migrate callers** | Replace one-off layout/styling in sheets, dialogs, popups, dropdowns, sliders, buttons. Begin with subtitle action sheet pilot, then Settings/Edit Line/Editor confirmations, formatting and session tools | **Pilot in progress; bulk migration pending** |
+| **DESIGN-1 — shared styling** | `StudioComponentThemes.apply` shared by old + new theme factories; tests for all 9 new palettes + 3 legacy modes | **Complete: R4 CI 424 tests, 0 analyzer issues** |
+| **DESIGN-2 — migrate callers** | Replace one-off layout/styling in sheets, dialogs, popups, dropdowns, sliders, buttons. Begin with subtitle action sheet pilot, then Settings/Edit Line/Editor confirmations, formatting and session tools | **Subtitle action sheet pilot committed and CI verified; bulk migration pending** |
 | **DESIGN-3 — visual/a11y acceptance** | Goldens/visual snapshots, 320dp + tablet + Windows width, RTL/Malayalam, 200% scaling, focus/hover/pressed/disabled, modal keyboard scroll, no sheet overflow | **Pending** |
 
 **SKIN-4 R3 is blocked on the contrast-critical DESIGN-2 sites**, notably Editor and Edit Line menus, formatting popups, toolbar and destructive actions. Remaining low-risk surfaces can finish in SKIN-5; full DESIGN-3 belongs with SKIN-6 Android/Windows native acceptance.
