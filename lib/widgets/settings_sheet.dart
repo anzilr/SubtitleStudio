@@ -101,7 +101,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
     final currentFontName = themeState.customFontName;
 
     return ListTile(
-      leading: const Icon(Icons.font_download, color: Colors.indigo),
+      leading: Icon(Icons.font_download, color: Theme.of(context).colorScheme.primary),
       title: const Text('Custom App Font'),
       subtitle: Text(currentFontName != null 
         ? 'Current: $currentFontName'
@@ -186,7 +186,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
 
                       // MSone Features Setting
                       ListTile(
-                        leading: const Icon(Icons.auto_awesome, color: Colors.blue),
+                        leading: Icon(Icons.auto_awesome, color: Theme.of(context).colorScheme.primary),
                         title: const Text('Enable MSone Features'),
                         subtitle: const Text('Enable advanced translation and editing features'),
                         trailing: Switch(
@@ -205,7 +205,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                       
                       // New Toggle for Save to File
                       ListTile(
-                        leading: const Icon(Icons.save, color: Colors.green),
+                        leading: Icon(Icons.save, color: Theme.of(context).colorScheme.primary),
                         title: const Text('Auto-Save to File'),
                         subtitle: const Text('When saving changes, also write to the file directly'),
                         trailing: Switch(
@@ -224,7 +224,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
               
               // Max Line Length Setting
               ListTile(
-                leading: const Icon(Icons.straighten, color: Colors.orange),
+                leading: Icon(Icons.straighten, color: Theme.of(context).colorScheme.primary),
                 title: const Text('Max Characters Per Line'),
                 subtitle: Text('Current limit: $_maxLineLength characters per line'),
                 trailing: SizedBox(
@@ -261,7 +261,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
               
               // Skip Duration Setting
               ListTile(
-                leading: const Icon(Icons.fast_forward, color: Colors.deepPurple),
+                leading: Icon(Icons.fast_forward, color: Theme.of(context).colorScheme.primary),
                 title: const Text('Video Skip Duration'),
                 subtitle: Text('Fast forward/reverse duration: $_skipDurationSeconds seconds'),
                 trailing: SizedBox(
@@ -302,7 +302,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
               // Switch Layout Setting (Desktop Only)
               if (ResponsiveLayout.shouldUseDesktopLayout(context))
                 ListTile(
-                  leading: const Icon(Icons.view_week, color: Colors.purple),
+                  leading: Icon(Icons.view_week, color: Theme.of(context).colorScheme.primary),
                   title: const Text('Switch Layout'),
                   subtitle: Text('Current layout: ${_editLineLayout == 'layout1' ? 'Editing Left, Video Right' : 'Video Left, Editing Right'}'),
                   trailing: Switch(
@@ -324,7 +324,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
               
               // Max History Entries Setting
               ListTile(
-                leading: const Icon(Icons.storage, color: Colors.blue),
+                leading: Icon(Icons.storage, color: Theme.of(context).colorScheme.primary),
                 title: const Text('Maximum Edit History'),
                 subtitle: Text(_maxCheckpoints == 0 
                     ? 'No Limit (Warning: May increase database size)'
@@ -356,7 +356,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
               
               // Full Backup Interval Setting
               ListTile(
-                leading: const Icon(Icons.save, color: Colors.orange),
+                leading: Icon(Icons.save, color: Theme.of(context).colorScheme.primary),
                 title: const Text('Full Backup Interval'),
                 subtitle: Text('Create full backup every $_snapshotInterval changes\nLower = Faster undo, Higher = More space efficient'),
                 trailing: SizedBox(
@@ -391,7 +391,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
               
               // Edit History Strategy Setting
               ListTile(
-                leading: const Icon(Icons.account_tree, color: Colors.purple),
+                leading: Icon(Icons.account_tree, color: Theme.of(context).colorScheme.primary),
                 title: const Text('Edit History Strategy'),
                 subtitle: Text(_checkpointStrategy == 'hybrid' 
                     ? 'Smart Backup: Balanced accuracy and efficiency'
@@ -490,7 +490,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                                         style: ElevatedButton.styleFrom(
                                           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                                           backgroundColor: Theme.of(context).primaryColor,
-                                          foregroundColor: Colors.white,
+                                          foregroundColor: Theme.of(context).colorScheme.onPrimary,
                                         ),
                                         child: const Text('Apply'),
                                       ),
@@ -546,16 +546,16 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                       children: [
                         Text(
                           'Version ${AppInfo.versionWithBuild}',
-                          style: const TextStyle(
-                            color: Colors.grey,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                             fontSize: 14,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           AppInfo.abiInfo,
-                          style: const TextStyle(
-                            color: Colors.grey,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                             fontSize: 12,
                           ),
                         ),
