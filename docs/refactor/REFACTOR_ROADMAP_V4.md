@@ -1,5 +1,22 @@
 # SubtitleStudio Refactor Roadmap v4
 
+> **WAVEFORM R7 RIVERPOD LIFECYCLE VERIFIED — October 16, 2026:**
+> Android reported `Tried to modify a provider while the widget tree was
+> building` at `WaveformController._setState`, after R6 compact waveform
+> processing succeeded. Fixed the direct `didUpdateWidget` playback and
+> subtitle repaint provider mutations, coalesced playback sync after frame,
+> and introduced a guarded deferred state write for unexpected build-phase
+> audio callbacks. Playback time and auto-scroll now update atomically;
+> a single zoom-level waveform no longer divides by zero. Both added widget
+> lifecycle tests and existing load/cancellation tests are green.
+> [GitHub CI 38921649751](https://github.com/anzilr/SubtitleStudio/actions/runs/38921649751):
+> **452 tests passed, zero analyzer issues** at code `b10b06f`.
+> [R7 incident analysis and Android retest checklist](STUDIO_WAVEFORM_R7_RIVERPOD_LIFECYCLE_2026-10-16.md).
+> **NEXT:** real CPH2381 Android debug test for waveform open, live
+> playback sync, editing, re-render, split resize and multiple skin modes;
+> capture full exception stack if it recurs. No Android native acceptance
+> or release sign-off yet.
+
 > **WAVEFORM R6 ANDROID CRASH CONTAINMENT — October 16, 2026:**
 > The Android 14/360dp device log exposed a definite 3.8dp vertical overflow
 > caused by fixed 180dp waveform content in a 177.2dp split pane; the video
