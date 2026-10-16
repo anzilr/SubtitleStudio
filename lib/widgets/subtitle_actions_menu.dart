@@ -119,7 +119,7 @@ class SubtitleActionsMenu extends StatelessWidget {
               children: [
                 Icon(
                   Icons.call_split,
-                  color: Colors.blue,
+                  color: Theme.of(context).colorScheme.primary,
                   size: 24,
                 ),
                 const SizedBox(width: 16),
@@ -141,7 +141,7 @@ class SubtitleActionsMenu extends StatelessWidget {
               children: [
                 Icon(
                   Icons.merge,
-                  color: Colors.green,
+                  color: Theme.of(context).colorScheme.primary,
                   size: 24,
                 ),
                 const SizedBox(width: 16),
@@ -163,7 +163,7 @@ class SubtitleActionsMenu extends StatelessWidget {
               children: [
                 Icon(
                   Icons.playlist_add,
-                  color: Colors.orange,
+                  color: Theme.of(context).colorScheme.tertiary,
                   size: 24,
                 ),
                 const SizedBox(width: 16),
@@ -186,7 +186,7 @@ class SubtitleActionsMenu extends StatelessWidget {
               children: [
                 Icon(
                   Icons.control_camera,
-                  color: Colors.purple,
+                  color: Theme.of(context).colorScheme.secondary,
                   size: 24,
                 ),
                 const SizedBox(width: 16),
@@ -208,7 +208,7 @@ class SubtitleActionsMenu extends StatelessWidget {
               children: [
                 Icon(
                   Icons.auto_awesome,
-                  color: Colors.deepPurple,
+                  color: Theme.of(context).colorScheme.secondary,
                   size: 24,
                 ),
                 const SizedBox(width: 16),
