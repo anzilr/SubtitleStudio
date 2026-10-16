@@ -173,7 +173,7 @@ extension _SettingsWaveformSection on _SettingsSheetState {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Waveform settings reset to defaults'),
-                    backgroundColor: Color(0xFF323232),
+                    backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                     behavior: SnackBarBehavior.floating,
                   ),
                 );
