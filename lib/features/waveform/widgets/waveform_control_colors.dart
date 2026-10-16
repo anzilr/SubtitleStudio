@@ -12,7 +12,10 @@ abstract final class WaveformControlColors {
   static const Color autoScroll = Colors.blue;
   static const Color playhead = Colors.red;
   static const Color timeReadout = Color(0x99EE9B00);
-  static Color get editBars => Colors.blue.shade400;
+  /// Subtitle timing boxes and editable start/end handles. Intentionally
+  /// different from the blue waveform and from the teal new-line selection.
+  static const Color subtitleOverlay = Color(0xFFFF9800);
+  static Color get editBars => subtitleOverlay;
 
   static Color waveform(ThemeData theme) =>
       theme.brightness == Brightness.dark

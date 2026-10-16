@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:subtitle_studio/features/waveform/widgets/waveform_control_colors.dart';
 import 'package:subtitle_studio/features/waveform/models/waveform_sample.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_tile_source.dart';
 import 'package:subtitle_studio/database/models/models.dart';
@@ -19,6 +20,7 @@ class WaveformPainter extends CustomPainter {
   final List<SubtitleLine> subtitles;
   final Color waveformColor;
   final Color subtitleColor;
+  final Color addLineColor;
   final Color playbackColor;
   final double channelHeight;
   final double channelSpacing;
@@ -55,7 +57,8 @@ class WaveformPainter extends CustomPainter {
     required this.sampleRate,
     required this.samplesPerPixel,
     this.waveformColor = const Color(0xFF00BCD4),
-    this.subtitleColor = const Color(0xFFFF9800), // Orange color
+    this.subtitleColor = WaveformControlColors.subtitleOverlay,
+    this.addLineColor = WaveformControlColors.addLine,
     this.playbackColor = const Color(0xFFFF5252),
     this.channelHeight = 60.0,
     this.channelSpacing = 10.0,
@@ -88,6 +91,7 @@ class WaveformPainter extends CustomPainter {
     samplesPerPixel: samplesPerPixel,
     waveformColor: waveformColor,
     subtitleColor: subtitleColor,
+    addLineColor: addLineColor,
     playbackColor: playbackColor,
     channelHeight: channelHeight,
     channelSpacing: channelSpacing,
@@ -300,11 +304,11 @@ class WaveformPainter extends CustomPainter {
     
     // Highlighted edit mode paint - dark colors
     final editHighlightPaint = Paint()
-      ..color = waveformColor.withValues(alpha: 0.3) // Dark green
+      ..color = subtitleColor.withValues(alpha: 0.3) // Subtitle edit selection
       ..style = PaintingStyle.fill;
     
     final editBorderPaint = Paint()
-      ..color = waveformColor // Dark green
+      ..color = subtitleColor // Subtitle edit border
       ..strokeWidth = 1.0 // Reduced from 3.0 to 1.0 for thinner border
       ..style = PaintingStyle.stroke;
 
@@ -560,18 +564,18 @@ class WaveformPainter extends CustomPainter {
     
     if (width <= 0) return;
     
-    // Draw selection overlay with teal tint (matching edit mode design)
+    // New-line selection is teal, separate from the orange edit handles.
     const heightRatio = 0.6;
     final boxHeight = size.height * heightRatio;
     final topOffset = (size.height - boxHeight) / 2;
     final rect = Rect.fromLTWH(left, topOffset, width, boxHeight);
     
     final overlayPaint = Paint()
-      ..color = waveformColor.withValues(alpha: 0.3) // Dark teal
+      ..color = addLineColor.withValues(alpha: 0.3)
       ..style = PaintingStyle.fill;
     
     final borderPaint = Paint()
-      ..color = waveformColor // Dark teal
+      ..color = addLineColor
       ..strokeWidth = 1.0 // Reduced from 3.0 to 1.0 for thinner border
       ..style = PaintingStyle.stroke;
     
@@ -638,7 +642,7 @@ class WaveformPainter extends CustomPainter {
   /// Draw draggable bars at start and end of add line overlay
   void _drawAddLineBars(Canvas canvas, Size size, double left, double right) {
     const barWidth = 1.0; // Reduced from 8.0 to 3.0 for less waveform coverage
-    final barColor = waveformColor; // Dark teal
+    final barColor = addLineColor;
     const handleSize = 16.0;
     
     final barPaint = Paint()
@@ -1003,6 +1007,8 @@ class WaveformPainter extends CustomPainter {
           oldDelegate.addLineEndTime != addLineEndTime ||
           oldDelegate.highlightedSubtitleIndex != highlightedSubtitleIndex ||
           oldDelegate.subtitleColor != subtitleColor ||
+          oldDelegate.addLineColor != addLineColor ||
+          oldDelegate.subtitleHighlightColor != subtitleHighlightColor ||
           oldDelegate.playbackColor != playbackColor;
     }
     return sceneryChanged ||
@@ -1019,6 +1025,10 @@ class WaveformPainter extends CustomPainter {
         oldDelegate.tempEndTime != tempEndTime ||
         oldDelegate.isAddLineMode != isAddLineMode ||
         oldDelegate.addLineStartTime != addLineStartTime ||
-        oldDelegate.addLineEndTime != addLineEndTime;
+        oldDelegate.addLineEndTime != addLineEndTime ||
+        oldDelegate.subtitleColor != subtitleColor ||
+        oldDelegate.addLineColor != addLineColor ||
+        oldDelegate.subtitleHighlightColor != subtitleHighlightColor ||
+        oldDelegate.playbackColor != playbackColor;
   }
 }

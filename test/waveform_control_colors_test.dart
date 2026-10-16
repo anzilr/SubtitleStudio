@@ -11,6 +11,13 @@ void main() {
     expect(WaveformControlColors.confirm, Colors.green);
     expect(WaveformControlColors.cancel, Colors.red);
     expect(WaveformControlColors.autoScroll, Colors.blue);
+    expect(WaveformControlColors.subtitleOverlay, const Color(0xFFFF9800));
+    expect(WaveformControlColors.editBars,
+        WaveformControlColors.subtitleOverlay);
+    expect(WaveformControlColors.subtitleOverlay,
+        isNot(WaveformControlColors.waveform(ThemeData.dark())));
+    expect(WaveformControlColors.subtitleOverlay,
+        isNot(WaveformControlColors.addLine));
     expect({
       WaveformControlColors.zoom,
       WaveformControlColors.magnet,

@@ -77,6 +77,36 @@ void main() {
     expect(after.shouldRepaint(before), isTrue);
   });
 
+  test('edit and add-line colors propagate to layered painter and invalidate '
+      'the dynamic overlay only', () {
+    final before = _make(Duration.zero);
+    final after = WaveformPainter(
+      zoomLevel: before.zoomLevel,
+      scrollOffset: before.scrollOffset,
+      playbackPosition: before.playbackPosition,
+      subtitles: before.subtitles,
+      sampleRate: before.sampleRate,
+      samplesPerPixel: before.samplesPerPixel,
+      waveformColor: before.waveformColor,
+      subtitleColor: Colors.orange,
+      addLineColor: Colors.teal,
+      playbackColor: before.playbackColor,
+      backgroundColor: before.backgroundColor,
+      showWaveformOnly: before.showWaveformOnly,
+      showPlaybackIndicator: before.showPlaybackIndicator,
+    );
+    expect(after.subtitleColor, Colors.orange);
+    expect(after.addLineColor, Colors.teal);
+    final isolated = after.forLayer(WaveformPaintLayer.overlays);
+    expect(isolated.subtitleColor, after.subtitleColor);
+    expect(isolated.addLineColor, after.addLineColor);
+    expect(isolated.shouldRepaint(
+        before.forLayer(WaveformPaintLayer.overlays)), isTrue);
+    expect(after.forLayer(WaveformPaintLayer.scenery).shouldRepaint(
+        before.forLayer(WaveformPaintLayer.scenery)), isFalse);
+    expect(after.shouldRepaint(before), isTrue);
+  });
+
   test('scroll and waveform zoom invalidate scenery and overlay layers', () {
     final before = _make(Duration.zero);
     final scrolled = WaveformPainter(

@@ -35,3 +35,5 @@ CP86 R2 2026-10-16: optimized low-rate compact PCM FFmpeg extraction and Android
 CP86 R3 2026-10-16: restore original role-coded waveform controllers, correct dictionary white-on-white Search buttons, and use Material for checkbox ListTile in dictionary headers. Full analyzer/tests gate required.
 
 CP86 R3 import-contrast follow-up: Import Subtitle raised primary action previously forced white download icon; use onPrimary for Carbon Zero Dark/Classic. Re-run complete analyze/test before accepting this reported issue.
+
+CP86 R4 2026-10-16: retain blue waveform, separate orange subtitle overlays/edit handles and teal add-line overlays/handles; update painter layered color invalidation. Analyze/test gate. Native libmpv SIGSEGV on hot restart remains an independent blocker.
