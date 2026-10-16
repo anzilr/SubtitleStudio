@@ -167,7 +167,7 @@ void main() {
     );
 
     expect(
-      () => StudioSkinCodec.decode('{' + ' ' * (StudioSkinCodec.maxBytes + 1)),
+      () => StudioSkinCodec.decode('{' + List.filled(StudioSkinCodec.maxBytes + 1, ' ').join()),
       throwsFormatException,
     );
   });
