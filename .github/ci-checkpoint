@@ -31,3 +31,8 @@ Now log asynchronously without gating the visible route. This also ensures
 the dialog remains responsive when app logging is slow. Waveform-settings
 performance-warning card now uses shared amber caution (tertiary) semantics.
 Re-run the full gate (including GoTo theme test); no native build.
+
+R5 final R3: run 38914770625 analyzed clean and 445 other tests
+passed; three Go To Line widget tests exposed a 35px horizontal RenderFlex
+overflow in the actual modal at 390dp. Keep those tests and use tighter
+outer/slider-card margins plus flexible header title. Recheck all tests.
