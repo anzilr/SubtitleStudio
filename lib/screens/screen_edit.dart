@@ -830,7 +830,7 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
                     final isPlaying = snapshot.data ?? _videoPlayerKey.currentState!.player.state.playing;
                     return Icon(
                       isPlaying ? Icons.pause : Icons.play_arrow,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onPrimary,
                     );
                   },
                 ),
