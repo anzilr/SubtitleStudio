@@ -729,7 +729,7 @@ class _SessionSelectionSheetState extends ConsumerState<SessionSelectionSheet> {
                         ),
                       ),
                       child: _isCreating
-                          ? const SizedBox(
+                          ? SizedBox(
                               width: 18,
                               height: 18,
                               child: CircularProgressIndicator(
