@@ -1,4 +1,5 @@
 import 'package:flutter/services.dart';
+import 'package:subtitle_studio/core/file_access/studio_file_identity.dart';
 
 /// An Android DocumentsProvider can expose a stable size + modified timestamp.
 /// Without both values, no persistent waveform cache may be trusted for SAF.
@@ -17,7 +18,7 @@ abstract final class WaveformSourceRevision {
   }
 
   static Future<String?> forSafUri(String uri) async {
-    if (!uri.startsWith('content://')) return null;
+    if (!StudioFileIdentity.fromLocator(uri).isAndroidDocument) return null;
     try {
       final metadata = await _channel.invokeMapMethod<Object?, Object?>(
         'getDocumentRevision', <String, String>{'uri': uri},

@@ -10,6 +10,7 @@ import 'package:subtitle_studio/features/waveform/services/waveform_cache_identi
 import 'package:subtitle_studio/features/waveform/services/waveform_processing_metrics.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_peak_cache.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_source_revision.dart';
+import 'package:subtitle_studio/core/file_access/studio_file_identity.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_cache_coordinator.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_peak_cache_janitor.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_ffmpeg_plan.dart';
@@ -242,7 +243,7 @@ class AudioProcessor {
 
     final temp = await getTemporaryDirectory();
     checkActive();
-    final isSaf = sourcePath.startsWith('content://');
+    final isSaf = StudioFileIdentity.fromLocator(sourcePath).isAndroidDocument;
     final revision = isSaf
         ? await WaveformSourceRevision.forSafUri(sourcePath)
         : null;

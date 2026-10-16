@@ -39,3 +39,5 @@ CP86 R3 import-contrast follow-up: Import Subtitle raised primary action previou
 CP86 R4 2026-10-16: retain blue waveform, separate orange subtitle overlays/edit handles and teal add-line overlays/handles; update painter layered color invalidation. Analyze/test gate. Native libmpv SIGSEGV on hot restart remains an independent blocker.
 
 CP87 R0 2026-10-16: selected Olam language tabs (EN-ML / ML-EN / ML-ML) use dark high-contrast selection in achromatic Dark/Classic palettes; 12 built-in combinations checked. Appearance freeze maintained.
+
+CP87 R1 2026-10-16: typed file locator identities introduced for native path/Android SAF/file URI/remote/opaque sources; wrapped VideoRepository saved-video identity and classified waveform cache, revision queries and secondary subtitle reads. Existing persisted paths/cache hashes unchanged. CP86 native mpv crash remains a separate blocker.

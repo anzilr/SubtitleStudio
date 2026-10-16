@@ -6,6 +6,7 @@ import 'package:subtitle_studio/utils/logging_helpers.dart';
 import 'package:subtitle_studio/utils/subtitle_parser.dart';
 import 'package:subtitle_studio/utils/saf_file_handler.dart';
 import 'package:subtitle_studio/utils/macos_bookmark_manager.dart';
+import 'package:subtitle_studio/core/file_access/studio_file_identity.dart';
 
 /// Repository layer for video-related operations
 /// 
@@ -47,6 +48,13 @@ class VideoRepository {
       logError('VideoRepository: Error fetching video path: $e');
       rethrow;
     }
+  }
+
+  /// Typed read boundary for the gradual file-access migration in CP87.
+  /// Legacy persisted paths and macOS bookmark resolution remain unchanged.
+  Future<StudioFileIdentity?> getSavedVideoIdentity(int collectionId) async {
+    final path = await getSavedVideoPath(collectionId);
+    return path == null ? null : StudioFileIdentity.fromLocator(path);
   }
 
   /// Save video path for a subtitle collection
@@ -120,7 +128,8 @@ class VideoRepository {
     String content;
     
     // Check if this is a SAF URI (Android)
-    if (Platform.isAndroid && path.startsWith('content://')) {
+    if (Platform.isAndroid &&
+        StudioFileIdentity.fromLocator(path).isAndroidDocument) {
       // Use SAF to read the file
       try {
         final bytes = await SafFileHandler.readFileFromUri(path);

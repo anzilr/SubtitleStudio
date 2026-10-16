@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:subtitle_studio/core/file_access/studio_file_identity.dart';
+
 /// Cache key scoped to source path, selected audio stream, and local file
 /// version (size + mtime). For content URIs, stat/version is unavailable;
 /// versioned SAF metadata is supplied explicitly where available.
@@ -18,7 +20,7 @@ class WaveformCacheIdentity {
             audioTrackId.isEmpty || audioTrackId == 'auto'
         ? 'auto' : audioTrackId;
     var sourceVersion = '';
-    if (!sourcePath.startsWith('content://')) {
+    if (StudioFileIdentity.fromLocator(sourcePath).canStatLocally) {
       try {
         final stat = await File(sourcePath).stat();
         if (stat.type == FileSystemEntityType.file) {
