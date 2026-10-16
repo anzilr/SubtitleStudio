@@ -15,7 +15,7 @@ double _contrast(Color a, Color b) {
 
 void main() {
   test('skin and appearance have independent stable serialization', () {
-    expect(StudioSkin.values, hasLength(3));
+    expect(StudioSkin.values, hasLength(4));
     expect(StudioAppearance.values, hasLength(3));
 
     for (final skin in StudioSkin.values) {
@@ -31,7 +31,7 @@ void main() {
         reason: 'Classic is not a disguised Flutter system theme');
 
     const start = StudioAppearanceSelection.defaultSelection;
-    expect(start.skin, StudioSkinId.carbonJade);
+    expect(start.skin, StudioSkinId.carbonZero);
     expect(start.mode, StudioAppearance.dark);
     final copper = start.copyWith(skin: StudioSkinId.copperCinema);
     expect(copper.skin, StudioSkinId.copperCinema);
@@ -46,7 +46,7 @@ void main() {
     ));
   });
 
-  test('all nine skins and appearances resolve independent readable roles', () {
+  test('all twelve skins and appearances resolve independent readable roles', () {
     final ids = <String>{};
     for (final skin in StudioSkin.values) {
       for (final appearance in StudioAppearance.values) {
@@ -133,7 +133,7 @@ void main() {
         base.extension<StudioDesignTokens>()?.onSurface);
   });
 
-  testWidgets('preview switches nine themes without resetting a text controller',
+  testWidgets('preview switches twelve themes without resetting a text controller',
       (tester) async {
     final controller = TextEditingController(
       text: 'മലയാളം subtitles – مرحبا',
@@ -164,7 +164,7 @@ void main() {
     }
   });
 
-  testWidgets('all nine preview tiles fit a narrow settings viewport',
+  testWidgets('all twelve preview tiles fit a narrow settings viewport',
       (tester) async {
     tester.view.physicalSize = const Size(320, 740);
     tester.view.devicePixelRatio = 1;
@@ -185,7 +185,7 @@ void main() {
       ),
     ));
 
-    expect(find.byType(StudioSkinPreviewTile), findsNWidgets(9));
+    expect(find.byType(StudioSkinPreviewTile), findsNWidgets(12));
     expect(find.text('Carbon & Jade'), findsOneWidget);
     expect(find.text('Copper Cinema'), findsOneWidget);
     expect(find.text('Aster Violet'), findsOneWidget);
