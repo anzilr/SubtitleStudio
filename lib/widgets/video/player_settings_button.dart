@@ -36,7 +36,7 @@ class _SettingsButtonState extends State<_SettingsButton> {
           ),
           child: Icon(
             Icons.tune, // Configuration/settings icon
-            color: _isHovered ? Colors.blue.shade200 : Colors.white,
+            color: _isHovered ? Theme.of(context).colorScheme.primary : Colors.white,
             size: 22, // Increased icon size
             shadows: const [
               Shadow(
@@ -249,7 +249,7 @@ class _SettingsButtonState extends State<_SettingsButton> {
                                 Container(
                                   padding: const EdgeInsets.all(4),
                                   decoration: BoxDecoration(
-                                    color: Colors.orange,
+                                    color: Theme.of(context).colorScheme.primary,
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Icon(
@@ -323,7 +323,7 @@ class _SettingsButtonState extends State<_SettingsButton> {
                                               children: [
                                                 Icon(
                                                   isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-                                                  color: isSelected ? Colors.orange : onSurfaceColor.withValues(alpha: 0.6),
+                                                  color: isSelected ? Theme.of(context).colorScheme.primary : onSurfaceColor.withValues(alpha: 0.6),
                                                   size: 16,
                                                 ),
                                                 const SizedBox(width: 8),
@@ -331,7 +331,7 @@ class _SettingsButtonState extends State<_SettingsButton> {
                                                   child: Text(
                                                     trackName,
                                                     style: TextStyle(
-                                                      color: isSelected ? Colors.orange : onSurfaceColor,
+                                                      color: isSelected ? Theme.of(context).colorScheme.primary : onSurfaceColor,
                                                       fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                                                     ),
                                                   ),
@@ -548,7 +548,7 @@ class _SettingsButtonState extends State<_SettingsButton> {
                             width: double.infinity,
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                              color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
                                 color: onSurfaceColor.withValues(alpha: 0.12),
@@ -614,7 +614,7 @@ class _SettingsButtonState extends State<_SettingsButton> {
                                         },
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: primaryColor,
-                                          foregroundColor: Colors.white,
+                                          foregroundColor: Theme.of(context).colorScheme.onPrimary,
                                           elevation: 0,
                                           shape: RoundedRectangleBorder(
                                             borderRadius: BorderRadius.circular(8),
@@ -656,7 +656,7 @@ class _SettingsButtonState extends State<_SettingsButton> {
                                         },
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: primaryColor,
-                                          foregroundColor: Colors.white,
+                                          foregroundColor: Theme.of(context).colorScheme.onPrimary,
                                           elevation: 0,
                                           shape: RoundedRectangleBorder(
                                             borderRadius: BorderRadius.circular(8),
@@ -682,7 +682,7 @@ class _SettingsButtonState extends State<_SettingsButton> {
                               width: double.infinity,
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                                color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
                                   color: onSurfaceColor.withValues(alpha: 0.12),
@@ -748,7 +748,7 @@ class _SettingsButtonState extends State<_SettingsButton> {
                                         },
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: primaryColor,
-                                          foregroundColor: Colors.white,
+                                          foregroundColor: Theme.of(context).colorScheme.onPrimary,
                                           elevation: 0,
                                           shape: RoundedRectangleBorder(
                                             borderRadius: BorderRadius.circular(8),
@@ -790,7 +790,7 @@ class _SettingsButtonState extends State<_SettingsButton> {
                                         },
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: primaryColor,
-                                          foregroundColor: Colors.white,
+                                          foregroundColor: Theme.of(context).colorScheme.onPrimary,
                                           elevation: 0,
                                           shape: RoundedRectangleBorder(
                                             borderRadius: BorderRadius.circular(8),
