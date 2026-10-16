@@ -878,7 +878,7 @@ class _RepeatButtonState extends State<_RepeatButton> {
                 Icons.repeat_one,
                 size: 22, // Increased icon size
                 color: isRepeatEnabled 
-                  ? Colors.orange 
+                  ? Theme.of(context).colorScheme.primary 
                   : _isHovered 
                     ? Theme.of(context).colorScheme.primary 
                     : Colors.white,
