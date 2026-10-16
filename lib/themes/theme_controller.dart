@@ -153,7 +153,8 @@ class ThemeController extends Notifier<ThemeState> {
       (saved.exists ? StudioAppearance.classic : StudioAppearance.dark);
 
   Future<void> setSkin(StudioSkinId skin) async {
-    if (skin == state.skinId) return;
+    // A choice made during hydration must win even when it matches fallback.
+    if (skin == state.skinId && state.isLoaded) return;
     final previous = state.skinId;
     final revision = ++_skinRevision;
     state = state.copyWith(skinId: skin);
@@ -168,7 +169,7 @@ class ThemeController extends Notifier<ThemeState> {
   }
 
   Future<void> setAppearance(StudioAppearance appearance) async {
-    if (appearance == state.appearance) return;
+    if (appearance == state.appearance && state.isLoaded) return;
     final previous = state.appearance;
     final revision = ++_appearanceRevision;
     state = state.copyWith(appearance: appearance);
