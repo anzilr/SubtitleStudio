@@ -1,4 +1,4 @@
-SubtitleStudio SKIN-4 R4 / CARBON ZERO + RAW SOURCE + FULLSCREEN SETTINGS | 2026-10-16
+SubtitleStudio SKIN-4 R4 R2 / CARBON ZERO + RAW SOURCE + FULLSCREEN SETTINGS | 2026-10-16
 Flutter analyze and full widget/regression suite only; no native platform builds.
 Restore embedded and standalone Source View as single raw SRT multiline text
 editors (no per-cue GUI controls). Embedded editor keeps raw unsaved buffer
@@ -14,3 +14,7 @@ initially collapsed and user-expandable. Keep Live Theme factory.
 Include field/encoder persistence tests, missing-skin fallback, contrast,
 raw SRT roundtrip and Android keyboard-constrained positioning modal.
 Record any failures; no user device testing until green.
+
+R2: fix invalid const in constrained positioning sheet; migrate remaining Settings
+section icons, status colors, destructive actions and text onto semantic palette
+roles so Carbon Zero stays achromatic outside its preview. Recheck analyzer.
