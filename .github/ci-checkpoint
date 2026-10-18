@@ -73,3 +73,5 @@ CP87 R8: user device log confirms staleLoader=false, page-to-home Back succeeds,
 CP87 R8 final gated batch: captured popup/sheet/form .completed and root pointer instrumentation, full real popup-menu→sheet→form→Editor→Home tap regression with asserts that popup/choice/form overlay entries are actually unmounted at each handoff. Existing UI appearance remains frozen. Native libmpv hot restart separate issue.
 
 CP87 R9: October 18 Logcat (pid 20660) confirms root Flutter hit tests 12, editor 0, Home unresponsive; R8 all modal routes completed and loader false. 10-17 SIGSEGV is old persistent crash-buffer record, not new Oct 18 crash. Add render hit-test target/creator introspection on 12 touches, editor+home input probes, and contract test. No speculative native/overlay removal.
+
+CP87 R9 CI fix: WidgetTester.tapAt does not support warnIfMissed. Remove unsupported test argument, run complete analyzer and Flutter tests for render hit-test diagnostics. Recheck app actual editor/home taps across route navigation.

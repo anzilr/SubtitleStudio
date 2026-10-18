@@ -37,7 +37,7 @@ void main() {
     await tester.tap(find.text('Open dialog'));
     await tester.pumpAndSettle();
     MsoneInputDiagnostics.watchAfterReturn();
-    await tester.tapAt(const Offset(30, 200), warnIfMissed: false);
+    await tester.tapAt(const Offset(30, 200));
     await tester.pump();
     expect(prints.any((line) => line.contains('MSone input: ROOT')), isTrue);
     expect(prints.any((line) => line.contains('MSone input: HITTEST')),
