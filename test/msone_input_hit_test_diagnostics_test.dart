@@ -10,8 +10,7 @@ void main() {
     debugPrint = (String? message, {int? wrapWidth}) {
       if (message != null) prints.add(message);
     };
-    addTearDown(() => debugPrint = oldDebugPrint);
-
+    try {
     await tester.pumpWidget(MaterialApp(
       builder: (context, child) => Listener(
         behavior: HitTestBehavior.translucent,
@@ -47,5 +46,10 @@ void main() {
         isTrue);
     expect(prints.any((line) => line.contains('ModalBarrier') ||
         line.contains('RenderPointerListener')), isTrue);
+    } finally {
+      // Flutter validates framework globals *before* addTearDown callbacks.
+      // Restore this debugPrint override synchronously within the test body.
+      debugPrint = oldDebugPrint;
+    }
   });
 }
