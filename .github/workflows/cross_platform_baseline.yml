@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - refactor/riverpod-architecture
+      - experiment/cp87-mediakit-upstream-restart
     paths:
       - .github/ci-checkpoint
 

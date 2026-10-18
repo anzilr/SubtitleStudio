@@ -49,6 +49,15 @@ dependencies:
       ref: 8c7c8047b903d7b01d9bf1d3516c11142cab8523
 
 dependency_overrides:
+  # CP87 isolated native hot-restart canary, NOT approved for merge.
+  # media_kit 1.2.6 is missing upstream mpv wakeup-callback cleanup
+  # and debug isolate initializer safeguards for Flutter 3.38+.
+  # Pin to a reproducible upstream commit; do not track floating main.
+  media_kit:
+    git:
+      url: https://github.com/media-kit/media-kit.git
+      ref: c533e446755f51cf53c7e57aea873f2aa5355f81
+      path: media_kit
   hotkey_manager_linux:
     git:
       url: https://github.com/gepbird/hotkey_manager.git
