@@ -1,5 +1,17 @@
 # SubtitleStudio Refactor Roadmap v4
 
+> **CP87 R9 — OCTOBER 18 ANDROID INPUT FREEZE OPEN:** Fresh `cp87_r8_touch.log`
+> (PID 20660) shows all R8 menu/sheet/form overlay-removal breadcrumbs,
+> `staleLoader=false`, and twelve Flutter root pointer-downs (nine
+> in Editor, three in Home) but zero in-editor pointer breadcrumbs.
+> Android Back and Home's Isar loads work, so this is not a demonstrated
+> isolate deadlock. The only SIGSEGV in the file is an **old Oct 17**
+> crash-buffer entry, not a fresh Oct 18 native crash.
+> R9 adds a bounded render-layer **hit-test path with DebugCreator widget
+> identity**, root UP/CANCEL, and Editor/Home pointer probes. Actual
+> touch-intercepting widget still unknown; no fix is claimed.
+> [R9 report](CHECKPOINT87_R9_ANDROID_INPUT_HIT_TEST_DIAGNOSTICS_2026-10-18.md).
+>
 > **CP87 R8 — CROSS-ROUTE TOUCH FREEZE:**
 > **Flutter quality gate GREEN:** [CI 38975383284](https://github.com/anzilr/SubtitleStudio/actions/runs/38975383284) — **536 tests passed, 0 analyzer issues** at code commit `6a90cb8`. The new full-popup, full-sheet, form, Editor and Home touch regression passed. Android device freeze still requires verification. On Android CPH2381, after MSone Back, Editor fails to accept taps although `staleLoader=false`, `mounted=true` and a frame rendered; system Back successfully exits Editor, Home loads all 3 sessions but also fails to accept taps. The stale cue-scroll loader hypothesis from R7 is refuted for this reproduction. R8 explicitly synchronizes menu→sheet→form route handoffs against `TransitionRoute.completed`, the documented signal that modal barriers have been removed. A debug-only root hit-test / Navigator probe and popup→sheet→form→Editor→Home touch regression were added. **Candidate mitigation only; device confirmation pending.** [R8 report](CHECKPOINT87_R8_CROSS_ROUTE_TOUCH_FREEZE_2026-10-17.md).
 

@@ -75,3 +75,5 @@ CP87 R8 final gated batch: captured popup/sheet/form .completed and root pointer
 CP87 R9: October 18 Logcat (pid 20660) confirms root Flutter hit tests 12, editor 0, Home unresponsive; R8 all modal routes completed and loader false. 10-17 SIGSEGV is old persistent crash-buffer record, not new Oct 18 crash. Add render hit-test target/creator introspection on 12 touches, editor+home input probes, and contract test. No speculative native/overlay removal.
 
 CP87 R9 CI fix: WidgetTester.tapAt does not support warnIfMissed. Remove unsupported test argument, run complete analyzer and Flutter tests for render hit-test diagnostics. Recheck app actual editor/home taps across route navigation.
+
+CP87 R9 final diagnostic gate: Flutter renderer hitTestInView (first 12 root taps), editor/home root pointer input counts, matching UP/CANCEL, tester hitTest regression, safe opt-in Logcat Fresh capture, document Oct18 timestamp separated from Oct17 buffered SIGSEGV. Do not mark freeze fixed.
