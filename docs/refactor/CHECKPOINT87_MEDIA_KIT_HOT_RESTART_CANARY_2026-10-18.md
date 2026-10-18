@@ -74,3 +74,13 @@ run. If it no longer crashes, test video playback, track switching,
 normal player disposal, then Android **profile** and Windows builds.
 Do not merge until supported by empirical evidence and independent
 verification of the persistent MSone input-freeze bug.
+
+## Canary Flutter gate — verified
+
+[GitHub Actions run 39141372129](https://github.com/anzilr/SubtitleStudio/actions/runs/39141372129): **SUCCESS — 537 Flutter tests passed; analyzer passed**. The CI dependency-resolution log confirms:
+
+```
+! media_kit 1.2.6 from git https://github.com/media-kit/media-kit.git at c533e4 in media_kit (overridden)
+```
+
+This verifies Git source selection and Flutter-side compatibility on Linux. **Android libmpv hot restart remains unverified on a device**. Continue using the isolated branch only for canary, not a release.
