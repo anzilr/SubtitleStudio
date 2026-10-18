@@ -83,3 +83,7 @@ the package without clearing app data. Save edited subtitles before
 starting/restarting a test process. To capture a fresh-only tombstone,
 use `tool/capture_android_back_log.ps1 -Fresh` in another terminal;
 this clears Logcat buffers only, not the application database.
+
+## Experimental CI result (not a device fix)
+
+[Experiment CI 39141372129](https://github.com/anzilr/SubtitleStudio/actions/runs/39141372129) — **537 passing Flutter tests, zero analyzer failures**; Linux runner selected `media_kit` from pinned upstream Git commit `c533e4`. The stable branch remains on published 1.2.6. The CPH2381 native hot-restart crash and MSone Back touch freeze both remain OPEN pending independent device tests.
