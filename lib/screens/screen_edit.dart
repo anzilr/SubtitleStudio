@@ -46,6 +46,7 @@ import 'package:subtitle_studio/operations/subtitle_effect_operations.dart';
 import 'package:subtitle_studio/utils/macos_bookmark_manager.dart';
 import 'package:subtitle_studio/utils/msone_hotkey_manager.dart' as hotkey;
 import 'msone_submission_flow.dart';
+import 'msone_input_diagnostics.dart';
 import 'package:subtitle_studio/screens/edit/edit_controller.dart';
 import 'package:subtitle_studio/screens/edit/edit_state.dart';
 import 'package:subtitle_studio/screens/edit/models/subtitle_entry.dart';
@@ -553,7 +554,8 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
 
     return Listener(
         behavior: HitTestBehavior.deferToChild,
-        onPointerDown: (_) {
+        onPointerDown: (event) {
+          MsoneInputDiagnostics.onEditorPointer(event);
           if (!kDebugMode || !_inputProbeAfterMsone || !mounted) return;
           if (_inputProbeCount++ < 5) {
             debugPrint('EditScreen MSone: editor received pointer #$_inputProbeCount '
