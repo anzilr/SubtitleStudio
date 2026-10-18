@@ -71,3 +71,5 @@ CP87 R7 test correction: route pop widget hit test must await animation settling
 CP87 R8: user device log confirms staleLoader=false, page-to-home Back succeeds, 3 home sessions load, but touch handlers not invoked; phase route handoff until popup/sheet/form TransitionRoute.completed to guarantee modal barriers removed, plus debug-only root pointer and navigator diagnostics. Add true popup-menu-to-sheet/form/home widget regression.
 
 CP87 R8 final gated batch: captured popup/sheet/form .completed and root pointer instrumentation, full real popup-menu→sheet→form→Editor→Home tap regression with asserts that popup/choice/form overlay entries are actually unmounted at each handoff. Existing UI appearance remains frozen. Native libmpv hot restart separate issue.
+
+CP87 R9: October 18 Logcat (pid 20660) confirms root Flutter hit tests 12, editor 0, Home unresponsive; R8 all modal routes completed and loader false. 10-17 SIGSEGV is old persistent crash-buffer record, not new Oct 18 crash. Add render hit-test target/creator introspection on 12 touches, editor+home input probes, and contract test. No speculative native/overlay removal.

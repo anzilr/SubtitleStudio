@@ -29,7 +29,8 @@
 // - Adapt animations to iOS conventions (UIView animations)
 
 import 'package:flutter/foundation.dart';     // Flutter debugging and platform detection
-import 'package:flutter/material.dart';      // Material Design components
+import 'package:flutter/material.dart';
+import 'package:subtitle_studio/screens/msone_input_diagnostics.dart';      // Material Design components
 import 'package:flutter/services.dart';      // Hardware services and keyboard support
 import 'dart:convert';                        // For encoding/decoding file content
 import 'package:flutter_riverpod/flutter_riverpod.dart'; // Riverpod state management
@@ -124,11 +125,17 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _HomeScreenContent(
+    final content = _HomeScreenContent(
       initialFilePath: initialFilePath,
       initialFileName: initialFileName,
       isProjectFile: isProjectFile,
       originalSafUri: originalSafUri,
+    );
+    if (!kDebugMode) return content;
+    return Listener(
+      behavior: HitTestBehavior.deferToChild,
+      onPointerDown: MsoneInputDiagnostics.onHomePointer,
+      child: content,
     );
   }
 }
