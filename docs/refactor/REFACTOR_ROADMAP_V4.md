@@ -1,6 +1,7 @@
 # SubtitleStudio Refactor Roadmap v4
 
-> **CP87 R9 — OCTOBER 18 ANDROID INPUT FREEZE OPEN:** Fresh `cp87_r8_touch.log`
+> **CP87 R9 — OCTOBER 18 ANDROID INPUT FREEZE OPEN:**
+> **R9 Flutter CI passed:** [39140091447](https://github.com/anzilr/SubtitleStudio/actions/runs/39140091447) — **537 tests, 0 analyzer issues**, including the modal-barrier hit-test trace test. Android freeze **not yet fixed**. Fresh `cp87_r8_touch.log`
 > (PID 20660) shows all R8 menu/sheet/form overlay-removal breadcrumbs,
 > `staleLoader=false`, and twelve Flutter root pointer-downs (nine
 > in Editor, three in Home) but zero in-editor pointer breadcrumbs.

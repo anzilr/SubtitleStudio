@@ -86,3 +86,11 @@ as it has its own libmpv lifecycle issue.
 An optional isolation check is to repeat in a session **without
 an attached video**, to determine whether the persistent media player
 or another app-level overlay is necessary to trigger the freeze.
+
+## CI verification (2026-10-18)
+
+[CI run 39140091447 — SUCCESS](https://github.com/anzilr/SubtitleStudio/actions/runs/39140091447), source commit `fe39aad`:
+
+- **537 Flutter tests passed**, including the R9 blocking modal-barrier hit-test/widget-creator diagnostic regression.
+- **0 Flutter analyzer issues**; analyzer step passed.
+- These diagnostics do **not** constitute a device freeze fix. Android physical validation remains **OPEN** until hit-test evidence identifies the intercepting render object and the targeted remediation is tested.
