@@ -248,6 +248,8 @@ class MainApp extends ConsumerWidget {
           ? (context, child) => Listener(
                 behavior: HitTestBehavior.translucent,
                 onPointerDown: MsoneInputDiagnostics.onRootPointer,
+                onPointerUp: MsoneInputDiagnostics.onRootPointerUp,
+                onPointerCancel: MsoneInputDiagnostics.onRootPointerCancel,
                 child: child ?? const SizedBox.shrink(),
               )
           : null,

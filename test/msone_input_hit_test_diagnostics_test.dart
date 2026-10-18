@@ -16,6 +16,7 @@ void main() {
       builder: (context, child) => Listener(
         behavior: HitTestBehavior.translucent,
         onPointerDown: MsoneInputDiagnostics.onRootPointer,
+        onPointerUp: MsoneInputDiagnostics.onRootPointerUp,
         child: child!,
       ),
       home: Scaffold(
@@ -41,6 +42,8 @@ void main() {
     await tester.pump();
     expect(prints.any((line) => line.contains('MSone input: ROOT')), isTrue);
     expect(prints.any((line) => line.contains('MSone input: HITTEST')),
+        isTrue);
+    expect(prints.any((line) => line.contains('MSone input: ROOT pointer-up')),
         isTrue);
     expect(prints.any((line) => line.contains('ModalBarrier') ||
         line.contains('RenderPointerListener')), isTrue);

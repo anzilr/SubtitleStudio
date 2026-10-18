@@ -70,6 +70,20 @@ class MsoneInputDiagnostics {
     }
   }
 
+  // Distinguishes an intercepting hit-test target (DOWN+UP reached the
+  // Navigator) from a device/engine stream that never completes the tap.
+  static void onRootPointerUp(PointerUpEvent event) {
+    if (!isWatching) return;
+    debugPrint('MSone input: ROOT pointer-up '
+        'pointer=${event.pointer} view=${event.viewId}');
+  }
+
+  static void onRootPointerCancel(PointerCancelEvent event) {
+    if (!isWatching) return;
+    debugPrint('MSone input: ROOT pointer-CANCEL '
+        'pointer=${event.pointer} view=${event.viewId}');
+  }
+
   static void onEditorPointer(PointerDownEvent event) {
     if (!isWatching) return;
     _editorPointers++;
