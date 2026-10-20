@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:subtitle_studio/screens/source_view/source_view_saf_grant_repository.dart';
 
 final class _FakeSafGrantStore implements SourceViewSafGrantStore {
@@ -28,6 +29,26 @@ void main() {
   const path = '/data/user/0/studio/cache/source.srt';
   const original = 'content://test.documents/document/selected%3Asrt';
   const other = 'content://test.documents/document/other%3Asrt';
+
+  test('SharedPreferences adapter preserves legacy keys and removal',
+      () async {
+    final key = SourceViewSafGrantRepositoryImpl.legacyKey(path);
+    SharedPreferences.setMockInitialValues({key: original});
+    const adapter = SharedPreferencesSafGrantStore();
+
+    expect(await adapter.read(key), original);
+    await adapter.write(key, other);
+    expect(await adapter.read(key), other);
+
+    final service = SourceViewSafGrantRepositoryImpl(store: adapter);
+    // An explicit URI should replace the old value under the same key.
+    expect(await service.resolve(filePath: path, providedUri: original),
+        original);
+    expect(await adapter.read(key), original);
+
+    await adapter.remove(key);
+    expect(await adapter.read(key), isNull);
+  });
 
   test('preserves legacy preference key and existing native-cache grant',
       () async {
