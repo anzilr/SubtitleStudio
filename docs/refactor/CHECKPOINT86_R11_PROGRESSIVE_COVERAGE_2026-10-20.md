@@ -12,13 +12,13 @@ R10 native Logcat `cp86_r10_paint_verification.log` verified **954ms** seek-wind
 
 `lib/features/waveform/services/waveform_progressive_coverage.dart` implements:
 - Explicit absolute-time window requests (default 30 seconds; hard maximum 60 seconds) and a strictly bounded at-most-eight in-flight viewport claim.
-- Nearest-playhead-first missing-window scheduling, with deterministic tie-breaking; does not duplicate work for pending/ready windows.
+- Nearest-playhead-first missing-window scheduling, with deterministic tie-breaking; does not duplicate work for pending/ready windows. A **global eight-pending-window cap** applies across repeated viewport requests.
 - Immutable viewport spans where **unknown data is `preview == null`**, never represented by zero/silence.
-- Strict source-revision and selected-audio-stream identity isolation; a new revision invalidates ready and pending results, and obsolete async callbacks cannot publish.
+- Strict source-revision and selected-audio-stream identity isolation; a new revision invalidates ready and pending results, and obsolete async callbacks cannot publish. Request tokens carry an **instance owner identity** to reject late results from an entirely different coverage object even when generation/index coincide.
 - Runtime rejection of truncated, shifted or invalid PCM windows; final tail window is clamped to the actual media duration.
 - No cached partial-file writes; no renderer/seek/subtitle editing behavior change; no source locator strings logged.
 
-Unit tests cover request ordering, known/unknown windows, duplicate suppression, source/stream cancellation, tail clipping and invalid views.
+Unit tests cover request ordering, known/unknown windows, duplicate suppression, cross-instance token rejection, the eight-pending-work global cap, source/stream cancellation, tail clipping and invalid views.
 
 ## Before any interactive integration
 
