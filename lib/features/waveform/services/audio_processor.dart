@@ -16,6 +16,8 @@ import 'package:subtitle_studio/core/file_access/studio_file_identity.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_cache_coordinator.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_peak_cache_janitor.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_ffmpeg_plan.dart';
+import 'package:subtitle_studio/features/waveform/services/waveform_window_ffmpeg_plan.dart';
+import 'package:subtitle_studio/features/waveform/services/waveform_window_alignment.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_saf_input.dart';
 import 'package:subtitle_studio/utils/ffmpeg_helper.dart';
 import 'package:ffmpeg_kit_flutter_new_min_gpl/ffmpeg_kit.dart';
@@ -33,6 +35,16 @@ class AudioProcessor {
   WaveformAcquisitionTimings? _acquisitionTimings;
   int _requestEpoch = 0;
   static int _nextTemporaryId = 0;
+  // CP86 R9 is an opt-in diagnostics experiment only. The stable branch
+  // has no window extraction and the shipping extraction path is unchanged.
+  static const bool _windowProbe = bool.fromEnvironment(
+    'MS_ONE_CP86_R9_WINDOW_PROBE', defaultValue: false);
+  static const int _windowProbeStartSeconds = int.fromEnvironment(
+    'MS_ONE_CP86_R9_START_SECONDS', defaultValue: 0);
+  static const int _windowProbeDurationSeconds = int.fromEnvironment(
+    'MS_ONE_CP86_R9_DURATION_SECONDS', defaultValue: 30);
+  static const bool _windowProbeAccurate = bool.fromEnvironment(
+    'MS_ONE_CP86_R9_ACCURATE_SEEK', defaultValue: false);
   Process? _activeDesktopProcess;
   int? _activeNativeSessionId;
 
@@ -76,6 +88,20 @@ class AudioProcessor {
       }
 
       WaveformData waveformData;
+      Int16List? probeSamples;
+      // Probe does not modify normal waveform state, its cache or the UI.
+      // Experimental builds intentionally incur this EXTRA decode cost.
+      if (kDebugMode && _windowProbe && useTiledZoom) {
+        try {
+          probeSamples = await _runWindowProbe(
+            audioFilePath, audioTrackId: audioTrackId, epoch: epoch,
+          );
+        } catch (error) {
+          if (epoch != _requestEpoch) rethrow;
+          debugPrint('CP86 R9 WINDOW failed: ${error.runtimeType}; '
+              'normal waveform fallback continues');
+        }
+      }
 
       // The experimental renderer uses a compact, source-scoped peak cache.
       // PCM extraction still writes a temporary raw file, but it is reduced
@@ -172,6 +198,18 @@ class AudioProcessor {
 
       if (epoch != _requestEpoch) {
         throw StateError('Waveform load was cancelled.');
+      }
+      if (probeSamples != null && waveformData.channels == 1 &&
+          waveformData.sampleRate == WaveformWindowFfmpegPlan.sampleRate) {
+        final comparison = WaveformWindowAlignment.compare(
+          window: probeSamples,
+          full: waveformData.rawSamples.first,
+          start: Duration(seconds: _windowProbeStartSeconds),
+        );
+        if (kDebugMode) {
+          debugPrint('CP86 R9 ALIGNMENT ' +
+              (comparison?.toString() ?? 'unavailable (out of range)'));
+        }
       }
       final sourceMicroseconds = stopwatch.elapsedMicroseconds;
       // Step 2: Downsample (20% of total work)
@@ -485,6 +523,122 @@ class AudioProcessor {
         '• Linux: sudo apt install ffmpeg (Ubuntu/Debian)\n\n'
         'Error: $e'
       );
+    }
+  }
+
+  /// CP86 R9 diagnostic: extract a bounded seek window as temp PCM only,
+  /// measure native time, then compare its samples to the untouched full
+  /// waveform. The segment is NEVER promoted to the real project cache.
+  Future<Int16List> _runWindowProbe(
+    String sourcePath, {
+    required String? audioTrackId,
+    required int epoch,
+  }) async {
+    void checkCurrent() {
+      if (epoch != _requestEpoch) {
+        throw StateError('CP86 R9 window probe cancelled.');
+      }
+    }
+    final temp = await getTemporaryDirectory();
+    checkCurrent();
+    final output = File(
+      '${temp.path}${Platform.pathSeparator}cp86_r9_window_'
+      '${DateTime.now().microsecondsSinceEpoch}_'
+      '${++_nextTemporaryId}.raw',
+    );
+    final nativeInput = FFmpegHelper.normalizePath(sourcePath);
+    var elapsed = Duration.zero;
+    try {
+      final input = (Platform.isAndroid || Platform.isIOS ||
+              Platform.isMacOS)
+          ? await _getSafReadableParameter(nativeInput)
+          : nativeInput;
+      checkCurrent();
+      final plan = WaveformWindowFfmpegPlan(
+        inputPath: input,
+        outputPath: output.path,
+        selectedTrackId: audioTrackId,
+        start: const Duration(seconds: _windowProbeStartSeconds),
+        duration: const Duration(seconds: _windowProbeDurationSeconds),
+        seekMode: _windowProbeAccurate
+            ? WaveformWindowSeekMode.outputAccurate
+            : WaveformWindowSeekMode.inputFast,
+      );
+      final args = plan.arguments(); // validate before running native code
+      final stopwatch = Stopwatch()..start();
+      if (Platform.isWindows || Platform.isLinux) {
+        final process = await Process.start('ffmpeg', args);
+        _activeDesktopProcess = process;
+        if (epoch != _requestEpoch) process.kill();
+        final stdoutDone = process.stdout.drain<void>();
+        final stderrDone = process.stderr.transform(utf8.decoder).join();
+        final code = await process.exitCode;
+        await stdoutDone;
+        final stderr = await stderrDone;
+        if (identical(_activeDesktopProcess, process)) {
+          _activeDesktopProcess = null;
+        }
+        checkCurrent();
+        if (code != 0) {
+          throw StateError(
+            'Windowed FFmpeg exit code $code '
+            '(stderr length=${stderr.length})',
+          );
+        }
+      } else if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
+        final done = Completer<void>();
+        final session = await FFmpegKit.executeAsync(
+          plan.ffmpegKitCommand(), (_) {
+            if (!done.isCompleted) done.complete();
+          },
+        );
+        final sessionId = session.getSessionId();
+        _activeNativeSessionId = sessionId;
+        if (epoch != _requestEpoch) await FFmpegKit.cancel(sessionId);
+        await done.future;
+        if (_activeNativeSessionId == sessionId) {
+          _activeNativeSessionId = null;
+        }
+        checkCurrent();
+        final code = await session.getReturnCode();
+        if (code == null || !code.isValueSuccess()) {
+          throw StateError('Windowed FFmpegKit extraction failed '
+              '(status=${code?.getValue()})');
+        }
+      } else {
+        throw UnsupportedError(
+            'CP86 R9 probe unavailable on ${Platform.operatingSystem}');
+      }
+      elapsed = stopwatch.elapsed;
+      checkCurrent();
+      final size = await output.length();
+      checkCurrent();
+      if (size <= 0 || size.isOdd || size > plan.maximumPcmBytes) {
+        throw FormatException(
+          'Unexpected window PCM byte count $size '
+          '(maximum ${plan.maximumPcmBytes})',
+        );
+      }
+      final pcm = await output.readAsBytes();
+      checkCurrent();
+      final samples = _decodePcm16Le(pcm);
+      if (kDebugMode) {
+        // No source file path, Android SAF grant or personal media ID logged.
+        debugPrint('CP86 R9 WINDOW seekMode=${plan.seekMode.name} '
+            'startSeconds=$_windowProbeStartSeconds '
+            'durationSeconds=$_windowProbeDurationSeconds '
+            'ffmpegMs=${elapsed.inMilliseconds} '
+            'pcmBytes=$size samples=${samples.length} '
+            'stream=${WaveformFfmpegPlan.streamMap(audioTrackId) ?? 'auto'}');
+      }
+      return samples;
+    } finally {
+      // The diagnostic cannot leave partial files or pollute the V2 cache.
+      try {
+        if (await output.exists()) await output.delete();
+      } on FileSystemException {
+        // An inaccessible debug temp file cannot be used as a cache hit.
+      }
     }
   }
 
