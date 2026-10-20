@@ -157,7 +157,11 @@ class MsoneDebugNavigatorObserver extends NavigatorObserver {
         .where((route) => route.overlayEntries.any((entry) => entry.mounted))
         .map(_routeInfo)
         .join(' | ');
-    return 'active=[$active] poppedStillMounted=[$popping]';
+    final navigator = _activeRoutes.isNotEmpty
+        ? _activeRoutes.last.navigator
+        : null;
+    return 'gestureInProgress=${navigator?.userGestureInProgress} '
+        'active=[$active] poppedStillMounted=[$popping]';
   }
 
   void _log(String action, Route<dynamic> route, Route<dynamic>? other) {

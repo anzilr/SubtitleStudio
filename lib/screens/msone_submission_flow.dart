@@ -87,6 +87,24 @@ Future<void> showMsoneSubmissionFlow({
   // its outgoing overlay/transition has been removed. Wait for that boundary.
   await submissionRoute.completed;
   debugPrint('MSone flow: submission route overlay removed');
+
+  // Flutter's ModalRoute content is IgnorePointer while the Navigator
+  // considers a system back gesture in progress. On some Android predictive
+  // Back paths the page can dispose before the framework balances that gesture.
+  // Recover ONLY after the outgoing page is fully disposed and the resumed
+  // Editor's route has completed its own transition.
+  final resumedRoute = context.mounted ? ModalRoute.of(context) : null;
+  final gestureAtReturn = navigator.userGestureInProgress;
+  final resumedRouteSettled = context.mounted &&
+      (resumedRoute?.isCurrent ?? false) &&
+      (resumedRoute?.animation?.isCompleted ?? false);
+  debugPrint('MSone flow: navigator gesture at return=$gestureAtReturn '
+      'routeSettled=$resumedRouteSettled');
+  if (gestureAtReturn && resumedRouteSettled) {
+    navigator.didStopUserGesture();
+    debugPrint('MSone flow: recovered completed Android Back gesture; '
+        'remaining=${navigator.userGestureInProgress}');
+  }
   // A Flutter hot restart never unwinds a Navigator route, so these
   // diagnostics distinguish successful Back navigation from isolate restart.
   debugPrint('MSone flow: returned to editor; mounted=${context.mounted}');

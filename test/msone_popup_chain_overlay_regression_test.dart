@@ -7,6 +7,84 @@ import 'package:subtitle_studio/screens/msone_submission_flow.dart';
 
 void main() {
   testWidgets(
+    'completed MSone form Back balances an unfinished Navigator gesture '
+    'and restores taps',
+    (tester) async {
+      final navigatorKey = GlobalKey<NavigatorState>();
+      var editorTaps = 0;
+      var homeTaps = 0;
+      var flowReturned = false;
+
+      await tester.pumpWidget(MaterialApp(
+        navigatorKey: navigatorKey,
+        home: Scaffold(
+          body: Builder(builder: (homeContext) => ElevatedButton(
+            onPressed: () {
+              homeTaps++;
+              unawaited(Navigator.of(homeContext).push<void>(
+                MaterialPageRoute<void>(
+                  builder: (context) => Scaffold(
+                    appBar: AppBar(title: const Text('Editor')),
+                    body: Column(children: [
+                      ElevatedButton(
+                        onPressed: () {
+                          unawaited(showMsoneSubmissionFlow(
+                            context: context,
+                            subtitleCollectionId: 42,
+                            destinationBuilder: (_, _) => Scaffold(
+                              appBar: AppBar(title: const Text('MSone form')),
+                            ),
+                            onReturnToEditor: () => flowReturned = true,
+                          ));
+                        },
+                        child: const Text('Submit to Msone'),
+                      ),
+                      ElevatedButton(
+                        onPressed: () => editorTaps++,
+                        child: const Text('Tap editor'),
+                      ),
+                    ]),
+                  ),
+                ),
+              ));
+            },
+            child: const Text('Open editor'),
+          )),
+        ),
+      ));
+
+      await tester.tap(find.text('Open editor'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Submit to Msone'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Existing Translator'));
+      await tester.pumpAndSettle();
+      expect(find.text('MSone form'), findsOneWidget);
+
+      // Simulate an Android back gesture whose start was delivered but
+      // whose stop callback was lost during an outgoing page transition.
+      navigatorKey.currentState!.didStartUserGesture();
+      expect(navigatorKey.currentState!.userGestureInProgress, isTrue);
+      navigatorKey.currentState!.pop();
+      await tester.pumpAndSettle();
+
+      expect(flowReturned, isTrue);
+      expect(navigatorKey.currentState!.userGestureInProgress, isFalse,
+          reason: 'A completed route must not retain gesture input blocking');
+      await tester.tap(find.text('Tap editor'));
+      await tester.pumpAndSettle();
+      expect(editorTaps, 1);
+
+      navigatorKey.currentState!.pop();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Open editor'));
+      await tester.pumpAndSettle();
+      expect(homeTaps, 2);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'real popup menu -> selection sheet -> form Back retains '
     'editor and home touch handling',
     (tester) async {
