@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 
 /// Debug-only evidence across *both* Editor and Home after MSone Back.
 ///
@@ -16,6 +16,7 @@ class MsoneInputDiagnostics {
   static int _pointerSerial = 0;
   static int _editorPointers = 0;
   static int _homePointers = 0;
+  static int _homeTraceCount = 0;
 
   static bool get isWatching => kDebugMode && _watching;
 
@@ -26,6 +27,7 @@ class MsoneInputDiagnostics {
     _pointerSerial = 0;
     _editorPointers = 0;
     _homePointers = 0;
+    _homeTraceCount = 0;
     debugPrint('MSone input: probe armed for 24 touches (hit-test trace on first 12)');
     debugPrint('MSone input: ROUTES at return ${MsoneDebugNavigatorObserver.describeRoutes()}');
   }
@@ -39,7 +41,10 @@ class MsoneInputDiagnostics {
         'view=${event.viewId} '
         'editorEvents=$_editorPointers homeEvents=$_homePointers '
         'remaining=$_remainingPointers');
-    if (serial <= 12) {
+    // Trace three Home taps after the Editor pops. R11 missed this phase.
+    final onHome = MsoneDebugNavigatorObserver.activeRouteCount == 1;
+    final traceHome = onHome && _homeTraceCount++ < 3;
+    if (serial <= 12 || traceHome) {
       // The root Listener is hit even when a sibling Navigator OverlayEntry
       // intercepts touches. Inspect the actual render hit-test path to find
       // the *specific* barrier rather than guessing which route left it.
@@ -62,7 +67,7 @@ class MsoneInputDiagnostics {
             'count=${hits.path.length} $description');
         // The render-object prefix reveals a barrier but not its owner.
         // Capture the widget ancestry and route stack without changing input.
-        if (serial <= 3) {
+        if (serial <= 3 || traceHome) {
           debugPrint('MSone input: HITTEST owner #$serial '
               '${_describeHitOwner(hits)}');
           debugPrint('MSone input: ROUTES #$serial '
@@ -128,14 +133,22 @@ class MsoneInputDiagnostics {
 /// observation and does not mutate Navigator routes or remove overlays.
 class MsoneDebugNavigatorObserver extends NavigatorObserver {
   static final List<Route<dynamic>> _activeRoutes = [];
+  static int get activeRouteCount => _activeRoutes.length;
   static final List<Route<dynamic>> _recentPopped = [];
 
   static String _routeInfo(Route<dynamic> route) {
     final overlay = route.overlayEntries;
-    final mounted = overlay.where((entry) => entry.mounted).length;
+    final entries = overlay.asMap().entries.map((entry) =>
+        '${entry.key}:${entry.value.mounted ? 'mounted' : 'unmounted'}'
+        '/opaque=${entry.value.opaque}'
+        '/keep=${entry.value.maintainState}').join(',');
+    final modal = route is ModalRoute<dynamic> ? route : null;
+    final transition = modal == null ? '' :
+        ', anim=${modal.animation?.status}, secondary=${modal.secondaryAnimation?.status}'
+        ', offstage=${modal.offstage}';
     return '${route.runtimeType}(name=${route.settings.name}, '
-        'current=${route.isCurrent}, active=${route.isActive}, '
-        'entries=${overlay.length}, mounted=$mounted)';
+        'current=${route.isCurrent}, active=${route.isActive}$transition, '
+        'entries=[$entries])';
   }
 
   static String describeRoutes() {
@@ -195,5 +208,33 @@ class MsoneDebugNavigatorObserver extends NavigatorObserver {
       _activeRoutes.add(newRoute);
     }
     if (newRoute != null) _log('replace', newRoute, oldRoute);
+  }
+}
+
+/// Passive page-route barrier labeling on debug builds. In release mode the
+/// original MaterialPageRoute barrier is returned unchanged.
+class MsoneDiagnosticPageRoute<T> extends MaterialPageRoute<T> {
+  MsoneDiagnosticPageRoute({
+    required super.builder,
+    required this.debugBarrierName,
+    super.settings,
+  });
+
+  final String debugBarrierName;
+
+  @override
+  Widget buildModalBarrier() {
+    final barrier = super.buildModalBarrier();
+    if (!kDebugMode) return barrier;
+    return Listener(
+      behavior: HitTestBehavior.deferToChild,
+      onPointerDown: (event) {
+        if (!MsoneInputDiagnostics.isWatching) return;
+        debugPrint('MSone barrier OWNER=$debugBarrierName '
+            'pointer=${event.pointer} current=$isCurrent '
+            'active=$isActive anim=${animation?.status}');
+      },
+      child: barrier,
+    );
   }
 }

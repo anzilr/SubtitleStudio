@@ -10,7 +10,8 @@ extension _HomeNavigationActions on _HomeScreenContentState {
       if (!mounted) return;
       await Navigator.push(
         context,
-        MaterialPageRoute(
+        MsoneDiagnosticPageRoute(
+          debugBarrierName: 'Editor',
           builder: (context) => EditScreenHost(
             subtitleCollectionId: session.subtitleCollectionId,
             lastEditedIndex: session.lastEditedIndex,

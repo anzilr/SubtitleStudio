@@ -71,7 +71,8 @@ Future<void> showMsoneSubmissionFlow({
   }
   debugPrint('MSone flow: opening submission type=$selected');
   final navigator = Navigator.of(context);
-  final submissionRoute = MaterialPageRoute<void>(
+  final submissionRoute = MsoneDiagnosticPageRoute<void>(
+    debugBarrierName: 'MSone submission',
     builder: (routeContext) => destinationBuilder?.call(
           routeContext,
           selected,

@@ -3,6 +3,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:subtitle_studio/screens/msone_input_diagnostics.dart';
 
 void main() {
+  test('diagnostic route preserves MaterialPageRoute defaults', () {
+    final route = MsoneDiagnosticPageRoute<void>(
+      debugBarrierName: 'Editor',
+      builder: (_) => const Placeholder(),
+    );
+    expect(route.opaque, isTrue);
+    expect(route.maintainState, isTrue);
+    expect(route.buildModalBarrier(), isA<Listener>());
+  });
+
   testWidgets('root probe describes the actual hit-tested modal barrier',
       (tester) async {
     final prints = <String>[];
