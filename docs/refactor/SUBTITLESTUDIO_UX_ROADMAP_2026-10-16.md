@@ -1,5 +1,8 @@
 # SubtitleStudio UX roadmap — visual history, plain language, unified design, compact Edit Line
 
+> **EXECUTION ORDER UPDATE — 2026-10-20:** The user's current goal is **finish technical refactoring and approved essential mobile UX, then begin the dedicated desktop UI**. Do not start desktop workspace layouts until CP93 shared-core acceptance. Waveform CP86 R9–R11 is archived/deferred, and broad skin/community-skin work remains frozen. See [current execution plan](REFACTOR_TO_DESKTOP_EXECUTION_2026-10-20.md). Earlier UX implementation proposals remain source history, not permission to reopen large appearance work now.
+
+
 > **CURRENT STATUS — October 16, 2026:** Since the historical three-skin
 > proposal below, the shipped refactor code now includes **four built-in
 > skins × Light/Dark/Classic**, including Carbon Zero as the default;
