@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'package:subtitle_studio/screens/edit/repositories/editor_preferences_repository.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 import 'package:subtitle_studio/utils/subtitle_parser.dart';
-import 'package:subtitle_studio/utils/saf_file_handler.dart';
+import 'package:subtitle_studio/core/file_access/secondary_subtitle_document_reader.dart';
 import 'package:subtitle_studio/utils/macos_bookmark_manager.dart';
 import 'package:subtitle_studio/core/file_access/studio_file_identity.dart';
 import 'package:subtitle_studio/core/file_access/secondary_subtitle_storage.dart';
@@ -20,8 +20,12 @@ import 'package:subtitle_studio/core/file_access/secondary_subtitle_storage.dart
 /// - Video-related preference loading
 class VideoRepository {
   final EditorPreferencesRepository _preferences;
+  final SecondarySubtitleDocumentReader _secondaryReader;
 
-  const VideoRepository(this._preferences);
+  const VideoRepository(this._preferences, {
+    SecondarySubtitleDocumentReader secondaryReader =
+        const SecondarySubtitleDocumentReader(),
+  }) : _secondaryReader = secondaryReader;
 
   /// Get saved video path for a subtitle collection
   Future<String?> getSavedVideoPath(int collectionId) async {
@@ -33,20 +37,20 @@ class VideoRepository {
           final bookmark = base64Decode(videoPrefs.macOsBookmark!);
           final resolvedPath = await MacOSBookmarkManager.resolveBookmark(bookmark);
           if (resolvedPath != null) {
-            logInfo('VideoRepository: Resolved bookmarked path: $resolvedPath');
+            logInfo('VideoRepository: Resolved saved video bookmark');
             return resolvedPath;
           }
         }
       }
       final path = await _preferences.getVideoPath(collectionId);
       if (path != null) {
-        logInfo('VideoRepository: Found saved video path: $path');
+        logInfo('VideoRepository: Found saved video path');
       } else {
         logInfo('VideoRepository: No saved video path found');
       }
       return path;
     } catch (e) {
-      logError('VideoRepository: Error fetching video path: $e');
+      logError('VideoRepository: Error fetching video path (${e.runtimeType})');
       rethrow;
     }
   }
@@ -60,7 +64,7 @@ class VideoRepository {
 
   /// Save video path for a subtitle collection
   Future<void> saveVideoPath(int collectionId, String path) async {
-    logInfo('VideoRepository: Saving video path for collection $collectionId: $path');
+    logInfo('VideoRepository: Saving video path for collection $collectionId');
     try {
       if (Platform.isMacOS) {
         final bookmark = await MacOSBookmarkManager.createBookmark(path);
@@ -74,7 +78,7 @@ class VideoRepository {
       await _preferences.saveVideoPath(collectionId, path);
       logInfo('VideoRepository: Successfully saved video path');
     } catch (e) {
-      logError('VideoRepository: Error saving video path: $e');
+      logError('VideoRepository: Error saving video path (${e.runtimeType})');
       rethrow;
     }
   }
@@ -137,52 +141,14 @@ class VideoRepository {
     }
   }
 
-  /// Parse subtitle file based on extension
-  /// 
-  /// Handles both SAF URIs (content://) and regular file paths.
-  /// On Android, prefers SAF for content:// URIs to avoid permission issues.
-  Future<List<SimpleSubtitleLine>> _parseSubtitleFile(String path) async {
-    String content;
-    
-    // Check if this is a SAF URI (Android)
-    if (Platform.isAndroid &&
-        StudioFileIdentity.fromLocator(path).isAndroidDocument) {
-      // Use SAF to read the file
-      try {
-        final bytes = await SafFileHandler.readFileFromUri(path);
-        content = utf8.decode(bytes);
-      } catch (e) {
-        logError('VideoRepository: Failed to read from SAF URI: $e');
-        throw Exception('Failed to read subtitle file from URI: $path. Error: $e');
-      }
-    } else {
-      // Use traditional file access for non-SAF paths
-      final file = File(path);
-      if (!await file.exists()) {
-        throw Exception('Subtitle file not found: $path');
-      }
-      content = await file.readAsString();
-    }
-
-    List<SimpleSubtitleLine> parsedSubtitles = [];
-
-    if (path.endsWith('.srt')) {
-      parsedSubtitles = SubtitleParser.parseSrt(content);
-    } else if (path.endsWith('.vtt')) {
-      parsedSubtitles = SubtitleParser.parseVtt(content);
-    } else if (path.endsWith('.ass') || path.endsWith('.ssa')) {
-      parsedSubtitles = SubtitleParser.parseAss(content);
-    } else {
-      throw Exception('Unsupported subtitle format: $path');
-    }
-
-    return parsedSubtitles;
-  }
+  /// Reads secondary media through a typed, injectable file boundary.
+  Future<List<SimpleSubtitleLine>> _parseSubtitleFile(String path) =>
+      _secondaryReader.readAndParse(path);
 
   /// Save secondary subtitle path for a collection and parse the file
   Future<SecondarySubtitleData> saveAndLoadSecondarySubtitle(
       int collectionId, String path) async {
-    logInfo('VideoRepository: Saving and loading secondary subtitle for collection $collectionId: $path');
+    logInfo('VideoRepository: Saving and loading secondary subtitle for collection $collectionId');
     try {
       await _preferences.saveSecondarySubtitlePath(collectionId, path);
       // Clear the "use original as secondary" flag
@@ -198,7 +164,7 @@ class VideoRepository {
         subtitles: subtitles,
       );
     } catch (e) {
-      logError('VideoRepository: Error saving secondary subtitle path: $e');
+      logError('VideoRepository: Error saving secondary subtitle path (${e.runtimeType})');
       rethrow;
     }
   }
