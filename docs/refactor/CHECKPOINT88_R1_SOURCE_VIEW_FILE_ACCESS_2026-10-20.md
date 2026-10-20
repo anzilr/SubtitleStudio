@@ -36,4 +36,8 @@ Implementation commits: [typed access boundary](https://github.com/anzilr/Subtit
 5. Reuse a stale mismatched SAF URI and verify the operation is rejected before writing.
 6. Verify Edit Screen, checkpoints, MSone Back and Home taps remain unchanged.
 
-CI status: see the latest `refactor/riverpod-architecture` Flutter-only Actions gate; record exact successful run once completed.
+## Verified Flutter-only quality gate
+
+[GitHub Actions run 39479871054](https://github.com/anzilr/SubtitleStudio/actions/runs/39479871054) — **SUCCESS** (2026-10-20), **552 Flutter tests passed** with analyzer **zero errors and zero warnings**; one pre-existing informational `unnecessary_import` lint in `lib/screens/msone_input_diagnostics.dart`. The workflow uses `flutter analyze --no-fatal-infos --no-fatal-warnings`, so do not describe it as "no analyzer issues". No platform build was run in Actions.
+
+The earlier run 39479380080 was superseded by the mismatched-SAF-grant safety fix and canceled; the result above is the final R1 gate. Android native Source View/SAF revocation checks remain outstanding.
