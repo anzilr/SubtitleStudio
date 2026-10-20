@@ -32,4 +32,4 @@ This is code-level validation of *secondary subtitle reads*, not general Phase 7
 
 ## Latest CI
 
-The exact Flutter-only quality gate and pass count will be added after verification.
+[GitHub Actions run 39490395278](https://github.com/anzilr/SubtitleStudio/actions/runs/39490395278) — **SUCCESS** on 2026-10-20: **579 Flutter tests passed** and `flutter analyze`: **No issues found** (no errors, warnings or informational lints). The earlier partial CI was superseded by this final source/test gate. GitHub Actions performed only dependency resolution, Flutter analyzer and tests—**no platform builds**. Native Android provider revocation, long-term SAF grants and Windows file-URI behavior remain to be verified locally.
