@@ -590,6 +590,7 @@ class AudioProcessor {
         final session = await FFmpegKit.executeAsync(
           command,
           (_) {
+            decodedProgress.close();
             if (!completed.isCompleted) completed.complete();
           },
           null,

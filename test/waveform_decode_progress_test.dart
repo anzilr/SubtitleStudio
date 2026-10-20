@@ -16,6 +16,9 @@ void main() {
     expect(gate.accept(2000), isNull);
     expect(gate.accept(5000), const Duration(seconds: 5));
     expect(gate.accept(864000001), isNull);
+    gate.close();
+    expect(gate.accept(12000), isNull,
+        reason: 'Late native statistics must not re-enter WaveformLoading');
   });
 
   test('processed media time is not presented as percent complete', () {

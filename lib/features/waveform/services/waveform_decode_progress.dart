@@ -5,11 +5,16 @@
 /// and metadata can be wrong for discontinuous tracks.
 class WaveformDecodeProgress {
   int _lastMilliseconds = -1;
+  bool _closed = false;
+
+  /// Prevent statistics emitted after the FFmpeg session's completion from
+  /// returning the screen to its loading state.
+  void close() => _closed = true;
 
   /// Returns the next visibly different processed-media timestamp, or null
   /// for invalid, repeated, regressing and sub-two-second callbacks.
   Duration? accept(num milliseconds) {
-    if (!milliseconds.isFinite || milliseconds <= 0 ||
+    if (_closed || !milliseconds.isFinite || milliseconds <= 0 ||
         milliseconds > 864000000) {
       return null;
     }
