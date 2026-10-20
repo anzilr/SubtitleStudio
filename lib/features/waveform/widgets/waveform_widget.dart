@@ -23,13 +23,13 @@ import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/widgets/settings_sheet.dart';
 import 'package:subtitle_studio/utils/time_parser.dart';
 
-/// R11 is diagnostic-only until absolute PTS/multitrack qualification.
-const bool _r11SparseViewportPreview = bool.fromEnvironment(
-  'MS_ONE_CP86_R11_SPARSE_VIEWPORT_PREVIEW', defaultValue: false);
-
 part 'waveform_rendering.dart';
 part 'waveform_interactions.dart';
 part 'waveform_editing.dart';
+
+/// R11 is diagnostic-only until absolute PTS/multitrack qualification.
+const bool _r11SparseViewportPreview = bool.fromEnvironment(
+  'MS_ONE_CP86_R11_SPARSE_VIEWPORT_PREVIEW', defaultValue: false);
 
 /// Main waveform visualization widget with interaction support
 class WaveformWidget extends riverpod.ConsumerStatefulWidget {
