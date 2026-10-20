@@ -109,3 +109,5 @@ CP86 R10 2026-10-20 verified device file: 30s window ffmpegMs=1204, full ffmpegM
 CP86 R10 paint diagnostics follow-up: restore explicit import of WaveformWindowPreview after refactoring the widget state; rerun Flutter analyzer and full test suite. GitHub Actions analysis/tests only; platform builds remain local.
 
 CP86 R11 P1 2026-10-20: after confirmed CPH2381 R10 PREVIEW_CREATED/PREVIEW_PAINTED with 954ms fast extraction and sampled zero-lag, add Dart-only source-revision/track-scoped viewport requests, nearest-playhead scheduling, explicit unknown timeline spans, stale result rejection, and truncated tail protection. Run flutter pub get, flutter analyze and flutter test ONLY; no Android/iOS/Windows/Web/macOS/Linux platform builds in Actions.
+
+CP86 R11 final P1 2026-10-20: guard at most eight concurrent claimed windows across repeated calls, cross-instance callback rejection with owner-scoped request tokens, and source/stream generation invalidation. Cover with Dart regressions; run flutter analyze/test ONLY, no platform builds.
