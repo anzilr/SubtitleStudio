@@ -18,6 +18,7 @@ void main() {
         onPointerUp: MsoneInputDiagnostics.onRootPointerUp,
         child: child!,
       ),
+      navigatorObservers: [MsoneDebugNavigatorObserver()],
       home: Scaffold(
         body: Builder(builder: (context) => Center(
           child: ElevatedButton(
@@ -42,6 +43,12 @@ void main() {
     expect(prints.any((line) => line.contains('MSone input: ROOT')), isTrue);
     expect(prints.any((line) => line.contains('MSone input: HITTEST')),
         isTrue);
+    expect(prints.any((line) =>
+        line.contains('MSone input: HITTEST owner #1') &&
+        line.contains('ModalBarrier')), isTrue);
+    expect(prints.any((line) =>
+        line.contains('MSone input: ROUTES #1') &&
+        line.contains('DialogRoute')), isTrue);
     expect(prints.any((line) => line.contains('MSone input: ROOT pointer-up')),
         isTrue);
     expect(prints.any((line) => line.contains('ModalBarrier') ||

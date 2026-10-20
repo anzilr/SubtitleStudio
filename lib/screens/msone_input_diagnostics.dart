@@ -27,6 +27,7 @@ class MsoneInputDiagnostics {
     _editorPointers = 0;
     _homePointers = 0;
     debugPrint('MSone input: probe armed for 24 touches (hit-test trace on first 12)');
+    debugPrint('MSone input: ROUTES at return ${MsoneDebugNavigatorObserver.describeRoutes()}');
   }
 
   static void onRootPointer(PointerDownEvent event) {
@@ -59,6 +60,14 @@ class MsoneInputDiagnostics {
         }).join(' > ');
         debugPrint('MSone input: HITTEST #$serial '
             'count=${hits.path.length} $description');
+        // The render-object prefix reveals a barrier but not its owner.
+        // Capture the widget ancestry and route stack without changing input.
+        if (serial <= 3) {
+          debugPrint('MSone input: HITTEST owner #$serial '
+              '${_describeHitOwner(hits)}');
+          debugPrint('MSone input: ROUTES #$serial '
+              '${MsoneDebugNavigatorObserver.describeRoutes()}');
+        }
       } catch (error) {
         debugPrint('MSone input: HITTEST #$serial failed: $error');
       }
@@ -68,6 +77,20 @@ class MsoneInputDiagnostics {
       debugPrint('MSone input: probe complete, '
           'editorEvents=$_editorPointers homeEvents=$_homePointers');
     }
+  }
+
+  static String _describeHitOwner(HitTestResult result) {
+    if (result.path.isEmpty) return '<empty hit-test path>';
+    final target = result.path.first.target;
+    if (target is! RenderObject) return target.runtimeType.toString();
+    final creator = target.debugCreator;
+    if (creator is! DebugCreator) return '${target.runtimeType} [no DebugCreator]';
+    final widgets = <String>[creator.element.widget.runtimeType.toString()];
+    creator.element.visitAncestorElements((ancestor) {
+      widgets.add(ancestor.widget.runtimeType.toString());
+      return widgets.length < 36;
+    });
+    return widgets.join(' < ');
   }
 
   // Distinguishes an intercepting hit-test target (DOWN+UP reached the
@@ -101,27 +124,76 @@ class MsoneInputDiagnostics {
   }
 }
 
+/// Tracks routes before the post-MSone probe starts. This is debug-only
+/// observation and does not mutate Navigator routes or remove overlays.
 class MsoneDebugNavigatorObserver extends NavigatorObserver {
+  static final List<Route<dynamic>> _activeRoutes = [];
+  static final List<Route<dynamic>> _recentPopped = [];
+
+  static String _routeInfo(Route<dynamic> route) {
+    final overlay = route.overlayEntries;
+    final mounted = overlay.where((entry) => entry.mounted).length;
+    return '${route.runtimeType}(name=${route.settings.name}, '
+        'current=${route.isCurrent}, active=${route.isActive}, '
+        'entries=${overlay.length}, mounted=$mounted)';
+  }
+
+  static String describeRoutes() {
+    final active = _activeRoutes.map(_routeInfo).join(' -> ');
+    final popping = _recentPopped
+        .where((route) => route.overlayEntries.any((entry) => entry.mounted))
+        .map(_routeInfo)
+        .join(' | ');
+    return 'active=[$active] poppedStillMounted=[$popping]';
+  }
+
   void _log(String action, Route<dynamic> route, Route<dynamic>? other) {
     if (!MsoneInputDiagnostics.isWatching) return;
     debugPrint('MSone nav: $action ${route.runtimeType} '
         'previous/next=${other.runtimeType} '
         'isCurrent=${route.isCurrent} '
-        'overlays=${route.overlayEntries.length}');
+        'overlays=${route.overlayEntries.length} '
+        'stack=${describeRoutes()}');
   }
 
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (previousRoute == null) {
+      _activeRoutes.clear();
+      _recentPopped.clear();
+    }
+    _activeRoutes.remove(route);
+    _activeRoutes.add(route);
     _log('push', route, previousRoute);
   }
 
   @override
   void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    _activeRoutes.remove(route);
+    _recentPopped.add(route);
+    if (_recentPopped.length > 8) _recentPopped.removeAt(0);
     _log('pop', route, previousRoute);
   }
 
   @override
   void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    _activeRoutes.remove(route);
     _log('remove', route, previousRoute);
+  }
+
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    if (oldRoute != null) {
+      final index = _activeRoutes.indexOf(oldRoute);
+      if (index >= 0) {
+        _activeRoutes.removeAt(index);
+        if (newRoute != null) _activeRoutes.insert(index, newRoute);
+      } else if (newRoute != null) {
+        _activeRoutes.add(newRoute);
+      }
+    } else if (newRoute != null) {
+      _activeRoutes.add(newRoute);
+    }
+    if (newRoute != null) _log('replace', newRoute, oldRoute);
   }
 }
