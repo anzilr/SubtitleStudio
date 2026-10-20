@@ -28,7 +28,9 @@ Source View previously contained `File(config.filePath)`, Android `MethodChannel
 
 ## R2 test outcome
 
-Initial Flutter-only Actions run [39481454982](https://github.com/anzilr/SubtitleStudio/actions/runs/39481454982) found an undefined convenience matcher `throwsFileSystemException`; this was corrected to `throwsA(isA<FileSystemException>())` alongside import cleanup. Final rerun: [39481786195](https://github.com/anzilr/SubtitleStudio/actions/runs/39481786195). Record final count and analyzer result after successful completion.
+Initial Flutter-only Actions run [39481454982](https://github.com/anzilr/SubtitleStudio/actions/runs/39481454982) found an undefined convenience matcher `throwsFileSystemException`; this was corrected to `throwsA(isA<FileSystemException>())` alongside import cleanup. The second run [39481786195](https://github.com/anzilr/SubtitleStudio/actions/runs/39481786195) reached 558 passing tests and one new Save As error-contract test failure. `writeCreatedDocument` had thrown URI validation errors synchronously despite returning `Future<bool>`; the contract is now genuinely asynchronous in [fix f5140bd](https://github.com/anzilr/SubtitleStudio/commit/f5140bde42cf788db30152cafe5c5fca26b0deba).
+
+**Final R2 acceptance:** [GitHub Actions 39482438137](https://github.com/anzilr/SubtitleStudio/actions/runs/39482438137) — **SUCCESS**, **559 Flutter tests passed**, `flutter analyze`: **No issues found** (zero errors/warnings/infos). No Android, iOS, Windows, Linux, macOS or Web platform builds were run. This verifies the adapter's Dart-side contracts, not physical SAF providers or desktop/native file dialogs.
 
 ## Next active sequence
 
