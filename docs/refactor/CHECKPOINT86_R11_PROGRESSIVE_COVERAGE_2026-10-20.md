@@ -68,3 +68,12 @@ git pull --ff-only origin experiment/cp86-r9-windowed-waveform-preview
 Expected: a read-only viewport labeled 00:29:30–00:31:00, the 00:30:00–00:30:30 waveform in the center third, hatching on either side, and `CP86 R11 SPARSE_VIEWPORT_PAINTED knownStartMs=1800000 knownEndMs=1830000 unknownNeighbors=true`. Once the full decode finishes, the normal interactive waveform should replace this proof-of-concept unchanged.
 
 **Not yet implemented:** driving multiple native FFmpeg window extractions from the scheduler, absolute time-to-subtitle gesture integration, native AV PTS gap verification, definitive media duration from video, cache promotion, or enablement outside debug/explicit opt-in. These remain gating work.
+
+## CP86 R11 P2 automated acceptance
+
+[GitHub Actions 39476751448](https://github.com/anzilr/SubtitleStudio/actions/runs/39476751448) **SUCCESS**, 2026-10-20, head `62d7f2b`: `flutter analyze` **No issues found**, **573 Flutter tests passed**. The new tests cover absolute 30-minute waveform placement, clipped segments, unknown intervals, painter execution at nonzero size, zero-sized paint rejection, cancellation/reclaim stale tokens, cross-instance request ownership, and bounded viewport work. No Android, Windows or other platform builds ran in CI.
+
+First R11 P2 workflow [39476480917](https://github.com/anzilr/SubtitleStudio/actions/runs/39476480917) failed **analysis only** due to a compile-time constant declared before `part` directives; fixed in commit `b1fc424` before this successful gate.
+
+**Status:** R11 P2 code/test PASS; Android sparse viewport UI native QA NOT YET RUN, and interactive progressive extraction is still not enabled. The earlier R10 954ms window and 32ms handoff-to-paint remain the measured native baseline for one automatically selected audio track.
+
