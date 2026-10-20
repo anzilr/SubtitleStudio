@@ -101,3 +101,5 @@ CP86 R9 experiment: bounded 30-60s seek-window FFmpeg extraction (fast vs accura
 CP86 R9 launcher repair 2026-10-20: PowerShell syntax restored, optional -DartDefines forwarding guarded in Flutter test (PowerShell Parser if available), no Android/Windows platform builds in CI. Flutter analyze and full test only.
 
 CP86 R10 2026-10-20: CPH2381 R9 window extraction 931/586/714ms at 1800s, 82680 samples with 256-point exact sampled alignment; add debug-only fast-seek preview strip during full decoder wait, signed min/max 256 buckets, absolute window labels, cancellation-safe Riverpod loading state, tests for stale callbacks and transients. Run flutter pub get, flutter analyze, flutter test only; NEVER build Android/iOS/Windows/Web/macOS/Linux in Actions.
+
+CP86 R10 final lint cleanup: remove two unused imports (preview widget and duplicate diagnostic gestures import), require clean flutter analyze and 556-test regression gate. Quality checks only; no platform builds in Actions.
