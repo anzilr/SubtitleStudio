@@ -109,3 +109,5 @@ CP88 R2 final gate 2026-10-20: all six Source View storage tests passed; Save As
 CP88 R3 2026-10-20: injectable SourceViewSafGrantRepository removes SharedPreferences operations from SourceViewController, retains the exact legacy saf_uri_<filePath> key, prioritizes explicit validated URI, prunes malformed/mismatched persisted grants, and preserves direct-content URI identity. New fake-backed unit regressions. Run flutter pub get, flutter analyze and flutter test ONLY; NO platform builds in GitHub Actions.
 
 CP88 R3 final gate: confirm actual SharedPreferences mock round-trip for legacy saf_uri_<filePath> keys, malformed and mismatched persisted URI cleanup, provider override and explicit URI precedence. Full flutter pub get, flutter analyze, flutter test; NO Android/iOS/desktop/Web platform builds.
+
+Desktop UI preview first milestone October 20 2026: standalone lib/main_desktop_preview.dart, desktop panel shell/rail/demo cues, local-only search/selection/edit/mark/play state, responsive sidebar/inspector, Flutter widget tests. Use flutter pub get, flutter analyze, flutter test ONLY. Absolutely NO platform builds in GitHub Actions.
