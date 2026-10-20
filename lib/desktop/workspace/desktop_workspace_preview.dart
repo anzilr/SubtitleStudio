@@ -1,0 +1,694 @@
+import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+/// Demo-only cue; this screen intentionally does not persist any user data.
+@immutable
+class WorkspaceDemoCue {
+  const WorkspaceDemoCue({
+    required this.id,
+    required this.start,
+    required this.end,
+    required this.original,
+    required this.edited,
+    this.marked = false,
+  });
+
+  final int id;
+  final String start;
+  final String end;
+  final String original;
+  final String edited;
+  final bool marked;
+
+  WorkspaceDemoCue copyWith({String? edited, bool? marked}) =>
+      WorkspaceDemoCue(
+        id: id, start: start, end: end, original: original,
+        edited: edited ?? this.edited, marked: marked ?? this.marked,
+      );
+}
+
+/// Desktop-first, data-isolated workspace design. Domain logic is intentionally
+/// absent: shared Editor, Isar, checkpoints, media and file-access providers
+/// remain authoritative in the refactoring branch.
+class DesktopWorkspacePreview extends StatefulWidget {
+  const DesktopWorkspacePreview({super.key});
+
+  @override
+  State<DesktopWorkspacePreview> createState() =>
+      _DesktopWorkspacePreviewState();
+}
+
+class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
+  static const _accent = Color(0xFF2A9D8F);
+  static const _border = Color(0xFF30363D);
+  static const _muted = Color(0xFF98A2AD);
+
+  final List<WorkspaceDemoCue> _cues = [
+    const WorkspaceDemoCue(id: 1, start: '00:00:08,200', end: '00:00:11,400',
+      original: 'The city always looks different at night.',
+      edited: 'The city always looks different at night.'),
+    const WorkspaceDemoCue(id: 2, start: '00:00:12,100', end: '00:00:15,800',
+      original: 'Especially when there is nowhere to go.',
+      edited: 'Especially when there is nowhere to go.'),
+    const WorkspaceDemoCue(id: 3, start: '00:00:17,300', end: '00:00:20,500',
+      original: 'I thought we had more time.',
+      edited: 'I thought we had more time.'),
+    const WorkspaceDemoCue(id: 4, start: '00:00:21,800', end: '00:00:24,700',
+      original: 'The last train left an hour ago.',
+      edited: 'The last train left an hour ago.'),
+    const WorkspaceDemoCue(id: 5, start: '00:00:26,100', end: '00:00:29,300',
+      original: 'Meet me where the lights end.',
+      edited: 'Meet me where the lights end.', marked: true),
+    const WorkspaceDemoCue(id: 6, start: '00:00:30,000', end: '00:00:33,900',
+      original: 'Every road leads somewhere.',
+      edited: 'Every road leads somewhere.'),
+    const WorkspaceDemoCue(id: 7, start: '00:00:35,500', end: '00:00:38,600',
+      original: 'Not every story has an ending.',
+      edited: 'Not every story has an ending.'),
+    const WorkspaceDemoCue(id: 8, start: '00:00:40,200', end: '00:00:43,700',
+      original: 'We could begin again.',
+      edited: 'We could begin again.'),
+    const WorkspaceDemoCue(id: 9, start: '00:00:44,900', end: '00:00:48,000',
+      original: 'Are you coming with me?',
+      edited: 'Are you coming with me?'),
+    const WorkspaceDemoCue(id: 10, start: '00:00:50,500', end: '00:00:53,600',
+      original: 'Only if we take the long way.',
+      edited: 'Only if we take the long way.'),
+    const WorkspaceDemoCue(id: 11, start: '00:00:56,900', end: '00:01:00,000',
+      original: 'It is almost midnight.',
+      edited: 'It is almost midnight.'),
+    const WorkspaceDemoCue(id: 12, start: '00:01:01,200', end: '00:01:04,700',
+      original: 'Then let us not waste another minute.',
+      edited: 'Then let us not waste another minute.'),
+  ];
+  int _selectedId = 5;
+  int _section = 0;
+  bool _playing = false;
+  bool _inspectorOpen = true;
+  String _query = '';
+  double _sidebarWidth = 224;
+  double _inspectorWidth = 292;
+
+  WorkspaceDemoCue get _selected =>
+      _cues.firstWhere((cue) => cue.id == _selectedId);
+  List<WorkspaceDemoCue> get _visible => _cues.where((cue) {
+    final q = _query.trim().toLowerCase();
+    return q.isEmpty || cue.original.toLowerCase().contains(q) ||
+        cue.edited.toLowerCase().contains(q) ||
+        cue.start.contains(q) || cue.id.toString() == q;
+  }).toList(growable: false);
+
+  void _replaceCue(WorkspaceDemoCue updated) {
+    final i = _cues.indexWhere((cue) => cue.id == updated.id);
+    if (i < 0) return;
+    setState(() => _cues[i] = updated);
+  }
+
+  void _selectRelative(int change) {
+    if (_visible.isEmpty) return;
+    final index = _visible.indexWhere((cue) => cue.id == _selectedId);
+    final target = (index + change).clamp(0, _visible.length - 1);
+    setState(() => _selectedId = _visible[target].id);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.arrowDown, control: true):
+            () => _selectRelative(1),
+        const SingleActivator(LogicalKeyboardKey.arrowUp, control: true):
+            () => _selectRelative(-1),
+      },
+      child: Focus(
+        autofocus: true,
+        child: Scaffold(
+          body: LayoutBuilder(builder: (context, bounds) {
+            final wide = bounds.maxWidth >= 1220;
+            final inspectorVisible = bounds.maxWidth >= 890 &&
+                _inspectorOpen;
+            return Column(
+              children: [
+                _topBar(),
+                Expanded(
+                  child: Row(
+                    children: [
+                      _navigationRail(),
+                      if (wide && _section == 0)
+                        SizedBox(
+                          width: _sidebarWidth,
+                          child: _projectSidebar(),
+                        ),
+                      if (wide && _section == 0)
+                        _dragHandle(
+                          onDelta: (dx) => setState(() => _sidebarWidth =
+                              (_sidebarWidth + dx).clamp(180, 320)),
+                        ),
+                      Expanded(child: _section == 0
+                          ? _editingWorkspace()
+                          : _secondarySection()),
+                      if (inspectorVisible && _section == 0)
+                        _dragHandle(
+                          onDelta: (dx) => setState(() => _inspectorWidth =
+                              (_inspectorWidth - dx).clamp(240, 380)),
+                        ),
+                      if (inspectorVisible && _section == 0)
+                        SizedBox(width: _inspectorWidth, child: _inspector()),
+                    ],
+                  ),
+                ),
+                _statusBar(),
+              ],
+            );
+          }),
+        ),
+      ),
+    );
+  }
+
+  Widget _topBar() => Container(
+    height: 55,
+    padding: const EdgeInsets.symmetric(horizontal: 17),
+    decoration: const BoxDecoration(border:
+        Border(bottom: BorderSide(color: _border))),
+    child: Row(children: [
+      const Icon(Icons.subtitles_rounded, color: _accent, size: 22),
+      const SizedBox(width: 10),
+      const Text('SubtitleStudio', style:
+          TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+      const SizedBox(width: 16),
+      Container(width: 1, height: 23, color: _border),
+      const SizedBox(width: 15),
+      Flexible(child: Text(
+        'Night Drive  /  Main subtitles',
+        maxLines: 1, overflow: TextOverflow.ellipsis,
+        style: const TextStyle(color: _muted, fontSize: 12),
+      )),
+      const Spacer(),
+      const Text('DEMO WORKSPACE', style:
+          TextStyle(color: _muted, letterSpacing: 1, fontSize: 10)),
+      const SizedBox(width: 14),
+      IconButton(
+        key: const ValueKey('toggle-inspector'),
+        icon: Icon(_inspectorOpen
+            ? Icons.view_sidebar_outlined : Icons.view_sidebar),
+        tooltip: 'Toggle inspector',
+        onPressed: () => setState(() =>
+            _inspectorOpen = !_inspectorOpen),
+      ),
+      const SizedBox(width: 7),
+      const Icon(Icons.circle, size: 9, color: _accent),
+      const SizedBox(width: 7),
+      const Text('Preview', style: TextStyle(fontSize: 12)),
+    ]),
+  );
+
+  Widget _navigationRail() => Container(
+    width: 61,
+    decoration: const BoxDecoration(border:
+      Border(right: BorderSide(color: _border))),
+    child: Column(children: [
+      const SizedBox(height: 13),
+      _railItem(0, Icons.movie_creation_outlined, 'Editor'),
+      _railItem(1, Icons.account_tree_outlined, 'History'),
+      _railItem(2, Icons.search_rounded, 'Find'),
+      _railItem(3, Icons.tune_rounded, 'Tools'),
+      const Spacer(),
+      _railItem(4, Icons.settings_outlined, 'Settings'),
+      const SizedBox(height: 13),
+    ]),
+  );
+
+  Widget _railItem(int index, IconData icon, String title) => Tooltip(
+    message: title,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Material(
+        color: _section == index ? _accent.withValues(alpha: .18)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(9),
+        child: InkWell(
+          key: ValueKey('rail-$index'),
+          borderRadius: BorderRadius.circular(9),
+          onTap: () => setState(() => _section = index),
+          child: SizedBox(width: 44, height: 43,
+            child: Icon(icon, size: 21,
+              color: _section == index ? _accent : _muted)),
+        ),
+      ),
+    ),
+  );
+
+  Widget _projectSidebar() => Container(
+    decoration: const BoxDecoration(border:
+        Border(right: BorderSide(color: _border))),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _paneHeader(Icons.folder_open_rounded, 'PROJECT', trailing: 'DEMO'),
+        const SizedBox(height: 10),
+        _sidebarRow(Icons.folder_rounded, 'Night Drive', selected: true),
+        const Padding(padding: EdgeInsets.fromLTRB(17, 20, 12, 7),
+          child: Text('PROJECT FILES', style:
+            TextStyle(fontSize: 10, color: _muted, letterSpacing: 1.2))),
+        _sidebarRow(Icons.subtitles_rounded, 'Main subtitles.srt',
+            selected: true, indent: 15),
+        _sidebarRow(Icons.subtitles_outlined, 'Secondary subtitles',
+            indent: 15),
+        _sidebarRow(Icons.movie_outlined, 'Night Drive.mp4', indent: 15),
+        const Padding(padding: EdgeInsets.fromLTRB(17, 23, 12, 7),
+          child: Text('VERSIONS', style:
+            TextStyle(fontSize: 10, color: _muted, letterSpacing: 1.2))),
+        _sidebarRow(Icons.fork_right_rounded, 'Current version'),
+        _sidebarRow(Icons.bookmark_border_rounded, 'Pinned versions'),
+        const Spacer(),
+        const Padding(
+          padding: EdgeInsets.all(14),
+          child: Text('Preview project\nNo local files are opened.',
+            style: TextStyle(fontSize: 11, color: _muted, height: 1.5)),
+        ),
+      ],
+    ),
+  );
+
+  Widget _sidebarRow(IconData icon, String label,
+      {bool selected = false, double indent = 0}) =>
+    Padding(
+      padding: EdgeInsets.fromLTRB(8 + indent, 2, 8, 2),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+        decoration: BoxDecoration(
+          color: selected ? _accent.withValues(alpha: .12) : null,
+          borderRadius: BorderRadius.circular(7),
+        ),
+        child: Row(children: [
+          Icon(icon, size: 16, color: selected ? _accent : _muted),
+          const SizedBox(width: 9),
+          Expanded(child: Text(label, overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 12,
+                  color: selected ? Colors.white : _muted))),
+        ]),
+      ),
+    );
+
+  Widget _dragHandle({required ValueChanged<double> onDelta}) =>
+      MouseRegion(
+        cursor: SystemMouseCursors.resizeColumn,
+        child: GestureDetector(
+          onHorizontalDragUpdate: (details) => onDelta(details.delta.dx),
+          child: const SizedBox(width: 5,
+              child: ColoredBox(color: _border)),
+        ),
+      );
+
+  Widget _paneHeader(IconData icon, String title, {String? trailing}) =>
+      Container(
+        height: 43,
+        padding: const EdgeInsets.symmetric(horizontal: 13),
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: _border))),
+        child: Row(children: [
+          Icon(icon, size: 15, color: _muted),
+          const SizedBox(width: 8),
+          Text(title, style: const TextStyle(
+              fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: .7)),
+          const Spacer(),
+          if (trailing != null) Text(trailing,
+              style: const TextStyle(color: _muted, fontSize: 10)),
+        ]),
+      );
+
+  Widget _editingWorkspace() => Column(children: [
+    Expanded(flex: 5, child: Column(children: [
+      Expanded(child: _videoPanel()),
+      _transport(),
+      _waveformPanel(),
+    ])),
+    const SizedBox(height: 5, child: ColoredBox(color: _border)),
+    Expanded(flex: 4, child: _subtitleTable()),
+  ]);
+
+  Widget _videoPanel() => Container(
+    padding: const EdgeInsets.all(14),
+    color: const Color(0xFF131619),
+    child: Column(children: [
+      Row(children: [
+        const Icon(Icons.videocam_outlined, size: 16, color: _muted),
+        const SizedBox(width: 9),
+        const Text('VIDEO PREVIEW',
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+        const Spacer(),
+        const Icon(Icons.aspect_ratio, size: 15, color: _muted),
+        const SizedBox(width: 8),
+        const Text('16:9  ·  Demo clip',
+            style: TextStyle(fontSize: 11, color: _muted)),
+      ]),
+      const SizedBox(height: 10),
+      Expanded(
+        child: Center(child: AspectRatio(
+          aspectRatio: 16 / 9,
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: _border),
+              borderRadius: BorderRadius.circular(9),
+              gradient: const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFF232C36), Color(0xFF10151B), Color(0xFF06090D)],
+              ),
+            ),
+            child: Stack(children: [
+              Positioned.fill(child: CustomPaint(
+                painter: const _DemoHorizonPainter())),
+              const Positioned(left: 17, top: 13,
+                child: Text('DEMO VIDEO · PLACEHOLDER',
+                  style: TextStyle(fontSize: 10,
+                    color: Color(0xFFACB6BD), letterSpacing: 1))),
+              Center(child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Text(_selected.edited,
+                  maxLines: 2, textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 16, height: 1.4, fontWeight: FontWeight.w600,
+                    shadows: [Shadow(color: Colors.black, blurRadius: 6)],
+                  )),
+              )),
+            ]),
+          ),
+        )),
+      ),
+    ]),
+  );
+
+  Widget _transport() => Container(
+    height: 45,
+    decoration: const BoxDecoration(border: Border(
+      top: BorderSide(color: _border),
+      bottom: BorderSide(color: _border),
+    )),
+    padding: const EdgeInsets.symmetric(horizontal: 14),
+    child: Row(children: [
+      IconButton(icon: const Icon(Icons.skip_previous_rounded, size: 19),
+        tooltip: 'Previous cue',
+        onPressed: () => _selectRelative(-1)),
+      IconButton(
+        key: const ValueKey('preview-play'),
+        icon: Icon(_playing ? Icons.pause_circle_filled_rounded
+            : Icons.play_circle_fill_rounded, color: _accent, size: 25),
+        tooltip: 'Toggle simulated playback',
+        onPressed: () => setState(() => _playing = !_playing)),
+      IconButton(icon: const Icon(Icons.skip_next_rounded, size: 19),
+        tooltip: 'Next cue', onPressed: () => _selectRelative(1)),
+      const SizedBox(width: 14),
+      Text(_selected.start, style: const TextStyle(
+          fontSize: 12, fontFeatures: [FontFeature.tabularFigures()])),
+      const Text(' /  00:12:45', style:
+        TextStyle(color: _muted, fontSize: 12)),
+      const Spacer(),
+      const Text('1.0×', style: TextStyle(color: _muted, fontSize: 11)),
+      const SizedBox(width: 12),
+      const Icon(Icons.volume_up_outlined, size: 17, color: _muted),
+    ]),
+  );
+
+  Widget _waveformPanel() => Container(
+    height: 114,
+    padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+    color: const Color(0xFF171B20),
+    child: Column(children: [
+      Row(children: [
+        const Icon(Icons.graphic_eq, size: 15, color: _accent),
+        const SizedBox(width: 8),
+        const Text('WAVEFORM', style: TextStyle(
+            fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: .8)),
+        const SizedBox(width: 10),
+        const Text('Audio track: Auto', style:
+            TextStyle(fontSize: 10, color: _muted)),
+        const Spacer(),
+        const Text('–  00:30  +', style:
+            TextStyle(color: _muted, fontSize: 10)),
+      ]),
+      const SizedBox(height: 7),
+      Expanded(child: SizedBox.expand(
+        child: CustomPaint(painter: _DemoWaveformPainter(
+          cueIndex: _selectedId, accent: _accent)))),
+    ]),
+  );
+
+  Widget _subtitleTable() => Column(children: [
+    _paneHeader(Icons.view_list_outlined, 'SUBTITLE LINES',
+      trailing: '${_visible.length} / ${_cues.length}'),
+    SizedBox(height: 43, child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 4),
+      child: TextField(
+        key: const ValueKey('desktop-cue-search'),
+        decoration: InputDecoration(
+          isDense: true,
+          hintText: 'Find subtitle, timecode or line number…',
+          hintStyle: const TextStyle(fontSize: 12),
+          prefixIcon: const Icon(Icons.search, size: 17),
+          contentPadding: const EdgeInsets.symmetric(vertical: 8),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(7)),
+        ),
+        style: const TextStyle(fontSize: 12),
+        onChanged: (value) => setState(() => _query = value),
+      ),
+    )),
+    Container(height: 33, color: const Color(0xFF21262B),
+      padding: const EdgeInsets.symmetric(horizontal: 13),
+      child: const Row(children: [
+        SizedBox(width: 30, child: Text('#',
+            style: TextStyle(fontSize: 11, color: _muted))),
+        SizedBox(width: 115, child: Text('START',
+            style: TextStyle(fontSize: 11, color: _muted))),
+        SizedBox(width: 115, child: Text('END',
+            style: TextStyle(fontSize: 11, color: _muted))),
+        Expanded(child: Text('TEXT',
+            style: TextStyle(fontSize: 11, color: _muted))),
+      ])),
+    Expanded(child: _visible.isEmpty
+      ? const Center(child: Text('No matching subtitle lines',
+          style: TextStyle(color: _muted)))
+      : ListView.builder(
+          itemCount: _visible.length,
+          itemExtent: 40,
+          itemBuilder: (context, i) {
+            final cue = _visible[i];
+            final selected = cue.id == _selectedId;
+            return Material(
+              color: selected ? _accent.withValues(alpha: .14)
+                  : i.isOdd ? const Color(0xFF1B1F23) : Colors.transparent,
+              child: InkWell(
+                key: ValueKey('desktop-cue-${cue.id}'),
+                onTap: () => setState(() => _selectedId = cue.id),
+                child: Container(
+                  decoration: const BoxDecoration(border:
+                    Border(bottom: BorderSide(color: _border, width: .4))),
+                  padding: const EdgeInsets.symmetric(horizontal: 13),
+                  child: Row(children: [
+                    SizedBox(width: 30,
+                        child: Text('${cue.id}', style: TextStyle(
+                          fontSize: 11, color: selected ? _accent : _muted))),
+                    SizedBox(width: 115, child: Text(cue.start,
+                        style: const TextStyle(fontSize: 11, color: _muted))),
+                    SizedBox(width: 115, child: Text(cue.end,
+                        style: const TextStyle(fontSize: 11, color: _muted))),
+                    Expanded(child: Text(cue.edited, maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 12))),
+                    if (cue.marked) const Icon(Icons.bookmark,
+                        color: Color(0xFFE9C46A), size: 14),
+                  ]),
+                ),
+              ),
+            );
+          },
+        )),
+  ]);
+
+  Widget _inspector() => Container(
+    color: const Color(0xFF191D21),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      _paneHeader(Icons.tune_outlined, 'LINE INSPECTOR',
+          trailing: '#${_selectedId.toString().padLeft(2, '0')}'),
+      Expanded(child: ListView(padding: const EdgeInsets.all(16), children: [
+        _fieldLabel('START TIMECODE'),
+        _readonlyField(_selected.start),
+        const SizedBox(height: 13),
+        _fieldLabel('END TIMECODE'),
+        _readonlyField(_selected.end),
+        const SizedBox(height: 20),
+        _fieldLabel('ORIGINAL TEXT'),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            border: Border.all(color: _border),
+            borderRadius: BorderRadius.circular(7),
+          ),
+          child: Text(_selected.original,
+              style: const TextStyle(fontSize: 13, height: 1.5)),
+        ),
+        const SizedBox(height: 20),
+        _fieldLabel('EDITED TEXT · DEMO ONLY'),
+        TextFormField(
+          key: ValueKey('desktop-edit-${_selected.id}'),
+          initialValue: _selected.edited,
+          minLines: 3, maxLines: 6,
+          style: const TextStyle(fontSize: 13, height: 1.5),
+          decoration: InputDecoration(
+            contentPadding: const EdgeInsets.all(12),
+            border: OutlineInputBorder(borderRadius:
+                BorderRadius.circular(7)),
+          ),
+          onChanged: (text) => _replaceCue(_selected.copyWith(edited: text)),
+        ),
+        const SizedBox(height: 14),
+        Row(children: [
+          Expanded(child: OutlinedButton.icon(
+            key: const ValueKey('desktop-mark-cue'),
+            onPressed: () => _replaceCue(
+              _selected.copyWith(marked: !_selected.marked)),
+            icon: Icon(_selected.marked
+                ? Icons.bookmark : Icons.bookmark_outline, size: 15),
+            label: Text(_selected.marked ? 'Unmark' : 'Mark'),
+          )),
+          const SizedBox(width: 8),
+          Expanded(child: OutlinedButton.icon(
+            onPressed: () => _replaceCue(
+                _selected.copyWith(edited: _selected.original)),
+            icon: const Icon(Icons.restore, size: 15),
+            label: const Text('Reset'),
+          )),
+        ]),
+        const SizedBox(height: 24),
+        _fieldLabel('TOOLS (COMING AFTER REFACTOR)'),
+        const SizedBox(height: 5),
+        const Text('Timing • Format • Comments • Dictionary',
+            style: TextStyle(fontSize: 11, color: _muted, height: 1.6)),
+      ])),
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: const BoxDecoration(
+          border: Border(top: BorderSide(color: _border))),
+        child: const Text('Changes stay in this demo session.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: _muted, fontSize: 11)),
+      ),
+    ]),
+  );
+
+  Widget _fieldLabel(String text) => Padding(
+    padding: const EdgeInsets.only(bottom: 7),
+    child: Text(text, style: const TextStyle(
+      color: _muted, fontSize: 10, letterSpacing: .8,
+      fontWeight: FontWeight.w600)),
+  );
+  Widget _readonlyField(String text) => Container(
+    padding: const EdgeInsets.all(11),
+    decoration: BoxDecoration(
+      color: const Color(0xFF121518),
+      border: Border.all(color: _border),
+      borderRadius: BorderRadius.circular(7),
+    ),
+    child: Text(text, style: const TextStyle(
+      fontSize: 12, fontFeatures: [FontFeature.tabularFigures()])),
+  );
+
+  Widget _secondarySection() {
+    const screens = ['Editor', 'Version history', 'Search', 'Tools', 'Settings'];
+    const descriptions = [
+      '',
+      'Visual Git-style history will reuse the shared checkpoint repository.',
+      'Cross-project and in-project subtitle search will use the shared search services.',
+      'Timing, formatting, encoding and audio tools will use shared commands.',
+      'Desktop appearance and shortcuts will reuse app preferences.',
+    ];
+    return Center(child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 470),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Icon([Icons.movie_creation_outlined, Icons.account_tree_outlined,
+          Icons.search, Icons.tune, Icons.settings][_section],
+          color: _accent, size: 38),
+        const SizedBox(height: 14),
+        Text(screens[_section], style: const TextStyle(
+            fontSize: 22, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 9),
+        Text(descriptions[_section], textAlign: TextAlign.center,
+          style: const TextStyle(color: _muted, height: 1.6)),
+        const SizedBox(height: 20),
+        OutlinedButton(onPressed: () =>
+            setState(() => _section = 0), child: const Text('Back to editor')),
+      ]),
+    ));
+  }
+
+  Widget _statusBar() => Container(
+    height: 28,
+    padding: const EdgeInsets.symmetric(horizontal: 15),
+    decoration: const BoxDecoration(border:
+        Border(top: BorderSide(color: _border))),
+    child: const Row(children: [
+      Icon(Icons.info_outline, color: _accent, size: 13),
+      SizedBox(width: 8),
+      Expanded(child: Text('Demo workspace · no files are modified',
+        style: TextStyle(color: _muted, fontSize: 10))),
+      Text('Desktop prototype  •  Windows / macOS / Linux',
+        style: TextStyle(color: _muted, fontSize: 10)),
+    ]),
+  );
+}
+
+/// A schematic video backdrop: no user video, no downloaded imagery.
+class _DemoHorizonPainter extends CustomPainter {
+  const _DemoHorizonPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final road = Path()
+      ..moveTo(size.width * .44, size.height * .66)
+      ..lineTo(size.width * .56, size.height * .66)
+      ..lineTo(size.width * .92, size.height)
+      ..lineTo(size.width * .08, size.height)
+      ..close();
+    canvas.drawPath(road, Paint()..color = const Color(0xFF172029));
+    canvas.drawLine(Offset(0, size.height * .67),
+      Offset(size.width, size.height * .67),
+      Paint()..color = const Color(0xFF445562)..strokeWidth = 1);
+    final centerLine = Path()
+      ..moveTo(size.width * .5, size.height * .7)
+      ..lineTo(size.width * .5, size.height * .77);
+    canvas.drawPath(centerLine, Paint()
+      ..color = const Color(0xFFE9C46A)
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke);
+  }
+  @override
+  bool shouldRepaint(_DemoHorizonPainter oldDelegate) => false;
+}
+
+class _DemoWaveformPainter extends CustomPainter {
+  const _DemoWaveformPainter({required this.cueIndex, required this.accent});
+  final int cueIndex;
+  final Color accent;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.width <= 0 || size.height <= 0) return;
+    final center = size.height * .55;
+    final stroke = Paint()..strokeWidth = 1.5..color = accent;
+    for (double x = 1; x < size.width; x += 3.6) {
+      final wave = math.sin(x * .088) * math.sin(x * .23) +
+          math.sin(x * .41) * .34;
+      final amplitude = (wave.abs() * .45 + .08) * size.height * .55;
+      canvas.drawLine(Offset(x, center - amplitude / 2),
+        Offset(x, center + amplitude / 2), stroke);
+    }
+    final cursor = (cueIndex / 13) * size.width;
+    canvas.drawLine(Offset(cursor, 0), Offset(cursor, size.height),
+      Paint()..color = const Color(0xFFE9C46A)..strokeWidth = 2);
+  }
+  @override
+  bool shouldRepaint(_DemoWaveformPainter old) =>
+      cueIndex != old.cueIndex || accent != old.accent;
+}
