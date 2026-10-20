@@ -37,3 +37,34 @@ Unit tests cover request ordering, known/unknown windows, duplicate suppression,
 
 The first R11 quality run [39473912088](https://github.com/anzilr/SubtitleStudio/actions/runs/39473912088) was superseded and canceled after the bounded-concurrency/owner-token fixes; it is not the acceptance gate. Native progressive UI interaction and Windows/Android PTS-gap/explicit-track qualification remain unverified.
 
+## CP86 R11 P2 — Absolute-time sparse viewport demonstration
+
+The R11 P1 scheduler was hardened before rendering: pending requests are now stored by **token identity**, not only a shared window index. A canceled request that finishes after a replacement request cannot promote stale data or cancel the replacement. Viewports spanning more than 1,024 windows and subsecond scheduling windows fail closed to prevent excessive list allocation.
+
+Added `waveform_progressive_viewport.dart` and `waveform_sparse_viewport_painter.dart`:
+- Absolute media timestamps map into viewport pixel coordinates, including nonzero 30:00 offsets and clipped known spans.
+- Pure projection exposes a min/max pair only where a validated window exists; gaps render as explicitly **unknown** (hatched), not zero-volume audio.
+- Validates bounded width, increasing non-overlapping extents and known interval containment before painting.
+- Reuses theme colors; does not add tap, scroll, seek, subtitle edit or cache methods.
+- Adds pure geometry and widget paint regression tests, including clipped-window sample offsets and zero-sized canvas behavior.
+
+### Debug-only local Android experiment
+
+Keep the R10 flags and add the new flag; the R11 UI shows a **90-second demonstration viewport** with 30-second unknown context on either side of the known window at 30:00. This is a local viewport, **not an assertion of total media duration**; no media duration is fabricated. The scheduler remains a separate pure service while we qualify real video duration and timestamp semantics.
+
+```powershell
+git fetch origin
+git switch experiment/cp86-r9-windowed-waveform-preview
+git pull --ff-only origin experiment/cp86-r9-windowed-waveform-preview
+.\tool\run_android_clean_debug.ps1 -Device d6e22c3f -DartDefines @(
+  'MS_ONE_CP86_R9_WINDOW_PROBE=true',
+  'MS_ONE_CP86_R9_START_SECONDS=1800',
+  'MS_ONE_CP86_R9_DURATION_SECONDS=30',
+  'MS_ONE_CP86_R10_SHOW_WINDOW_PREVIEW=true',
+  'MS_ONE_CP86_R11_SPARSE_VIEWPORT_PREVIEW=true'
+)
+```
+
+Expected: a read-only viewport labeled 00:29:30–00:31:00, the 00:30:00–00:30:30 waveform in the center third, hatching on either side, and `CP86 R11 SPARSE_VIEWPORT_PAINTED knownStartMs=1800000 knownEndMs=1830000 unknownNeighbors=true`. Once the full decode finishes, the normal interactive waveform should replace this proof-of-concept unchanged.
+
+**Not yet implemented:** driving multiple native FFmpeg window extractions from the scheduler, absolute time-to-subtitle gesture integration, native AV PTS gap verification, definitive media duration from video, cache promotion, or enablement outside debug/explicit opt-in. These remain gating work.
