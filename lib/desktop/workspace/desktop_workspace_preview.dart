@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' show FontFeature;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -109,7 +110,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   void _selectRelative(int change) {
     if (_visible.isEmpty) return;
     final index = _visible.indexWhere((cue) => cue.id == _selectedId);
-    final target = (index + change).clamp(0, _visible.length - 1);
+    final target = (index + change).clamp(0, _visible.length - 1).toInt();
     setState(() => _selectedId = _visible[target].id);
   }
 
@@ -144,7 +145,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
                       if (wide && _section == 0)
                         _dragHandle(
                           onDelta: (dx) => setState(() => _sidebarWidth =
-                              (_sidebarWidth + dx).clamp(180, 320)),
+                              (_sidebarWidth + dx).clamp(180, 320).toDouble()),
                         ),
                       Expanded(child: _section == 0
                           ? _editingWorkspace()
@@ -152,7 +153,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
                       if (inspectorVisible && _section == 0)
                         _dragHandle(
                           onDelta: (dx) => setState(() => _inspectorWidth =
-                              (_inspectorWidth - dx).clamp(240, 380)),
+                              (_inspectorWidth - dx).clamp(240, 380).toDouble()),
                         ),
                       if (inspectorVisible && _section == 0)
                         SizedBox(width: _inspectorWidth, child: _inspector()),

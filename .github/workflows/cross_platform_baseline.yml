@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - refactor/riverpod-architecture
+      - feature/desktop-workspace-preview
     paths:
       - .github/ci-checkpoint
 
