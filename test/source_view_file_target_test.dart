@@ -35,6 +35,22 @@ void main() {
     expect(access.source.toString(), isNot(contains('a%3Ab')));
   });
 
+  test('a stale SAF grant cannot redirect an already-document source', () {
+    const original = 'content://com.example.documents/document/a%3Ab.srt';
+    const unrelated = 'content://com.example.documents/document/c%3Ad.srt';
+    expect(
+      () => SourceViewFileTarget.resolve(
+        filePath: original, safUri: unrelated,
+      ),
+      throwsFormatException,
+    );
+    expect(
+      SourceViewFileTarget.resolve(filePath: original, safUri: original)
+          .androidDocumentUri,
+      original,
+    );
+  });
+
   test('URI-based remote and opaque sources cannot use dart:io File', () {
     for (final locator in [
       'file:///tmp/file.srt',

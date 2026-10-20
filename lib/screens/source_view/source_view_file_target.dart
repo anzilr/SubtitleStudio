@@ -30,6 +30,14 @@ final class SourceViewFileTarget {
           'Source View SAF access must use an Android document URI.',
         );
       }
+      // When filePath itself is a document, do not allow a stale or
+      // unrelated saved grant to redirect a write to a different document.
+      // A separate native cached file may still have its own SAF URI.
+      if (source.isAndroidDocument && source.location != safUri) {
+        throw const FormatException(
+          'Source View document and SAF grant identity do not match.',
+        );
+      }
     }
     // The provided SAF locator takes precedence over the source locator,
     // preserving the existing native-cache-file + SAF grant flow.
