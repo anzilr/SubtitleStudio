@@ -93,7 +93,12 @@ class WaveformFfmpegPlan {
   }
 
   /// FFmpegKit accepts one command string; quote individual argv components.
-  String ffmpegKitCommand() => arguments().map(_quote).join(' ');
+  String ffmpegKitCommand() => formatArgumentsForFfmpegKit(arguments());
+
+  /// Shared quoting with the experimental seek-window plan: identical
+  /// argument-escaping behavior on FFmpegKit and normal extraction.
+  static String formatArgumentsForFfmpegKit(List<String> argv) =>
+      argv.map(_quote).join(' ');
 
   static String _quote(String value) {
     if (value.isEmpty) return '""';
