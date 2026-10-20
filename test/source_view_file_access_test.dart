@@ -1,3 +1,4 @@
+import 'dart:io' show FileSystemException;
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -94,7 +95,7 @@ void main() {
       ..local[local] = original;
     final service = SourceViewFileAccessImpl(operations: ops);
     final target = SourceViewFileTarget.resolve(filePath: uri);
-    await expectLater(service.read(target), throwsFileSystemException);
+    await expectLater(service.read(target), throwsA(isA<FileSystemException>()));
     expect(await service.write(target, changed), isNull);
     expect(ops.local[local], original);
     expect(ops.events, ['readDocument', 'writeDocument']);
@@ -124,11 +125,11 @@ void main() {
     final web = SourceViewFileTarget.resolve(
       filePath: 'https://example.com/sub.srt?key=token',
     );
-    await expectLater(service.read(web), throwsFileSystemException);
+    await expectLater(service.read(web), throwsA(isA<FileSystemException>()));
     expect(await service.write(web, changed), isNull);
     expect(ops.events, isEmpty);
     final missing = SourceViewFileTarget.resolve(filePath: '/missing.srt');
-    await expectLater(service.read(missing), throwsFileSystemException);
+    await expectLater(service.read(missing), throwsA(isA<FileSystemException>()));
     expect(await service.write(missing, changed), isNull);
   });
 
@@ -141,7 +142,7 @@ void main() {
     expect(await service.read(SourceViewFileTarget.resolve(
       filePath: local, safUri: uri)), original);
     await expectLater(service.read(SourceViewFileTarget.resolve(
-      filePath: uri)), throwsFileSystemException);
+      filePath: uri)), throwsA(isA<FileSystemException>()));
   });
 
   test('non-Android adapter avoids Android SAF while permitting local IO',
