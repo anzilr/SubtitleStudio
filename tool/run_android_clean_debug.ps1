@@ -6,7 +6,9 @@
 param(
   [string]$Device = 'CPH2381',
   [ValidateSet('debug', 'profile')]
-  [string]$Mode = 'debug'
+  [string]$Mode = 'debug',
+  # Optional experiment-only defines; existing callers remain unchanged.
+  [string[]]$DartDefines = @()
 )
 $ErrorActionPreference = 'Stop'
 $packageName = 'org.malayalamsubtitles.studio'
@@ -37,6 +39,19 @@ try {
     'run', "--$Mode", '-d', $Device,
     '--dart-define=MS_ONE_WAVEFORM_TRACK_SYNC=true'
   )
+  foreach ($definition in $DartDefines) {
+    if ([string]::IsNullOrWhiteSpace($definition) -or $definition -notmatch '^[A-Za-z][A-Za-z0-9_]*=.+
+  if ($LASTEXITCODE -ne 0) {
+    throw "flutter run exited with code $LASTEXITCODE."
+  }
+} finally {
+  Pop-Location
+}
+) {
+      throw "Invalid dart-define '$definition'. Expected NAME=value."
+    }
+    $flutterArgs += "--dart-define=$definition"
+  }
   & flutter @flutterArgs
   if ($LASTEXITCODE -ne 0) {
     throw "flutter run exited with code $LASTEXITCODE."

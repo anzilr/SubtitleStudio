@@ -46,7 +46,10 @@ class WaveformWindowAlignment {
     var bestMagnitude = 0;
     var bestCount = 0;
 
-    for (var lag = -maxLag; lag <= maxLag; lag += math.max(1, maxLag ~/ 16)) {
+    // Test the exact requested timeline position explicitly (lag == 0),
+    // then compare symmetrical offsets for seek/resampler priming drift.
+    for (var n = -16; n <= 16; n++) {
+      final lag = (n * maxLag / 16).round();
       var error = 0;
       var magnitude = 0;
       var count = 0;
