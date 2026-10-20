@@ -8,6 +8,7 @@ import 'package:subtitle_studio/features/waveform/models/waveform_sample.dart';
 import 'package:subtitle_studio/features/waveform/services/zoom_buffer_generator.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_cache_identity.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_processing_metrics.dart';
+import 'package:subtitle_studio/features/waveform/services/waveform_acquisition_timings.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_peak_cache.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_source_revision.dart';
 import 'package:subtitle_studio/core/file_access/studio_file_identity.dart';
@@ -28,6 +29,7 @@ class AudioProcessor {
   /// retain the existing eager path; explicit overrides remain available.
   final bool useTiledZoom;
   WaveformProcessingMetrics? lastProcessingMetrics;
+  WaveformAcquisitionTimings? _acquisitionTimings;
   int _requestEpoch = 0;
   static int _nextTemporaryId = 0;
   Process? _activeDesktopProcess;
@@ -63,6 +65,8 @@ class AudioProcessor {
   }) async {
     cancelActive();
     final epoch = _requestEpoch;
+    lastProcessingMetrics = null;
+    _acquisitionTimings = null;
     final stopwatch = Stopwatch()..start();
     try {
       if (kDebugMode) {
@@ -113,12 +117,20 @@ class AudioProcessor {
             
             // Load from cached PCM
             onProgress?.call(0.1);
+            final cacheWatch = Stopwatch()..start();
             waveformData = await _loadFromCachedPCM(
               pcmPath,
               cache.sampleRate,
               cache.totalSamples,
               cache.channels,
             );
+            if (epoch == _requestEpoch) {
+              _acquisitionTimings = WaveformAcquisitionTimings(
+                mode: WaveformAcquisitionMode.eagerPcmCache,
+                cacheLoad: cacheWatch.elapsed,
+                pcmBytes: existingBytes,
+              );
+            }
             onProgress?.call(0.2);
             
             if (kDebugMode) {
@@ -207,7 +219,11 @@ class AudioProcessor {
         displaySamples: processedData.totalSamples * processedData.channels,
         zoomPixels: zoomLevels.fold<int>(0,
             (count, level) => count + level.materializedPixels),
+        acquisitionDetails: _acquisitionTimings,
       );
+      if (epoch != _requestEpoch) {
+        throw StateError('Waveform load was cancelled.');
+      }
       lastProcessingMetrics = metrics;
       if (kDebugMode) {
         print('AudioProcessor: Processing complete: ' + metrics.toString());
@@ -280,7 +296,14 @@ class AudioProcessor {
         if (persistent && await cacheFile.exists()) {
           try {
             onProgress?.call(0.1);
+            final cacheWatch = Stopwatch()..start();
             final cached = await WaveformPeakCache.load(cacheFile);
+            checkActive();
+            _acquisitionTimings = WaveformAcquisitionTimings(
+              mode: WaveformAcquisitionMode.compactPeakCache,
+              cacheLoad: cacheWatch.elapsed,
+              pcmBytes: await cacheFile.length(),
+            );
             checkActive();
             onProgress?.call(0.2);
             return cached;
@@ -309,12 +332,18 @@ class AudioProcessor {
                 await pcm.length() == legacy.totalSamples * 2) {
               checkActive();
               onProgress?.call(0.1);
+              final reductionWatch = Stopwatch()..start();
               final reduced = await WaveformPeakCache.build(
                 pcmFile: pcm,
                 cacheFile: cacheFile,
                 isCancelled: () => requestEpoch != _requestEpoch,
               );
               checkActive();
+              _acquisitionTimings = WaveformAcquisitionTimings(
+                mode: WaveformAcquisitionMode.legacyPcmConverted,
+                peakReduction: reductionWatch.elapsed,
+                pcmBytes: legacy.totalSamples * 2,
+              );
               onProgress?.call(0.2);
               return reduced;
             }
@@ -465,6 +494,7 @@ class AudioProcessor {
     String? peakCachePath,
   }) async {
     String? generatedOutputPath;
+    var ffmpegDuration = Duration.zero;
     try {
       final extractionEpoch = _requestEpoch;
       // Get temporary directory
@@ -510,6 +540,7 @@ class AudioProcessor {
               plan.selectedStreamMap);
         }
 
+        final ffmpegWatch = Stopwatch()..start();
         final process = await Process.start('ffmpeg', args);
         _activeDesktopProcess = process;
         if (extractionEpoch != _requestEpoch) {
@@ -529,6 +560,7 @@ class AudioProcessor {
         if (exitCode != 0) {
           throw Exception('FFmpeg failed with exit code $exitCode: $stderr');
         }
+        ffmpegDuration = ffmpegWatch.elapsed;
       } else if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
         // Mobile/macOS platforms: Use FFmpegKit
         final inputPath = await _getSafReadableParameter(normalizedPath);
@@ -545,6 +577,7 @@ class AudioProcessor {
           print('AudioProcessor: FFmpegKit command: $command');
         }
         
+        final ffmpegWatch = Stopwatch()..start();
         final completed = Completer<void>();
         final session = await FFmpegKit.executeAsync(command, (_) {
           if (!completed.isCompleted) completed.complete();
@@ -568,6 +601,7 @@ class AudioProcessor {
           final logMessages = logs.map((log) => log.getMessage()).join('\n');
           throw Exception('FFmpegKit failed with code ${returnCode?.getValue()}: $logMessages');
         }
+        ffmpegDuration = ffmpegWatch.elapsed;
       } else {
         throw UnsupportedError(
           'Waveform generation is not supported on ${Platform.operatingSystem}.'
@@ -592,10 +626,21 @@ class AudioProcessor {
           if (peakCachePath == null) {
             throw ArgumentError('Missing compact peak cache path.');
           }
-          return await WaveformPeakCache.build(
+          final pcmBytes = await file.length();
+          final reductionWatch = Stopwatch()..start();
+          final reduced = await WaveformPeakCache.build(
             pcmFile: file, cacheFile: File(peakCachePath),
             inputAlreadyReduced: true,
             isCancelled: () => extractionEpoch != _requestEpoch);
+          if (extractionEpoch == _requestEpoch) {
+            _acquisitionTimings = WaveformAcquisitionTimings(
+              mode: WaveformAcquisitionMode.ffmpegCompactBuild,
+              ffmpeg: ffmpegDuration,
+              peakReduction: reductionWatch.elapsed,
+              pcmBytes: pcmBytes,
+            );
+          }
+          return reduced;
         } finally {
           if (await file.exists()) await file.delete();
         }
@@ -633,6 +678,13 @@ class AudioProcessor {
         await file.delete();
       }
 
+      if (extractionEpoch == _requestEpoch) {
+        _acquisitionTimings = WaveformAcquisitionTimings(
+          mode: WaveformAcquisitionMode.eagerFfmpeg,
+          ffmpeg: ffmpegDuration,
+          pcmBytes: bytes.length,
+        );
+      }
       if (kDebugMode) {
         print('AudioProcessor: Successfully extracted ${samples.length} samples (mono)');
       }
