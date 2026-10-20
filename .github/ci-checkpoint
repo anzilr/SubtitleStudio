@@ -97,3 +97,5 @@ CP86 R7 completion guard: FFmpegKit per-session progress closes immediately on c
 CP86 R7 analyzer correction: update PendingAudioProcessor test override to carry onDecodedAudioTime, explicitly test stale media-time callbacks after clear/supersession. Full Flutter analyze + test only; no platform builds.
 
 CP86 R9 experiment: bounded 30-60s seek-window FFmpeg extraction (fast vs accurate), track mapping, content-SAF resolver, cancellation, temp cleanup, max 2,756Hz s16le bytes, absolute sample-correlation diagnostics against unchanged full waveform. Experimental branch ONLY. Analyze and Flutter tests; NEVER build Android/Windows/Web/etc in CI.
+
+CP86 R9 launcher repair 2026-10-20: PowerShell syntax restored, optional -DartDefines forwarding guarded in Flutter test (PowerShell Parser if available), no Android/Windows platform builds in CI. Flutter analyze and full test only.
