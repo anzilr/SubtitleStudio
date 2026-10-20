@@ -16,3 +16,7 @@ R4's physical Android test produced approximately 20 million reduced samples on 
 
 ## Remaining CP86 native qualification
 Run on CPH2381 with a fresh source/track identity and compare `ffmpegMs`, `peakMs`, `cacheMs` from `AudioProcessor: Processing complete`; also reopen the same file twice and test cancellation, alternate audio streams, seeking, waveform gestures, and large-file memory. On Windows use `--dart-define=MS_ONE_TILED_WAVEFORM=true` when testing the compact writer rather than the default eager PCM pathway. Keep the verified CP87 R13 MSone Back recovery unchanged.
+
+## Latest Flutter-only quality gate
+
+[Run 39454515948](https://github.com/anzilr/SubtitleStudio/actions/runs/39454515948) succeeded on 2026-10-20 against `4ce284d`, with **543 tests passed and zero analyzer issues**. Includes both R5 stage profiling and the R6 allocation-free writer/golden round trip. No platform builds were run. Native performance impact and Android/Windows acceptance remain unverified.
