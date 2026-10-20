@@ -105,3 +105,5 @@ CP88 R2 2026-10-20: extract injectable platform-neutral SourceViewFileAccess and
 CP88 R2 quality rerun 2026-10-20: adapter fake-backed tests use Dart FileSystemException type matcher, and remove unnecessary typed-data/gestures imports. Verify clean flutter analyze and all flutter tests, no platform builds. Initial run 39481454982 failed on test matcher only; this run supersedes it.
 
 CP88 R2 final gate 2026-10-20: all six Source View storage tests passed; Save As invalid-document test now uses a genuinely asynchronous Future<bool> validation contract (prior run 39481786195: 558 pass 1 fail). Reverify full Flutter analyzer and test suite ONLY, absolutely no platform builds in CI.
+
+CP88 R3 2026-10-20: injectable SourceViewSafGrantRepository removes SharedPreferences operations from SourceViewController, retains the exact legacy saf_uri_<filePath> key, prioritizes explicit validated URI, prunes malformed/mismatched persisted grants, and preserves direct-content URI identity. New fake-backed unit regressions. Run flutter pub get, flutter analyze and flutter test ONLY; NO platform builds in GitHub Actions.
