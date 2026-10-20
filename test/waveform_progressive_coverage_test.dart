@@ -136,6 +136,56 @@ void main() {
     ).single.isKnown, isTrue);
   });
 
+  test('claims never exceed eight concurrent native windows', () {
+    final service = WaveformProgressiveCoverage(
+      sourceRevision: 'memory-safe',
+      trackIdentity: 'auto',
+      mediaDuration: const Duration(minutes: 10),
+    );
+    final first = service.claimVisible(
+      start: Duration.zero,
+      end: const Duration(minutes: 10),
+      limit: 8,
+    );
+    expect(first, hasLength(8));
+    expect(service.claimVisible(
+      start: Duration.zero,
+      end: const Duration(minutes: 10),
+      limit: 8,
+    ), isEmpty);
+    service.cancel(first.first);
+    expect(service.claimVisible(
+      start: Duration.zero,
+      end: const Duration(minutes: 10),
+      limit: 8,
+    ), hasLength(1));
+    expect(service.pendingWindowCount, 8);
+  });
+
+  test('requests from another coverage instance cannot publish or cancel',
+      () {
+    WaveformProgressiveCoverage makeCoverage() =>
+        WaveformProgressiveCoverage(
+          sourceRevision: 'same',
+          trackIdentity: 'auto',
+          mediaDuration: const Duration(minutes: 1),
+        );
+    final old = makeCoverage();
+    final current = makeCoverage();
+    final oldToken = old.claimVisible(
+      start: Duration.zero,
+      end: const Duration(seconds: 30),
+    ).single;
+    current.claimVisible(
+      start: Duration.zero,
+      end: const Duration(seconds: 30),
+    );
+    current.cancel(oldToken);
+    expect(current.pendingWindowCount, 1);
+    expect(current.publish(oldToken, segment(oldToken)), isFalse);
+    expect(current.loadedWindowCount, 0);
+  });
+
   test('reject invalid viewports and source identities before scheduling', () {
     expect(() => WaveformProgressiveCoverage(
       sourceRevision: ' ',
