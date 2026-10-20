@@ -66,13 +66,25 @@ extension _WaveformRendering on WaveformWidgetState {
             ),
             const SizedBox(height: 24),
             Text(
-              'Generating waveform...',
+              state.progress >= 0.2
+                  ? 'Preparing waveform...'
+                  : 'Generating waveform...',
               style: TextStyle(
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
               ),
             ),
+            if (state.processedAudioTime != null && widget.height >= 160) ...[
+              const SizedBox(height: 6),
+              Text(
+                WaveformDecodeProgress.format(state.processedAudioTime!),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontSize: 12,
+                ),
+              ),
+            ],
           ],
         ),
       ),

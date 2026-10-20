@@ -10,6 +10,7 @@ import 'package:subtitle_studio/features/waveform/state/waveform_event.dart';
 import 'package:subtitle_studio/features/waveform/widgets/waveform_painter.dart';
 import 'package:subtitle_studio/features/waveform/widgets/waveform_control_colors.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_tile_source.dart';
+import 'package:subtitle_studio/features/waveform/services/waveform_decode_progress.dart';
 import 'package:subtitle_studio/features/waveform/models/waveform_sample.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/widgets/settings_sheet.dart';

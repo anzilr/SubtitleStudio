@@ -18,11 +18,16 @@ class WaveformInitial extends WaveformState {
 class WaveformLoading extends WaveformState {
   final String filePath;
   final double progress; // 0.0 to 1.0
+  /// FFmpeg media timeline processed so far; not a percentage of total duration.
+  final Duration? processedAudioTime;
 
-  const WaveformLoading(this.filePath, {this.progress = 0.0});
+  const WaveformLoading(this.filePath, {
+    this.progress = 0.0,
+    this.processedAudioTime,
+  });
 
   @override
-  List<Object?> get props => [filePath, progress];
+  List<Object?> get props => [filePath, progress, processedAudioTime];
 }
 
 /// Waveform loaded and ready

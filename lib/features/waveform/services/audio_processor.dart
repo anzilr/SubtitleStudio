@@ -9,6 +9,7 @@ import 'package:subtitle_studio/features/waveform/services/zoom_buffer_generator
 import 'package:subtitle_studio/features/waveform/services/waveform_cache_identity.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_processing_metrics.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_acquisition_timings.dart';
+import 'package:subtitle_studio/features/waveform/services/waveform_decode_progress.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_peak_cache.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_source_revision.dart';
 import 'package:subtitle_studio/core/file_access/studio_file_identity.dart';
@@ -60,6 +61,7 @@ class AudioProcessor {
   Future<WaveformBuffer> processAudioFile(
     String audioFilePath, {
     Function(double)? onProgress,
+    void Function(Duration)? onDecodedAudioTime,
     int? subtitleCollectionId,
     String? audioTrackId,
   }) async {
@@ -84,6 +86,7 @@ class AudioProcessor {
           subtitleCollectionId: subtitleCollectionId,
           audioTrackId: audioTrackId,
           onProgress: onProgress,
+          onDecodedAudioTime: onDecodedAudioTime,
         );
       } else if (subtitleCollectionId != null) {
       // Check for cached waveform data if subtitle collection ID is provided
@@ -249,6 +252,7 @@ class AudioProcessor {
     required int? subtitleCollectionId,
     required String? audioTrackId,
     required Function(double)? onProgress,
+    required void Function(Duration)? onDecodedAudioTime,
   }) async {
     final requestEpoch = _requestEpoch;
     void checkActive() {
@@ -357,6 +361,7 @@ class AudioProcessor {
           audioTrackId: audioTrackId,
           reduceToPeaks: true,
           peakCachePath: cachePath,
+          onDecodedAudioTime: onDecodedAudioTime,
         );
         checkActive();
         onProgress?.call(0.2);
@@ -493,6 +498,7 @@ class AudioProcessor {
     String? cacheOutputPath,
     bool reduceToPeaks = false,
     String? peakCachePath,
+    void Function(Duration)? onDecodedAudioTime,
   }) async {
     String? generatedOutputPath;
     var ffmpegDuration = Duration.zero;
@@ -580,9 +586,21 @@ class AudioProcessor {
         
         final ffmpegWatch = Stopwatch()..start();
         final completed = Completer<void>();
-        final session = await FFmpegKit.executeAsync(command, (_) {
-          if (!completed.isCompleted) completed.complete();
-        });
+        final decodedProgress = WaveformDecodeProgress();
+        final session = await FFmpegKit.executeAsync(
+          command,
+          (_) {
+            if (!completed.isCompleted) completed.complete();
+          },
+          null,
+          (statistics) {
+            // Session-local native FFmpeg progress. Never display an
+            // outgoing track's late callback over the newly selected track.
+            if (extractionEpoch != _requestEpoch) return;
+            final accepted = decodedProgress.accept(statistics.getTime());
+            if (accepted != null) onDecodedAudioTime?.call(accepted);
+          },
+        );
         _activeNativeSessionId = session.getSessionId();
         if (extractionEpoch != _requestEpoch) {
           await FFmpegKit.cancel(session.getSessionId());

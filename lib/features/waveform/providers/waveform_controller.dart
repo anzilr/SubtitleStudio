@@ -199,6 +199,8 @@ class WaveformController extends Notifier<WaveformState> {
     bool isCurrent() => !_disposed && _loadEpoch == epoch;
     // Kill old platform decoding as well as ignoring late Riverpod results.
     _audioProcessor.cancelActive();
+    var currentProgress = 0.0;
+    Duration? processedAudioTime;
     try {
       _setState(WaveformLoading(event.filePath, progress: 0.0));
 
@@ -218,10 +220,20 @@ class WaveformController extends Notifier<WaveformState> {
         subtitleCollectionId: event.subtitleCollectionId,
         audioTrackId: audioTrackId,
         onProgress: (progress) {
-          // Emit loading progress updates
-          if (isCurrent()) {
-            _setState(WaveformLoading(event.filePath, progress: progress));
-          }
+          if (!isCurrent()) return;
+          currentProgress = progress;
+          _setState(WaveformLoading(event.filePath,
+            progress: progress,
+            processedAudioTime: processedAudioTime,
+          ));
+        },
+        onDecodedAudioTime: (time) {
+          if (!isCurrent()) return;
+          processedAudioTime = time;
+          _setState(WaveformLoading(event.filePath,
+            progress: currentProgress,
+            processedAudioTime: time,
+          ));
         },
       );
 
