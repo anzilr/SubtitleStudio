@@ -88,6 +88,31 @@ void main() {
     await expectLater(WaveformPeakCache.load(cache()), throwsFormatException);
   });
 
+  test('reduced V2 binary payload and checksum remain byte identical '
+      'across reusable writer buffers', () async {
+    // More than four full 24 KiB buffers, with both signed extremes.
+    final samples = List<int>.generate(60001, (i) =>
+        i % 23 == 0 ? -32768 : i % 37 == 0 ? 32767 :
+        ((i * 313) % 65536) - 32768);
+    final pcm = await _writePcm(directory, samples);
+    final source = await pcm.readAsBytes();
+    final output = await WaveformPeakCache.build(
+      pcmFile: pcm, cacheFile: cache(), inputAlreadyReduced: true,
+    );
+    final cacheBytes = await cache().readAsBytes();
+    expect(output.rawSamples.single, samples);
+    expect(cacheBytes.sublist(WaveformPeakCache.headerBytes), source);
+
+    var checksum = 0x811c9dc5;
+    for (final byte in source) {
+      checksum = ((checksum ^ byte) * 0x01000193) & 0xffffffff;
+    }
+    final header = ByteData.sublistView(cacheBytes);
+    expect(header.getUint32(20, Endian.little), checksum);
+    expect((await WaveformPeakCache.load(cache())).rawSamples.single,
+        samples);
+  });
+
   test('truncated, corrupt and tampered cache is rejected', () async {
     final pcm = await _writePcm(directory, List<int>.filled(256, 231));
     await WaveformPeakCache.build(pcmFile: pcm, cacheFile: cache());

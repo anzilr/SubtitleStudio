@@ -67,7 +67,20 @@ class WaveformPeakCache {
     var low = 32767;
     var high = -32768;
     int? pendingByte;
-    final batch = BytesBuilder(copy: false);
+    // The previous implementation allocated a ByteData and Uint8List
+    // for EVERY reduced sample. A long movie can have tens of millions of
+    // samples, so write the same signed little-endian records into one
+    // fixed-size chunk and reuse it across disk writes. Both V1 and V2
+    // retain their existing byte layout and FNV checksum.
+    final batch = Uint8List(24576); // multiple of V1(6) and V2(2)
+    var batchUsed = 0;
+    void emitInt16(int value) {
+      final lowByte = value & 0xff;
+      final highByte = (value >> 8) & 0xff;
+      batch[batchUsed++] = lowByte;
+      batch[batchUsed++] = highByte;
+      checksum = _hash(_hash(checksum, lowByte), highByte);
+    }
 
     try {
       await writer.writeFrom(_header(frames, 0, reduced: inputAlreadyReduced));
@@ -83,32 +96,32 @@ class WaveformPeakCache {
           var sample = pendingByte | (byte << 8);
           pendingByte = null;
           if (sample >= 0x8000) sample -= 0x10000;
-          sum += sample;
-          low = math.min(low, sample);
-          high = math.max(high, sample);
-          inputCount++;
-          if (inputCount != effectiveFrameSize) continue;
+          if (inputAlreadyReduced) {
+            // V2 is already at the target rate; min/max and averaging
+            // are unnecessary. Preserve every source sample exactly.
+            result[emitted++] = sample;
+            emitInt16(sample);
+          } else {
+            sum += sample;
+            low = math.min(low, sample);
+            high = math.max(high, sample);
+            inputCount++;
+            if (inputCount != frameSize) continue;
 
-          final average = (sum / effectiveFrameSize).round();
-          result[emitted++] = average;
-          final record = ByteData(inputAlreadyReduced ? 2 : bytesPerFrame);
-          record.setInt16(0, average, Endian.little);
-          if (!inputAlreadyReduced) {
-            record.setInt16(2, low, Endian.little);
-            record.setInt16(4, high, Endian.little);
+            final average = (sum / frameSize).round();
+            result[emitted++] = average;
+            emitInt16(average);
+            emitInt16(low);
+            emitInt16(high);
+            inputCount = 0;
+            sum = 0;
+            low = 32767;
+            high = -32768;
           }
-          final recordBytes = record.buffer.asUint8List();
-          for (final b in recordBytes) {
-            checksum = _hash(checksum, b);
+          if (batchUsed >= batch.length) {
+            await writer.writeFrom(batch, 0, batchUsed);
+            batchUsed = 0;
           }
-          batch.add(recordBytes);
-          if (batch.length >= 24576) {
-            await writer.writeFrom(batch.takeBytes());
-          }
-          inputCount = 0;
-          sum = 0;
-          low = 32767;
-          high = -32768;
         }
       }
       if (isCancelled?.call() ?? false) {
@@ -117,7 +130,7 @@ class WaveformPeakCache {
       if (emitted != frames || inputCount != 0 || pendingByte != null) {
         throw const FormatException('Incomplete PCM reduction.');
       }
-      if (batch.isNotEmpty) await writer.writeFrom(batch.takeBytes());
+      if (batchUsed > 0) await writer.writeFrom(batch, 0, batchUsed);
       await writer.setPosition(0);
       await writer.writeFrom(_header(frames, checksum, reduced: inputAlreadyReduced));
       await writer.flush();
