@@ -49,3 +49,20 @@ Deliberately not wired: real player, subtitle persistence/Isar, project import, 
 6. Prior to production release, run local Windows native acceptance, tests, loading/saving a sample SRT, performance and accessibility checks.
 
 Desktop UI can develop in parallel with refactor; **production integration still depends on CP93 acceptance**.
+
+## Flutter-only quality acceptance
+
+[GitHub Actions run 39487356891](https://github.com/anzilr/SubtitleStudio/actions/runs/39487356891): **SUCCESS**, **573 tests passed**, `flutter analyze`: **No issues found** on October 20, 2026. This includes four new desktop widget regressions covering wide workspace panels, subtitle search/selection, inspector toggle/navigation, and narrow-window collapse. Only dependency resolution, analyzer and Flutter tests ran; **no Windows, Android, Linux, macOS, iOS or Web builds were run in CI**.
+
+The initial CI run [39486519781](https://github.com/anzilr/SubtitleStudio/actions/runs/39486519781) also passed 573 tests but noted a redundant `dart:ui` import. The final run above removed that lint and is the acceptance gate. Windows native rendering and actual desktop device input are still to be tested locally.
+
+## Local desktop smoke test checklist
+
+1. Run `flutter devices` and confirm the intended desktop target is visible.
+2. Start `flutter run -d windows -t lib/main_desktop_preview.dart`. Do **not** start the production entrypoint `lib/main.dart` for this isolated layout check.
+3. At roughly 1500×900 or larger: project tree, video, waveform, subtitle table, and line inspector should all be visible. Resize project sidebar and inspector using the thin separator strips.
+4. Enter `midnight` in cue search, select the resulting line, edit its text in the inspector, and verify both table and placeholder video update. Mark and Reset should change demo-only state.
+5. Toggle the inspector, click History and Back to editor, then resize to ~820px wide; project and inspector panels should collapse without rendering overflow.
+6. Exit and relaunch; since there is no storage adapter yet, all demo edits should reset. The app must never touch existing Isar projects, SAF permissions, videos or subtitle files.
+
+This branch remains experimental. Desktop production integration will reuse shared core services as CP88–CP93 proceed in parallel.
