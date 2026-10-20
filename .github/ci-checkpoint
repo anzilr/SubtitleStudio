@@ -95,3 +95,5 @@ CP86 R7 October 20: source evidence cold 137089 ms FFmpeg 134990 ms peak 1881 ms
 CP86 R7 completion guard: FFmpegKit per-session progress closes immediately on completion, preventing late native statistics from replacing WaveformReady with WaveformLoading. Additional regression tests; Flutter analyze and full tests only, no platform builds.
 
 CP86 R7 analyzer correction: update PendingAudioProcessor test override to carry onDecodedAudioTime, explicitly test stale media-time callbacks after clear/supersession. Full Flutter analyze + test only; no platform builds.
+
+CP88 R1 2026-10-20: user reprioritized core refactoring, waveform experiment frozen separate; typed StudioFileIdentity-backed Source View local/SAF read and save decisions with lossless source path preservation, no File(contentUri) fallback, grant validation, targeted tests, roadmap-to-desktop phase gates. Run flutter pub get/analyze/test ONLY. No Android/Windows/Web/iOS/macOS/Linux platform builds in GitHub Actions.
