@@ -62,7 +62,7 @@ class WaveformProgressiveCoverage {
   final Object _owner = Object();
   int _generation = 0;
   final Map<int, WaveformWindowPreview> _ready = {};
-  final Set<int> _pending = {};
+  final Map<int, WaveformProgressiveRequest> _pending = {};
 
   int get loadedWindowCount => _ready.length;
   int get pendingWindowCount => _pending.length;
@@ -73,6 +73,7 @@ class WaveformProgressiveCoverage {
       Duration media, Duration window) {
     if (source.trim().isEmpty || track.trim().isEmpty ||
         media <= Duration.zero || window <= Duration.zero ||
+        window < const Duration(seconds: 1) ||
         window > const Duration(seconds: 60)) {
       throw ArgumentError('Invalid progressive source, stream or duration.');
     }
@@ -129,11 +130,15 @@ class WaveformProgressiveCoverage {
     }
     final first = start.inMicroseconds ~/ windowDuration.inMicroseconds;
     final last = (end.inMicroseconds - 1) ~/ windowDuration.inMicroseconds;
+    final windowCount = last - first + 1;
+    if (windowCount > 1024) {
+      throw RangeError('Viewport must cover at most 1024 windows.');
+    }
     final remaining = 8 - _pending.length;
     if (remaining <= 0) return const [];
     final needed = <int>[];
     for (var index = first; index <= last; index++) {
-      if (!_ready.containsKey(index) && !_pending.contains(index)) {
+      if (!_ready.containsKey(index) && !_pending.containsKey(index)) {
         needed.add(index);
       }
     }
@@ -149,14 +154,15 @@ class WaveformProgressiveCoverage {
     });
     final requests = <WaveformProgressiveRequest>[];
     for (final index in needed.take(math.min(limit, remaining))) {
-      _pending.add(index);
-      requests.add(WaveformProgressiveRequest(
+      final request = WaveformProgressiveRequest(
         owner: _owner,
         generation: _generation,
         index: index,
         start: _start(index),
         end: _end(index),
-      ));
+      );
+      _pending[index] = request;
+      requests.add(request);
     }
     return List<WaveformProgressiveRequest>.unmodifiable(requests);
   }
@@ -169,7 +175,7 @@ class WaveformProgressiveCoverage {
       WaveformWindowPreview preview, {int sampleRate = 2756}) {
     if (!identical(request._owner, _owner) ||
         request.generation != _generation ||
-        !_pending.contains(request.index)) {
+        !identical(_pending[request.index], request)) {
       return false;
     }
     if (sampleRate <= 0 || request.index < 0 ||
@@ -191,7 +197,8 @@ class WaveformProgressiveCoverage {
   /// Failures remain unknown and may be retried without stale cache reuse.
   void cancel(WaveformProgressiveRequest request) {
     if (identical(request._owner, _owner) &&
-        request.generation == _generation) {
+        request.generation == _generation &&
+        identical(_pending[request.index], request)) {
       _pending.remove(request.index);
     }
   }
@@ -204,6 +211,9 @@ class WaveformProgressiveCoverage {
     _validateViewport(start, end);
     final first = start.inMicroseconds ~/ windowDuration.inMicroseconds;
     final last = (end.inMicroseconds - 1) ~/ windowDuration.inMicroseconds;
+    if (last - first + 1 > 1024) {
+      throw RangeError('Viewport must cover at most 1024 windows.');
+    }
     final extents = <WaveformProgressiveExtent>[];
     for (var index = first; index <= last; index++) {
       extents.add(WaveformProgressiveExtent(

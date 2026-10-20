@@ -186,6 +186,52 @@ void main() {
     expect(current.loadedWindowCount, 0);
   });
 
+
+  test('cancel and reclaim rejects late old request for same window', () {
+    final service = WaveformProgressiveCoverage(
+      sourceRevision: 'stable',
+      trackIdentity: 'stream-2',
+      mediaDuration: const Duration(minutes: 1),
+    );
+    final old = service.claimVisible(
+      start: Duration.zero,
+      end: const Duration(seconds: 30),
+    ).single;
+    service.cancel(old);
+    final replacement = service.claimVisible(
+      start: Duration.zero,
+      end: const Duration(seconds: 30),
+    ).single;
+    expect(service.publish(old, segment(old)), isFalse);
+    service.cancel(old);
+    expect(service.pendingWindowCount, 1,
+        reason: 'Stale cancellation must not cancel replacement');
+    expect(service.publish(replacement, segment(replacement),
+        sampleRate: 10), isTrue);
+    expect(service.loadedWindowCount, 1);
+  });
+
+  test('wide viewports and pathological tiny windows are rejected', () {
+    expect(() => WaveformProgressiveCoverage(
+      sourceRevision: 'stable',
+      trackIdentity: 'auto',
+      mediaDuration: const Duration(hours: 24),
+      windowDuration: const Duration(microseconds: 1),
+    ), throwsArgumentError);
+    final service = WaveformProgressiveCoverage(
+      sourceRevision: 'stable',
+      trackIdentity: 'auto',
+      mediaDuration: const Duration(hours: 24),
+      windowDuration: const Duration(seconds: 1),
+    );
+    expect(() => service.claimVisible(
+      start: Duration.zero, end: const Duration(hours: 2),
+    ), throwsRangeError);
+    expect(() => service.coverage(
+      start: Duration.zero, end: const Duration(hours: 2),
+    ), throwsRangeError);
+  });
+
   test('reject invalid viewports and source identities before scheduling', () {
     expect(() => WaveformProgressiveCoverage(
       sourceRevision: ' ',
