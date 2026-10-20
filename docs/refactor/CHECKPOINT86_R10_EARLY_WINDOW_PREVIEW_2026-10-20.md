@@ -65,3 +65,25 @@ The markers distinguish actual rendering from successful extraction. Added widge
 [GitHub Actions 39470973477](https://github.com/anzilr/SubtitleStudio/actions/runs/39470973477) completed successfully on 2026-10-20, with **558 Flutter tests passed and "No issues found!" from `flutter analyze`**. This includes the direct nonempty-canvas paint test and the zero-size rejection test. No Android, Windows, or other platform builds were run in CI.
 
 The preceding gate (39470704464) initially failed analysis because the widget's newly typed `WaveformWindowPreview` reference lacked an import; fixed in commit `489d779`, and the succeeding gate verified the corrected source. Device-side `PREVIEW_PAINTED` and UI visible-frame acceptance remain to be captured.
+
+## CP86 R10 native paint acceptance — PASS (2026-10-20)
+
+**Evidence:** uploaded `cp86_r10_paint_verification.log` (UTF-16 LE; Flutter PID 28210, OnePlus CPH2381, Android 14). This newer capture supersedes the earlier R10 entry above that correctly reported UI paint as unverified.
+
+| Wall clock (device local) | Event | Measurement |
+|---|---|---|
+| 21:12:58.299 | `AudioProcessor: Starting audio processing` | selected Android SAF MKV source |
+| 21:12:59.459 | `CP86 R9 WINDOW` | **954ms** native FFmpeg for 30s at 1800s, **82,680 samples / 165,360 PCM bytes**, `stream=auto` |
+| 21:12:59.465 | `CP86 R10 PREVIEW_CREATED` | absolute **1,800,000–1,830,000ms**, 256 buckets, controller callback attached |
+| 21:12:59.497 | `CP86 R10 PREVIEW_PAINTED` | **32ms after creation**, painter drew a nonempty Flutter canvas |
+| 21:12:59.521 | normal full FFmpeg extraction command | normal V2 full source path unchanged |
+| 21:15:13.124 | full FFmpeg exit | success |
+| 21:15:19.086 | `CP86 R9 ALIGNMENT` | **256 sampled points; 0 lag; 0.0000 relative error; nonsilent** |
+| 21:15:19.125 | `AudioProcessor: Processing complete` | **140,822ms** total; **133,602ms native FFmpeg**, **5,904ms peak generation**, 20,635,510 samples |
+
+**Result:** both preview handoff and the actual nonempty-canvas paint are now **device verified**, about **139.6s before full waveform completion**. No `SIGSEGV`, `Fatal signal`, `FATAL EXCEPTION`, app ANR, or Flutter framework exception was present in the capture. This log is evidence of painter execution, **not** a device screenshot or comprehensive human-perceptual display assertion.
+
+**R10 acceptance:** PASS for *this selected Android SAF MKV, auto audio track, inputFast 30s window at 30:00*, plus clean [Flutter CI 39470973477](https://github.com/anzilr/SubtitleStudio/actions/runs/39470973477) (**558 tests, zero analyzer issues**). Do not extrapolate to all formats, PTS gaps, explicit stream selections, Windows, cancellation or interactive editing. The production `refactor/riverpod-architecture` branch remains unchanged.
+
+**Next qualification:** CP86 R11 interval mapping, sparse unknown/known viewport coverage, source/track isolation, validation of timestamp gaps and explicit multi-audio track fixtures before interactive seek/edit is allowed.
+
