@@ -6,13 +6,17 @@ import 'package:subtitle_studio/features/waveform/services/waveform_window_previ
 ///
 /// A request token is valid only for its originating source/track generation.
 class WaveformProgressiveRequest {
-  const WaveformProgressiveRequest({
+  WaveformProgressiveRequest({
+    required Object owner,
     required this.generation,
     required this.index,
     required this.start,
     required this.end,
-  });
+  }) : _owner = owner;
 
+  // Prevent callbacks from an entirely different coverage instance with
+  // matching generation/index from publishing into this instance.
+  final Object _owner;
   final int generation;
   final int index;
   final Duration start;
@@ -55,6 +59,7 @@ class WaveformProgressiveCoverage {
   String _trackIdentity;
   final Duration mediaDuration;
   final Duration windowDuration;
+  final Object _owner = Object();
   int _generation = 0;
   final Map<int, WaveformWindowPreview> _ready = {};
   final Set<int> _pending = {};
@@ -124,6 +129,8 @@ class WaveformProgressiveCoverage {
     }
     final first = start.inMicroseconds ~/ windowDuration.inMicroseconds;
     final last = (end.inMicroseconds - 1) ~/ windowDuration.inMicroseconds;
+    final remaining = 8 - _pending.length;
+    if (remaining <= 0) return const [];
     final needed = <int>[];
     for (var index = first; index <= last; index++) {
       if (!_ready.containsKey(index) && !_pending.contains(index)) {
@@ -141,9 +148,10 @@ class WaveformProgressiveCoverage {
       return distance != 0 ? distance : a.compareTo(b);
     });
     final requests = <WaveformProgressiveRequest>[];
-    for (final index in needed.take(limit)) {
+    for (final index in needed.take(math.min(limit, remaining))) {
       _pending.add(index);
       requests.add(WaveformProgressiveRequest(
+        owner: _owner,
         generation: _generation,
         index: index,
         start: _start(index),
@@ -159,7 +167,8 @@ class WaveformProgressiveCoverage {
   /// Permit at most one 2,756Hz sample of rounding at the right edge.
   bool publish(WaveformProgressiveRequest request,
       WaveformWindowPreview preview, {int sampleRate = 2756}) {
-    if (request.generation != _generation ||
+    if (!identical(request._owner, _owner) ||
+        request.generation != _generation ||
         !_pending.contains(request.index)) {
       return false;
     }
@@ -181,7 +190,8 @@ class WaveformProgressiveCoverage {
 
   /// Failures remain unknown and may be retried without stale cache reuse.
   void cancel(WaveformProgressiveRequest request) {
-    if (request.generation == _generation) {
+    if (identical(request._owner, _owner) &&
+        request.generation == _generation) {
       _pending.remove(request.index);
     }
   }
