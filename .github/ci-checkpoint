@@ -79,3 +79,5 @@ CP87 R9 CI fix: WidgetTester.tapAt does not support warnIfMissed. Remove unsuppo
 CP87 R9 final diagnostic gate: Flutter renderer hitTestInView (first 12 root taps), editor/home root pointer input counts, matching UP/CANCEL, tester hitTest regression, safe opt-in Logcat Fresh capture, document Oct18 timestamp separated from Oct17 buffered SIGSEGV. Do not mark freeze fixed.
 
 CP87 R9 test fixture correction: restore debugPrint in synchronous try/finally before TestWidgetsFlutterBinding._verifyInvariants (addTearDown restoration was too late). Rerun full analyzer and 537 tests.
+
+CP87 R11 October 20: 24 root down events (including UP) but 0 Editor and 0 Home handlers; repeated hit-test path has RenderBlockSemantics / RenderIgnorePointer barrier inside Navigator _RenderTheater. Trace first hit widget ancestry and active/popped Navigator routes to identify owner, add DialogRoute regression. Analyzer + flutter test only; DO NOT build any platform.
