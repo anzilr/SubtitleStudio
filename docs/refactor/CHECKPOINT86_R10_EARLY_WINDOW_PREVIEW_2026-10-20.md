@@ -58,3 +58,10 @@ R10 now emits distinct, privacy-safe diagnostic markers:
 - `CP86 R10 PREVIEW_PAINTED startMs=1800000 endMs=1830000 buckets=256`: the waveform's CustomPainter completed drawing on a nonempty Canvas; logged only once per transient preview object.
 
 The markers distinguish actual rendering from successful extraction. Added widget test for nonempty painting and a zero-size test to prevent falsely claiming a drawn waveform. Device acceptance still needs a fresh log with both markers and normal subsequent `AudioProcessor: Processing complete`; visual confirmation from the device remains recommended.
+
+
+## Flutter-only R10 paint diagnostics quality gate
+
+[GitHub Actions 39470973477](https://github.com/anzilr/SubtitleStudio/actions/runs/39470973477) completed successfully on 2026-10-20, with **558 Flutter tests passed and "No issues found!" from `flutter analyze`**. This includes the direct nonempty-canvas paint test and the zero-size rejection test. No Android, Windows, or other platform builds were run in CI.
+
+The preceding gate (39470704464) initially failed analysis because the widget's newly typed `WaveformWindowPreview` reference lacked an import; fixed in commit `489d779`, and the succeeding gate verified the corrected source. Device-side `PREVIEW_PAINTED` and UI visible-frame acceptance remain to be captured.
