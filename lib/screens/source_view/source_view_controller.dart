@@ -1,14 +1,13 @@
 import 'dart:async';
-import 'dart:io';
+import 'dart:typed_data';
 import 'dart:convert';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:subtitle_studio/screens/source_view/source_view_state.dart';
 import 'package:subtitle_studio/screens/source_view/source_view_file_target.dart';
 import 'package:subtitle_studio/models/subtitle_entry.dart';
 import 'package:subtitle_studio/utils/app_logger.dart';
-import 'package:subtitle_studio/utils/saf_file_handler.dart';
+import 'package:subtitle_studio/screens/source_view/source_view_file_access.dart';
 import 'package:subtitle_studio/utils/subtitle_parser.dart';
 
 /// Riverpod controller for Source View state
@@ -56,7 +55,6 @@ final sourceViewControllerProvider =
 );
 
 class SourceViewController extends Notifier<SourceViewState> {
-  late File _file;
   String? _rawSourceText;
   String? get rawSourceText => _rawSourceText;
 
@@ -69,7 +67,6 @@ class SourceViewController extends Notifier<SourceViewState> {
   @override
   SourceViewState build() {
     final config = ref.watch(sourceViewConfigProvider);
-    _file = File(config.filePath);
     _disposed = false;
 
     ref.onDispose(() {
@@ -96,8 +93,9 @@ class SourceViewController extends Notifier<SourceViewState> {
     if (displayName != null && displayName.isNotEmpty) {
       return displayName;
     }
-    final segments = _file.uri.pathSegments;
-    return segments.isEmpty ? 'subtitle-file' : segments.last;
+    // Never derive log names from Android document IDs, token-bearing URLs
+    // or local user home directories. The UI still retains its display name.
+    return 'subtitle-file';
   }
 
   Map<String, dynamic> get _safeLogContext => {
@@ -177,62 +175,15 @@ class SourceViewController extends Notifier<SourceViewState> {
         encoding = utf8; // Assume UTF-8 for pre-loaded content
         await AppLogger.instance.info('Using preloaded content: ${content.length} chars');
       } else {
-        // Resolve the actual source identity before choosing SAF or local
-        // File operations. A content:// URI must never be treated as a
-        // pathname or silently read from an unrelated filesystem fallback.
+        // The platform adapter owns SAF, native fallback and revoked grants.
+        // The controller only chooses a typed, validated source identity.
         final target = SourceViewFileTarget.resolve(
           filePath: state.filePath,
           safUri: state.safUri,
         );
-        List<int> bytes;
+        final bytes = await ref.read(sourceViewFileAccessProvider).read(target);
+        if (_disposed) return;
 
-        if (target.androidDocumentUri != null && Platform.isAndroid) {
-          // For SAF files, try reading using the intent handler method
-          try {
-            await AppLogger.instance.info('Reading subtitle through SAF intent handler');
-            
-            // Use IntentHandler to read the content URI
-            const MethodChannel channel = MethodChannel('org.malayalamsubtitles.studio/intent');
-            final Uint8List? fileBytes = await channel.invokeMethod('readFileFromContentUri', {'uri': target.androidDocumentUri});
-            
-            if (fileBytes != null && fileBytes.isNotEmpty) {
-              bytes = fileBytes;
-              await AppLogger.instance.info('Successfully read ${bytes.length} bytes from SAF URI');
-            } else {
-              // Fallback: try reading from the cached file path if available
-              await AppLogger.instance.warning('No content from SAF URI, trying cached file path');
-              if (target.canFallbackToLocalFile && await _file.exists()) {
-                bytes = await _file.readAsBytes();
-                await AppLogger.instance.info('Fallback: Read ${bytes.length} bytes from cached file');
-              } else {
-                throw Exception('Unable to read SAF file: no content available and cached file not found');
-              }
-            }
-          } catch (e) {
-            await AppLogger.instance.error(
-              'Error reading subtitle through SAF',
-              extra: {'errorType': e.runtimeType.toString(), ..._safeLogContext},
-            );
-            // Final fallback: try reading from cached file path
-            if (target.canFallbackToLocalFile && await _file.exists()) {
-              bytes = await _file.readAsBytes();
-              await AppLogger.instance.info('Final fallback: Read ${bytes.length} bytes from cached file');
-            } else {
-              throw Exception('Cannot read SAF file: $e. Cached file also not available.');
-            }
-          }
-        } else {
-          // Only a proven native path may use dart:io File access.
-          if (!target.canFallbackToLocalFile) {
-            throw const FileSystemException(
-              'This source requires platform-backed file access.');
-          }
-          if (!await _file.exists()) {
-            throw Exception('File not found: ${state.filePath}');
-          }
-          bytes = await _file.readAsBytes();
-        }
-        
         // Try to detect encoding (simple detection - UTF-8 first, then fallback)
         try {
           content = utf8.decode(bytes);
@@ -357,71 +308,24 @@ class SourceViewController extends Notifier<SourceViewState> {
       final content = _rawSourceText ?? state.toSrtContent();
       
       // Encode using the detected encoding
-      final bytes = state.fileEncoding.encode(content);
+      final bytes = Uint8List.fromList(state.fileEncoding.encode(content));
       final target = SourceViewFileTarget.resolve(
         filePath: state.filePath,
         safUri: state.safUri,
       );
+      // SAF permission checks and native fallback belong to the adapter;
+      // it never treats a document URI as a filesystem path.
+      final destination = await ref.read(sourceViewFileAccessProvider)
+          .write(target, bytes);
+      if (_disposed) return;
+      final saveSuccessful = destination != null;
 
-      await AppLogger.instance.info('=== SOURCE VIEW SAVE DEBUG ===');
-      await AppLogger.instance.info('Content length: ${content.length} chars');
-      await AppLogger.instance.info('Encoded bytes length: ${bytes.length}');
-      await AppLogger.instance.info('SAF access available: ${state.safUri?.isNotEmpty == true}');
-      await AppLogger.instance.info('File name: $_logFileName');
-      await AppLogger.instance.info(
-          'Local fallback available: ${target.canFallbackToLocalFile}');
-      
-      bool saveSuccessful = false;
-      String saveMethod = '';
-      
-      // Strategy 1: Try SAF URI if available
-      if (target.androidDocumentUri != null && Platform.isAndroid) {
-        await AppLogger.instance.info('Attempting Strategy 1: SAF URI save');
-        try {
-          // Check if we have persistent permissions (informational only)
-          final hasPermission = await SafFileHandler.hasUriPermission(uri: target.androidDocumentUri!);
-          await AppLogger.instance.info('URI persistent permission check: $hasPermission');
-          
-          // ALWAYS try to write to the original URI
-          await AppLogger.instance.info('Attempting write to original SAF URI');
-          final success = await SafFileHandler.writeSafUri(target.androidDocumentUri!, Uint8List.fromList(bytes));
-          if (success) {
-            saveSuccessful = true;
-            saveMethod = 'SAF URI (original file)';
-            await AppLogger.instance.info('Strategy 1 SUCCESS: Saved to original SAF URI');
-          } else {
-            await AppLogger.instance.warning('Strategy 1 FAILED: writeSafUri returned false');
-          }
-        } catch (e) {
-          await AppLogger.instance.error('Strategy 1 ERROR: $e');
-        }
-      } else {
-        await AppLogger.instance.info('Strategy 1 SKIPPED: No SAF URI available');
-      }
-      
-      // Strategy 2: Try direct file write if SAF failed
-      if (!saveSuccessful) {
-        await AppLogger.instance.info('Attempting Strategy 2: Direct file write');
-        try {
-          if (target.canFallbackToLocalFile && await _file.exists()) {
-            await _file.writeAsBytes(bytes);
-            saveSuccessful = true;
-            saveMethod = 'Direct file';
-            await AppLogger.instance.info('Strategy 2 SUCCESS: Saved to direct file path');
-          } else {
-            await AppLogger.instance.warning('Strategy 2 FAILED: File does not exist at path');
-          }
-        } catch (e) {
-          await AppLogger.instance.error('Strategy 2 ERROR: $e');
-        }
-      }
-      
       // Handle save results
       if (saveSuccessful) {
         String successMessage;
-        if (saveMethod == 'SAF URI (original file)') {
+        if (destination == SourceViewSaveDestination.androidDocument) {
           successMessage = 'File saved to original location ✓';
-        } else if (saveMethod == 'Direct file' &&
+        } else if (destination == SourceViewSaveDestination.nativeFile &&
             target.androidDocumentUri != null) {
           successMessage = 'File saved to app cache (original location unavailable)';
         } else {
@@ -466,10 +370,12 @@ class SourceViewController extends Notifier<SourceViewState> {
       await AppLogger.instance.info('Save As filename: $fileName');
       
       // Use SAF to create a new document
-      final safInfo = await SafFileHandler.createDocument(
+      final fileAccess = ref.read(sourceViewFileAccessProvider);
+      final safInfo = await fileAccess.createDocument(
         fileName: fileName,
         mimeType: '*/*',
       );
+      if (_disposed) return;
       
       if (safInfo == null) {
         // User cancelled the save dialog
@@ -494,7 +400,10 @@ class SourceViewController extends Notifier<SourceViewState> {
       await AppLogger.instance.info('Save As encoded bytes length: ${bytes.length}');
       
       // Save to the new location
-      final writeResult = await SafFileHandler.writeSafUri(safInfo.uri, Uint8List.fromList(bytes));
+      final writeResult = await fileAccess.writeCreatedDocument(
+        safInfo, Uint8List.fromList(bytes),
+      );
+      if (_disposed) return;
       
       if (writeResult) {
         await AppLogger.instance.info('Save As completed successfully');
