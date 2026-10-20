@@ -36,3 +36,25 @@ Open the same long MKV using the same audio track. On a cold full waveform load,
 Test rapidly navigating away or switching the audio track while the full decode runs; the preview must not appear on another session. Confirm R13 Android Back navigation still works. Retain `cp86_r10_window_preview.log` to record timing. Android native acceptance is outstanding until device tested. Do not use Flutter hot restart.
 
 **Next R11 requirement:** independent timestamp-gap/codec/explicit-audio-track fixtures and real absolute-window tile mapping before allowing preview interactions or enabling it by default.
+
+## R10 device capture: preview extraction verified, UI paint not yet observable
+
+The uploaded `cp86_r10_window_preview.log` (20:51–20:54 October 20, CPH2381 Android 14, experimental branch) shows:
+
+| Stage | Device log | Result |
+|---|---|---|
+| Source processing started | 20:52:00.009 | 30-minute window probe begins before normal full extraction |
+| Window probe complete | 20:52:01.437 | **1,204 ms**, 82,680 signed PCM samples, 165,360 bytes, 30 seconds at 2,756 Hz, `stream=auto` |
+| Full extraction starts | 20:52:01.502 | Normal FFmpegKit `aresample=async=1:first_pts=0` flow |
+| Full extraction ends | 20:54:20.105 | Native FFmpeg **138,602 ms**, peak reduction **1,794 ms**, full source acquisition 141,920 ms, total processing **141,957 ms** |
+| Preview vs whole-track cache | 20:54:21.930 | `samples=256 lagSamples=0 relativeError=0.0000 inconclusiveSilence=false` |
+
+No app `SIGSEGV`, fatal signal, or ANR appeared in this capture. However, no `CP86 R10` label was emitted by the previously released code, so the log **does not confirm the preview ever reached the UI painter**. Do not mark native R10 preview display acceptance PASS based on this log alone.
+
+### Follow-up observability patch
+
+R10 now emits distinct, privacy-safe diagnostic markers:
+- `CP86 R10 PREVIEW_CREATED startMs=1800000 endMs=1830000 buckets=256 callback=true`: bounded window PCM was reduced to UI data and handed to the controller; not evidence of drawing.
+- `CP86 R10 PREVIEW_PAINTED startMs=1800000 endMs=1830000 buckets=256`: the waveform's CustomPainter completed drawing on a nonempty Canvas; logged only once per transient preview object.
+
+The markers distinguish actual rendering from successful extraction. Added widget test for nonempty painting and a zero-size test to prevent falsely claiming a drawn waveform. Device acceptance still needs a fresh log with both markers and normal subsequent `AudioProcessor: Processing complete`; visual confirmation from the device remains recommended.

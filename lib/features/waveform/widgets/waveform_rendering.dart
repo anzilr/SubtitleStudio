@@ -69,7 +69,10 @@ extension _WaveformRendering on WaveformWidgetState {
               child: SizedBox.expand(
                 child: CustomPaint(
                   painter: WaveformWindowPreviewPainter(
-                    preview: preview, color: loaderColor),
+                    preview: preview,
+                    color: loaderColor,
+                    onPaint: () => _recordWindowPreviewPaint(preview),
+                  ),
                 ),
               ),
             ),

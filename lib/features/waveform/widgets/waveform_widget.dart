@@ -68,6 +68,22 @@ class WaveformWidgetState extends riverpod.ConsumerState<WaveformWidget> {
   List<SubtitleLine> _currentSubtitles = [];
   WaveformBuffer? _tileBuffer;
   WaveformTileSource? _tileSource;
+  WaveformWindowPreview? _lastPaintedWindowPreview;
+
+  /// Only the painter can confirm that the experimental bucket strip reached
+  /// a nonempty Flutter Canvas. Log one marker per distinct window, without
+  /// including any source path or selected DocumentsProvider identifier.
+  void _recordWindowPreviewPaint(WaveformWindowPreview preview) {
+    if (!mounted || identical(_lastPaintedWindowPreview, preview)) return;
+    _lastPaintedWindowPreview = preview;
+    assert(() {
+      debugPrint('CP86 R10 PREVIEW_PAINTED '
+          'startMs=${preview.start.inMilliseconds} '
+          'endMs=${preview.end.inMilliseconds} '
+          'buckets=${preview.minima.length}');
+      return true;
+    }());
+  }
 
   WaveformTileSource? _tilesFor(WaveformReady state) {
     // Metadata-only zoom descriptors have no eager channel arrays.

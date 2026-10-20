@@ -6,10 +6,14 @@ class WaveformWindowPreviewPainter extends CustomPainter {
   const WaveformWindowPreviewPainter({
     required this.preview,
     required this.color,
+    this.onPaint,
   });
 
   final WaveformWindowPreview preview;
   final Color color;
+  /// Fires only after drawing at a positive, nonempty canvas size.
+  /// Used for debug-only, device-observable R10 paint verification.
+  final VoidCallback? onPaint;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -29,6 +33,7 @@ class WaveformWindowPreviewPainter extends CustomPainter {
       canvas.drawLine(Offset(x.toDouble(), top),
           Offset(x.toDouble(), bottom), paint);
     }
+    onPaint?.call();
   }
 
   @override

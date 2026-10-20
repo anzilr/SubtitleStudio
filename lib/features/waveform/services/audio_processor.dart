@@ -108,6 +108,15 @@ class AudioProcessor {
             );
             // Preview only: do not publish WaveformReady or alter the
             // zoom/seek/edit model until whole-source timing is qualified.
+            // Distinguish generated/handed-off bytes from an actually painted
+            // waveform; the widget emits PREVIEW_PAINTED if it draws.
+            if (kDebugMode) {
+              debugPrint('CP86 R10 PREVIEW_CREATED '
+                  'startMs=${preview.start.inMilliseconds} '
+                  'endMs=${preview.end.inMilliseconds} '
+                  'buckets=${preview.minima.length} '
+                  'callback=${onWindowPreview != null}');
+            }
             onWindowPreview?.call(preview);
           }
         } catch (error) {
