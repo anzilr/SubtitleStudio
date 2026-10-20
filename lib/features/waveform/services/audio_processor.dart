@@ -299,12 +299,13 @@ class AudioProcessor {
             final cacheWatch = Stopwatch()..start();
             final cached = await WaveformPeakCache.load(cacheFile);
             checkActive();
+            final cacheBytes = await cacheFile.length();
+            checkActive();
             _acquisitionTimings = WaveformAcquisitionTimings(
               mode: WaveformAcquisitionMode.compactPeakCache,
               cacheLoad: cacheWatch.elapsed,
-              pcmBytes: await cacheFile.length(),
+              pcmBytes: cacheBytes,
             );
-            checkActive();
             onProgress?.call(0.2);
             return cached;
           } on FileSystemException {
