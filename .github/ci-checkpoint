@@ -93,3 +93,5 @@ CP86 R6 October 20: reuse fixed-size 24 KiB waveform peak writer buffer for V1/V
 CP86 R7 October 20: source evidence cold 137089 ms FFmpeg 134990 ms peak 1881 ms; warm 1953 ms. Add native FFmpegKit statistics processing-time callbacks with 2-second media tick throttle, cancellation/track epoch filtering, loading-pane timestamp, unit regression and docs. Verify flutter pub get / analyze / test only. NO Android, Windows or other platform builds in GitHub Actions.
 
 CP86 R7 completion guard: FFmpegKit per-session progress closes immediately on completion, preventing late native statistics from replacing WaveformReady with WaveformLoading. Additional regression tests; Flutter analyze and full tests only, no platform builds.
+
+CP86 R7 analyzer correction: update PendingAudioProcessor test override to carry onDecodedAudioTime, explicitly test stale media-time callbacks after clear/supersession. Full Flutter analyze + test only; no platform builds.
