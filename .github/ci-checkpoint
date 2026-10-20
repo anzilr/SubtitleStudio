@@ -107,3 +107,5 @@ CP86 R10 final lint cleanup: remove two unused imports (preview widget and dupli
 CP86 R10 2026-10-20 verified device file: 30s window ffmpegMs=1204, full ffmpegMs=138602, peakMs=1794, sampled lag=0; prior log didn't distinguish UI rendering. Add PREVIEW_CREATED vs PREVIEW_PAINTED instrumentation and zero-size/nonempty painter regression. Flutter analyze and Flutter test ONLY, no platform builds in CI.
 
 CP86 R10 paint diagnostics follow-up: restore explicit import of WaveformWindowPreview after refactoring the widget state; rerun Flutter analyzer and full test suite. GitHub Actions analysis/tests only; platform builds remain local.
+
+CP86 R11 P1 2026-10-20: after confirmed CPH2381 R10 PREVIEW_CREATED/PREVIEW_PAINTED with 954ms fast extraction and sampled zero-lag, add Dart-only source-revision/track-scoped viewport requests, nearest-playhead scheduling, explicit unknown timeline spans, stale result rejection, and truncated tail protection. Run flutter pub get, flutter analyze and flutter test ONLY; no Android/iOS/Windows/Web/macOS/Linux platform builds in Actions.
