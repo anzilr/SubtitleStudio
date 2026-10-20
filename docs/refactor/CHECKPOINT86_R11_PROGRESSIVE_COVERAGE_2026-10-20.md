@@ -30,3 +30,10 @@ Unit tests cover request ordering, known/unknown windows, duplicate suppression,
 6. **After acceptance:** investigate making viewport-first progression the default while retaining existing full-cache compatibility/fast reopening.
 
 **Never build platform artifacts in GitHub Actions.** Only Flutter dependency resolution, analysis and tests.
+
+## Verified Flutter-only quality gate
+
+[GitHub Actions 39474158230](https://github.com/anzilr/SubtitleStudio/actions/runs/39474158230) — **SUCCESS** on 2026-10-20 at head `3791896`. `flutter analyze`: **No issues found**; **565 Flutter tests passed**. This includes source/track identity, owner-token isolation, at-most-eight concurrently claimed windows across repeated calls, cancellation, absolute interval clipping and known/unknown coverage regressions. No platform builds were performed.
+
+The first R11 quality run [39473912088](https://github.com/anzilr/SubtitleStudio/actions/runs/39473912088) was superseded and canceled after the bounded-concurrency/owner-token fixes; it is not the acceptance gate. Native progressive UI interaction and Windows/Android PTS-gap/explicit-track qualification remain unverified.
+
