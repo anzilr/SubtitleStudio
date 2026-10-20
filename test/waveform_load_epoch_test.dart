@@ -19,15 +19,18 @@ class PendingAudioProcessor extends AudioProcessor {
   PendingAudioProcessor() : super(UnusedPreferences());
   final Map<String, Completer<WaveformBuffer>> requests = {};
   final Map<String, Function(double)?> progressCallbacks = {};
+  final Map<String, void Function(Duration)?> decodeTimeCallbacks = {};
 
   @override
   Future<WaveformBuffer> processAudioFile(
     String audioFilePath, {
     Function(double)? onProgress,
+    void Function(Duration)? onDecodedAudioTime,
     int? subtitleCollectionId,
     String? audioTrackId,
   }) {
     progressCallbacks[audioFilePath] = onProgress;
+    decodeTimeCallbacks[audioFilePath] = onDecodedAudioTime;
     return (requests[audioFilePath] ??= Completer<WaveformBuffer>()).future;
   }
 
@@ -59,6 +62,8 @@ void main() {
         .sourceFilePath, 'audio-latest');
 
     processor.progressCallbacks['audio-old']?.call(0.75);
+    processor.decodeTimeCallbacks['audio-old']?.call(
+        const Duration(minutes: 10));
     processor.complete('audio-old');
     await old;
     final result = container.read(waveformControllerProvider);
@@ -77,6 +82,8 @@ void main() {
     await controller.dispatch(const ClearWaveform());
     expect(container.read(waveformControllerProvider), isA<WaveformInitial>());
     processor.progressCallbacks['audio-pending']?.call(0.5);
+    processor.decodeTimeCallbacks['audio-pending']?.call(
+        const Duration(hours: 1));
     processor.complete('audio-pending');
     await pending;
     expect(container.read(waveformControllerProvider), isA<WaveformInitial>());
