@@ -38,4 +38,4 @@ Resolution order:
 
 ## Flutter-only verification
 
-Final quality run: [CP88 R3 CI](https://github.com/anzilr/SubtitleStudio/actions/runs?query=branch%3Arefactor%2Friverpod-architecture) (record the exact run and count after completion). No native Android or desktop builds in CI.
+[Final CP88 R3 GitHub Actions run 39484474034](https://github.com/anzilr/SubtitleStudio/actions/runs/39484474034) — **SUCCESS** on October 20, 2026: **569 Flutter tests passed**, `flutter analyze`: **No issues found**. The test suite includes the actual SharedPreferences mock compatibility case and pure grant-policy regressions. No Android, Windows, Web, iOS, Linux or macOS build was performed in CI. Physical Android SAF grant behavior remains outstanding.
