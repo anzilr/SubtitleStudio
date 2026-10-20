@@ -97,3 +97,5 @@ CP86 R7 completion guard: FFmpegKit per-session progress closes immediately on c
 CP86 R7 analyzer correction: update PendingAudioProcessor test override to carry onDecodedAudioTime, explicitly test stale media-time callbacks after clear/supersession. Full Flutter analyze + test only; no platform builds.
 
 CP88 R1 2026-10-20: user reprioritized core refactoring, waveform experiment frozen separate; typed StudioFileIdentity-backed Source View local/SAF read and save decisions with lossless source path preservation, no File(contentUri) fallback, grant validation, targeted tests, roadmap-to-desktop phase gates. Run flutter pub get/analyze/test ONLY. No Android/Windows/Web/iOS/macOS/Linux platform builds in GitHub Actions.
+
+CP88 R1 document identity hardening: reject mismatched content:// filePath and saved SAF URI so stale grants cannot redirect writes to another document, retain native-cache + SAF behavior and explicit same-URI grants. Flutter analysis and complete tests ONLY; no platform builds.
