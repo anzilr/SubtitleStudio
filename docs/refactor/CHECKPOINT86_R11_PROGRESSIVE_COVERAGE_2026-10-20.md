@@ -77,3 +77,18 @@ First R11 P2 workflow [39476480917](https://github.com/anzilr/SubtitleStudio/act
 
 **Status:** R11 P2 code/test PASS; Android sparse viewport UI native QA NOT YET RUN, and interactive progressive extraction is still not enabled. The earlier R10 954ms window and 32ms handoff-to-paint remain the measured native baseline for one automatically selected audio track.
 
+## R11 Android sparse-view verification and intentional freeze — October 20
+
+The uploaded `cp86_r11.log` (device PID 5954, Android 14) records:
+
+| Event | Local log time | Observation |
+|---|---|---|
+| R9 short seek extraction | 21:48:01.275 | 30s at 1800s: **1,000 ms** FFmpeg; 82,680 samples / 165,360 bytes; auto audio stream |
+| R10 preview prepared | 21:48:01.281 | 256 buckets, callback installed, absolute range 1,800,000–1,830,000 ms |
+| **R11 sparse viewport actually painted** | **21:48:01.316** | 35ms after preview creation, unknownNeighbors=true, correct absolute known range |
+| R9 comparison | 21:50:15.298 | 256 sampled comparisons, lag 0, relative error 0.0000, not silence |
+| Complete waveform | 21:50:15.335 | 135,329ms total; FFmpeg 129,279ms; peak 4,638ms; 20,635,510 decoded samples |
+
+No new app fatal signal, framework exception, or package ANR was found in this capture. The absence of `CP86 R10 PREVIEW_PAINTED` is **expected** with the R11 sparse painter enabled: the alternate `CP86 R11 SPARSE_VIEWPORT_PAINTED` marker establishes actual nonempty-canvas drawing. This is one Android MKV/auto-track acceptance, not a general PTS/multitrack/native-platform qualification.
+
+**Decision:** User explicitly deferred further waveform development in favor of completing the core refactoring roadmap and then building the desktop UI. Freeze this experimental branch as a reference implementation; do not merge its feature-flagged progressive pipeline into `refactor/riverpod-architecture` without a separate future decision. Preserve the current stable R5–R7 waveform support and all successful R8–R11 research, tests, logs and documentation. Deferred: native multitrack/PTS-gap fixtures, viewport-wide segmented decoding, accurate unknown-range caching, interactive editing, and platform benchmarks. **Next active work is not waveform.**
