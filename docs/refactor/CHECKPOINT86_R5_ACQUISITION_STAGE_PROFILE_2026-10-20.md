@@ -35,3 +35,7 @@ On Windows repeat with the same MKV and a valid FFmpeg install. Compare cold and
 - Warm: `acquisition=compactPeakCache cacheMs=... acquisitionBytes=...`.
 
 **Retained blocker:** the `media_kit` hot-restart SIGSEGV remains separately unverified; ordinary CP87 R13 Back/tap behavior has passed physical-device QA.
+
+## Latest Flutter-only quality gate
+
+[Run 39454515948](https://github.com/anzilr/SubtitleStudio/actions/runs/39454515948) succeeded on 2026-10-20 against `4ce284d`, with **543 tests passed and zero analyzer issues**. Includes both R5 stage profiling and the R6 allocation-free writer/golden round trip. No platform builds were run. Native performance impact and Android/Windows acceptance remain unverified.
