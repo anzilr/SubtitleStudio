@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - refactor/riverpod-architecture
+      - experiment/cp86-r9-windowed-waveform-preview
     paths:
       - .github/ci-checkpoint
 
