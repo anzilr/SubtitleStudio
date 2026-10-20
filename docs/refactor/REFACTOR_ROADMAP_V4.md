@@ -1,5 +1,8 @@
 # SubtitleStudio Refactor Roadmap v4
 
+> **PARALLEL DESKTOP WORK APPROVED — 2026-10-20:** User elected to **see and refine a desktop UI now while CP88–CP93 refactoring continues**. A separate [desktop preview branch](https://github.com/anzilr/SubtitleStudio/tree/feature/desktop-workspace-preview) contains a demo-data-only Flutter workspace shell and an independent Windows entrypoint; it does not open or modify projects. Continue CP88–CP93 here. Full desktop *data/media integration and production acceptance* remain gated on shared-core readiness/CP93. This updates and supersedes the earlier "only after CP93 begin PC workspace" instruction below without reopening deferred CP86 waveform work. [Current parallel execution plan](REFACTOR_TO_DESKTOP_EXECUTION_2026-10-20.md).
+
+
 > **ACTIVE PRIORITY RESET — 2026-10-20:** By user decision, **defer further waveform optimization and freeze the CP86 R9–R11 progressive experiment** (do not merge into this branch). Final physical `cp86_r11.log`: 1,000ms 30s seek, R11 sparse canvas paint 35ms after creation, sampled zero-lag, no captured crash; source-specific acceptance only. **Current objective: complete core refactor, then build the desktop UI**, in that order. Start CP88 Source View/file-access unification, then CP89 encoding, CP90 Editor decomposition, CP91 approved outstanding mobile UX, CP92 cleanup/performance and CP93 native/CI acceptance. Only after CP93 begin the PC workspace. This supersedes the historical checkpoint-43 immediate-next-commit sequence and CP86-focused priority notices below. [Current completion plan](REFACTOR_TO_DESKTOP_EXECUTION_2026-10-20.md).
 
 

@@ -1,12 +1,21 @@
-# SubtitleStudio — Refactoring Completion Before Desktop UI
+# SubtitleStudio — Parallel Desktop Preview and Core Refactoring
 
 Decision date: October 20, 2026
 Active branch: `refactor/riverpod-architecture`
-Future desktop workspace: **blocked until core refactoring acceptance**
+Desktop workspace: **UI preview in parallel now; production integration after CP93 shared-core acceptance**
 
 ## Binding project decision
 
-The user has paused additional waveform research/optimization and elected to **complete the remaining SubtitleStudio refactor roadmap first, then design and implement the dedicated desktop UI**. Do not reopen CP86 R12 progressive audio work during the core-refactoring phase. The experiment is preserved on `experiment/cp86-r9-windowed-waveform-preview` at R11 and is **not to be merged now**. The stable branch preserves its previously tested R5–R7 waveform/cache pipeline. Appearance skins and the standalone community Skin Creator site remain frozen/deferred unless necessary for a reproducible regression.
+The user has paused additional waveform research/optimization and now approved **starting desktop presentation design in parallel with the remaining SubtitleStudio refactoring**. The desktop layout preview may proceed independently, but production data/media/Isar integration waits for the relevant shared service contracts and final CP93 acceptance. Do not reopen CP86 R12 progressive audio work during the core-refactoring phase. The experiment is preserved on `experiment/cp86-r9-windowed-waveform-preview` at R11 and is **not to be merged now**. The stable branch preserves its previously tested R5–R7 waveform/cache pipeline. Appearance skins and the standalone community Skin Creator site remain frozen/deferred unless necessary for a reproducible regression.
+
+## Desktop workspace parallel preview — approved October 20, 2026
+
+- **Shared core track:** `refactor/riverpod-architecture` continues CP88–CP93. This branch owns file/SAF, subtitle encoding, Riverpod controllers, Isar/project/checkpoint compatibility, and native QA.
+- **Presentation track:** [`feature/desktop-workspace-preview`](https://github.com/anzilr/SubtitleStudio/tree/feature/desktop-workspace-preview) prototypes a single-screen desktop shell (project rail/sidebar, video pane, waveform strip, subtitle table and line inspector). It launches independently via `flutter run -d windows -t lib/main_desktop_preview.dart`. Content is labeled demo-only, and the preview cannot read or write user data.
+- Implement desktop resizing, window breakpoints, keyboard-friendly cue selection and visual polish now. Do **not** fork business logic, create separate Isar schemas or media engines, merge incomplete desktop APIs into mobile, or advertise the preview as a production editor.
+- Once CP88 file-access, CP90 editor and CP91 checkpoint UI contracts settle, connect desktop panels to the existing shared Riverpod/repository services through adapters and test each integration individually.
+- Reconcile/rebase the desktop branch from the core branch at controlled checkpoints, not across half-completed migrations. Local Windows builds and smoke testing belong to the user/developer machine. GitHub CI runs only `flutter pub get`, `flutter analyze` and `flutter test`.
+- **Release gate unchanged:** CP93 must pass before production desktop editing is declared complete; this gate does not forbid early design and isolated layout implementation.
 
 ## Archived native waveform evidence
 
@@ -56,8 +65,8 @@ The earlier sections of `REFACTOR_ROADMAP_V4.md` include historical "immediate n
 - Native builds and smoke tests on Android and desktop operating systems on user/local machines. Preserve fast Back/touch behavior, media lifecycle, file/SAF grants and `.msone` roundtrip.
 - Resolve open P0/P1 core defects, publish a migration/compatibility summary, and declare the shared architecture ready.
 
-### Next: Desktop Workspace / UI [ONLY AFTER CP93]
-- Start with a desktop layout design and a reusable application shell, not a separate domain/data layer. Keep one shared Riverpod, Isar, project, checkpoint, encoding and file-access core.
+### Production Desktop Workspace Integration / UI [AFTER CP93]
+- The presentation shell may be designed and previewed now on the isolated branch. After CP93, connect it to the shared Riverpod, Isar, project, checkpoint, encoding and file-access core without duplicating domain logic.
 - PC single-screen workflow: project navigator/history, video + waveform, cue editor/table, tools/sidebar; keyboard shortcuts, resizable panes and platform file dialogs.
 - Do not regress mobile UI; desktop layout and window persistence stay platform-responsive.
 
