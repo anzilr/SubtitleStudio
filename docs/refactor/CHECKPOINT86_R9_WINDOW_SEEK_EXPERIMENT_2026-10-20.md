@@ -21,6 +21,12 @@ KDE Subtitle Composer's progressive WaveBuffer/ZoomBuffer design allows renderin
 - Pure Dart regression tests for seek argument placement, limiting duration, preserved audio stream choice/SAF-compatible escaping, invalid user track and path rejection, no output beyond bounded raw PCM, subsecond seeking and alignment behavior.
 - `run_android_clean_debug.ps1` now optionally accepts named Dart defines; old usage remains compatible. Flutter CI triggers are limited to analyzer and tests on this experiment branch.
 
+## Flutter-only CI acceptance
+
+[GitHub Actions run 39461127483](https://github.com/anzilr/SubtitleStudio/actions/runs/39461127483) — **successful**, 2026-10-20. **552 Flutter tests passed**; analyzer had **zero errors**, with one pre-existing informational unused-import lint in `lib/screens/msone_input_diagnostics.dart`. Tested bounded seek-window construction and quote behavior, track selection, time arguments, invalid input rejection, comparison diagnostics, and all existing application regressions. **No Android/Windows or other platform builds ran in Actions.**
+
+**Still pending:** same-media native fast-vs-accurate seek profiling at start offsets 0/1800/5400 seconds, nonzero PTS stream handling, Android SAF seeking, and preview alignment / cancellation on device. Full progressive rendering is not yet implemented.
+
 ## Run on local Android OnePlus CPH2381
 
 Save any local edits before switching branches. An existing `flutter run` terminal should exit with lowercase **q**; do not Flutter hot restart with uppercase R.
