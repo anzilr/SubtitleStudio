@@ -81,3 +81,5 @@ CP87 R9 final diagnostic gate: Flutter renderer hitTestInView (first 12 root tap
 CP87 R9 test fixture correction: restore debugPrint in synchronous try/finally before TestWidgetsFlutterBinding._verifyInvariants (addTearDown restoration was too late). Rerun full analyzer and 537 tests.
 
 CP87 R11 October 20: 24 root down events (including UP) but 0 Editor and 0 Home handlers; repeated hit-test path has RenderBlockSemantics / RenderIgnorePointer barrier inside Navigator _RenderTheater. Trace first hit widget ancestry and active/popped Navigator routes to identify owner, add DialogRoute regression. Analyzer + flutter test only; DO NOT build any platform.
+
+CP87 R12 October 20: live R11 shows Home and Editor only, top hits a page ModalBarrier, root DOWN+UP complete but Editor/Home handlers zero; no stale MSone route shown. Instrument Editor and MSone submission page-route barrier ownership, per-entry Navigator opacity/mounted state, and first Home hit tests after Editor Back. Flutter analyzer + full tests only; no platform builds. Follow-up physical CPH2381 test required.
