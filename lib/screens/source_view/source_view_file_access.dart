@@ -179,7 +179,7 @@ final class SourceViewFileAccessImpl implements SourceViewFileAccess {
   @override
   Future<bool> writeCreatedDocument(
     SourceViewCreatedDocument document, Uint8List bytes,
-  ) {
+  ) async {
     if (!_operations.isAndroid) {
       throw UnsupportedError('SAF Save As requires Android.');
     }
