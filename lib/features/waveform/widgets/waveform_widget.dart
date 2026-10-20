@@ -13,10 +13,17 @@ import 'package:subtitle_studio/features/waveform/services/waveform_tile_source.
 import 'package:subtitle_studio/features/waveform/services/waveform_decode_progress.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_window_preview.dart';
 import 'package:subtitle_studio/features/waveform/widgets/waveform_window_preview_painter.dart';
+import 'package:subtitle_studio/features/waveform/widgets/waveform_sparse_viewport_painter.dart';
+import 'package:subtitle_studio/features/waveform/services/waveform_progressive_coverage.dart';
+import 'package:subtitle_studio/features/waveform/services/waveform_progressive_viewport.dart';
 import 'package:subtitle_studio/features/waveform/models/waveform_sample.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/widgets/settings_sheet.dart';
 import 'package:subtitle_studio/utils/time_parser.dart';
+
+/// R11 is diagnostic-only until absolute PTS/multitrack qualification.
+const bool _r11SparseViewportPreview = bool.fromEnvironment(
+  'MS_ONE_CP86_R11_SPARSE_VIEWPORT_PREVIEW', defaultValue: false);
 
 part 'waveform_rendering.dart';
 part 'waveform_interactions.dart';
@@ -70,6 +77,19 @@ class WaveformWidgetState extends riverpod.ConsumerState<WaveformWidget> {
   WaveformBuffer? _tileBuffer;
   WaveformTileSource? _tileSource;
   WaveformWindowPreview? _lastPaintedWindowPreview;
+  WaveformWindowPreview? _lastPaintedSparsePreview;
+
+  void _recordSparseViewportPaint(WaveformWindowPreview preview) {
+    if (!mounted || identical(_lastPaintedSparsePreview, preview)) return;
+    _lastPaintedSparsePreview = preview;
+    assert(() {
+      debugPrint('CP86 R11 SPARSE_VIEWPORT_PAINTED '
+          'knownStartMs=${preview.start.inMilliseconds} '
+          'knownEndMs=${preview.end.inMilliseconds} '
+          'unknownNeighbors=true');
+      return true;
+    }());
+  }
 
   /// Only the painter can confirm that the experimental bucket strip reached
   /// a nonempty Flutter Canvas. Log one marker per distinct window, without

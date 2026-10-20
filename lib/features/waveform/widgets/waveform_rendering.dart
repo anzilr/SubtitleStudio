@@ -35,6 +35,25 @@ extension _WaveformRendering on WaveformWidgetState {
     final loaderColor = Theme.of(context).colorScheme.primary;
     final preview = widget.height >= 115 ? state.windowPreview : null;
     if (preview != null) {
+      // R11 debug-only view: display 30s of unknown context on either side,
+      // without claiming those times were decoded or are audio silence.
+      final contextDuration = preview.end - preview.start;
+      final sparseStart = Duration(microseconds: math.max(0,
+          preview.start.inMicroseconds - contextDuration.inMicroseconds));
+      final sparseEnd = preview.end + contextDuration;
+      final sparseViewport = _r11SparseViewportPreview
+          ? WaveformProgressiveViewport(
+              start: sparseStart,
+              end: sparseEnd,
+              extents: [
+                WaveformProgressiveExtent(
+                  start: preview.start,
+                  end: preview.end,
+                  preview: preview,
+                ),
+              ],
+            )
+          : null;
       String fmt(Duration d) {
         final total = d.inSeconds;
         final h = total ~/ 3600;
@@ -57,8 +76,11 @@ extension _WaveformRendering on WaveformWidgetState {
           mainAxisSize: MainAxisSize.max,
           children: [
             Text(
-              'Experimental waveform preview  ' +
-                  fmt(preview.start) + '–' + fmt(preview.end),
+              sparseViewport == null
+                  ? 'Experimental waveform preview  ' +
+                      fmt(preview.start) + '–' + fmt(preview.end)
+                  : 'Sparse waveform · ' +
+                      fmt(sparseStart) + '–' + fmt(sparseEnd),
               style: TextStyle(color:
                   Theme.of(context).colorScheme.onSurface, fontSize: 11),
               maxLines: 1,
@@ -68,17 +90,27 @@ extension _WaveformRendering on WaveformWidgetState {
             Expanded(
               child: SizedBox.expand(
                 child: CustomPaint(
-                  painter: WaveformWindowPreviewPainter(
-                    preview: preview,
-                    color: loaderColor,
-                    onPaint: () => _recordWindowPreviewPaint(preview),
-                  ),
+                  painter: sparseViewport == null
+                      ? WaveformWindowPreviewPainter(
+                          preview: preview,
+                          color: loaderColor,
+                          onPaint: () => _recordWindowPreviewPaint(preview),
+                        )
+                      : WaveformSparseViewportPainter(
+                          viewport: sparseViewport,
+                          waveColor: loaderColor,
+                          unknownColor:
+                              Theme.of(context).colorScheme.onSurfaceVariant,
+                          onPaint: () => _recordSparseViewportPaint(preview),
+                        ),
                 ),
               ),
             ),
             const SizedBox(height: 4),
             Text(
-              'Preview only · full waveform loading · other times unknown',
+              sparseViewport == null
+                  ? 'Preview only · full waveform loading · other times unknown'
+                  : 'Middle 30s decoded · hatched audio unknown · read-only',
               textAlign: TextAlign.center,
               maxLines: 2,
               style: TextStyle(color:
