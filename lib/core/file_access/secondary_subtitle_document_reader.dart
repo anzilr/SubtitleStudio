@@ -85,7 +85,7 @@ final class SecondarySubtitleDocumentReader {
     final path = identity.kind == StudioFileLocationKind.nativePath
         ? identity.location
         : Uri.parse(identity.location).pathSegments.last;
-    final fileName = path.replaceAll(r'\', '/').split('/').last.toLowerCase();
+    final fileName = path.replaceAll(String.fromCharCode(92), '/').split('/').last.toLowerCase();
     for (final ext in const ['srt', 'vtt', 'ass', 'ssa']) {
       if (fileName.endsWith('.$ext')) return ext;
     }
