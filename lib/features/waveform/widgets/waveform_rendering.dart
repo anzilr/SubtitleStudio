@@ -33,7 +33,59 @@ extension _WaveformRendering on WaveformWidgetState {
 
   Widget _buildLoadingState(WaveformLoading state) {
     final loaderColor = Theme.of(context).colorScheme.primary;
-    
+    final preview = widget.height >= 115 ? state.windowPreview : null;
+    if (preview != null) {
+      String fmt(Duration d) {
+        final total = d.inSeconds;
+        final h = total ~/ 3600;
+        final m = (total ~/ 60) % 60;
+        final sec = total % 60;
+        return h.toString().padLeft(2, '0') + ':' +
+            m.toString().padLeft(2, '0') + ':' +
+            sec.toString().padLeft(2, '0');
+      }
+      return Container(
+        height: widget.height,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color:
+              Theme.of(context).colorScheme.outline.withValues(alpha: 0.3)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.max,
+          children: [
+            Text(
+              'Experimental waveform preview  ' +
+                  fmt(preview.start) + '–' + fmt(preview.end),
+              style: TextStyle(color:
+                  Theme.of(context).colorScheme.onSurface, fontSize: 11),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 4),
+            Expanded(
+              child: SizedBox.expand(
+                child: CustomPaint(
+                  painter: WaveformWindowPreviewPainter(
+                    preview: preview, color: loaderColor),
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Preview only · full waveform loading · other times unknown',
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              style: TextStyle(color:
+                  Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 10),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       height: widget.height,
       decoration: BoxDecoration(

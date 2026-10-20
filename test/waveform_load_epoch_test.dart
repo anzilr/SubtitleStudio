@@ -7,6 +7,7 @@ import 'package:subtitle_studio/features/waveform/models/waveform_sample.dart';
 import 'package:subtitle_studio/features/waveform/providers/waveform_controller.dart';
 import 'package:subtitle_studio/features/waveform/repositories/waveform_preferences_repository.dart';
 import 'package:subtitle_studio/features/waveform/services/audio_processor.dart';
+import 'package:subtitle_studio/features/waveform/services/waveform_window_preview.dart';
 import 'package:subtitle_studio/features/waveform/state/waveform_event.dart';
 import 'package:subtitle_studio/features/waveform/state/waveform_state.dart';
 
@@ -20,17 +21,20 @@ class PendingAudioProcessor extends AudioProcessor {
   final Map<String, Completer<WaveformBuffer>> requests = {};
   final Map<String, Function(double)?> progressCallbacks = {};
   final Map<String, void Function(Duration)?> decodeTimeCallbacks = {};
+  final Map<String, void Function(WaveformWindowPreview)?> windowCallbacks = {};
 
   @override
   Future<WaveformBuffer> processAudioFile(
     String audioFilePath, {
     Function(double)? onProgress,
     void Function(Duration)? onDecodedAudioTime,
+    void Function(WaveformWindowPreview)? onWindowPreview,
     int? subtitleCollectionId,
     String? audioTrackId,
   }) {
     progressCallbacks[audioFilePath] = onProgress;
     decodeTimeCallbacks[audioFilePath] = onDecodedAudioTime;
+    windowCallbacks[audioFilePath] = onWindowPreview;
     return (requests[audioFilePath] ??= Completer<WaveformBuffer>()).future;
   }
 
@@ -64,6 +68,12 @@ void main() {
     processor.progressCallbacks['audio-old']?.call(0.75);
     processor.decodeTimeCallbacks['audio-old']?.call(
         const Duration(minutes: 10));
+    processor.windowCallbacks['audio-old']?.call(
+        WaveformWindowPreview.fromPcm(
+          start: const Duration(minutes: 30),
+          pcm: Int16List.fromList([-32768, 32767]),
+          sampleRate: 2,
+        ));
     processor.complete('audio-old');
     await old;
     final result = container.read(waveformControllerProvider);
@@ -84,6 +94,12 @@ void main() {
     processor.progressCallbacks['audio-pending']?.call(0.5);
     processor.decodeTimeCallbacks['audio-pending']?.call(
         const Duration(hours: 1));
+    processor.windowCallbacks['audio-pending']?.call(
+        WaveformWindowPreview.fromPcm(
+          start: const Duration(minutes: 30),
+          pcm: Int16List.fromList([-1, 1]),
+          sampleRate: 2,
+        ));
     processor.complete('audio-pending');
     await pending;
     expect(container.read(waveformControllerProvider), isA<WaveformInitial>());

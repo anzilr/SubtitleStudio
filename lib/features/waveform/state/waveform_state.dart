@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:subtitle_studio/features/waveform/models/waveform_sample.dart';
+import 'package:subtitle_studio/features/waveform/services/waveform_window_preview.dart';
 
 /// States for waveform controller
 abstract class WaveformState extends Equatable {
@@ -20,14 +21,18 @@ class WaveformLoading extends WaveformState {
   final double progress; // 0.0 to 1.0
   /// FFmpeg media timeline processed so far; not a percentage of total duration.
   final Duration? processedAudioTime;
+  /// Debug-only sampled window; all other timeline positions are unavailable.
+  final WaveformWindowPreview? windowPreview;
 
   const WaveformLoading(this.filePath, {
     this.progress = 0.0,
     this.processedAudioTime,
+    this.windowPreview,
   });
 
   @override
-  List<Object?> get props => [filePath, progress, processedAudioTime];
+  List<Object?> get props =>
+      [filePath, progress, processedAudioTime, windowPreview];
 }
 
 /// Waveform loaded and ready

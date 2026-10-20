@@ -18,6 +18,7 @@ import 'package:subtitle_studio/features/waveform/services/waveform_peak_cache_j
 import 'package:subtitle_studio/features/waveform/services/waveform_ffmpeg_plan.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_window_ffmpeg_plan.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_window_alignment.dart';
+import 'package:subtitle_studio/features/waveform/services/waveform_window_preview.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_saf_input.dart';
 import 'package:subtitle_studio/utils/ffmpeg_helper.dart';
 import 'package:ffmpeg_kit_flutter_new_min_gpl/ffmpeg_kit.dart';
@@ -45,6 +46,8 @@ class AudioProcessor {
     'MS_ONE_CP86_R9_DURATION_SECONDS', defaultValue: 30);
   static const bool _windowProbeAccurate = bool.fromEnvironment(
     'MS_ONE_CP86_R9_ACCURATE_SEEK', defaultValue: false);
+  static const bool _showExperimentalPreview = bool.fromEnvironment(
+    'MS_ONE_CP86_R10_SHOW_WINDOW_PREVIEW', defaultValue: false);
   Process? _activeDesktopProcess;
   int? _activeNativeSessionId;
 
@@ -74,6 +77,7 @@ class AudioProcessor {
     String audioFilePath, {
     Function(double)? onProgress,
     void Function(Duration)? onDecodedAudioTime,
+    void Function(WaveformWindowPreview)? onWindowPreview,
     int? subtitleCollectionId,
     String? audioTrackId,
   }) async {
@@ -96,6 +100,16 @@ class AudioProcessor {
           probeSamples = await _runWindowProbe(
             audioFilePath, audioTrackId: audioTrackId, epoch: epoch,
           );
+          if (_showExperimentalPreview && epoch == _requestEpoch) {
+            final preview = WaveformWindowPreview.fromPcm(
+              start: const Duration(seconds: _windowProbeStartSeconds),
+              pcm: probeSamples,
+              sampleRate: WaveformWindowFfmpegPlan.sampleRate,
+            );
+            // Preview only: do not publish WaveformReady or alter the
+            // zoom/seek/edit model until whole-source timing is qualified.
+            onWindowPreview?.call(preview);
+          }
         } catch (error) {
           if (epoch != _requestEpoch) rethrow;
           debugPrint('CP86 R9 WINDOW failed: ${error.runtimeType}; '

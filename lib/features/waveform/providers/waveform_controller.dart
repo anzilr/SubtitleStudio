@@ -4,6 +4,7 @@ import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/features/waveform/state/waveform_event.dart';
 import 'package:subtitle_studio/features/waveform/state/waveform_state.dart';
 import 'package:subtitle_studio/features/waveform/services/audio_processor.dart';
+import 'package:subtitle_studio/features/waveform/services/waveform_window_preview.dart';
 import 'package:subtitle_studio/features/waveform/repositories/waveform_subtitle_repository.dart';
 import 'package:subtitle_studio/features/waveform/repositories/waveform_preferences_repository.dart';
 
@@ -201,6 +202,7 @@ class WaveformController extends Notifier<WaveformState> {
     _audioProcessor.cancelActive();
     var currentProgress = 0.0;
     Duration? processedAudioTime;
+    WaveformWindowPreview? windowPreview;
     try {
       _setState(WaveformLoading(event.filePath, progress: 0.0));
 
@@ -225,6 +227,7 @@ class WaveformController extends Notifier<WaveformState> {
           _setState(WaveformLoading(event.filePath,
             progress: progress,
             processedAudioTime: processedAudioTime,
+            windowPreview: windowPreview,
           ));
         },
         onDecodedAudioTime: (time) {
@@ -233,6 +236,16 @@ class WaveformController extends Notifier<WaveformState> {
           _setState(WaveformLoading(event.filePath,
             progress: currentProgress,
             processedAudioTime: time,
+            windowPreview: windowPreview,
+          ));
+        },
+        onWindowPreview: (preview) {
+          if (!isCurrent()) return;
+          windowPreview = preview;
+          _setState(WaveformLoading(event.filePath,
+            progress: currentProgress,
+            processedAudioTime: processedAudioTime,
+            windowPreview: preview,
           ));
         },
       );
