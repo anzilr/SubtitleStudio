@@ -7,3 +7,10 @@ Physical test `cp86_r6_waveform_perf.log` (OnePlus CPH2381, Android 14) measured
 CP86 R7 exposes FFmpegKit's supported per-session statistics callback as *processed audio time* (not a percentage, since source media duration is not available/guaranteed for SAF). The timeline is monotonic, throttled to two-second media increments, is discarded when the active request changes, and never logs SAF paths in the new callback. A compact second line is displayed only in sufficiently tall waveform loading panes. Pure regression tests cover invalid/regressing stats, formatting and per-request isolation.
 
 This change improves feedback while decoding continues; **it does not speed up FFmpeg**. Next efficiency work should evaluate alternative decoding architectures on a separate experimental branch with physical-device profiling (progressive/tiled decode and seek/gap semantics), preserving signed timing, multi-track mapping and atomic source-specific cache updates. Do not compromise the stable CP87 R13 Back gesture fix.
+
+
+## Verified Flutter quality gate
+
+[GitHub Actions 39457546723](https://github.com/anzilr/SubtitleStudio/actions/runs/39457546723) — **SUCCESS** on 2026-10-20, head `41c2357`. Flutter analysis completed with no errors (one older informational unnecessary-import lint in CP87 MSone diagnostics); the full test suite passed **546 tests**. This includes the new native-statistics throttle tests and the `PendingAudioProcessor` fake-process stale callback regressions.
+
+The prior attempt [39457169215](https://github.com/anzilr/SubtitleStudio/actions/runs/39457169215) failed analysis only because the new optional callback was not included in the test double's overridden signature; test double updated in commit `5bd9645`. No native platform builds were run in CI. No native Android acceptance is implied by this result.
