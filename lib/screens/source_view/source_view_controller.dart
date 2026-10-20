@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:subtitle_studio/screens/source_view/source_view_saf_grant_repository.dart';
 import 'package:subtitle_studio/screens/source_view/source_view_state.dart';
 import 'package:subtitle_studio/screens/source_view/source_view_file_target.dart';
 import 'package:subtitle_studio/models/subtitle_entry.dart';
@@ -16,7 +16,7 @@ import 'package:subtitle_studio/utils/subtitle_parser.dart';
 /// - File loading with encoding detection
 /// - Content editing and change tracking
 /// - Save operations with multiple fallback strategies
-/// - SAF URI management and persistence
+/// - Resolving SAF access metadata through an injectable repository
 /// - Error handling with user-friendly messages
 /// 
 /// State Flow:
@@ -114,49 +114,31 @@ class SourceViewController extends Notifier<SourceViewState> {
     await _loadFileContent(preloadedContent);
   }
 
-  /// Check shared preferences for existing SAF URI information for this file path
+  /// Resolve SAF locator metadata through the injected repository.
+  ///
+  /// The stored URI is not itself proof of a current Android grant; read and
+  /// write access is still checked by SourceViewFileAccess on each operation.
   Future<void> _checkForExistingSafUri() async {
     try {
-      await AppLogger.instance.info('Checking saved SAF access for $_logFileName');
-      
-      final prefs = await SharedPreferences.getInstance();
-      final key = 'saf_uri_${state.filePath}';
-      final storedSafUri = prefs.getString(key);
-      
-      if (storedSafUri != null) {
-        _setState(state.copyWith(safUri: storedSafUri));
-        await AppLogger.instance.info('Found saved SAF access for $_logFileName');
-      } else if (state.safUri != null) {
-        await AppLogger.instance.info('Using provided SAF access for $_logFileName');
-        // Store this SAF URI in preferences for future use
-        await _storeSafUriInPreferences();
+      final resolved = await ref.read(sourceViewSafGrantRepositoryProvider)
+          .resolve(filePath: state.filePath, providedUri: state.safUri);
+      if (_disposed) return;
+      if (resolved != null && resolved != state.safUri) {
+        _setState(state.copyWith(safUri: resolved));
       }
-      
-    } catch (e) {
-      await AppLogger.instance.error(
-        'Error checking saved SAF access',
-        extra: {'errorType': e.runtimeType.toString(), ..._safeLogContext},
+      await AppLogger.instance.info(
+        'Source View SAF locator metadata resolved',
+        extra: {
+          'hasSafUri': resolved != null,
+          'fileType': 'subtitle',
+        },
       );
-      // Continue with provided SAF URI or null
-    }
-  }
-  
-  /// Store the SAF URI information in shared preferences for future access
-  Future<void> _storeSafUriInPreferences() async {
-    if (state.safUri == null) return;
-    
-    try {
-      await AppLogger.instance.info('Storing SAF URI in shared preferences for future access');
-      
-      final prefs = await SharedPreferences.getInstance();
-      final key = 'saf_uri_${state.filePath}';
-      await prefs.setString(key, state.safUri!);
-      
-      await AppLogger.instance.info('Saved SAF access metadata for $_logFileName');
-    } catch (e) {
-      await AppLogger.instance.error(
-        'Error storing SAF access metadata',
-        extra: {'errorType': e.runtimeType.toString(), ..._safeLogContext},
+    } catch (error) {
+      // Invalid caller-supplied grants fail on the real typed IO boundary;
+      // preference failures cannot silently redirect the operation.
+      await AppLogger.instance.warning(
+        'Could not resolve Source View SAF metadata',
+        extra: {'errorType': error.runtimeType.toString()},
       );
     }
   }
