@@ -72,3 +72,13 @@ Confirm audio-track switching, Android SAF source, aborting during native FFmpeg
 - **Phase 2, not implemented in R9:** render only the validated window as a *partial* waveform, mark unknown ranges as loading rather than silence; track absolute start time in tiles, viewport priority and cache/source-revision identity. No release-mode visual change in R9.
 
 **Important:** no APK/platform compilation is performed in Actions. Flutter device/debug builds are local to user PC.
+
+## R9 PowerShell launcher repair — 2026-10-20
+
+The first experimental `tool/run_android_clean_debug.ps1` became syntactically corrupted: its `-notmatch` regular expression was truncated and a duplicate `finally`/Flutter invocation was inserted inside the validation block. This caused a parse-time `TerminatorExpectedAtEndOfString` before Flutter could start.
+
+The entire launcher has been reconstructed with one parameter-validation loop, one `flutter @flutterArgs` invocation, and one `finally` block. Optional `-DartDefines` values must each match `NAME=value`, while existing calls without the parameter continue working. It preserves the ADB device check and app force-stop; it never clears app data.
+
+A Flutter regression checks argument forwarding and uses PowerShell's parser to check the complete script on machines with `pwsh` or Windows PowerShell. Actions remains Flutter analysis and tests only.
+
+Use the connected device ID `d6e22c3f` rather than the script's older default. Update the experimental branch before rerunning.
