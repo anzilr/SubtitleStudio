@@ -91,6 +91,17 @@ void main() {
     expect(a.called, ['native', 'native']);
   });
 
+  test('Windows file URI decodes to native drive path', () async {
+    const uri = 'file:///C:/Studio/one%20subtitle.srt';
+    final access = _FakeImportBytes(isAndroid: false, isWindows: true);
+    final nativePath = Uri.parse(uri).toFilePath(windows: true);
+    access.native[nativePath] = Uint8List.fromList([49, 10]);
+    final source = SubtitleImportFileReference.resolve(filePath: uri);
+    final bytes = await SubtitleImportFileReader(access: access).read(source);
+    expect(bytes, [49, 10]);
+    expect(access.called, ['native']);
+  });
+
   test('Android source cannot be read on non Android', () async {
     final a = _FakeImportBytes(isAndroid: false);
     final ref = SubtitleImportFileReference.resolve(filePath: uri);
