@@ -165,8 +165,9 @@ the output folder with the source filename or an SAF display hint. Canceling
 folder selection no longer crashes the sheet. Existing visuals and project
 serialization are unchanged.
 [R3 report](CHECKPOINT90_R3_EDITOR_EXPORT_SERVICE_2026-10-21.md).
-Linux and opt-in Windows/macOS Flutter gates are requested because Save As
-crosses platform file/encoding boundaries; native acceptance is separate.
+**Automated verification:** [Linux full suite, 661 tests / clean analyzer](https://github.com/anzilr/SubtitleStudio/actions/runs/39654883752);
+[Windows 130 targeted tests / clean analyzer, macOS queued](https://github.com/anzilr/SubtitleStudio/actions/runs/39654883751).
+The macOS result is pending runner availability; native acceptance is separate.
 
 - Identify and isolate the largest remaining mixed-responsibility Editor/Edit Line/Source View modules; decouple UI from persistence/media/filesystem operations while preserving existing Riverpod state and checkpoint behavior.
 - Prefer injectable services/coordinators, typed outcomes and widget tests. Verify source editing round trips, comment/mark preservation, secondary track fallback, keyboard and Android Back behavior.

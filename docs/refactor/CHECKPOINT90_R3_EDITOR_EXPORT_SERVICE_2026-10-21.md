@@ -2,7 +2,7 @@
 
 Date: October 21, 2026
 Branch: `refactor/riverpod-architecture`
-Verification: Flutter CI requested; no platform application builds
+Verification: Linux/Windows Flutter gates passed; macOS host job queued
 
 ## Findings and correction
 
@@ -49,6 +49,16 @@ parent suggestions, Windows escaped file URIs and real-host byte export.
 Linux full Flutter `pub get`, `analyze`, `test` and the Windows/macOS targeted
 file-sensitive Flutter workflow are requested through separate markers.
 Actions must **not build Android, Windows, Linux, macOS or iOS apps**.
+
+## Automated verification, October 21
+
+- [Linux full suite](https://github.com/anzilr/SubtitleStudio/actions/runs/39654883752):
+  **661 Flutter tests passed**, analyzer clean.
+- [Windows/macOS targeted workflow](https://github.com/anzilr/SubtitleStudio/actions/runs/39654883751):
+  Windows **130 targeted tests passed**, analyzer clean. macOS job was still
+  queued at this documentation update and is not counted as verified.
+- These are Flutter host tests only, not application builds or native file
+  provider/sandbox integration acceptance.
 
 ## Deferred/native acceptance
 
