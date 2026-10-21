@@ -10,12 +10,12 @@ import 'package:subtitle_studio/screens/source_view/source_view_file_access.dart
 import 'package:subtitle_studio/services/subtitle_text_codec.dart';
 
 class _FakeFileOperations implements SourceViewFileOperations {
-  _FakeFileOperations({this.isAndroid = false, this.isWindows = false});
+  _FakeFileOperations({this.isAndroid = false});
 
   @override
   final bool isAndroid;
   @override
-  final bool isWindows;
+  bool get isWindows => false;
   final files = <String, Uint8List>{};
   final documents = <String, Uint8List>{};
   final writes = <String>[];
