@@ -7,6 +7,7 @@ import 'package:subtitle_studio/utils/saf_file_handler.dart';
 import 'package:subtitle_studio/utils/saf_path_converter.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/services/file_picker_preferences_repository.dart';
+import 'package:subtitle_studio/core/file_access/studio_picked_file_reference.dart';
 
 /// Platform-specific file picker utilities using SAF on Android
 /// 
@@ -164,22 +165,18 @@ class FilePickerSAF {
         final fileInfo = await PlatformFileHandler.readFile(mimeTypes: mimeTypes);
         
         if (fileInfo != null) {
-          // Fix the display path using proper SAF URI conversion
-          final correctedPath = SafPathConverter.normalizePath(fileInfo.safUri ?? fileInfo.path);
-          
+          // Preserve displayPath for legacy callers; use accessLocator for
+          // file access/persistence instead of the synthetic SAF path.
+          final selection = fileInfo.pickedReference;
           if (kDebugMode) {
-            print('FilePickerSAF pickFileWithInfo: originalPath=${fileInfo.path}, correctedPath=$correctedPath, safUri=${fileInfo.safUri}');
+            debugPrint('FilePickerSAF: Android document selected');
           }
-          return {
-            'displayPath': correctedPath, // Use corrected path
-            'safUri': fileInfo.safUri,
-            'bytes': fileInfo.content, // Decode only after user chooses encoding
-          };
+          return selection.toLegacyPickerInfo(fileInfo.content);
         }
         return null;
       } catch (e) {
         if (context.mounted) {
-          SnackbarHelper.showError(context, 'Error selecting file: $e');
+          SnackbarHelper.showError(context, 'Unable to select file');
         }
         return null;
       }
@@ -194,14 +191,12 @@ class FilePickerSAF {
         try {
           final file = File(path);
           final bytes = await file.readAsBytes();
-          return {
-            'displayPath': path,
-            'safUri': null,
-            'bytes': bytes,
-          };
+          final selection = StudioPickedFileReference.fromPicker(
+            accessLocator: path, displayPath: path, isFromSaf: false);
+          return selection.toLegacyPickerInfo(bytes);
         } catch (e) {
           if (context.mounted) {
-            SnackbarHelper.showError(context, 'Error reading file: $e');
+            SnackbarHelper.showError(context, 'Unable to read selected file');
           }
           return null;
         }
@@ -227,7 +222,7 @@ class FilePickerSAF {
         final correctedPath = SafPathConverter.normalizePath(fileInfo.safUri ?? fileInfo.path);
         
         if (kDebugMode) {
-          print('FilePickerSAF Android: originalPath=${fileInfo.path}, correctedPath=$correctedPath, safUri=${fileInfo.safUri}');
+          debugPrint('FilePickerSAF: legacy Android document selected');
         }
         return correctedPath;
       }
@@ -237,7 +232,7 @@ class FilePickerSAF {
       if (context.mounted) {
         SnackbarHelper.showError(
           context,
-          'Error selecting file: $e',
+          'Unable to select file',
         );
       }
       return null;
@@ -263,7 +258,7 @@ class FilePickerSAF {
       if (context.mounted) {
         SnackbarHelper.showError(
           context,
-          'Error selecting file: $e',
+          'Unable to select file',
         );
       }
       return null;
@@ -294,7 +289,7 @@ class FilePickerSAF {
       }
       return null;
     } catch (e) {
-      debugPrint('Error picking file on desktop: $e');
+      debugPrint('FilePickerSAF: desktop selection failed (${e.runtimeType})');
       return null;
     }
   }
@@ -315,7 +310,7 @@ class FilePickerSAF {
       await _persistLastUsedDirectory();
       return selectedDirectory;
     } catch (e) {
-      debugPrint('Error picking folder on desktop: $e');
+      debugPrint('FilePickerSAF: folder selection failed (${e.runtimeType})');
       return null;
     }
   }
@@ -445,12 +440,13 @@ class FilePickerConvenience {
       final correctedPath = SafPathConverter.normalizePath(fileInfo.uri);
       
       if (kDebugMode) {
-        print('FilePickerConvenience pickVideoFileWithInfo: originalPath=${fileInfo.displayPath}, correctedPath=$correctedPath, uri=${fileInfo.uri}');
+          debugPrint('FilePickerConvenience: video selected');
       }
       
       return {
         'uri': fileInfo.uri,
-        'displayPath': correctedPath, // Use corrected path
+        'accessLocator': fileInfo.uri, // True storage URI, not displayPath.
+        'displayPath': correctedPath, // Presentation-only legacy hint
         'displayName': fileInfo.fileName, // This extracts just the filename
       };
     }
