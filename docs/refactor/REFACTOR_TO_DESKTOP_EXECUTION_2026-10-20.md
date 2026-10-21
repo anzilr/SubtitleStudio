@@ -192,6 +192,19 @@ remain for a scoped follow-up.
 **Verification:** [Linux 671 Flutter tests / clean analyzer](https://github.com/anzilr/SubtitleStudio/actions/runs/39659967724); platform file
 matrix not applicable to this UI-preference-only change.
 
+**CP90 R6 (October 21, 2026):** Edit Line now shares the controller-owned
+resize preference coordinator. Its previous widget timers canceled pending
+desktop/mobile ratio writes during route exit; the scoped Riverpod controller
+instead captures a repository writer while active and flushes the latest drag
+values on disposal. The UI retains desktop local updates and mobile
+no-rebuild dragging; the Edit Line desktop ratio is stored separately from
+the main Editor's ratio. Isar-backed controller regression tests verify
+immediate state and persisted final values. Two existing analyzer diagnostics
+were also removed. No file access, Isar schema or native-media changes.
+[R6 report](CHECKPOINT90_R6_EDIT_LINE_RESIZE_PREFERENCES_2026-10-21.md).
+**Verification:** [Linux 672 tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39664510820);
+Windows/macOS file-host matrix not applicable.
+
 - Identify and isolate the largest remaining mixed-responsibility Editor/Edit Line/Source View modules; decouple UI from persistence/media/filesystem operations while preserving existing Riverpod state and checkpoint behavior.
 - Prefer injectable services/coordinators, typed outcomes and widget tests. Verify source editing round trips, comment/mark preservation, secondary track fallback, keyboard and Android Back behavior.
 - Keep the shared core reusable by both Flutter mobile widgets and the later desktop presentation.
