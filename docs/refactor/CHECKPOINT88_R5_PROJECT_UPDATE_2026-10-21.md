@@ -2,7 +2,7 @@
 
 **Date:** October 21, 2026
 **Branch:** `refactor/riverpod-architecture`
-**Status:** Flutter-only CI gate running; native Android and Windows acceptance outstanding.
+**Status:** CP88 R5 Dart/Flutter quality gate **PASS**; native Android and Windows acceptance outstanding.
 
 ## Problem and scope
 
@@ -37,4 +37,4 @@ Only `flutter pub get`, `flutter analyze` and `flutter test` run in GitHub Actio
 
 ## CI
 
-Quality run: https://github.com/anzilr/SubtitleStudio/actions/runs/39615099160 (complete test count and analyzer outcome to be recorded when finished).
+[Final CP88 R5 Flutter-only CI 39615780906](https://github.com/anzilr/SubtitleStudio/actions/runs/39615780906) — **SUCCESS** on October 21, 2026: **587 Flutter tests passed**, and `flutter analyze` reported **No issues found** (zero errors, warnings or informational lints). Only Flutter dependency resolution, analysis and tests ran; **no platform builds**. The first run [39615099160](https://github.com/anzilr/SubtitleStudio/actions/runs/39615099160) passed 587 tests but flagged an `unawaited_return_in_try_block` warning; this was fixed by awaiting the file-URI update inside the `try` block and verified in the final run.
