@@ -115,3 +115,5 @@ CP88 R4 2026-10-20: new injected SecondarySubtitleDocumentReader for native path
 CP88 R4 final quality gate 2026-10-20: typed SecondarySubtitleDocumentReader, native/file URI/Android SAF routing, opaque-ID format signatures, fail-closed revoked grants, VideoRepository privacy log cleanup, Isar-backed secondary reconnect integration regressions. Run flutter pub get, flutter analyze, flutter test only. Never build Android/Windows/iOS/Linux/macOS/Web platform artifacts in GitHub Actions.
 
 CP88 R5 2026-10-21: ProjectDocumentUpdateService uses StudioFileIdentity to route existing project writes; native-only existing paths, decoded file URIs, Android SAF-only document URIs, reject remote/opaque URIs and absent project originals. Tests with fake platform writer and real temp .msone; run Flutter pub get, analyze, tests ONLY, never platform builds in GitHub Actions.
+
+CP88 R5 final lint cleanup 2026-10-21: await platform file-URI update inside the try block; remove analyzer unawaited_return_in_try_block warning. Flutter pub get/analyze/test ONLY; no platform builds in GitHub Actions.
