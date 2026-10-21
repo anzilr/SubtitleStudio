@@ -135,13 +135,11 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
   bool get _floatingControlsEnabled => _editState.floatingControlsEnabled;
   bool get _isMsoneEnabled => _editState.isMsoneEnabled;
   double _resizeRatio = 0.35; // Track the resize ratio for desktop layout
-  Timer? _resizeRatioSaveTimer; // Timer for debouncing resize ratio saves
   bool _isResizeRatioLoaded = false; // Track if resize ratio has been loaded from preferences
   bool _isCommentDialogOpen = false; // Track if comment dialog is currently visible
   
   // Mobile video resize support
   double _mobileVideoResizeRatio = 0.4; // Track the mobile video resize ratio
-  Timer? _mobileResizeRatioSaveTimer; // Timer for debouncing mobile resize ratio saves
   
   // Subtitle change debouncer - reduces rebuilds during video playback
   Timer? _subtitleChangeDebouncer;
@@ -309,8 +307,6 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
     // taps on the HomeScreen after a system Back gesture.
     IsolatedLoaderController.hide();
     _waveformTrackReload.dispose();
-    _resizeRatioSaveTimer?.cancel(); // Cancel resize ratio save timer
-    _mobileResizeRatioSaveTimer?.cancel(); // Cancel mobile resize ratio save timer
     _subtitleChangeDebouncer?.cancel(); // Cancel subtitle change debouncer
     
     // Unregister only this screen's hotkey shortcuts

@@ -181,6 +181,17 @@ Isar checkpoint schema or native media player. [R4 report](CHECKPOINT90_R4_SECON
 **Verification:** [Linux 666 Flutter tests / clean analyzer](https://github.com/anzilr/SubtitleStudio/actions/runs/39657803545). This is not a
 platform file-access change, so Windows/macOS file matrix is not requested.
 
+**CP90 R5 (October 21, 2026):** The main Editor now delegates desktop/mobile
+split-ratio debouncing to `EditorResizePreferenceCoordinator`. Riverpod state
+reflects drag changes immediately; ordered preference writes preserve the
+latest values, and route disposal flushes pending values instead of silently
+canceling timers. Failures do not poison later saves. The UI layout and
+native media lifecycle are unchanged; Edit Line's separate legacy timers
+remain for a scoped follow-up.
+[R5 report](CHECKPOINT90_R5_EDITOR_RESIZE_PREFERENCES_2026-10-21.md).
+**Verification:** Linux full Flutter analyzer/tests pending; platform file
+matrix not applicable to this UI-preference-only change.
+
 - Identify and isolate the largest remaining mixed-responsibility Editor/Edit Line/Source View modules; decouple UI from persistence/media/filesystem operations while preserving existing Riverpod state and checkpoint behavior.
 - Prefer injectable services/coordinators, typed outcomes and widget tests. Verify source editing round trips, comment/mark preservation, secondary track fallback, keyboard and Android Back behavior.
 - Keep the shared core reusable by both Flutter mobile widgets and the later desktop presentation.

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/database/models/models.dart';
@@ -12,6 +14,7 @@ import 'package:subtitle_studio/widgets/video_player_widget.dart';
 import 'package:subtitle_studio/utils/subtitle_parser.dart';
 import 'package:subtitle_studio/screens/edit/models/subtitle_entry.dart';
 import 'package:subtitle_studio/screens/edit/services/editor_secondary_subtitle_service.dart';
+import 'package:subtitle_studio/screens/edit/services/editor_resize_preference_coordinator.dart';
 
 /// Inputs that scope one Editor controller instance.
 class EditConfiguration {
@@ -60,12 +63,17 @@ class EditController extends Notifier<EditState> {
   int get sessionId => _configuration.sessionId;
 
   bool _disposed = false;
+  EditorResizePreferenceCoordinator? _resizePreferences;
 
   @override
   EditState build() {
     final config = ref.watch(editConfigurationProvider);
     ref.onDispose(() {
       _disposed = true;
+      final pendingPreferences = _resizePreferences;
+      if (pendingPreferences != null) {
+        unawaited(pendingPreferences.flushAndDispose());
+      }
     });
 
     logInfo(
@@ -1049,16 +1057,28 @@ class EditController extends Notifier<EditState> {
     _setState(state.copyWith(isLayout1: isLayout1));
   }
 
-  /// Update resize ratio
-  Future<void> updateResizeRatio(double ratio) async {
-    await _videoRepo.saveEditScreenResizeRatio(ratio);
-    _setState(state.copyWith(resizeRatio: ratio));
+  EditorResizePreferenceCoordinator get _resizePreferenceCoordinator {
+    return _resizePreferences ??= EditorResizePreferenceCoordinator(
+      saveDesktop: _videoRepo.saveEditScreenResizeRatio,
+      saveMobile: _videoRepo.saveMobileVideoResizeRatio,
+      onSaveError: (error, _) => logWarning(
+        'Editor resize preference save failed (${error.runtimeType})',
+      ),
+    );
   }
 
-  /// Update mobile video resize ratio
-  Future<void> updateMobileResizeRatio(double ratio) async {
-    await _videoRepo.saveMobileVideoResizeRatio(ratio);
+  /// Reflect drag changes in shared Riverpod state immediately, and persist
+  /// the final value after the drag settles or when the route is disposed.
+  void scheduleResizeRatio(double ratio) {
+    if (_disposed) return;
+    _setState(state.copyWith(resizeRatio: ratio));
+    _resizePreferenceCoordinator.scheduleDesktop(ratio);
+  }
+
+  void scheduleMobileVideoResizeRatio(double ratio) {
+    if (_disposed) return;
     _setState(state.copyWith(mobileVideoResizeRatio: ratio));
+    _resizePreferenceCoordinator.scheduleMobile(ratio);
   }
 
   /// Update last edited session timestamp

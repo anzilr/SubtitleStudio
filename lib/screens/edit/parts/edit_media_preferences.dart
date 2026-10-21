@@ -1,27 +1,18 @@
 part of '../../screen_edit.dart';
 
 extension _EditMediaPreferences on _EditScreenState {
-  // Save resize ratio preference with debouncing
-  Future<void> _saveResizeRatio(double ratio) async {
+  // Apply immediately; the controller owns debounced persistence and exit flush.
+  void _saveResizeRatio(double ratio) {
     if (mounted) {
       _setEditorState(() {
         _resizeRatio = ratio;
       });
     }
     
-    // Cancel any existing timer
-    _resizeRatioSaveTimer?.cancel();
-    
-    // Start a new timer to save after a short delay
-    _resizeRatioSaveTimer = Timer(const Duration(milliseconds: 300), () async {
-      // Riverpod migration - delegate to the Riverpod controller
-      if (mounted) {
-        await _controller.updateResizeRatio(ratio);
-      }
-    });
+    _controller.scheduleResizeRatio(ratio);
   }
 
-  /// Save mobile video resize ratio with debouncing
+  /// Save mobile video resize ratio through the shared coordinator.
   void _saveMobileResizeRatio(double ratio) {
     if (mounted) {
       _setEditorState(() {
@@ -29,16 +20,7 @@ extension _EditMediaPreferences on _EditScreenState {
       });
     }
     
-    // Cancel any existing timer
-    _mobileResizeRatioSaveTimer?.cancel();
-    
-    // Set up a new timer with 500ms delay
-    _mobileResizeRatioSaveTimer = Timer(Duration(milliseconds: 500), () async {
-      // Riverpod migration - delegate to the Riverpod controller
-      if (mounted) {
-        await _controller.updateMobileResizeRatio(ratio);
-      }
-    });
+    _controller.scheduleMobileVideoResizeRatio(ratio);
   }
 
   // Toggle floating controls

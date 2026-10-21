@@ -184,3 +184,9 @@ source provenance instead of first-cue text matching. Preserve blank original
 cues and refresh original-text overlays even while hidden; keep external
 overlays unchanged. Run full Flutter analyzer/tests on Linux, no platform app
 builds or unnecessary Windows/macOS file-host matrix.
+CP90 R5 October 21 2026: move Editor desktop/mobile resize preference
+debounce timers into a controller-owned coordinator; reflect UI changes
+immediately and flush pending writes on route disposal without accessing a
+disposed Riverpod ref. Test timer coalescing, independent ratios, write
+ordering, and failure recovery. Linux analyzer/full Flutter suite only;
+no app builds or file-sensitive Windows/macOS matrix.
