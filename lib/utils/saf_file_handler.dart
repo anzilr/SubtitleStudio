@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
+import 'package:subtitle_studio/core/file_access/studio_picked_file_reference.dart';
 
 /// SAF (Storage Access Framework) File Handler for Android
 /// 
@@ -449,6 +450,15 @@ class SafFileInfo {
     required this.displayPath,
     this.content,
   });
+
+  /// Validate URI-only selections without reading large video data. Android
+  /// documents retain their actual grant URI; desktop keeps its native path.
+  StudioPickedFileReference pickedReference({required bool isFromSaf}) =>
+      StudioPickedFileReference.fromPicker(
+        accessLocator: uri,
+        displayPath: displayPath,
+        isFromSaf: isFromSaf,
+      );
   
   /// Get the file content as a UTF-8 string
   String get contentAsString {
@@ -479,5 +489,6 @@ class SafFileInfo {
   }
   
   @override
-  String toString() => 'SafFileInfo(uri: $uri, displayPath: $displayPath, size: ${content?.length ?? 0} bytes)';
+  String toString() =>
+      'SafFileInfo(size: ${content?.length ?? 0} bytes, hasContent: ${content != null})';
 }

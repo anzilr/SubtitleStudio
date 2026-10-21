@@ -33,6 +33,18 @@ The earlier sections of `REFACTOR_ROADMAP_V4.md` include historical "immediate n
 
 ### CP88 — Source View and file-access ownership [ACTIVE]
 
+**CP88 R8 project-settings media picker migration (October 21, 2026):**
+Audited legacy path-only picker users. Project Settings' fallback video
+selection now uses URI-only access (avoids loading an entire video into
+memory) and secondary subtitle selection persists the real Android SAF URI,
+never its synthetic display hint. URI-only video selections are typed and
+validated; subtitle extraction requires an `accessLocator`. `.msone` project
+and comment imports already use picked Android document bytes and preserve
+their existing behavior. Details and pending native scenarios:
+[R8 report](CHECKPOINT88_R8_PROJECT_SETTINGS_MEDIA_PICKERS_2026-10-21.md).
+**Android and Windows real picker/grant acceptance remains outstanding.**
+
+
 **CP88 R7 canonical import/Source View access (October 21, 2026):** New injectable [SubtitleImportFileReader](CHECKPOINT88_R7_IMPORT_AND_SOURCE_VIEW_2026-10-21.md) routes direct and selected `content://` sources through SAF and `file://`/native desktop sources through their proper adapters without confusing display hints and real locators. Home Source View now opens selected Android documents using their original URI. Original `filePath` display/persistence hints and `originalFileUri` remain compatible. [Final Flutter CI: 600 tests, analyzer no issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39621384992). **CP88 R8 remaining:** audit/deprecate remaining path-only Android picker API, project/comments picker and video document flows; native Android SAF and Windows validation is outstanding.
 
 

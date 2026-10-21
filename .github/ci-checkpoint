@@ -125,3 +125,5 @@ CP88 R7 October 21 2026: canonical SAF content URI for Home Source View route, t
 CP88 R7 final quality recheck: ensure unsupported Android-only subtitle import reader emits a failed Future (async API contract), not synchronous throw; include direct SAF, revoked grant, source identity, desktop file URI regression. Only flutter pub get, flutter analyze and flutter test in Actions; NEVER platform builds.
 
 CP88 R7 analyzer lint closure October 21: exercise fake isWindows mode with percent-escaped Windows file:// URI, verify storage reader's native path conversion, no unused-element test parameters. Gate with flutter pub get/analyze/test ONLY. Never platform builds.
+
+CP88 R8 October 21 2026: Project Settings fallback video picker must use URI-only Android SAF and persist validated locator, never load full MKV or save a synthetic display path; secondary subtitle selection likewise persists PlatformFileInfo.pickedReference.accessLocator; video extraction forbids fallback from URI to display hint. Add picker identity regressions and privacy-safe logs. Run flutter pub get, flutter analyze and flutter test ONLY. NEVER platform builds in GitHub Actions.

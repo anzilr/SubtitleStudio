@@ -41,21 +41,11 @@ extension _ProjectSettingsMediaActions on _ProjectSettingsSheetState {
 
     // Fallback for standalone callers without an Editor callback.
     try {
-      String? videoPath;
-
-      if (Platform.isAndroid) {
-        final fileInfo = await PlatformFileHandler.readFile(
-          mimeTypes: ['video/*'],
-        );
-        videoPath = fileInfo?.path;
-      } else {
-        videoPath = await FilePickerSAF.pickFile(
-          context: context,
-          title: 'Select Video File',
-          allowedExtensions: ['.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv'],
-          pickText: 'Select Video File',
-        );
-      }
+      // URI-only on Android: reading an entire MKV here can exhaust memory.
+      // The legacy SAF display path is never a usable video storage locator.
+      final videoPath = await FilePickerConvenience.pickVideoFile(
+        context: context,
+      );
 
       if (videoPath == null || videoPath.isEmpty) return;
 
@@ -91,19 +81,11 @@ extension _ProjectSettingsMediaActions on _ProjectSettingsSheetState {
           .read(editorPreferencesRepositoryProvider)
           .getVideoPath(widget.session.subtitleCollectionId);
       if (mounted) {
-        final oldPath = _videoPath;
         _setProjectSettingsState(() {
           _videoPath = savedPath;
         });
         if (kDebugMode) {
-          print('Video path loaded: $oldPath -> $savedPath');
-          if (savedPath != null) {
-            print('Video path details:');
-            print('  - Full path: $savedPath');
-            print('  - Contains extension: ${savedPath.contains('.')}');
-            print('  - Ends with slash: ${savedPath.endsWith('/') || savedPath.endsWith('\\')}');
-            print('  - Is SAF URI: ${savedPath.startsWith('content://')}');
-          }
+          debugPrint('Project Settings: video source ${savedPath == null ? 'not set' : 'loaded'}');
         }
       }
     } catch (e) {
@@ -211,7 +193,7 @@ extension _ProjectSettingsMediaActions on _ProjectSettingsSheetState {
         );
         
         if (fileInfo != null) {
-          filePath = fileInfo.path;
+          filePath = fileInfo.pickedReference.accessLocator;
           fileContent = fileInfo.contentAsString;
           fileName = fileInfo.fileName;
         }
@@ -223,9 +205,10 @@ extension _ProjectSettingsMediaActions on _ProjectSettingsSheetState {
           pickText: 'Select Subtitle File',
         );
         
-        final file = File(filePath!);
+        if (filePath == null) return; // Picker cancelled.
+        final file = File(filePath);
         fileContent = await file.readAsString();
-        fileName = file.path.split('/').last;
+        fileName = file.path.split(Platform.pathSeparator).last;
             }
 
       if (filePath != null && fileContent != null) {

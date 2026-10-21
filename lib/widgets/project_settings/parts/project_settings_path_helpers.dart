@@ -48,9 +48,6 @@ extension _ProjectSettingsPathHelpers on _ProjectSettingsSheetState {
       try {
         // Use SafPathConverter for correct SAF URI to path conversion
         final decodedPath = SafPathConverter.normalizePath(projectFilePath);
-        if (kDebugMode) {
-          print('ProjectSettings _getDisplayProjectFilePath: originalPath=$projectFilePath, correctedPath=$decodedPath');
-        }
         
         if (decodedPath != projectFilePath && 
             decodedPath.contains('/') && 
@@ -91,9 +88,6 @@ extension _ProjectSettingsPathHelpers on _ProjectSettingsSheetState {
       try {
         // Use SafPathConverter for correct SAF URI to path conversion
         final decodedPath = SafPathConverter.normalizePath(_videoPath!);
-        if (kDebugMode) {
-          print('ProjectSettings _getDisplayVideoFilePath: originalPath=$_videoPath, correctedPath=$decodedPath');
-        }
         
         // Check if the decoded path contains a filename (has an extension)
         if (decodedPath.isNotEmpty && !decodedPath.startsWith('content://')) {
@@ -101,9 +95,6 @@ extension _ProjectSettingsPathHelpers on _ProjectSettingsSheetState {
           
           // Clean up malformed paths that contain "primary:" pattern
           if (displayPath.contains('primary:')) {
-            if (kDebugMode) {
-              print('Found primary: pattern in decoded path, cleaning...');
-            }
             
             // Split by "primary:" and take everything after the last occurrence
             final parts = displayPath.split('primary:');
@@ -115,17 +106,11 @@ extension _ProjectSettingsPathHelpers on _ProjectSettingsSheetState {
                 displayPath = displayPath.substring(1);
               }
               
-              if (kDebugMode) {
-                print('Cleaned path after removing primary:: $displayPath');
-              }
             }
           }
           
           // If the cleaned path doesn't contain a filename, try to extract it from the original URI
           if (!displayPath.contains('.') || displayPath.endsWith('/') || displayPath.endsWith('\\')) {
-            if (kDebugMode) {
-              print('Path appears to be missing filename, attempting extraction from URI');
-            }
             
             // Try to extract filename from the original URI
             try {
@@ -139,9 +124,6 @@ extension _ProjectSettingsPathHelpers on _ProjectSettingsSheetState {
                 } else {
                   displayPath = '$displayPath${Platform.isWindows ? '\\' : '/'}$displayName';
                 }
-                if (kDebugMode) {
-                  print('Added filename from URI displayName: $displayPath');
-                }
               } else {
                 // Method 2: Check path segments for filename
                 if (uri.pathSegments.isNotEmpty) {
@@ -152,9 +134,6 @@ extension _ProjectSettingsPathHelpers on _ProjectSettingsSheetState {
                         displayPath = '$displayPath$filename';
                       } else {
                         displayPath = '$displayPath${Platform.isWindows ? '\\' : '/'}$filename';
-                      }
-                      if (kDebugMode) {
-                        print('Added filename from URI path segments: $displayPath');
                       }
                       break;
                     }
@@ -177,9 +156,6 @@ extension _ProjectSettingsPathHelpers on _ProjectSettingsSheetState {
       }
     }
     
-    if (kDebugMode) {
-      print('Final video display path: $displayPath');
-    }
     
     return displayPath;
   }
@@ -195,9 +171,6 @@ extension _ProjectSettingsPathHelpers on _ProjectSettingsSheetState {
       try {
         // Use SafPathConverter for correct SAF URI to path conversion
         final decodedPath = SafPathConverter.normalizePath(_secondarySubtitlePath!);
-        if (kDebugMode) {
-          print('ProjectSettings _getDisplaySecondarySubtitlePath: originalPath=$_secondarySubtitlePath, correctedPath=$decodedPath');
-        }
         
         // Check if the decoded path contains a filename (has an extension)
         if (decodedPath.isNotEmpty && !decodedPath.startsWith('content://')) {
@@ -205,9 +178,6 @@ extension _ProjectSettingsPathHelpers on _ProjectSettingsSheetState {
           
           // Clean up malformed paths that contain "primary:" pattern
           if (displayPath.contains('primary:')) {
-            if (kDebugMode) {
-              print('Found primary: pattern in decoded path, cleaning...');
-            }
             
             // Split by "primary:" and take everything after the last occurrence
             final parts = displayPath.split('primary:');
@@ -219,17 +189,11 @@ extension _ProjectSettingsPathHelpers on _ProjectSettingsSheetState {
                 displayPath = displayPath.substring(1);
               }
               
-              if (kDebugMode) {
-                print('Cleaned path after removing primary:: $displayPath');
-              }
             }
           }
           
           // If the cleaned path doesn't contain a filename, try to extract it from the original URI
           if (!displayPath.contains('.') || displayPath.endsWith('/') || displayPath.endsWith('\\')) {
-            if (kDebugMode) {
-              print('Path appears to be missing filename, attempting extraction from URI');
-            }
             
             // Try to extract filename from the original URI
             try {
@@ -243,9 +207,6 @@ extension _ProjectSettingsPathHelpers on _ProjectSettingsSheetState {
                 } else {
                   displayPath = '$displayPath${Platform.isWindows ? '\\' : '/'}$displayName';
                 }
-                if (kDebugMode) {
-                  print('Added filename from URI displayName: $displayPath');
-                }
               } else {
                 // Method 2: Check path segments for filename
                 if (uri.pathSegments.isNotEmpty) {
@@ -256,9 +217,6 @@ extension _ProjectSettingsPathHelpers on _ProjectSettingsSheetState {
                         displayPath = '$displayPath$filename';
                       } else {
                         displayPath = '$displayPath${Platform.isWindows ? '\\' : '/'}$filename';
-                      }
-                      if (kDebugMode) {
-                        print('Added filename from URI path segments: $displayPath');
                       }
                       break;
                     }
@@ -281,9 +239,6 @@ extension _ProjectSettingsPathHelpers on _ProjectSettingsSheetState {
       }
     }
     
-    if (kDebugMode) {
-      print('Final secondary subtitle display path: $displayPath');
-    }
     
     return displayPath;
   }
@@ -299,7 +254,7 @@ extension _ProjectSettingsPathHelpers on _ProjectSettingsSheetState {
       }
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('Failed to open file location for $filePath: $e');
+        debugPrint('Failed to open file location (${e.runtimeType})');
       }
       _showFileLocationErrorDialog(filePath);
     }
@@ -316,9 +271,6 @@ extension _ProjectSettingsPathHelpers on _ProjectSettingsSheetState {
         // Use SafPathConverter for correct SAF URI to path conversion
         displayPath = SafPathConverter.normalizePath(filePath);
         
-        if (kDebugMode) {
-          print('AndroidFileLocationDialog: originalPath=$filePath, correctedPath=$displayPath');
-        }
       } catch (e) {
         if (kDebugMode) {
           print('Error in AndroidFileLocationDialog path conversion: $e');
@@ -461,8 +413,8 @@ extension _ProjectSettingsPathHelpers on _ProjectSettingsSheetState {
                       const SizedBox(height: 8),
                       Text(
                         'This file is securely managed by Android\'s Storage Access Framework (SAF). '
-                        'The location shown above represents the actual file path on your device\'s storage. '
-                        'SAF ensures secure access while maintaining proper file permissions.',
+                        'The location above is a readable hint and may not be a directly accessible path. '
+                        'Android uses the selected document permission to access this file.',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Colors.blue.shade700,
                           height: 1.4,

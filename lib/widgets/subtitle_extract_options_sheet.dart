@@ -82,7 +82,7 @@ class _SubtitleExtractOptionsSheetState
       );
 
       if (videoFileInfo != null) {
-        final videoPath = videoFileInfo['uri'] ?? videoFileInfo['displayPath']!;
+        final videoPath = videoFileInfo['accessLocator']!;
         String fileName = videoFileInfo['displayName'] ?? '';
         
         // Fallback filename extraction if displayName is empty
@@ -155,7 +155,7 @@ class _SubtitleExtractOptionsSheetState
         if (subtitleTracks.isEmpty && mounted) {
           if (allSubtitleTracks.isEmpty) {
             await AppLogger.instance.warning(
-              'No subtitle tracks found in video file: $_selectedVideoPath',
+              'No subtitle tracks found in selected video',
               context: 'SubtitleExtractOptionsSheet._selectVideoFile',
             );
             SnackbarHelper.showWarning(
@@ -166,7 +166,7 @@ class _SubtitleExtractOptionsSheetState
           } else {
             // Found subtitle tracks but they're all bitmap format
             await AppLogger.instance.warning(
-              'Found ${allSubtitleTracks.length} subtitle track(s) but they are bitmap format (not extractable): $_selectedVideoPath',
+              'Found ${allSubtitleTracks.length} bitmap subtitle track(s) in selected video',
               context: 'SubtitleExtractOptionsSheet._selectVideoFile',
             );
             SnackbarHelper.showWarning(
@@ -185,7 +185,7 @@ class _SubtitleExtractOptionsSheetState
       }
     } catch (e) {
       await AppLogger.instance.error(
-        'Error selecting video: $e',
+        'Error selecting video (${e.runtimeType})',
         context: 'SubtitleExtractOptionsSheet._selectVideoFile',
       );
       if (!mounted) return;

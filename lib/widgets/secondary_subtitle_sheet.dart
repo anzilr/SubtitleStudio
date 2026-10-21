@@ -333,7 +333,7 @@ class SecondarySubtitleSheet extends ConsumerWidget {
         String pathToSave = filePath;
         if (Platform.isAndroid && safUri != null) {
           pathToSave = safUri;
-          print('Saving SAF URI for secondary subtitle: $pathToSave');
+          debugPrint('Saving document locator for secondary subtitle');
         }
         
         // Replace the preference before deleting any previous managed track.

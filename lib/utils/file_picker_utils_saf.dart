@@ -420,7 +420,16 @@ class FilePickerConvenience {
       pickText: 'Select Video',
     );
     
-    return fileInfo?.uri; // Return URI instead of display path for video files
+    if (fileInfo == null) return null;
+    try {
+      return fileInfo.pickedReference(isFromSaf: Platform.isAndroid)
+          .accessLocator;
+    } on FormatException {
+      if (context.mounted) {
+        SnackbarHelper.showError(context, 'Unable to access selected video');
+      }
+      return null;
+    }
   }
   
   /// Pick a video file with both URI and display name information
@@ -436,16 +445,28 @@ class FilePickerConvenience {
     );
     
     if (fileInfo != null) {
+      late final String locator;
+      try {
+        locator = fileInfo.pickedReference(isFromSaf: Platform.isAndroid)
+            .accessLocator;
+      } on FormatException {
+        if (context.mounted) {
+          SnackbarHelper.showError(context, 'Unable to access selected video');
+        }
+        return null;
+      }
       // Fix the display path using proper SAF URI conversion
-      final correctedPath = SafPathConverter.normalizePath(fileInfo.uri);
+      final correctedPath = Platform.isAndroid
+          ? SafPathConverter.normalizePath(locator)
+          : fileInfo.displayPath;
       
       if (kDebugMode) {
           debugPrint('FilePickerConvenience: video selected');
       }
       
       return {
-        'uri': fileInfo.uri,
-        'accessLocator': fileInfo.uri, // True storage URI, not displayPath.
+        'uri': locator,
+        'accessLocator': locator, // True storage URI, not displayPath.
         'displayPath': correctedPath, // Presentation-only legacy hint
         'displayName': fileInfo.fileName, // This extracts just the filename
       };
