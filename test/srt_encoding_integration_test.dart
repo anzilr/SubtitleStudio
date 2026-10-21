@@ -56,6 +56,82 @@ void main() {
         throwsFormatException);
   });
 
+  test('null edit uses original, explicit empty edit exports empty text', () {
+    final unedited = _entry('Unchanged');
+    final cleared = _entry('Private original')
+      ..index = 2
+      ..edited = '';
+    final changed = _entry('Before')
+      ..index = 3
+      ..edited = 'After';
+
+    final editedSrt = SrtCompiler.generateSrtContent([
+      unedited, cleared, changed,
+    ]);
+    expect(editedSrt, contains('Unchanged'));
+    expect(editedSrt, isNot(contains('Private original')));
+    expect(editedSrt, contains('After'));
+    expect(editedSrt, isNot(contains('Before')));
+    final cues = SubtitleParser.parseSrt(editedSrt);
+    expect(cues.map((cue) => cue.text), ['Unchanged', '', 'After']);
+
+    final originalSrt = SrtCompiler.generateSrtContent([
+      unedited, cleared, changed,
+    ], forceOriginal: true);
+    expect(originalSrt, contains('Private original'));
+    expect(originalSrt, contains('Before'));
+    expect(originalSrt, isNot(contains('After')));
+  });
+
+  test('desktop compilation matches the shared byte codec exactly', () async {
+    final dir = await Directory.systemTemp.createTemp('srt_compile_equiv_');
+    addTearDown(() => dir.delete(recursive: true));
+    for (final label in ['UTF-8 BOM', 'UTF-16BE BOM', 'Windows-1252']) {
+      final file = File('${dir.path}${Platform.pathSeparator}output.srt');
+      final line = _entry('Original')..edited =
+          label == 'Windows-1252' ? 'Café “new”' : 'മലയാളം 😀';
+      final collection = SubtitleCollection(
+        fileName: 'output.srt', filePath: file.path,
+        encoding: label, lines: [line],
+      );
+      await SrtCompiler.compileSrt(collection);
+      final expected = SrtCompiler.generateSrtBytes([line], encoding: label);
+      expect(await file.readAsBytes(), orderedEquals(expected), reason: label);
+      final content = SubtitleEncodingDecoder.decodeBytes(
+        expected, selectedEncoding: label.endsWith(' BOM') ? null : label);
+      expect(SubtitleParser.parseSrt(content.content).single.text,
+          line.edited, reason: label);
+    }
+  });
+
+  test('unrepresentable export leaves existing file and directories untouched',
+      () async {
+    final dir = await Directory.systemTemp.createTemp('srt_no_loss_');
+    addTearDown(() => dir.delete(recursive: true));
+    final file = File('${dir.path}${Platform.pathSeparator}existing.srt');
+    final previous = SubtitleTextCodec.encode(
+      'Old content', encoding: 'ISO-8859-1');
+    await file.writeAsBytes(previous);
+    final line = _entry('Original')..edited = 'മലയാളം';
+    final collection = SubtitleCollection(
+      fileName: 'existing.srt', filePath: file.path,
+      encoding: 'ISO-8859-1', lines: [line],
+    );
+
+    await expectLater(SrtCompiler.compileSrt(collection), throwsException);
+    expect(await file.readAsBytes(), orderedEquals(previous));
+    final missingDirectory = Directory(
+        '${dir.path}${Platform.pathSeparator}should-not-exist');
+    final missingCollection = SubtitleCollection(
+      fileName: 'missing.srt',
+      filePath: '${missingDirectory.path}${Platform.pathSeparator}missing.srt',
+      encoding: 'ISO-8859-1', lines: [line],
+    );
+    await expectLater(
+        SrtCompiler.compileSrt(missingCollection), throwsException);
+    expect(await missingDirectory.exists(), isFalse);
+  });
+
   test('file larger than 5 MiB retains final bytes and encoding',
       () async {
     final dir = await Directory.systemTemp.createTemp('srt_codec_large_');

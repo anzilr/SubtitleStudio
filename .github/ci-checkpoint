@@ -143,3 +143,10 @@ No native builds in Actions.
 CP89 R1 analyzer follow-up: use braced Dart string interpolation for the
 new Source View encoding test fixtures (otherwise adjacent Latin letters
 join identifier names). Re-run full Linux analyzer/tests, no native builds.
+
+CP89 R2 October 21 2026: SRT compilation treats null edits as original but
+explicitly empty edits as blank cues; desktop export shares strict extended
+encoder and validates bytes before touching destination or creating folders.
+Exercise edited/force-original cues, host file preservation and Isar import/edit
+charset roundtrip. Run Flutter pub get, analyze and full tests ONLY. No native
+Android, iOS, macOS, Windows, Linux or Web app builds in GitHub Actions.

@@ -3,3 +3,7 @@ behavior changed; run targeted Flutter tests and analysis on native Windows
 and macOS hosts. iOS document cases are simulated; no platform builds in CI.
 CP89 R1 fixture interpolation fix; rerun targeted Windows/macOS analyzer and
 encoding tests after the Linux analyzer reported three undefined identifiers.
+
+CP89 R2 October 21 2026: desktop SRT save and shared encoding export changed.
+Run focused Windows/macOS host Flutter analyzer and file/encoding tests, plus
+iOS simulated adapter coverage. No platform application builds in Actions.
