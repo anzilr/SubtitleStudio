@@ -123,3 +123,5 @@ CP88 R6 2026-10-21: typed StudioPickedFileReference preserves canonical SAF cont
 CP88 R7 October 21 2026: canonical SAF content URI for Home Source View route, typed SubtitleImportFileReader for raw subtitle preview/import, direct-document and revoked-grant safety, preserve legacy displayPath and originalFileUri metadata; full Flutter analyze/test only, absolutely NO platform builds in GitHub Actions.
 
 CP88 R7 final quality recheck: ensure unsupported Android-only subtitle import reader emits a failed Future (async API contract), not synchronous throw; include direct SAF, revoked grant, source identity, desktop file URI regression. Only flutter pub get, flutter analyze and flutter test in Actions; NEVER platform builds.
+
+CP88 R7 analyzer lint closure October 21: exercise fake isWindows mode with percent-escaped Windows file:// URI, verify storage reader's native path conversion, no unused-element test parameters. Gate with flutter pub get/analyze/test ONLY. Never platform builds.
