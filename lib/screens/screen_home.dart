@@ -44,7 +44,6 @@ import 'package:subtitle_studio/screens/home/widgets/session_card.dart';
 // Removed startup_permission_manager - not needed with pure SAF implementation
 import 'package:subtitle_studio/utils/file_picker_utils_saf.dart'; // File picker utilities
 import 'package:subtitle_studio/utils/saf_file_handler.dart';    // SAF file operations
-import 'package:subtitle_studio/utils/saf_path_converter.dart';  // SAF path conversion
 import '../utils/responsive_layout.dart';     // Responsive layout utilities
 import '../database/models/models.dart';     // Data models
 import '../themes/theme_switcher_button.dart'; // Theme toggle component

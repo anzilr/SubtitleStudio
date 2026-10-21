@@ -203,11 +203,10 @@ extension _HomeNavigationActions on _HomeScreenContentState {
         );
         
         if (fileInfo != null && mounted) {
-          // Fix the display path using proper SAF URI conversion
-          final correctedPath = SafPathConverter.normalizePath(fileInfo.uri);
-          
+          // Source View's filePath now uses the actual selected document.
+          // A translated /storage/... hint is not a trustworthy SAF path.
           if (kDebugMode) {
-            print('Home _handleSourceView: originalPath=${fileInfo.displayPath}, correctedPath=$correctedPath, uri=${fileInfo.uri}');
+            debugPrint('Home Source View: SAF document selected');
           }
           
           // Load file content from URI (openFile now returns URI-only for memory safety)
@@ -222,17 +221,17 @@ extension _HomeNavigationActions on _HomeScreenContentState {
                 fileContent = latin1.decode(contentBytes);
               } catch (e2) {
                 if (kDebugMode) {
-                  print('Failed to decode file content: $e2');
+                  debugPrint('Source View: decoding unavailable (${e2.runtimeType})');
                 }
               }
             }
           } catch (e) {
             if (kDebugMode) {
-              print('Failed to read file content: $e');
+              debugPrint('Source View: document read failed (${e.runtimeType})');
             }
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Failed to read file: ${e.toString()}')),
+                const SnackBar(content: Text('Unable to read selected document')),
               );
             }
             return;
@@ -243,7 +242,7 @@ extension _HomeNavigationActions on _HomeScreenContentState {
             context,
             MaterialPageRoute(
               builder: (context) => SourceViewScreen(
-                filePath: correctedPath, // Use corrected path
+                filePath: fileInfo.uri, // Authoritative document locator
                 displayName: fileInfo.fileName,
                 safUri: fileInfo.uri,
                 fileContent: fileContent, // Pass pre-loaded content
@@ -277,7 +276,7 @@ extension _HomeNavigationActions on _HomeScreenContentState {
       if (mounted) {
         SnackbarHelper.showError(context, 'Could not open this file. Please verify the file and try again.');
       }
-      await logError('Error in source view handler: $e');
+      await logError('Source View handler unavailable (${e.runtimeType})');
     }
   }
 }
