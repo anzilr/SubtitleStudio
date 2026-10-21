@@ -150,8 +150,9 @@ existing Save As interaction. Legacy path migration remains in the owning
 repository only after a successful write. No storage schema, project-history
 or mobile layout changes.
 [R2 report](CHECKPOINT90_R2_EDITOR_DIRECT_SAVE_SERVICE_2026-10-21.md).
-Linux full-suite and Windows/macOS targeted host gates are triggered for this
-file-save change; native file-provider acceptance is separate.
+**Automated acceptance:** [Linux full suite, 650 tests / clean analyzer](https://github.com/anzilr/SubtitleStudio/actions/runs/39651652550);
+[Windows and macOS, 119 targeted tests each / clean analyzers](https://github.com/anzilr/SubtitleStudio/actions/runs/39651652728).
+Native file-provider acceptance remains separate.
 
 - Identify and isolate the largest remaining mixed-responsibility Editor/Edit Line/Source View modules; decouple UI from persistence/media/filesystem operations while preserving existing Riverpod state and checkpoint behavior.
 - Prefer injectable services/coordinators, typed outcomes and widget tests. Verify source editing round trips, comment/mark preservation, secondary track fallback, keyboard and Android Back behavior.

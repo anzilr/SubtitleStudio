@@ -2,7 +2,7 @@
 
 Date: October 21, 2026
 Branch: `refactor/riverpod-architecture`
-Verification: Flutter host CI gates requested; native platform builds excluded
+Verification: Linux/Windows/macOS Flutter CI passed; no platform builds
 
 ## Change
 
@@ -47,6 +47,16 @@ This regression file was added to the opt-in Windows/macOS file-sensitive
 workflow. Linux full Flutter tests and analyzer, plus Windows/macOS targeted
 Flutter tests and analyzers, are requested through separate checkpoint markers.
 CI performs **no Android/iOS/desktop app builds**.
+
+## Accepted automated gates
+
+- [Linux full Flutter suite](https://github.com/anzilr/SubtitleStudio/actions/runs/39651652550):
+  **650 tests passed**, analyzer clean.
+- [Windows/macOS targeted host Flutter suites](https://github.com/anzilr/SubtitleStudio/actions/runs/39651652728):
+  **119 tests passed on Windows and 119 on macOS**, both analyzers clean,
+  including all eight new Editor direct-save regression tests.
+- Native Android/iOS/desktop file-provider behavior is **not** counted as
+  accepted by these automated tests.
 
 ## Remaining acceptance
 
