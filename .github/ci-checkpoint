@@ -190,3 +190,9 @@ immediately and flush pending writes on route disposal without accessing a
 disposed Riverpod ref. Test timer coalescing, independent ratios, write
 ordering, and failure recovery. Linux analyzer/full Flutter suite only;
 no app builds or file-sensitive Windows/macOS matrix.
+CP90 R6 October 21 2026: migrate Edit Line desktop/mobile resize ratios to
+the shared controller-owned preference coordinator; capture repository writers
+while the Riverpod provider is active and flush pending drag values on route
+disposal. Preserve mobile no-rebuild dragging and Editor-specific resize keys;
+verify persisted ratios with Isar integration tests. Linux analyzer/full
+Flutter suite only; no application builds in GitHub Actions.

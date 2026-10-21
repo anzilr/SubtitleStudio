@@ -97,48 +97,28 @@ extension _EditLinePreferences on EditSubtitleScreenState {
     }
   }
 
-  Future<void> _saveResizeRatio(double ratio) async {
-    if (_lastLoggedRatio == null ||
-        (ratio - _lastLoggedRatio!).abs() > 0.05) {
-      await logInfo(
-        '_saveResizeRatio called with: $ratio',
-        context: 'EditSubtitleScreen._saveResizeRatio',
-      );
-      _lastLoggedRatio = ratio;
-    }
-
+  void _saveResizeRatio(double ratio) {
     _setEditLineState(() {
       _resizeRatio = ratio;
     });
+    _editLineController.scheduleResizeRatio(ratio);
 
-    _resizeRatioSaveTimer?.cancel();
-    _resizeRatioSaveTimer = Timer(
-      const Duration(milliseconds: 300),
-      () async {
-        await _editLineController.savePreference('resizeRatio', ratio);
-      },
-    );
+    if (_lastLoggedRatio == null ||
+        (ratio - _lastLoggedRatio!).abs() > 0.05) {
+      _lastLoggedRatio = ratio;
+      unawaited(
+        logInfo(
+          '_saveResizeRatio called with: $ratio',
+          context: 'EditSubtitleScreen._saveResizeRatio',
+        ),
+      );
+    }
   }
 
   void _saveMobileResizeRatio(double ratio) {
-    _mobileResizeRatioSaveTimer?.cancel();
-    _mobileResizeRatioSaveTimer = Timer(
-      const Duration(milliseconds: 500),
-      () async {
-        try {
-          await _editLineController.savePreference(
-            'mobileVideoResizeRatio',
-            ratio,
-          );
-        } catch (e) {
-          logError(
-            'Error saving mobile resize ratio',
-            error: e,
-            context: 'EditSubtitleScreen._saveMobileResizeRatio',
-          );
-        }
-      },
-    );
+    // ResizableSplitView manages its drag frames without a parent rebuild.
+    _mobileVideoResizeRatio = ratio;
+    _editLineController.scheduleMobileVideoResizeRatio(ratio);
   }
 
   Future<void> _saveAutoResizeOnKeyboard(bool value) async {

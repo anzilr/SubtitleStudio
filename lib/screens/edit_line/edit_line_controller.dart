@@ -5,6 +5,7 @@ import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/screens/edit_line/edit_line_state.dart';
 import 'package:subtitle_studio/screens/edit_line/repositories/edit_line_repository.dart';
 import 'package:subtitle_studio/screens/edit_line/repositories/edit_line_preferences_repository.dart';
+import 'package:subtitle_studio/screens/edit/services/editor_resize_preference_coordinator.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 import 'package:subtitle_studio/widgets/video_player_widget.dart';
 import 'package:subtitle_studio/utils/subtitle_parser.dart';
@@ -89,6 +90,7 @@ class EditLineController extends Notifier<EditLineState> {
 
   bool _disposed = false;
   bool _textStreamsInitialized = false;
+  EditorResizePreferenceCoordinator? _resizePreferences;
 
   @override
   EditLineState build() {
@@ -99,7 +101,13 @@ class EditLineController extends Notifier<EditLineState> {
       _textStreamsInitialized = true;
     }
 
-    ref.onDispose(_disposeResources);
+    ref.onDispose(() {
+      final pendingPreferences = _resizePreferences;
+      if (pendingPreferences != null) {
+        unawaited(pendingPreferences.flushAndDispose());
+      }
+      _disposeResources();
+    });
 
     var initialState = EditLineState.initial(
       sessionId: config.sessionId,
@@ -725,6 +733,36 @@ class EditLineController extends Notifier<EditLineState> {
 
   Future<void> savePreference(String key, dynamic value) {
     return _repository.savePreference(key, value);
+  }
+
+  EditorResizePreferenceCoordinator get _resizePreferenceCoordinator {
+    // Capture repository writers while this provider is active. The pending
+    // futures must not read Riverpod ref after the Edit Line route closes.
+    final existing = _resizePreferences;
+    if (existing != null) return existing;
+    final repository = _repository;
+    return _resizePreferences = EditorResizePreferenceCoordinator(
+      saveDesktop: (ratio) => repository.savePreference('resizeRatio', ratio),
+      saveMobile: (ratio) =>
+          repository.savePreference('mobileVideoResizeRatio', ratio),
+      onSaveError: (error, _) => logWarning(
+        'Edit Line resize preference save failed (${error.runtimeType})',
+      ),
+    );
+  }
+
+  /// Keep drag values in Riverpod state immediately; flush any pending
+  /// preference write on the route-scoped provider's disposal.
+  void scheduleResizeRatio(double ratio) {
+    if (_disposed) return;
+    _setState(state.copyWith(resizeRatio: ratio));
+    _resizePreferenceCoordinator.scheduleDesktop(ratio);
+  }
+
+  void scheduleMobileVideoResizeRatio(double ratio) {
+    if (_disposed) return;
+    _setState(state.copyWith(mobileVideoResizeRatio: ratio));
+    _resizePreferenceCoordinator.scheduleMobile(ratio);
   }
 
   Future<void> saveColorHistory(List<Color> colors) {

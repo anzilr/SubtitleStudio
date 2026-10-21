@@ -165,14 +165,12 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
 
   // Resize ratio for desktop layout
   double _resizeRatio = 0.35;
-  Timer? _resizeRatioSaveTimer; // Timer for debouncing resize ratio saves
   double? _lastLoggedRatio; // Track last logged ratio to reduce debug noise
   bool _isResizeRatioLoaded =
       false; // Track if resize ratio has been loaded from preferences
 
   // Mobile video resize state variables
   double _mobileVideoResizeRatio = 0.4;
-  Timer? _mobileResizeRatioSaveTimer; // Timer for debouncing mobile resize ratio saves
   bool _isMobileResizeRatioLoaded = false; // Track if mobile resize ratio has been loaded from preferences
 
   // Layout preference for desktop
@@ -348,9 +346,6 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
     _timeUpdateTimer?.cancel();
     _subtitleUpdateTimer?.cancel();
     _repeatPlaybackTimer?.cancel(); // Cancel repeat playback timer
-    _resizeRatioSaveTimer?.cancel(); // Cancel resize ratio save timer
-    _mobileResizeRatioSaveTimer?.cancel(); // Cancel mobile resize ratio save timer
-
     // Dispose AI Explanation Cubit
 
     // Remove character count listeners before disposing

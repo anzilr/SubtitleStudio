@@ -135,7 +135,6 @@ extension _EditLineResponsiveLayout on EditSubtitleScreenState {
                 context: 'EditSubtitleScreen.build',
               );
               // Only save the ratio, don't trigger setState to avoid build loops
-              _mobileVideoResizeRatio = ratio;
               _saveMobileResizeRatio(ratio);
             },
             leftChild: shouldShowVideo && _selectedVideoPath != null
