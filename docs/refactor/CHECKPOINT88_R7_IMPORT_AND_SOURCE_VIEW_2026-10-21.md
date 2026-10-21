@@ -38,4 +38,4 @@ No desktop preview or CP86 waveform code is changed. This checkpoint requires **
 
 ## Quality gate
 
-Final Flutter-only CI run and exact pass count will be added after successful verification.
+[CP88 R7 final Flutter-only CI 39621384992](https://github.com/anzilr/SubtitleStudio/actions/runs/39621384992) — **SUCCESS**, October 21, 2026: **600 Flutter tests passed**, and `flutter analyze` reported **No issues found** (zero errors, warnings, informational lints). Includes seven primary source-reader cases and an additional Windows `file:///C:/...` percent-encoded URI regression. The first test run [39620120200](https://github.com/anzilr/SubtitleStudio/actions/runs/39620120200) reported 598 passing/1 failure caused by a synchronous throw in a Future API; fixed in `c2f730b`. The second run [39620599808](https://github.com/anzilr/SubtitleStudio/actions/runs/39620599808) passed 599 tests but noted one unused Windows fake parameter; the new Windows URI regression exercises it. **No platform builds** ran in Actions. Native Android SAF/desktop smoke acceptance remains outstanding.
