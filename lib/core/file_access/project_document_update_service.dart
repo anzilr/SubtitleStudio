@@ -94,7 +94,7 @@ final class ProjectDocumentUpdateService {
         try {
           final path = Uri.parse(identity.location)
               .toFilePath(windows: _storage.isWindows);
-          return _storage.writeExistingNativeFile(path, content);
+          return await _storage.writeExistingNativeFile(path, content);
         } on FormatException {
           return false;
         } on UnsupportedError {
