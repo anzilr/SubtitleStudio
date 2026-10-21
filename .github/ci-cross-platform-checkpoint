@@ -1,3 +1,5 @@
 CP89 R1 2026-10-21: file opening/Source View save and Save As encoding
 behavior changed; run targeted Flutter tests and analysis on native Windows
 and macOS hosts. iOS document cases are simulated; no platform builds in CI.
+CP89 R1 fixture interpolation fix; rerun targeted Windows/macOS analyzer and
+encoding tests after the Linux analyzer reported three undefined identifiers.

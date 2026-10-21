@@ -123,7 +123,7 @@ void main() {
 
   test('Source View Save retains UTF-8 BOM, Malayalam, and CRLF exactly',
       () async {
-    final sourceText = '$_srtHeaderമലയാളം 😀\r\n';
+    final sourceText = '${_srtHeader}മലയാളം 😀\r\n';
     final original = SubtitleTextCodec.encode(
         sourceText, encoding: 'UTF-8 BOM');
     final files = _MemorySourceFiles(original);
@@ -145,7 +145,7 @@ void main() {
 
   test('Source View Save As retains UTF-16BE BOM and original line endings',
       () async {
-    final sourceText = '$_srtHeaderمرحبا മലയാളം\r\n\r\n';
+    final sourceText = '${_srtHeader}مرحبا മലയാളം\r\n\r\n';
     final original = SubtitleTextCodec.encode(
         sourceText, encoding: 'UTF-16BE BOM');
     final files = _MemorySourceFiles(original);
@@ -160,7 +160,7 @@ void main() {
 
   test('legacy bytes require explicit encoding instead of Latin-1 guessing',
       () async {
-    final sourceText = '$_srtHeader“Café”\r\n';
+    final sourceText = '${_srtHeader}“Café”\r\n';
     final original = SubtitleTextCodec.encode(
         sourceText, encoding: 'Windows-1252');
     final files = _MemorySourceFiles(original);
@@ -180,9 +180,9 @@ void main() {
 
   test('changing charset never discards unsaved raw text', () async {
     final files = _MemorySourceFiles(
-        SubtitleTextCodec.encode('$_srtHeaderHello\n', encoding: 'UTF-8'));
+        SubtitleTextCodec.encode('${_srtHeader}Hello\n', encoding: 'UTF-8'));
     final session = await _open(files);
-    session.controller.updateRawSourceText('$_srtHeaderNew line\n');
+    session.controller.updateRawSourceText('${_srtHeader}New line\n');
     final readsBefore = files.reads;
     await session.controller.reopenWithEncoding('ISO-8859-1');
     expect(files.reads, readsBefore);
@@ -196,13 +196,13 @@ void main() {
   test('unrepresentable text cannot overwrite file or create Save As document',
       () async {
     final original = SubtitleTextCodec.encode(
-        '$_srtHeaderCafé\r\n', encoding: 'ISO-8859-1');
+        '${_srtHeader}Café\r\n', encoding: 'ISO-8859-1');
     final files = _MemorySourceFiles(original);
     final session = await _open(files);
     // Latin-1 is intentionally ambiguous. The first attempt must refuse it.
     expect(session.first.errorMessage, isNotNull);
     await session.controller.reopenWithEncoding('ISO-8859-1');
-    session.controller.updateRawSourceText('$_srtHeaderമലയാളം\r\n');
+    session.controller.updateRawSourceText('${_srtHeader}മലയാളം\r\n');
     await session.controller.saveFile();
     expect(files.lastWrite, isNull);
     expect(session.container.read(sourceViewControllerProvider).hasUnsavedChanges,
@@ -223,7 +223,7 @@ void main() {
     );
     expect(session.first.errorMessage, isNotNull);
     await session.controller.reopenWithEncoding('Windows-1251');
-    expect(session.controller.rawSourceText, '$_srtHeaderЯ\r\n');
+    expect(session.controller.rawSourceText, '${_srtHeader}Я\r\n');
     await session.controller.saveFile();
     expect(files.lastWrite, orderedEquals(original));
   });

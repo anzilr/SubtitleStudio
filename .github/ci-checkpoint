@@ -139,3 +139,7 @@ unrepresentable edits before writing. Full Linux Flutter analyze/test gate;
 Windows/macOS focused host gate requested separately via
 .github/ci-cross-platform-checkpoint for platform-sensitive edits only.
 No native builds in Actions.
+
+CP89 R1 analyzer follow-up: use braced Dart string interpolation for the
+new Source View encoding test fixtures (otherwise adjacent Latin letters
+join identifier names). Re-run full Linux analyzer/tests, no native builds.
