@@ -178,7 +178,7 @@ projection preserves blank primary cues, whitespace and line-break semantics;
 both Editor secondary-load entrypoints communicate the selected source rather
 than inferring it from parsed content. This does not alter the mobile layout,
 Isar checkpoint schema or native media player. [R4 report](CHECKPOINT90_R4_SECONDARY_SOURCE_2026-10-21.md).
-**Verification:** Linux full Flutter analyzer/tests pending. This is not a
+**Verification:** [Linux 666 Flutter tests / clean analyzer](https://github.com/anzilr/SubtitleStudio/actions/runs/39657803545). This is not a
 platform file-access change, so Windows/macOS file matrix is not requested.
 
 - Identify and isolate the largest remaining mixed-responsibility Editor/Edit Line/Source View modules; decouple UI from persistence/media/filesystem operations while preserving existing Riverpod state and checkpoint behavior.

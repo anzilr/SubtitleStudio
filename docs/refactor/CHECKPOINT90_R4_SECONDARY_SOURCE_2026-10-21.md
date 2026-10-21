@@ -2,7 +2,7 @@
 
 Date: October 21, 2026
 Branch: `refactor/riverpod-architecture`
-Verification: Linux Flutter analyzer/full suite pending
+Verification: Linux Flutter analyzer/full suite passed
 
 ## Problem and extraction
 
@@ -39,8 +39,9 @@ state change usable later by the desktop workspace.
 `test/editor_secondary_subtitle_service_test.dart` verifies blank and
 whitespace cues, timing/index preservation, legacy line-break conversion,
 hidden original refresh policy, external first-cue equality, the no-track
-state and state copy/equality semantics. The full Linux Flutter analyze/test
-workflow runs after pushing the checkpoint marker. Windows/macOS host checks
+state and state copy/equality semantics. [Linux GitHub Actions run
+39657803545](https://github.com/anzilr/SubtitleStudio/actions/runs/39657803545)
+passed **666 Flutter tests with zero analyzer issues**. Windows/macOS host checks
 are reserved for platform-sensitive file/path/save/import/encoding changes;
 no platform builds are allowed in GitHub Actions.
 
