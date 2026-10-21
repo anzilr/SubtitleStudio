@@ -162,3 +162,10 @@ CP89 R3 cleanup regression retest: remove *generated* leading/trailing newlines
 left by deleted sound-effect annotations, but preserve explicitly blank edge
 lines from the original cue. Retest complete Linux Flutter analyzer/tests;
 never build any platform application in Actions.
+
+CP90 R1 October 21 2026: extract Edit Line direct-file and Save As operations
+into injectable save service, encode strict bytes before file I/O, prevent
+SAF grant failure redirecting to legacy display hints, preserve intentionally
+empty edits on manual save and navigation autosave. Full Flutter analyze/test
+on Linux; dedicated Windows/macOS host adapter suite via separate checkpoint
+marker. No platform builds in any GitHub Actions job.

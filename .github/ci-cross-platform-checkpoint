@@ -15,3 +15,8 @@ file-access and encoding tests; iOS simulated adapters. Never platform builds.
 CP89 R3 cleanup regression retest: source-blank preservation must coexist with
 hearing-impaired annotation removal. Focused Windows/macOS Flutter tests and
 analyzer only. No app builds.
+
+CP90 R1 October 21 2026: Edit Line direct-save/Save As ownership extracted,
+original document locator and encoded-byte output enforced; verify host Flutter
+tests and analysis on Windows/macOS with simulated Android/iOS permission paths.
+No platform application builds in Actions.

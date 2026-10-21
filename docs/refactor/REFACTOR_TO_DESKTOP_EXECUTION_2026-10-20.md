@@ -121,6 +121,19 @@ still required.
 - Explicit preview/manual override where ambiguous; lossless save/load tests, including non-Latin scripts. Do not change existing saved Isar schema solely to finish encoding.
 
 ### CP90 — Editor ownership / mixed UI refactor
+
+**CP90 R1 (October 21, 2026):** Edit Line's large mixed UI/save method has
+been reduced to confirmation, feedback and metadata update. The new injectable
+`EditLineFileSaveService` prepares strictly validated encoded SRT bytes and
+routes existing writes through the shared Source View file-access adapter;
+Save As delegates to an isolated platform picker. Original Android document
+URIs never silently fall back to synthetic display paths when access is
+revoked. Manual Save and navigation autosave permit deliberately blank edited
+text, retaining the previous edited value in the checkpoint before-state.
+[R1 report](CHECKPOINT90_R1_EDIT_LINE_FILE_SAVE_SERVICE_2026-10-21.md).
+**Verification pending:** Linux full Flutter suite; targeted Windows/macOS
+host checks; native Android/iOS/desktop file-provider smoke tests.
+
 - Identify and isolate the largest remaining mixed-responsibility Editor/Edit Line/Source View modules; decouple UI from persistence/media/filesystem operations while preserving existing Riverpod state and checkpoint behavior.
 - Prefer injectable services/coordinators, typed outcomes and widget tests. Verify source editing round trips, comment/mark preservation, secondary track fallback, keyboard and Android Back behavior.
 - Keep the shared core reusable by both Flutter mobile widgets and the later desktop presentation.

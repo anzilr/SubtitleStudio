@@ -1,7 +1,5 @@
-import 'dart:io';
 import 'dart:async';
-import 'dart:convert';
-import 'package:flutter/foundation.dart';
+import 'dart:typed_data';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,10 +8,7 @@ import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/themes/studio_cue_field.dart';
 import 'package:subtitle_studio/themes/studio_design_tokens.dart';
 import 'package:subtitle_studio/themes/theme_switcher_button.dart';
-import 'package:subtitle_studio/utils/srt_compiler.dart';
 import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
-import 'package:file_picker/file_picker.dart' as fp;
-import 'package:subtitle_studio/utils/platform_file_handler.dart';
 import 'package:subtitle_studio/operations/subtitle_sync_operations.dart';
 
 import 'package:subtitle_studio/operations/subtitle_operations.dart';
@@ -54,6 +49,7 @@ import 'package:subtitle_studio/screens/edit_line/widgets/edit_line_menu.dart';
 import 'package:subtitle_studio/screens/edit_line/widgets/edit_line_placeholders.dart';
 import 'package:subtitle_studio/screens/edit_line/widgets/dictionary_sheets.dart';
 import 'package:subtitle_studio/screens/edit_line/services/ai_context_builder.dart';
+import 'package:subtitle_studio/screens/edit_line/services/edit_line_file_save_service.dart';
 import 'package:subtitle_studio/widgets/ai_explanation_sheet.dart';
 
 part 'edit_line/parts/edit_line_dialog_actions.dart';

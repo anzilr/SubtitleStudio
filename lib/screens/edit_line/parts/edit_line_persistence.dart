@@ -119,32 +119,9 @@ extension _EditLinePersistence on EditSubtitleScreenState {
         return false;
       }
 
-      // Check if the edited text is empty but there are other changes
-      if (_editedController.text.trim().isEmpty) {
-        // Allow saving if there are changes to original text or time fields
-        if (_originalController.text != _initialOriginalText ||
-            _startTimeController.text != _initialStartTime ||
-            _endTimeController.text != _initialEndTime) {
-          // There are changes to save, continue with save operation
-        } else {
-          // No changes at all and empty edited text
-          ScaffoldMessenger.of(contxt).showSnackBar(
-            SnackBar(
-              content: const Text(
-                'Cannot save empty edited text with no other changes',
-              ),
-              backgroundColor: Colors.red,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10.0),
-              ),
-              duration: const Duration(seconds: 2),
-              margin: const EdgeInsets.all(10),
-            ),
-          );
-          return false;
-        }
-      }
+      // A change from existing edited text to '' is a deliberate blank cue.
+      // _hasUnsavedChanges above already rejects no-op saves; do not reject
+      // blank edits or whitespace-only subtitle text here.
 
       // Validate time before saving - enable validation and show errors
       _updateCombinedTimeControllers(validateTime: true);
@@ -191,6 +168,7 @@ extension _EditLinePersistence on EditSubtitleScreenState {
       }
 
       try {
+        final beforeEdited = _subtitleLine!.edited;
         if (_isEditMode) {
           // In edit mode, always update edited text (even if empty, to save the change)
           _subtitleLine!.edited = _editedController.text.replaceAll(
@@ -227,8 +205,10 @@ extension _EditLinePersistence on EditSubtitleScreenState {
             ..startTime = _initialStartTime
             ..endTime = _initialEndTime
             ..original = _initialOriginalText
-            ..edited = _subtitleLine!.edited
-            ..marked = _subtitleLine!.marked;
+            ..edited = beforeEdited
+            ..marked = _subtitleLine!.marked
+            ..comment = _subtitleLine!.comment
+            ..resolved = _subtitleLine!.resolved;
           
           // Call the database function for existing lines asynchronously
           await Future.microtask(() async {
@@ -259,7 +239,7 @@ extension _EditLinePersistence on EditSubtitleScreenState {
                 ..startTime = _startTimeController.text
                 ..endTime = _endTimeController.text
                 ..original = _originalController.text
-                ..edited = _editedController.text.isEmpty ? null : _editedController.text
+                ..edited = _editedController.text
                 ..marked = _subtitleLine!.marked;
 
           // Create a copy of all lines and update the current one
@@ -332,15 +312,8 @@ extension _EditLinePersistence on EditSubtitleScreenState {
         return true;
       }
 
-      // Allow saving if there are changes to original text or time fields,
-      // even if edited text is empty
-      if (_editedController.text.trim().isEmpty &&
-          _originalController.text == _initialOriginalText &&
-          _startTimeController.text == _initialStartTime &&
-          _endTimeController.text == _initialEndTime) {
-        // No changes at all, skip saving but allow navigation
-        return true;
-      }
+      // Clearing edited text is a real edit; navigation autosave must persist
+      // the deliberate blank just like a manual save.
 
       // Validate time components - show errors if validation fails during autosave
       _updateCombinedTimeControllers(validateTime: true);
@@ -389,6 +362,7 @@ extension _EditLinePersistence on EditSubtitleScreenState {
       }
 
       try {
+        final beforeEdited = _subtitleLine!.edited;
         if (_isEditMode) {
           // In edit mode, always update edited text (even if empty, to save the change)
           _subtitleLine!.edited = _editedController.text.replaceAll(
@@ -424,8 +398,10 @@ extension _EditLinePersistence on EditSubtitleScreenState {
             ..startTime = _initialStartTime
             ..endTime = _initialEndTime
             ..original = _initialOriginalText
-            ..edited = _subtitleLine!.edited
-            ..marked = _subtitleLine!.marked;
+            ..edited = beforeEdited
+            ..marked = _subtitleLine!.marked
+            ..comment = _subtitleLine!.comment
+            ..resolved = _subtitleLine!.resolved;
           
           // Call the database function for existing lines asynchronously
           await Future.microtask(() async {
@@ -468,295 +444,107 @@ extension _EditLinePersistence on EditSubtitleScreenState {
     return false;
   }
 
-  Future<void> _performEnhancedFileSave(BuildContext contxt, List<SubtitleLine> updatedLines) async {
-    if (_subtitle == null) return;
+  /// Save to the selected original document when possible, and offer Save As
+  /// when access is unavailable. All platform I/O and charset decisions live
+  /// in the shared service; this method only presents UI and updates metadata.
+  Future<void> _performEnhancedFileSave(
+    BuildContext targetContext,
+    List<SubtitleLine> updatedLines,
+  ) async {
+    final collection = _subtitle;
+    if (collection == null) return;
 
-    // Generate SRT content
-    final srtContent = SrtCompiler.generateSrtContent(updatedLines);
-
-    // Strategy 1: Try to save using originalFileUri (SAF URI)
-    bool saveSuccessful = false;
-    String? originalFileUri = _subtitle!.originalFileUri;
-    
-    if (originalFileUri != null && originalFileUri.isNotEmpty) {
-      try {
-        if (Platform.isAndroid && originalFileUri.startsWith('content://')) {
-          // Use SAF to write to the content URI
-          final success = await PlatformFileHandler.writeFile(
-            content: srtContent,
-            filePath: originalFileUri,
-            fileName: _subtitle!.fileName,
-            mimeType: 'application/x-subrip',
-          );
-
-          if (success) {
-            saveSuccessful = true;
-            if (mounted) {
-              ScaffoldMessenger.of(contxt).showSnackBar(
-                SnackBar(
-                  content: const Text('Changes saved to database and file'),
-                  backgroundColor: Colors.green,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
-                  duration: const Duration(seconds: 2),
-                  margin: const EdgeInsets.all(10),
-                ),
-              );
-            }
-          }
-        } else {
-          // Desktop platform with regular file path
-          String? filePath = originalFileUri;
-          
-          // Check if the path is a directory or doesn't end with .srt
-          if (Directory(filePath).existsSync() || !filePath.toLowerCase().endsWith('.srt')) {
-            // Create a proper file path by combining the directory with the filename
-            String fileName = _subtitle!.fileName;
-            if (!fileName.toLowerCase().endsWith('.srt')) {
-              fileName = '$fileName.srt';
-            }
-            filePath = '$filePath/$fileName';
-          }
-
-          await File(filePath).writeAsString(srtContent);
-          saveSuccessful = true;
-          
-          if (mounted) {
-            ScaffoldMessenger.of(contxt).showSnackBar(
-              SnackBar(
-                content: const Text('Changes saved to database and file'),
-                backgroundColor: Colors.green,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
-                duration: const Duration(seconds: 2),
-                margin: const EdgeInsets.all(10),
-              ),
-            );
-          }
-        }
-      } catch (e) {
-        // Strategy 1 failed, we'll try Strategy 2
-        if (kDebugMode) {
-          logWarning(
-            'Failed to save using originalFileUri: $e',
-            context: 'EditSubtitleScreen._saveChanges',
-          );
-        }
-      }
-    }
-
-    // Strategy 2: If Strategy 1 failed, try using filePath
-    if (!saveSuccessful) {
-      String? filePath = _subtitle!.filePath;
-      
-      if (filePath!.isNotEmpty) {
-        try {
-          if (Platform.isAndroid && filePath.startsWith('content://')) {
-            // Use SAF to write to the content URI
-            final success = await PlatformFileHandler.writeFile(
-              content: srtContent,
-              filePath: filePath,
-              fileName: _subtitle!.fileName,
-              mimeType: 'application/x-subrip',
-            );
-
-            if (success) {
-              saveSuccessful = true;
-              if (mounted) {
-                ScaffoldMessenger.of(contxt).showSnackBar(
-                  SnackBar(
-                    content: const Text('Changes saved to database and file'),
-                    backgroundColor: Colors.green,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
-                    duration: const Duration(seconds: 2),
-                    margin: const EdgeInsets.all(10),
-                  ),
-                );
-              }
-            }
-          } else {
-            // Desktop platform with regular file path
-            String? filePathToUse = filePath;
-            
-            // Check if the path is a directory or doesn't end with .srt
-            if (Directory(filePathToUse).existsSync() || !filePathToUse.toLowerCase().endsWith('.srt')) {
-              // Create a proper file path by combining the directory with the filename
-              String fileName = _subtitle!.fileName;
-              if (!fileName.toLowerCase().endsWith('.srt')) {
-                fileName = '$fileName.srt';
-              }
-              filePathToUse = '$filePathToUse/$fileName';
-            }
-
-            await File(filePathToUse).writeAsString(srtContent);
-            saveSuccessful = true;
-            
-            if (mounted) {
-              ScaffoldMessenger.of(contxt).showSnackBar(
-                SnackBar(
-                  content: const Text('Changes saved to database and file'),
-                  backgroundColor: Colors.green,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
-                  duration: const Duration(seconds: 2),
-                  margin: const EdgeInsets.all(10),
-                ),
-              );
-            }
-          }
-        } catch (e) {
-          // Strategy 2 also failed
-          if (kDebugMode) {
-            logWarning(
-              'Failed to save using filePath: $e',
-              context: 'EditSubtitleScreen._saveChanges',
-            );
-          }
-        }
-      }
-    }
-
-    // Strategy 3: If both strategies failed, ask user to pick new location
-    if (!saveSuccessful) {
+    final saver = EditLineFileSaveService();
+    late final Uint8List bytes;
+    try {
+      bytes = await saver.prepareBytes(collection, updatedLines);
+    } catch (error) {
+      // No write, picker, or metadata mutation after an incompatible charset.
       if (!mounted) return;
-      
-      // Show dialog asking user to pick new save location
-      final shouldPickLocation = await _showSaveLocationDialog();
-      
-      if (shouldPickLocation == true && mounted) {
-        try {
-          String? newFilePath;
-          String? newOriginalUri;
-          
-          if (Platform.isAndroid) {
-            // Use SAF on Android
-            final fileInfo = await PlatformFileHandler.saveNewFile(
-              content: srtContent,
-              fileName: _subtitle!.fileName.endsWith('.srt') 
-                  ? _subtitle!.fileName 
-                  : '${_subtitle!.fileName}.srt',
-              mimeType: 'application/x-subrip',
-            );
-            
-            if (fileInfo != null) {
-              newFilePath = fileInfo.path;
-              newOriginalUri = fileInfo.safUri;
-              saveSuccessful = true;
-            }
-          } else if (Platform.isIOS) {
-            // iOS platform - show save file dialog with bytes parameter
-            final srtBytes = Uint8List.fromList(utf8.encode(srtContent));
-            final result = await fp.FilePicker.platform.saveFile(
-              dialogTitle: 'Save Subtitle File',
-              fileName: _subtitle!.fileName.endsWith('.srt') 
-                  ? _subtitle!.fileName 
-                  : '${_subtitle!.fileName}.srt',
-              type: fp.FileType.custom,
-              allowedExtensions: ['srt'],
-              bytes: srtBytes,
-            );
-            
-            if (result != null) {
-              newFilePath = result;
-              newOriginalUri = result;
-              saveSuccessful = true;
-            }
-          } else {
-            // Desktop platform - show save file dialog
-            final result = await fp.FilePicker.platform.saveFile(
-              dialogTitle: 'Save Subtitle File',
-              fileName: _subtitle!.fileName.endsWith('.srt') 
-                  ? _subtitle!.fileName 
-                  : '${_subtitle!.fileName}.srt',
-              type: fp.FileType.custom,
-              allowedExtensions: ['srt'],
-            );
-            
-            if (result != null) {
-              try {
-                final file = File(result);
-                await file.writeAsString(srtContent);
-                newFilePath = result;
-                newOriginalUri = result;
-                saveSuccessful = true;
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(contxt).showSnackBar(
-                    SnackBar(
-                      content: const Text('Could not write the subtitle file to that location.'),
-                      backgroundColor: Colors.orange,
-                      behavior: SnackBarBehavior.floating,
-                      duration: const Duration(seconds: 3),
-                      margin: const EdgeInsets.all(10),
-                    ),
-                  );
-                }
-              }
-            }
-          }
-          
-          // Update the subtitle collection with new paths
-          if (saveSuccessful && newFilePath != null) {
-            final updateSuccess = await _editLineController
-                .updateSubtitleSaveLocation(
-                  filePath: newFilePath,
-                  originalFileUri: newOriginalUri ?? newFilePath,
-                );
-            if (updateSuccess) {
-              // Update only the local file-location fields after persistence.
-              _subtitle!.filePath = newFilePath;
-              _subtitle!.originalFileUri = newOriginalUri ?? newFilePath;
-            }
-            
-            if (updateSuccess && mounted) {
-              ScaffoldMessenger.of(contxt).showSnackBar(
-                SnackBar(
-                  content: const Text('Changes saved to database and file (new location)'),
-                  backgroundColor: Colors.green,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
-                  duration: const Duration(seconds: 2),
-                  margin: const EdgeInsets.all(10),
-                ),
-              );
-            } else if (mounted) {
-              ScaffoldMessenger.of(contxt).showSnackBar(
-                SnackBar(
-                  content: const Text('File saved but failed to update file location in database'),
-                  backgroundColor: Colors.orange,
-                  behavior: SnackBarBehavior.floating,
-                  duration: const Duration(seconds: 3),
-                  margin: const EdgeInsets.all(10),
-                ),
-              );
-            }
-          }
-        } catch (e) {
-          if (mounted) {
-            ScaffoldMessenger.of(contxt).showSnackBar(
-              SnackBar(
-                content: const Text('Could not save the subtitle file to the new location.'),
-                backgroundColor: Colors.orange,
-                behavior: SnackBarBehavior.floating,
-                duration: const Duration(seconds: 3),
-                margin: const EdgeInsets.all(10),
-              ),
-            );
-          }
-        }
-      }
-    }
-    
-    // If all strategies failed and user didn't pick a new location
-    if (!saveSuccessful && mounted) {
-      ScaffoldMessenger.of(contxt).showSnackBar(
-        SnackBar(
-          content: const Text('File save failed - changes saved to database only'),
+      ScaffoldMessenger.of(targetContext).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'This text cannot be saved in the selected encoding. '
+            'Choose a compatible encoding in Project Settings.',
+          ),
           backgroundColor: Colors.orange,
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 3),
-          margin: const EdgeInsets.all(10),
+        ),
+      );
+      return;
+    }
+
+    bool saved = false;
+    try {
+      saved = await saver.saveExisting(collection, bytes);
+    } catch (error) {
+      logWarning(
+        'Edit Line original-file save unavailable (${error.runtimeType})',
+        context: 'EditSubtitleScreen._performEnhancedFileSave',
+      );
+    }
+    if (!mounted) return;
+
+    if (saved) {
+      ScaffoldMessenger.of(targetContext).showSnackBar(
+        const SnackBar(
+          content: Text('Changes saved to database and file'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      return;
+    }
+
+    final shouldPickLocation = await _showSaveLocationDialog();
+    if (shouldPickLocation != true || !mounted) {
+      ScaffoldMessenger.of(targetContext).showSnackBar(
+        const SnackBar(
+          content: Text('File save unavailable - changes saved to database only'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    try {
+      final location = await saver.saveAs(collection, bytes);
+      if (!mounted) return;
+      if (location == null) {
+        ScaffoldMessenger.of(targetContext).showSnackBar(
+          const SnackBar(
+            content: Text('Save As canceled - changes saved to database only'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      final updated = await _editLineController.updateSubtitleSaveLocation(
+        filePath: location.filePath,
+        originalFileUri: location.originalFileUri,
+      );
+      if (!mounted) return;
+      if (updated) {
+        collection.filePath = location.filePath;
+        collection.originalFileUri = location.originalFileUri;
+      }
+      ScaffoldMessenger.of(targetContext).showSnackBar(
+        SnackBar(
+          content: Text(updated
+              ? 'Changes saved to database and file (new location)'
+              : 'File saved, but the project location could not be updated'),
+          backgroundColor: updated ? Colors.green : Colors.orange,
+        ),
+      );
+    } catch (error) {
+      logWarning(
+        'Edit Line Save As unavailable (${error.runtimeType})',
+        context: 'EditSubtitleScreen._performEnhancedFileSave',
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(targetContext).showSnackBar(
+        const SnackBar(
+          content: Text('Could not save the subtitle file to the new location.'),
+          backgroundColor: Colors.orange,
         ),
       );
     }

@@ -68,4 +68,5 @@ jobs:
             test/subtitle_processor_hearing_impaired_test.dart \
             test/subtitle_entry_test.dart \
             test/raw_srt_document_test.dart \
-            test/srt_encoding_integration_test.dart
+            test/srt_encoding_integration_test.dart \
+            test/edit_line_file_save_service_test.dart
