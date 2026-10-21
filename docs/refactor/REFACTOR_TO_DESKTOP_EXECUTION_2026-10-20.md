@@ -33,6 +33,18 @@ The earlier sections of `REFACTOR_ROADMAP_V4.md` include historical "immediate n
 
 ### CP88 — Source View and file-access ownership [ACTIVE]
 
+**CP88 R9 cross-platform CI / file-URI compatibility (October 21, 2026):**
+Source View now decodes native `file://` locations at the I/O boundary,
+including percent-escaped Windows/POSIX paths, without modifying persisted
+identity or confusing SAF grants. Secondary subtitle file-URI conversion is
+injected/testable for Windows and POSIX. CI now exercises the full Flutter
+suite on Linux and focused file/encoding tests on actual Windows and macOS
+runners; iOS policy is verified through simulated adapters (not an iPhone
+runtime). No platform app builds run in Actions.
+[R9 report](CHECKPOINT88_R9_CROSS_PLATFORM_FILE_URI_GATE_2026-10-21.md).
+**Native Android/Windows/macOS/iOS acceptance still required.**
+
+
 **CP88 R8 project-settings media picker migration (October 21, 2026):**
 Audited legacy path-only picker users. Project Settings' fallback video
 selection now uses URI-only access (avoids loading an entire video into

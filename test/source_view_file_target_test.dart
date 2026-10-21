@@ -53,7 +53,6 @@ void main() {
 
   test('URI-based remote and opaque sources cannot use dart:io File', () {
     for (final locator in [
-      'file:///tmp/file.srt',
       'https://example.com/srt?id=token',
       'saf:unknown-source',
       'rtsp://host/track',
@@ -62,6 +61,14 @@ void main() {
       expect(access.canFallbackToLocalFile, isFalse);
       expect(access.androidDocumentUri, isNull);
     }
+  });
+
+  test('file URI is a native source only after explicit decoding', () {
+    const uri = 'file:///tmp/my%20subtitle.srt';
+    final target = SourceViewFileTarget.resolve(filePath: uri);
+    expect(target.canFallbackToLocalFile, isTrue);
+    expect(target.androidDocumentUri, isNull);
+    expect(target.source.persistedLocator, uri);
   });
 
   test('malformed or misleading SAF grant fails closed', () {

@@ -1,4 +1,4 @@
-import 'dart:io' show FileSystemException;
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -6,10 +6,12 @@ import 'package:subtitle_studio/screens/source_view/source_view_file_access.dart
 import 'package:subtitle_studio/screens/source_view/source_view_file_target.dart';
 
 class _MemoryFileOperations implements SourceViewFileOperations {
-  _MemoryFileOperations({this.isAndroid = true});
+  _MemoryFileOperations({this.isAndroid = true, this.isWindows = false});
 
   @override
   final bool isAndroid;
+  @override
+  final bool isWindows;
   final Map<String, Uint8List> local = {};
   final Map<String, Uint8List> docs = {};
   final List<String> events = [];
@@ -160,6 +162,67 @@ void main() {
     expect(ops.events, ['readNative', 'writeNative']);
     expect(() => service.createDocument(fileName: 'export.srt',
         mimeType: 'text/plain'), throwsUnsupportedError);
+  });
+
+  test('Windows file URI uses decoded native path without changing source',
+      () async {
+    const locator = 'file:///C:/Studio/My%20Subtitles/raw.srt';
+    final path = Uri.parse(locator).toFilePath(windows: true);
+    final ops = _MemoryFileOperations(isAndroid: false, isWindows: true)
+      ..local[path] = original;
+    final source = SourceViewFileTarget.resolve(filePath: locator);
+    final access = SourceViewFileAccessImpl(operations: ops);
+    expect(source.source.location, locator);
+    expect(await access.read(source), original);
+    expect(await access.write(source, changed),
+        SourceViewSaveDestination.nativeFile);
+    expect(ops.local[path], changed);
+    expect(ops.events, ['readNative', 'writeNative']);
+  });
+
+  test('macOS, Linux and sandboxed iOS file URI route through native adapter',
+      () async {
+    const locator = 'file:///private/var/mobile/My%20Subtitles/raw.srt';
+    const path = '/private/var/mobile/My Subtitles/raw.srt';
+    final ops = _MemoryFileOperations(isAndroid: false)
+      ..local[path] = original;
+    final source = SourceViewFileTarget.resolve(filePath: locator);
+    final access = SourceViewFileAccessImpl(operations: ops);
+    expect(await access.read(source), original);
+    expect(await access.write(source, changed),
+        SourceViewSaveDestination.nativeFile);
+    expect(ops.local[path], changed);
+    expect(ops.events, ['readNative', 'writeNative']);
+  });
+
+  test('non-local and malformed file URIs cannot be treated as native files',
+      () async {
+    final ops = _MemoryFileOperations(isAndroid: false);
+    final access = SourceViewFileAccessImpl(operations: ops);
+    final source = SourceViewFileTarget.resolve(
+        filePath: 'file://remote.example/private/sub.srt');
+    await expectLater(access.read(source),
+        throwsA(isA<FileSystemException>()));
+    expect(await access.write(source, changed), isNull);
+    expect(ops.events, isEmpty);
+  });
+
+  test('actual host OS reads and saves a percent-escaped file URI', () async {
+    final dir = await Directory.systemTemp.createTemp('cp88_source_uri_');
+    addTearDown(() async {
+      if (await dir.exists()) await dir.delete(recursive: true);
+    });
+    final file = File('${dir.path}${Platform.pathSeparator}my source.srt');
+    await file.writeAsBytes(original);
+    final uri = Uri.file(file.path, windows: Platform.isWindows).toString();
+    final target = SourceViewFileTarget.resolve(filePath: uri);
+    final service = SourceViewFileAccessImpl();
+    expect(await service.read(target), original);
+    expect(await service.write(target, changed),
+        SourceViewSaveDestination.nativeFile);
+    expect(await file.readAsBytes(), changed);
+    // Persistence retains the file URI, never its decoded operation path.
+    expect(target.source.location, uri);
   });
 
   test('Save As validates created documents and honors cancellation', () async {

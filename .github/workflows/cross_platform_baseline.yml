@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   quality:
-    name: Analyze and test
+    name: Linux — full Flutter analysis and tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -46,4 +46,50 @@ jobs:
           else
             echo "No committed Flutter tests found yet; skipping test execution."
           fi
+
+  platform-file-access:
+    name: ${{ matrix.os }} — file access and encoding tests
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.5"
+          channel: stable
+          cache: true
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      # These are host Flutter unit/widget tests, not Windows/macOS app builds.
+      # iOS document behavior is tested via injected adapters in this suite;
+      # genuine iOS UI/document-provider acceptance still needs a device.
+      - name: Cross-platform file access and encoding tests
+        shell: bash
+        run: |
+          flutter test -j 1 \
+            test/studio_file_identity_test.dart \
+            test/studio_picked_file_reference_test.dart \
+            test/saf_video_picker_identity_test.dart \
+            test/source_view_file_target_test.dart \
+            test/source_view_file_access_test.dart \
+            test/project_document_update_service_test.dart \
+            test/subtitle_import_file_reader_test.dart \
+            test/secondary_subtitle_document_reader_test.dart \
+            test/secondary_subtitle_storage_test.dart \
+            test/subtitle_encoding_decoder_test.dart \
+            test/subtitle_extended_encoding_service_test.dart \
+            test/srt_encoding_integration_test.dart
 

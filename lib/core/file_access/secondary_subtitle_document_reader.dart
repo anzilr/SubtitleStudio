@@ -10,6 +10,7 @@ import 'package:subtitle_studio/utils/subtitle_parser.dart';
 /// native filesystem paths. Domain and UI code should not open file locators.
 abstract class SecondarySubtitleByteSource {
   bool get isAndroid;
+  bool get isWindows;
   Future<Uint8List> readNative(String path);
   Future<Uint8List> readDocument(String uri);
 }
@@ -20,6 +21,9 @@ final class DeviceSecondarySubtitleByteSource
 
   @override
   bool get isAndroid => Platform.isAndroid;
+
+  @override
+  bool get isWindows => Platform.isWindows;
 
   @override
   Future<Uint8List> readNative(String path) => File(path).readAsBytes();
@@ -72,7 +76,7 @@ final class SecondarySubtitleDocumentReader {
       case StudioFileLocationKind.fileUri:
         final uri = Uri.parse(identity.location);
         return _bytes.readNative(
-            uri.toFilePath(windows: Platform.isWindows));
+            uri.toFilePath(windows: _bytes.isWindows));
       case StudioFileLocationKind.remoteUri:
       case StudioFileLocationKind.opaqueUri:
         throw const FileSystemException(

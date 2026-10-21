@@ -42,6 +42,7 @@ abstract class SourceViewFileAccess {
 /// SAF entry points (and their grant semantics), do not add native plugins.
 abstract class SourceViewFileOperations {
   bool get isAndroid;
+  bool get isWindows;
   Future<Uint8List?> readNative(String path);
   Future<bool> writeNative(String path, Uint8List bytes);
   Future<Uint8List?> readDocument(String uri);
@@ -60,6 +61,9 @@ final class SourceViewDeviceFileOperations implements SourceViewFileOperations {
 
   @override
   bool get isAndroid => Platform.isAndroid;
+
+  @override
+  bool get isWindows => Platform.isWindows;
 
   @override
   Future<Uint8List?> readNative(String path) async {
@@ -114,6 +118,32 @@ final class SourceViewFileAccessImpl implements SourceViewFileAccess {
 
   final SourceViewFileOperations _operations;
 
+  /// Decode file:// locations only for native I/O. The persisted source URI
+  /// and any separate SAF grant remain unchanged.
+  String? _nativePath(SourceViewFileTarget source) {
+    if (!source.canFallbackToLocalFile) return null;
+    switch (source.source.kind) {
+      case StudioFileLocationKind.nativePath:
+        return source.source.location;
+      case StudioFileLocationKind.fileUri:
+        try {
+          final uri = Uri.parse(source.source.location);
+          // A network file:// host is only meaningful as a UNC path on
+          // Windows. Never reinterpret its path as a POSIX local file.
+          if (!_operations.isWindows && uri.host.isNotEmpty) return null;
+          return uri.toFilePath(windows: _operations.isWindows);
+        } on FormatException {
+          return null;
+        } on UnsupportedError {
+          return null;
+        } on ArgumentError {
+          return null;
+        }
+      default:
+        return null;
+    }
+  }
+
   @override
   Future<Uint8List> read(SourceViewFileTarget source) async {
     final document = source.androidDocumentUri;
@@ -127,8 +157,9 @@ final class SourceViewFileAccessImpl implements SourceViewFileAccess {
       }
     }
 
-    if (source.canFallbackToLocalFile) {
-      final native = await _operations.readNative(source.source.location);
+    final nativePath = _nativePath(source);
+    if (nativePath != null) {
+      final native = await _operations.readNative(nativePath);
       if (native != null) return native;
     }
     throw const FileSystemException(
@@ -151,9 +182,10 @@ final class SourceViewFileAccessImpl implements SourceViewFileAccess {
       }
     }
 
-    if (source.canFallbackToLocalFile) {
+    final nativePath = _nativePath(source);
+    if (nativePath != null) {
       try {
-        if (await _operations.writeNative(source.source.location, bytes)) {
+        if (await _operations.writeNative(nativePath, bytes)) {
           return SourceViewSaveDestination.nativeFile;
         }
       } on FileSystemException {

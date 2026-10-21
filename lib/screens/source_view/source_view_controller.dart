@@ -190,7 +190,7 @@ class SourceViewController extends Notifier<SourceViewState> {
     } catch (e) {
       _setState(state.toError('Could not load this subtitle file.'));
       await AppLogger.instance.error(
-        'Error loading file in source view: $e',
+        'Source View file loading failed (${e.runtimeType})',
         context: 'SourceViewController._loadFileContent',
         extra: _safeLogContext,
       );

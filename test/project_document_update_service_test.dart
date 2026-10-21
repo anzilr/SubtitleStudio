@@ -84,6 +84,21 @@ void main() {
     expect(ios.calls, isEmpty);
   });
 
+  test('iOS project document update refuses native, file URI and SAF writes',
+      () async {
+    final ios = _FakeStore(isIos: true);
+    final updater = ProjectDocumentUpdateService(storage: ios);
+    for (final location in [
+      '/private/var/mobile/Documents/project.msone',
+      'file:///private/var/mobile/Documents/project.msone',
+      'content://provider.example/document/project.msone',
+    ]) {
+      expect(await updater.update(
+        projectFilePath: location, content: document), isFalse);
+    }
+    expect(ios.calls, isEmpty);
+  });
+
   test('malformed, remote and opaque locators fail without any writes',
       () async {
     final store = _FakeStore(isAndroid: true);

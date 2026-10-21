@@ -18,6 +18,9 @@ final class _FakeDocumentBytes implements SecondarySubtitleByteSource {
   bool get isAndroid => true;
 
   @override
+  bool get isWindows => false;
+
+  @override
   Future<Uint8List> readDocument(String uri) async {
     attempts.add('document');
     if (revoked) throw const FileSystemException('Document permission revoked');

@@ -6,9 +6,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:subtitle_studio/core/file_access/secondary_subtitle_document_reader.dart';
 
 final class _FakeBytes implements SecondarySubtitleByteSource {
-  _FakeBytes({this.isAndroid = true});
+  _FakeBytes({this.isAndroid = true, this.isWindows = false});
   @override
   final bool isAndroid;
+  @override
+  final bool isWindows;
   final native = <String, Uint8List>{};
   final docs = <String, Uint8List>{};
   final attempts = <String>[];
@@ -65,13 +67,51 @@ void main() {
 
   test('file URI is decoded to native path before File access', () async {
     const uri = 'file:///tmp/secondary%20subtitle.srt';
-    final decoded = Uri.parse(uri).toFilePath(windows: Platform.isWindows);
-    final fake = _FakeBytes()
+    final decoded = Uri.parse(uri).toFilePath(windows: false);
+    final fake = _FakeBytes(isAndroid: false)
       ..native[decoded] = Uint8List.fromList(utf8.encode(srt));
     final cues = await SecondarySubtitleDocumentReader(byteSource: fake)
         .readAndParse(uri);
     expect(cues.single.text, 'Hello world');
     expect(fake.attempts, ['native']);
+  });
+
+  test('Windows file URI uses Windows drive path without an Android grant',
+      () async {
+    const uri = 'file:///C:/Studio/secondary%20subtitle.srt';
+    final path = Uri.parse(uri).toFilePath(windows: true);
+    final fake = _FakeBytes(isAndroid: false, isWindows: true)
+      ..native[path] = Uint8List.fromList(utf8.encode(srt));
+    final cues = await SecondarySubtitleDocumentReader(byteSource: fake)
+        .readAndParse(uri);
+    expect(cues.single.text, 'Hello world');
+    expect(fake.attempts, ['native']);
+  });
+
+  test('iOS-style sandbox file URI reads local copy, not a SAF document',
+      () async {
+    const uri = 'file:///private/var/mobile/Documents/Subtitle%20One.srt';
+    const path = '/private/var/mobile/Documents/Subtitle One.srt';
+    final fake = _FakeBytes(isAndroid: false)
+      ..native[path] = Uint8List.fromList(utf8.encode(srt));
+    final cues = await SecondarySubtitleDocumentReader(byteSource: fake)
+        .readAndParse(uri);
+    expect(cues.single.text, 'Hello world');
+    expect(fake.attempts, ['native']);
+  });
+
+  test('host OS reads a real percent-escaped secondary-subtitle file URI',
+      () async {
+    final dir = await Directory.systemTemp.createTemp('cp88_secondary_uri_');
+    addTearDown(() async {
+      if (await dir.exists()) await dir.delete(recursive: true);
+    });
+    final file = File('${dir.path}${Platform.pathSeparator}my subtitle.srt');
+    await file.writeAsBytes(utf8.encode(srt));
+    final locator = Uri.file(file.path, windows: Platform.isWindows).toString();
+    final cues = await const SecondarySubtitleDocumentReader()
+        .readAndParse(locator);
+    expect(cues.single.text, 'Hello world');
   });
 
   test('revoked document never attempts native fallback', () async {

@@ -14,8 +14,11 @@ final class SourceViewFileTarget {
   final StudioFileIdentity source;
   final String? androidDocumentUri;
 
+  /// A local file URI is also a native source after explicit URI decoding
+  /// at the I/O boundary. A content/remote URI never becomes a fallback.
   bool get canFallbackToLocalFile =>
-      source.kind == StudioFileLocationKind.nativePath;
+      source.kind == StudioFileLocationKind.nativePath ||
+      source.kind == StudioFileLocationKind.fileUri;
 
   static SourceViewFileTarget resolve({
     required String filePath,

@@ -102,6 +102,17 @@ void main() {
     expect(access.called, ['native']);
   });
 
+  test('iOS sandboxed picker URI loads native bytes without SAF', () async {
+    const uri = 'file:///private/var/mobile/Documents/Malayalam%20sample.srt';
+    const local = '/private/var/mobile/Documents/Malayalam sample.srt';
+    final access = _FakeImportBytes(isAndroid: false)
+      ..native[local] = Uint8List.fromList([49, 10]);
+    final source = SubtitleImportFileReference.resolve(filePath: uri);
+    expect(await SubtitleImportFileReader(access: access).read(source),
+        [49, 10]);
+    expect(access.called, ['native']);
+  });
+
   test('Android source cannot be read on non Android', () async {
     final a = _FakeImportBytes(isAndroid: false);
     final ref = SubtitleImportFileReference.resolve(filePath: uri);
