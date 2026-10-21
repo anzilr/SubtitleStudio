@@ -87,6 +87,9 @@ Unit, temporary-file and Isar integration tests cover edit/clear, UTF BOMs,
 Windows-1252, and incompatible charset failures. This change is
 platform-sensitive: Linux full suite plus focused Windows/macOS Flutter checks
 are required, without application builds. [Checkpoint report](CHECKPOINT89_R2_EDITED_EXPORT_ROUNDTRIP_2026-10-21.md).
+**Verification:** [Linux 624 tests / clean analyzer](https://github.com/anzilr/SubtitleStudio/actions/runs/39640233941),
+[Windows 80 tests / clean analyzer](https://github.com/anzilr/SubtitleStudio/actions/runs/39640233399);
+macOS runner still queued at the report update.
 Native acceptance and import → editor line-ending retention remain pending.
 
 **CP89 R1 (October 21, 2026):** Raw Source View now uses the shared strict

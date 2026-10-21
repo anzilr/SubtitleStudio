@@ -44,8 +44,12 @@ removed from the edited subtitle.
   analyzer and test workflows are the validation gates for this checkpoint.
 - The previous CP89 R1 platform-sensitive run completed Windows successfully;
   its macOS job was still queued at the start of R2.
-- **Pending R2 GitHub Actions:** Linux full Flutter analyzer/tests, and focused
-  Windows/macOS analyzer/tests; no platform application builds in Actions.
+- [Linux full Flutter CI run 39640233941](https://github.com/anzilr/SubtitleStudio/actions/runs/39640233941):
+  **624 tests passed**, analyzer successful.
+- [Platform-sensitive CI run 39640233399](https://github.com/anzilr/SubtitleStudio/actions/runs/39640233399):
+  **Windows 80 tests passed**, analyzer successful. The macOS runner remained
+  **queued** at the time of this report; do not count macOS as accepted.
+- No native platform application builds were run in Actions.
 
 ## Remaining acceptance
 
