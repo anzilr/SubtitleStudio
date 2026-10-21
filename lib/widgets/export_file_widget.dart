@@ -1,25 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
 import 'package:subtitle_studio/utils/platform_check.dart';
-import 'package:subtitle_studio/utils/srt_compiler.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/utils/app_logger.dart';
 import 'package:subtitle_studio/widgets/file_replace_dialog.dart';
+import 'package:subtitle_studio/screens/edit/services/editor_export_service.dart';
 import 'package:file_picker/file_picker.dart' as fp;
 import 'dart:io';
 import 'package:subtitle_studio/services/subtitle_text_codec.dart';
 import 'package:subtitle_studio/services/subtitle_extended_encoding_service.dart';
 import 'package:subtitle_studio/widgets/subtitle_encoding_picker.dart';
-import 'dart:typed_data';
 import '../database/models/models.dart';
 
 class ExportBottomSheet extends StatefulWidget {
   final SubtitleCollection subtitle;
+  final List<SubtitleLine> lines;
   final Function onExportComplete;
 
   const ExportBottomSheet({
     super.key,
     required this.subtitle,
+    required this.lines,
     required this.onExportComplete,
   });
 
@@ -34,6 +35,8 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
   String _selectedEncoding = 'UTF-8'; // Explicit output charset/BOM.
   List<String> _availableEncodings = SubtitleTextCodec.supportedEncodings;
   bool _exportOriginalAsWell = false; // Track if original lines should be exported separately
+  bool _isExporting = false;
+  final EditorExportService _exportService = EditorExportService();
 
   @override
   void initState() {
@@ -42,8 +45,14 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
     _selectedEncoding = widget.subtitle.encoding.isEmpty
         ? 'UTF-8' : widget.subtitle.encoding;
     _fileNameController = TextEditingController(text: widget.subtitle.fileName);
-    _filePathController =
-        TextEditingController(text: widget.subtitle.filePath ?? '');
+    _filePathController = TextEditingController(
+      text: Platform.isAndroid || Platform.isIOS
+          ? ''
+          : _exportService.suggestedFolder(
+                originalFileUri: widget.subtitle.originalFileUri,
+                legacyFilePath: widget.subtitle.filePath,
+              ) ?? '',
+    );
     _customTagController = TextEditingController(text: "MSone"); // Default tag value
     _loadEncodings();
   }
@@ -75,14 +84,11 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
 
   Future<void> _pickFolder() async {
     if (!context.mounted) return;
-    
-    // Use SAF-based file picker
-    String? selectedFolder = await FilePickerConvenience.pickExportFolder(context: context);
-
-    setState(() {
-      _filePathController.text = selectedFolder!;
-    });
-    }
+    final selectedFolder = await FilePickerConvenience.pickExportFolder(
+        context: context);
+    if (!mounted || selectedFolder == null || selectedFolder.isEmpty) return;
+    setState(() => _filePathController.text = selectedFolder);
+  }
 
   Future<void> _requestStoragePermission() async {
     // On Android with SAF, no permission requests needed
@@ -98,256 +104,128 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
   }
 
   Future<void> _exportSrt() async {
-    await AppLogger.instance.info('Starting export process', context: 'ExportBottomSheet._exportSrt');
-    
+    if (_isExporting) return;
+    setState(() => _isExporting = true);
+
     try {
-      // Do not overwrite files by silently switching a missing codec.
+      await AppLogger.instance.info('Starting export process',
+          context: 'ExportBottomSheet._exportSrt');
       if (!_availableEncodings.contains(_selectedEncoding)) {
         throw UnsupportedError('The source charset is unavailable on this '
             'device. Choose a supported export encoding.');
       }
-      // Request storage permission
+      // Compile first: incompatible characters must not launch a picker,
+      // request permissions, or touch an existing user's subtitle file.
+      final plan = await _exportService.prepare(
+        lines: widget.lines,
+        encoding: _selectedEncoding,
+        requestedName: _fileNameController.text,
+        customTag: _customTagController.text,
+        originalOnly: _exportOriginalAsWell,
+      );
       await _requestStoragePermission();
+      if (!mounted) return;
 
-      final fileName = _fileNameController.text.replaceAll(".srt", "");
-      
-      // Check if filename contains .msone/.MSone/.Msone before .srt and skip custom tag
-      String customTag;
-      if (RegExp(r'\.msone(?=\.srt)|\.MSone(?=\.srt)|\.Msone(?=\.srt)', caseSensitive: false).hasMatch(_fileNameController.text)) {
-        customTag = ""; // Don't add custom tag for files already containing msone variants
-      } else {
-        customTag = _customTagController.text.trim().isEmpty ? "MSone" : _customTagController.text.trim();
-      }
-      
-      // Different handling for Android, iOS, and desktop
+      final bool exported;
       if (Platform.isAndroid) {
-        // On Android, use SAF to save files individually
-        await _exportWithSAF(fileName, customTag);
+        exported = await _exportWithSAF(plan);
       } else if (Platform.isIOS) {
-        // On iOS, use file picker with bytes
-        await _exportWithFilePicker(fileName, customTag);
+        exported = await _exportWithFilePicker(plan);
       } else {
-        // On desktop, use traditional file operations
-        await _exportTraditional(fileName, customTag);
+        exported = await _exportTraditional(plan);
       }
-
+      if (!exported || !mounted) return; // User cancelled or chose no replace.
+      widget.onExportComplete();
+      if (!mounted) return;
+      Navigator.of(context).pop();
+    } on ArgumentError {
+      if (mounted) SnackbarHelper.showError(context,
+          'Choose a valid file name and an accessible export folder.');
+    } on FormatException {
+      if (mounted) SnackbarHelper.showError(context,
+          'Subtitle text cannot be represented in this output encoding.');
+    } on UnsupportedError {
+      if (mounted) SnackbarHelper.showError(context,
+          'This encoding is unavailable. Choose another output encoding.');
     } catch (e) {
-      await AppLogger.instance.error('Export failed: $e', context: 'ExportBottomSheet._exportSrt');
+      await AppLogger.instance.error('Export failed (${e.runtimeType})',
+          context: 'ExportBottomSheet._exportSrt');
       if (context.mounted) {
-        SnackbarHelper.showError(context, 'Export failed: $e');
+        SnackbarHelper.showError(context,
+            'Could not export the subtitle file. Check the destination.');
       }
+    } finally {
+      if (mounted) setState(() => _isExporting = false);
     }
   }
 
-  Future<void> _exportWithSAF(String fileName, String customTag) async {
-    try {
-      // Compile subtitle content
-      final content = await SrtCompiler.generateSrtBytesExtended(
-        widget.subtitle.lines,
-        encoding: _selectedEncoding,
-        forceOriginal: _exportOriginalAsWell,
-      );
-      
-      // Determine filename based on export option
-      String exportFileName;
-      if (_exportOriginalAsWell) {
-        exportFileName = "$fileName.original.srt";
-      } else {
-        // Only add custom tag if it's not empty
-        if (customTag.isNotEmpty) {
-          exportFileName = "$fileName.$customTag.srt";
-        } else {
-          exportFileName = "$fileName.srt";
-        }
-      }
-      
-      // Use SAF to save the file
-      final success = await FilePickerConvenience.saveFile(
+  Future<bool> _exportWithSAF(EditorExportPlan plan) async {
+    final saved = await FilePickerConvenience.saveFile(
+      context: context,
+      bytes: plan.bytes,
+      fileName: plan.fileName,
+      mimeType: 'application/x-subrip',
+    );
+    return saved != null;
+  }
+
+  Future<bool> _exportWithFilePicker(EditorExportPlan plan) async {
+    final saved = await fp.FilePicker.platform.saveFile(
+      dialogTitle: 'Save Subtitle File',
+      fileName: plan.fileName,
+      type: fp.FileType.custom,
+      allowedExtensions: const ['srt'],
+      bytes: plan.bytes,
+    );
+    return saved != null;
+  }
+
+  Future<bool> _exportTraditional(EditorExportPlan plan) async {
+    final folder = _filePathController.text.trim();
+    if (folder.isEmpty) {
+      SnackbarHelper.showError(context, 'Please select a folder to save the file.');
+      return false;
+    }
+
+    var selectedPlan = plan;
+    var replaceExisting = false;
+    if (await _exportService.existsInFolder(folder, plan)) {
+      if (!mounted) return false;
+      String? renamedBase;
+      bool confirmedReplace = false;
+      await showFileReplaceDialog(
         context: context,
-        bytes: Uint8List.fromList(content),
-        fileName: exportFileName,
-        mimeType: 'application/x-subrip', // Proper MIME type for SRT files
+        fileName: plan.fileName,
+        existingPath: folder,
+        onRename: (newName) => renamedBase = newName,
+        onReplace: () => confirmedReplace = true,
       );
-      
-      if (success != null) {
-        await AppLogger.instance.info('Successfully exported via SAF: $success', context: 'ExportBottomSheet._exportWithSAF');
-        
-        if (context.mounted) {
-          widget.onExportComplete();
-          Navigator.of(context).pop();
-          SnackbarHelper.showSuccess(
-            context,
-            'Subtitle exported successfully to $exportFileName',
-          );
-        }
+      if (!mounted) return false;
+      if (renamedBase == null && !confirmedReplace) return false;
+      if (renamedBase != null) {
+        selectedPlan = plan.renamed(_exportService.fileNameFor(
+          requestedName: renamedBase!,
+          customTag: _customTagController.text,
+          originalOnly: _exportOriginalAsWell,
+        ));
       } else {
-        throw Exception('SAF export was cancelled or failed');
+        replaceExisting = true;
       }
-    } catch (e) {
-      await AppLogger.instance.error('SAF export failed: $e', context: 'ExportBottomSheet._exportWithSAF');
-      rethrow;
-    }
-  }
-
-  Future<void> _exportWithFilePicker(String fileName, String customTag) async {
-    try {
-      // Compile subtitle content
-      final content = await SrtCompiler.generateSrtBytesExtended(
-        widget.subtitle.lines,
-        encoding: _selectedEncoding,
-        forceOriginal: _exportOriginalAsWell,
-      );
-      
-      // Determine filename based on export option
-      String exportFileName;
-      if (_exportOriginalAsWell) {
-        exportFileName = "$fileName.original.srt";
-      } else {
-        // Only add custom tag if it's not empty
-        if (customTag.isNotEmpty) {
-          exportFileName = "$fileName.$customTag.srt";
-        } else {
-          exportFileName = "$fileName.srt";
-        }
-      }
-      
-      // Convert content to bytes for iOS file picker
-      final contentBytes = Uint8List.fromList(content);
-      
-      // Use file picker to save the file on iOS
-      final result = await fp.FilePicker.platform.saveFile(
-        dialogTitle: 'Save Subtitle File',
-        fileName: exportFileName,
-        type: fp.FileType.custom,
-        allowedExtensions: ['srt'],
-        bytes: contentBytes,
-      );
-      
-      if (result != null) {
-        await AppLogger.instance.info('Successfully exported via iOS file picker: $result', context: 'ExportBottomSheet._exportWithFilePicker');
-        
-        if (context.mounted) {
-          widget.onExportComplete();
-          Navigator.of(context).pop();
-          SnackbarHelper.showSuccess(
-            context,
-            'Subtitle exported successfully to $exportFileName',
-          );
-        }
-      } else {
-        await AppLogger.instance.info('iOS export was cancelled by user', context: 'ExportBottomSheet._exportWithFilePicker');
-      }
-    } catch (e) {
-      await AppLogger.instance.error('iOS export failed: $e', context: 'ExportBottomSheet._exportWithFilePicker');
-      rethrow;
-    }
-  }
-
-  Future<void> _exportTraditional(String fileName, String customTag) async {
-    if (_filePathController.text.isEmpty) {
-      await AppLogger.instance.warning('Export attempted without folder selection', context: 'ExportBottomSheet._exportTraditional');
-      SnackbarHelper.showError(
-        context,
-        Platform.isAndroid 
-          ? "Please tap the Save As button to select an output folder."
-          : "Please select a folder to save the file.",
-      );
-      return;
     }
 
-    try {
-      // Define file path based on export option
-      String filePath;
-      
-      if (_exportOriginalAsWell) {
-        // Export only original content with .original.srt extension
-        filePath = "${_filePathController.text}/$fileName.original.srt";
-      } else {
-        // Export edited lines with custom tag (only if not empty)
-        if (customTag.isNotEmpty) {
-          filePath = "${_filePathController.text}/$fileName.$customTag.srt";
-        } else {
-          filePath = "${_filePathController.text}/$fileName.srt";
-        }
-      }
-
-      // Handle file existence
-      final file = File(filePath);
-      if (await file.exists()) {
-        if (!context.mounted) return;
-
-        // Show the new file replace dialog
-        bool shouldContinue = false;
-        String finalFilePath = filePath;
-        
-        await showFileReplaceDialog(
-          context: context,
-          fileName: fileName,
-          existingPath: _filePathController.text,
-          onRename: (newFileName) {
-            // Update file path with new name
-            if (_exportOriginalAsWell) {
-              finalFilePath = "${_filePathController.text}/$newFileName.original.srt";
-            } else {
-              if (customTag.isNotEmpty) {
-                finalFilePath = "${_filePathController.text}/$newFileName.$customTag.srt";
-              } else {
-                finalFilePath = "${_filePathController.text}/$newFileName.srt";
-              }
-            }
-            shouldContinue = true;
-          },
-          onReplace: () {
-            // Keep original file path
-            finalFilePath = filePath;
-            shouldContinue = true;
-          },
-        );
-
-        if (!shouldContinue) {
-          return; // User cancelled
-        }
-        
-        filePath = finalFilePath;
-      }
-
-      // Create and export the subtitle file
-      final subtitle = SubtitleCollection(
-        fileName: fileName,
-        filePath: filePath,
-        encoding: _selectedEncoding,
-        lines: widget.subtitle.lines,
-      );
-
-      // Export with the appropriate option
-      await SrtCompiler.compileSrt(subtitle, forceOriginal: _exportOriginalAsWell);
-      
-      await AppLogger.instance.info('Subtitle exported successfully to: $filePath', context: 'ExportBottomSheet._exportSrt');
-      
-      if (!context.mounted) return;
-
-      if (mounted) {
-        SnackbarHelper.showSuccess(
-          context,
-          "Exported to $filePath",
-          duration: const Duration(seconds: 2),
-        );
-        widget.onExportComplete();
-        Navigator.pop(context);
-      }
-    } catch (e) {
-      await AppLogger.instance.error('Export failed: $e', context: 'ExportBottomSheet._exportSrt');
-      
-      if (!context.mounted) return;
-
-      if (mounted) {
-        SnackbarHelper.showError(
-          context,
-          "Error exporting file: $e\nPlease try a different location or check app permissions.",
-          duration: const Duration(seconds: 3),
-        );
-      }
+    final result = await _exportService.writeDesktop(
+      folder: folder,
+      plan: selectedPlan,
+      replaceExisting: replaceExisting,
+    );
+    if (result == EditorExportWriteResult.alreadyExists) {
+      // If Rename selected another existing name, it must never silently
+      // overwrite that second file without an explicit Replace confirmation.
+      if (mounted) SnackbarHelper.showError(context,
+          'That filename already exists. Choose a different name.');
+      return false;
     }
+    return true;
   }
 
   @override
@@ -655,7 +533,7 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
                     child: Container(
                       height: 50,
                       child: ElevatedButton(
-                        onPressed: _exportSrt,
+                        onPressed: _isExporting ? null : _exportSrt,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primaryColor,
                           foregroundColor: Theme.of(context).colorScheme.onPrimary,

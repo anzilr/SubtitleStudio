@@ -174,3 +174,8 @@ injectable encoded-byte writer, preserving selected charset, original SAF
 document URI, macOS bookmark scope and Save As fallback. New regressions for
 strict encoding and revoked document/bookmark. Full Flutter analyzer/test
 on Linux only; no platform application builds in GitHub Actions.
+CP90 R3 October 21 2026: Save As exporter delegates output name, strict
+encoded byte preparation, and desktop file writes to EditorExportService.
+Use live Editor/Source View lines rather than the Isar collection snapshot;
+reject filename path traversal, missing/revoked folder, implicit overwrite and
+rename collisions. Run Flutter analyzer/full tests on Linux; no app builds.

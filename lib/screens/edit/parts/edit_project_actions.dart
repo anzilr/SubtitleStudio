@@ -55,11 +55,17 @@ extension _EditProjectActions on _EditScreenState {
 
   Future<void> _handleSaveFileAs() async {
     try {
+      if (_isSourceView) {
+        await _syncSourceViewToDatabase();
+      }
       final subtitle = await _controller.loadSubtitleCollection();
 
       if (subtitle == null) {
         throw Exception('Could not find subtitle with ID: ${widget.subtitleCollectionId}');
       }
+      // The lines embedded in the Isar collection may be a stale snapshot;
+      // export the same fresh edited lines used by the main Save operation.
+      final currentLines = await _controller.loadSubtitleLines();
 
       if (context.mounted) {
         showModalBottomSheet(
@@ -75,6 +81,7 @@ extension _EditProjectActions on _EditScreenState {
               ),
               child: ExportBottomSheet(
                 subtitle: subtitle,
+                lines: currentLines,
                 onExportComplete: () {
                   SnackbarHelper.showSuccess(context, 'Export completed successfully!', duration: const Duration(seconds: 1));
                 },

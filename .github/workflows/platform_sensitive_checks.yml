@@ -70,4 +70,5 @@ jobs:
             test/raw_srt_document_test.dart \
             test/srt_encoding_integration_test.dart \
             test/edit_line_file_save_service_test.dart \
-            test/editor_direct_save_service_test.dart
+            test/editor_direct_save_service_test.dart \
+            test/editor_export_service_test.dart
