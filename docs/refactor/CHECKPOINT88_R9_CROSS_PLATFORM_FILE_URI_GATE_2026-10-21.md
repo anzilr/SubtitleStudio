@@ -48,9 +48,12 @@ build runs in GitHub Actions.
 ## Verification
 
 - Local diff whitespace: `git diff --check` passed.
-- GitHub Linux full suite: pending.
-- GitHub Windows targeted suite: pending.
-- GitHub macOS targeted suite: pending.
+- Final [GitHub Actions run 39631680679](https://github.com/anzilr/SubtitleStudio/actions/runs/39631680679)
+  on commit `a9184121591e76169a7aad7b8ef92a005e02ad2d`:
+  - Linux: **614 passed**, analyzer **No issues found**.
+  - Windows: **71 passed**, analyzer **No issues found**.
+  - macOS: **71 passed**, analyzer **No issues found**.
+  - All three jobs and the workflow: **success**.
 - Native Android, Windows desktop app, macOS desktop app and iOS device
   acceptance: pending and intentionally distinct from Flutter CI.
 

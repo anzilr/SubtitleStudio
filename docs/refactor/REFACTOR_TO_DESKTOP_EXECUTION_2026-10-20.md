@@ -42,6 +42,7 @@ suite on Linux and focused file/encoding tests on actual Windows and macOS
 runners; iOS policy is verified through simulated adapters (not an iPhone
 runtime). No platform app builds run in Actions.
 [R9 report](CHECKPOINT88_R9_CROSS_PLATFORM_FILE_URI_GATE_2026-10-21.md).
+**Final Flutter CI: [Linux 614, Windows 71, macOS 71 tests passed; all analyzers clean](https://github.com/anzilr/SubtitleStudio/actions/runs/39631680679).**
 **Native Android/Windows/macOS/iOS acceptance still required.**
 
 
