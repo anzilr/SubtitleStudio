@@ -196,3 +196,6 @@ while the Riverpod provider is active and flush pending drag values on route
 disposal. Preserve mobile no-rebuild dragging and Editor-specific resize keys;
 verify persisted ratios with Isar integration tests. Linux analyzer/full
 Flutter suite only; no application builds in GitHub Actions.
+CP90 R6 verification follow-up: remove obsolete typed-data import and unused
+test fake constructor parameter flagged by the R6 analyzer. Re-run full Linux
+Flutter analysis and tests to confirm a zero-diagnostic final checkpoint.
