@@ -87,8 +87,9 @@ hearing-impaired cleanup retains preexisting blank cues. The rules use valid
 cue headers to identify boundaries and remove only one structural separator;
 raw Source View retains byte-exact newline style. Added unit, Isar and Source
 View regressions. [R3 report](CHECKPOINT89_R3_BLANK_CUE_IMPORT_2026-10-21.md).
-**Verification pending:** Linux full and Windows/macOS focused Flutter-only
-checks; native smoke acceptance still remains.
+**Verification:** [Linux 635 tests / clean analyzer](https://github.com/anzilr/SubtitleStudio/actions/runs/39644802316),
+[Windows 104 targeted tests / clean analyzer](https://github.com/anzilr/SubtitleStudio/actions/runs/39644802337).
+macOS runner still queued; native smoke acceptance remains separate.
 
 **CP89 R2 (October 21, 2026):** Editor export now honors explicitly blank
 edited cues instead of restoring the original text, and desktop file export

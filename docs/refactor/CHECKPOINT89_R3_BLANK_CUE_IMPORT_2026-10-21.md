@@ -59,8 +59,12 @@ strict raw-SRT Save path had a third indiscriminate blank-line split.
   deleting a leading annotation left an unintended newline. The cleanup now
   removes artifact edge newlines unless the original cue had blank edge lines;
   new regression cases cover both. Verification must use the updated rerun.
-- **CP89 R3 final CI pending**. No Android/iOS/Windows/macOS/Linux app builds will
-  run in GitHub Actions.
+- [Corrected Linux full CI run 39644802316](https://github.com/anzilr/SubtitleStudio/actions/runs/39644802316):
+  **635 tests passed**, analyzer successful.
+- [Corrected platform-sensitive CI run 39644802337](https://github.com/anzilr/SubtitleStudio/actions/runs/39644802337):
+  **Windows 104 tests passed**, analyzer successful. macOS was still queued at
+  this report update, so its result is not yet accepted.
+- No Android/iOS/Windows/macOS/Linux app builds ran in GitHub Actions.
 - Generic SRT cannot unambiguously distinguish every surplus separator blank
   from an intentional leading or trailing empty text line. The rule here is
   deterministic: one blank separator, extras retained as text. The raw Source
