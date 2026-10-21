@@ -87,7 +87,9 @@ pre-decodes SAF bytes as UTF-8/Latin-1. Save As checks representability before
 creating a document. Source View controller round-trip tests cover Unicode,
 Windows code pages and lossless failure handling.
 [Checkpoint report](CHECKPOINT89_R1_SOURCE_VIEW_ENCODING_2026-10-21.md).
-**Verification in GitHub CI pending.** Windows/macOS Flutter checks now run
+**Verification:** [Linux 620 tests / clean analyzer](https://github.com/anzilr/SubtitleStudio/actions/runs/39637089640),
+[Windows 77 tests / clean analyzer](https://github.com/anzilr/SubtitleStudio/actions/runs/39637089737);
+macOS job queued at report update and not yet accepted. Windows/macOS Flutter checks now run
 only on a separate, explicitly changed platform-sensitive checkpoint marker;
 the routine Linux full-suite gate remains unchanged. Native iOS testing is
 still required.

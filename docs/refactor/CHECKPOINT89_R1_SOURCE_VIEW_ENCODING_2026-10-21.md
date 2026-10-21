@@ -43,8 +43,17 @@ Base: CP88 R9 (`27e96e91f710fa1108f921d2f292d24198b332c9`)
 ## Verification
 
 - Local `git diff --check`: passed.
-- Flutter/Dart SDK unavailable in this workspace; authoritative Linux and
-  Windows/macOS CI results to be recorded after GitHub runs.
+- Flutter/Dart SDK unavailable in this workspace; verification uses the
+  GitHub Flutter-only workflows.
+- [Linux full suite run 39637089640](https://github.com/anzilr/SubtitleStudio/actions/runs/39637089640):
+  **620 tests passed**, `flutter analyze` **No issues found**.
+- [Platform-sensitive run 39637089737](https://github.com/anzilr/SubtitleStudio/actions/runs/39637089737):
+  Windows **77 tests passed**, analyzer **No issues found**. macOS remains
+  **queued**, not accepted yet; consult the linked run for its final result.
+- The first Linux run found three adjacent string interpolation identifiers in
+  the new test file; fixed in commit `9524c230a6d7388ab1a4bf7718b3c43a857079b1`.
+- No Android, Windows, macOS, Linux or iOS native application build was run
+  in CI. Real device/desktop smoke testing is a separate task.
 
 ## Remaining CP89 work
 
