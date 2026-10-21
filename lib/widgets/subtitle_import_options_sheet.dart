@@ -4,7 +4,7 @@ import 'package:subtitle_studio/services/subtitle_text_codec.dart';
 import 'package:subtitle_studio/services/subtitle_extended_encoding_service.dart';
 import 'package:subtitle_studio/widgets/subtitle_encoding_picker.dart';
 import 'package:subtitle_studio/services/subtitle_encoding_preview.dart';
-import 'package:subtitle_studio/utils/saf_file_handler.dart';
+import 'package:subtitle_studio/core/file_access/subtitle_import_file_reader.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -42,7 +42,8 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
   bool _isLoading = false;
   String? _selectedFilePath;
   String _fileName = '';
-  String? _safUri; // Store SAF URI for Android file operations
+  String? _safUri; // Retained for existing import/database metadata
+  String? _accessLocator; // Actual source URI/path, never an SAF display hint
   Uint8List? _fileBytes; // Raw SAF / desktop / iOS bytes
   String _encodingChoice = 'Auto';
   List<String> _availableEncodings = SubtitleTextCodec.supportedEncodings;
@@ -55,6 +56,7 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
     // Initialize with pre-filled data if provided
     if (widget.initialFilePath != null) {
       _selectedFilePath = widget.initialFilePath;
+      _accessLocator = widget.originalSafUri ?? widget.initialFilePath;
       // Extract proper filename for display
       _fileName = widget.initialFileName ?? IntentHandler.getFileName(widget.initialFilePath!);
       // If we have an original SAF URI from intent, use it
@@ -84,13 +86,14 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
   /// Reuse identical raw-byte source for preview and final import.
   Future<Uint8List> _readSourceBytes() async {
     if (_fileBytes != null) return _fileBytes!;
-    if (_safUri != null && IntentHandler.isContentUri(_safUri!)) {
-      return SafFileHandler.readFileFromUri(_safUri!);
+    final filePath = _selectedFilePath;
+    if (filePath == null) {
+      throw const FormatException('Select a subtitle file first.');
     }
-    if (_selectedFilePath != null) {
-      return File(_selectedFilePath!).readAsBytes();
-    }
-    throw const FormatException('Select a subtitle file first.');
+    final selected = SubtitleImportFileReference.resolve(
+      filePath: filePath, safUri: _safUri, accessLocator: _accessLocator,
+    );
+    return const SubtitleImportFileReader().read(selected);
   }
 
   Future<void> _showEncodingPreview() async {
@@ -166,6 +169,7 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
           _selectedFilePath = subtitleData['filePath'];
           _fileName = subtitleData['fileName'] ?? '';
           _safUri = subtitleData['safUri'];
+          _accessLocator = subtitleData['accessLocator'];
           _fileBytes = subtitleData['bytes'] as Uint8List?;
           _encodingChoice = 'Auto';
           _isLoading = false;
@@ -237,19 +241,24 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
       String subtitleContent;
       String selectedEncoding = 'UTF-8';
       String displayPath = _selectedFilePath!;
-      String? contentUri = _safUri; // Use stored SAF URI
+      final source = SubtitleImportFileReference.resolve(
+        filePath: _selectedFilePath!,
+        safUri: _safUri,
+        accessLocator: _accessLocator,
+      );
+      String? contentUri = source.safUri; // Persist actual content URI
       
       // For SAF URIs, create a better display path for the database
-      if (_safUri != null && IntentHandler.isContentUri(_safUri!)) {
+      if (contentUri != null) {
         // Use SafPathConverter for correct SAF URI to path conversion
-        final safDisplayPath = SafPathConverter.normalizePath(_safUri!);
+        final safDisplayPath = SafPathConverter.normalizePath(contentUri);
         
         if (kDebugMode) {
-          print('SubtitleImportOptionsSheet: originalPath=$displayPath, correctedPath=$safDisplayPath, safUri=$_safUri');
+          debugPrint('SubtitleImportOptionsSheet: SAF source selected');
         }
         
         // Only use the SAF display path if it looks valid and includes filename
-        if (safDisplayPath != _safUri && safDisplayPath.contains('/') && 
+        if (safDisplayPath != contentUri && safDisplayPath.contains('/') && 
             (safDisplayPath.toLowerCase().endsWith('.srt') || 
              safDisplayPath.toLowerCase().endsWith('.vtt') ||
              safDisplayPath.toLowerCase().endsWith('.ass') ||
@@ -276,8 +285,14 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
           displayPath = _selectedFilePath!;
           if (_fileName.isNotEmpty && !displayPath.toLowerCase().endsWith(_fileName.toLowerCase())) {
             // If the selected path doesn't end with filename, construct it
-            final dir = File(displayPath).parent.path;
-            displayPath = '$dir${Platform.pathSeparator}$_fileName';
+            // Do not construct a native path from an opaque Android
+            // document URI. Keep the presentation hint independent.
+            if (!displayPath.startsWith('content://')) {
+              final dir = File(displayPath).parent.path;
+              displayPath = '$dir${Platform.pathSeparator}$_fileName';
+            } else {
+              displayPath = _fileName;
+            }
           }
         }
       }
