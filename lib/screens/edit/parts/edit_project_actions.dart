@@ -155,8 +155,12 @@ extension _EditProjectActions on _EditScreenState {
                 // Refresh the current view if needed
                 _setEditorState(() {});
               },
-              onSecondarySubtitlesLoaded: (secondarySubtitles) {
-                _controller.setSecondarySubtitlesLocally(secondarySubtitles);
+              onSecondarySubtitlesLoaded: (secondarySubtitles,
+                  {required bool fromOriginal}) {
+                _controller.setSecondarySubtitlesLocally(
+                  secondarySubtitles,
+                  fromOriginal: fromOriginal,
+                );
                 _videoPlayerKey.currentState
                     ?.updateSecondarySubtitles(_secondarySubtitles);
                 SnackbarHelper.showSuccess(

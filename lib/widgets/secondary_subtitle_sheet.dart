@@ -12,10 +12,12 @@ import 'package:subtitle_studio/widgets/video_player_widget.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:subtitle_studio/core/file_access/secondary_subtitle_storage.dart';
+import 'package:subtitle_studio/screens/edit/services/editor_secondary_subtitle_service.dart';
 
 class SecondarySubtitleSheet extends ConsumerWidget {
   final List<SubtitleLine> originalSubtitles;
-  final Function(List<SimpleSubtitleLine>) onSecondarySubtitlesLoaded;
+  final void Function(List<SimpleSubtitleLine>, {required bool fromOriginal})
+      onSecondarySubtitlesLoaded;
   final int subtitleCollectionId; // to persist per-collection settings
   final VideoPlayerWidgetState? videoPlayerState; // for accessing video subtitle tracks
 
@@ -339,7 +341,7 @@ class SecondarySubtitleSheet extends ConsumerWidget {
         // Replace the preference before deleting any previous managed track.
         await preferences.saveSecondarySubtitlePath(subtitleCollectionId, pathToSave);
         await preferences.setSecondaryIsOriginal(subtitleCollectionId, false);
-        onSecondarySubtitlesLoaded(parsedSubtitles);
+        onSecondarySubtitlesLoaded(parsedSubtitles, fromOriginal: false);
         if (previousPath != pathToSave) {
           try {
             await SecondarySubtitleStorage.deleteOwnedFileIfPresent(
@@ -366,21 +368,8 @@ class SecondarySubtitleSheet extends ConsumerWidget {
   }
 
   Future<void> _useOriginalText(BuildContext context, WidgetRef ref) async {
-    List<SimpleSubtitleLine> originalTextSubtitles = [];
-
-    // Create a new list with original text using SimpleSubtitleLine
-    for (var line in originalSubtitles) {
-      if (line.original.isNotEmpty) {
-        originalTextSubtitles.add(SimpleSubtitleLine(
-          index: line.index,
-          startTime: line.startTime,
-          endTime: line.endTime,
-          // Convert <br> tags back to newlines since the video player expects \n characters
-          // to convert them to <br> tags for HTML rendering
-          text: line.original.replaceAll('<br>', '\n'),
-        ));
-      }
-    }
+    final originalTextSubtitles =
+        EditorSecondarySubtitleService.fromOriginal(originalSubtitles);
 
     if (originalTextSubtitles.isNotEmpty) {
       final preferences = ref.read(editorPreferencesRepositoryProvider);
@@ -389,7 +378,7 @@ class SecondarySubtitleSheet extends ConsumerWidget {
       // Original text wins on reload even if a process dies before cleanup.
       await preferences.setSecondaryIsOriginal(subtitleCollectionId, true);
       await preferences.removeSecondarySubtitlePath(subtitleCollectionId);
-      onSecondarySubtitlesLoaded(originalTextSubtitles);
+      onSecondarySubtitlesLoaded(originalTextSubtitles, fromOriginal: true);
       try {
         await SecondarySubtitleStorage.deleteOwnedFileIfPresent(
           previousPath,
@@ -724,7 +713,7 @@ class SecondarySubtitleSheet extends ConsumerWidget {
       }
 
       // Successfully parsed subtitles
-      onSecondarySubtitlesLoaded(parsedSubtitles);
+      onSecondarySubtitlesLoaded(parsedSubtitles, fromOriginal: false);
       
       // Persist the track selection
       await ref.read(editorPreferencesRepositoryProvider).setSecondaryIsOriginal(subtitleCollectionId, false);

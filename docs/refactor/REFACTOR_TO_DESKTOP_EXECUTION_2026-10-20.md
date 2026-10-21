@@ -166,8 +166,20 @@ folder selection no longer crashes the sheet. Existing visuals and project
 serialization are unchanged.
 [R3 report](CHECKPOINT90_R3_EDITOR_EXPORT_SERVICE_2026-10-21.md).
 **Automated verification:** [Linux full suite, 661 tests / clean analyzer](https://github.com/anzilr/SubtitleStudio/actions/runs/39654883752);
-[Windows 130 targeted tests / clean analyzer, macOS queued](https://github.com/anzilr/SubtitleStudio/actions/runs/39654883751).
-The macOS result is pending runner availability; native acceptance is separate.
+[Windows and macOS 130 targeted tests each / clean analyzers](https://github.com/anzilr/SubtitleStudio/actions/runs/39654883751).
+Native acceptance is separate.
+
+**CP90 R4 (October 21, 2026):** The Editor now carries an explicit secondary
+subtitle source (`none`, `originalText` or `external`) instead of guessing from
+the first cue's text. The original-text overlay regenerates after primary
+subtitle refreshes and local changes even if hidden, while external tracks
+remain untouched even if they share the first cue's text. The shared pure
+projection preserves blank primary cues, whitespace and line-break semantics;
+both Editor secondary-load entrypoints communicate the selected source rather
+than inferring it from parsed content. This does not alter the mobile layout,
+Isar checkpoint schema or native media player. [R4 report](CHECKPOINT90_R4_SECONDARY_SOURCE_2026-10-21.md).
+**Verification:** Linux full Flutter analyzer/tests pending. This is not a
+platform file-access change, so Windows/macOS file matrix is not requested.
 
 - Identify and isolate the largest remaining mixed-responsibility Editor/Edit Line/Source View modules; decouple UI from persistence/media/filesystem operations while preserving existing Riverpod state and checkpoint behavior.
 - Prefer injectable services/coordinators, typed outcomes and widget tests. Verify source editing round trips, comment/mark preservation, secondary track fallback, keyboard and Android Back behavior.

@@ -219,8 +219,12 @@ extension _EditMenuActions on _EditScreenState {
               originalSubtitles: subtitleLines,
               subtitleCollectionId: widget.subtitleCollectionId,
               videoPlayerState: _videoPlayerKey.currentState,
-              onSecondarySubtitlesLoaded: (secondarySubtitles) {
-                _controller.setSecondarySubtitlesLocally(secondarySubtitles);
+              onSecondarySubtitlesLoaded: (secondarySubtitles,
+                  {required bool fromOriginal}) {
+                _controller.setSecondarySubtitlesLocally(
+                  secondarySubtitles,
+                  fromOriginal: fromOriginal,
+                );
                 _videoPlayerKey.currentState
                     ?.updateSecondarySubtitles(_secondarySubtitles);
                 SnackbarHelper.showSuccess(

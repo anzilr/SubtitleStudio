@@ -179,3 +179,8 @@ encoded byte preparation, and desktop file writes to EditorExportService.
 Use live Editor/Source View lines rather than the Isar collection snapshot;
 reject filename path traversal, missing/revoked folder, implicit overwrite and
 rename collisions. Run Flutter analyzer/full tests on Linux; no app builds.
+CP90 R4 October 21 2026: secondary subtitle projection now uses explicit
+source provenance instead of first-cue text matching. Preserve blank original
+cues and refresh original-text overlays even while hidden; keep external
+overlays unchanged. Run full Flutter analyzer/tests on Linux, no platform app
+builds or unnecessary Windows/macOS file-host matrix.

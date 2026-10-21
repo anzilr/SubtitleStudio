@@ -4,6 +4,7 @@ import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/widgets/video_player_widget.dart'; // For Subtitle
 import 'package:subtitle_studio/utils/subtitle_parser.dart'; // For SimpleSubtitleLine
 import 'package:subtitle_studio/screens/edit/models/subtitle_entry.dart';
+import 'package:subtitle_studio/screens/edit/services/editor_secondary_subtitle_service.dart';
 
 /// Immutable state model for the EditScreen
 /// 
@@ -32,6 +33,7 @@ class EditState extends Equatable {
   final List<Subtitle> secondarySubtitles;
   final List<SimpleSubtitleLine> originalSecondarySubtitles;
   final bool showSecondarySubtitles;
+  final EditorSecondarySubtitleSource secondarySubtitleSource;
   
   // UI state - highlighting and navigation
   final int? highlightedIndex;
@@ -76,6 +78,7 @@ class EditState extends Equatable {
     this.secondarySubtitles = const [],
     this.originalSecondarySubtitles = const [],
     this.showSecondarySubtitles = true,
+    this.secondarySubtitleSource = EditorSecondarySubtitleSource.none,
     this.highlightedIndex,
     this.expandedCards = const {},
     this.isSelectionMode = false,
@@ -120,6 +123,7 @@ class EditState extends Equatable {
     List<Subtitle>? secondarySubtitles,
     List<SimpleSubtitleLine>? originalSecondarySubtitles,
     bool? showSecondarySubtitles,
+    EditorSecondarySubtitleSource? secondarySubtitleSource,
     int? highlightedIndex,
     bool clearHighlightedIndex = false,
     Map<int, bool>? expandedCards,
@@ -157,6 +161,8 @@ class EditState extends Equatable {
       secondarySubtitles: secondarySubtitles ?? this.secondarySubtitles,
       originalSecondarySubtitles: originalSecondarySubtitles ?? this.originalSecondarySubtitles,
       showSecondarySubtitles: showSecondarySubtitles ?? this.showSecondarySubtitles,
+      secondarySubtitleSource:
+          secondarySubtitleSource ?? this.secondarySubtitleSource,
       highlightedIndex: clearHighlightedIndex
           ? null
           : (highlightedIndex ?? this.highlightedIndex),
@@ -234,6 +240,7 @@ class EditState extends Equatable {
         secondarySubtitles,
         originalSecondarySubtitles,
         showSecondarySubtitles,
+        secondarySubtitleSource,
         highlightedIndex,
         expandedCards,
         isSelectionMode,

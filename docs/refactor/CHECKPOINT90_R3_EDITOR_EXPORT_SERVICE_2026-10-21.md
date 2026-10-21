@@ -2,7 +2,7 @@
 
 Date: October 21, 2026
 Branch: `refactor/riverpod-architecture`
-Verification: Linux/Windows Flutter gates passed; macOS host job queued
+Verification: Linux/Windows/macOS Flutter gates passed
 
 ## Findings and correction
 
@@ -55,8 +55,7 @@ Actions must **not build Android, Windows, Linux, macOS or iOS apps**.
 - [Linux full suite](https://github.com/anzilr/SubtitleStudio/actions/runs/39654883752):
   **661 Flutter tests passed**, analyzer clean.
 - [Windows/macOS targeted workflow](https://github.com/anzilr/SubtitleStudio/actions/runs/39654883751):
-  Windows **130 targeted tests passed**, analyzer clean. macOS job was still
-  queued at this documentation update and is not counted as verified.
+  Windows and macOS each **130 targeted tests passed**, analyzers clean.
 - These are Flutter host tests only, not application builds or native file
   provider/sandbox integration acceptance.
 

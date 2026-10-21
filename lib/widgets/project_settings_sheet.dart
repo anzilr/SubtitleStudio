@@ -12,6 +12,7 @@ import 'package:subtitle_studio/utils/platform_file_handler.dart';
 import 'package:subtitle_studio/utils/saf_path_converter.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/utils/subtitle_parser.dart';
+import 'package:subtitle_studio/screens/edit/services/editor_secondary_subtitle_service.dart';
 import 'package:subtitle_studio/services/subtitle_text_codec.dart';
 import 'package:subtitle_studio/services/subtitle_extended_encoding_service.dart';
 import 'package:subtitle_studio/widgets/project_settings/project_encoding_selector.dart';
@@ -28,7 +29,8 @@ class ProjectSettingsSheet extends ConsumerStatefulWidget {
   final Session session;
   final SubtitleCollection subtitleCollection;
   final VoidCallback onProjectUpdated;
-  final Function(List<SimpleSubtitleLine>)? onSecondarySubtitlesLoaded;
+  final void Function(List<SimpleSubtitleLine>, {required bool fromOriginal})?
+      onSecondarySubtitlesLoaded;
   final Function()? onSecondarySubtitlesCleared;
   final Future<void> Function()? onSaveProject;
   final Future<void> Function()? onLoadVideo;

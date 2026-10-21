@@ -288,7 +288,8 @@ extension _EditLineVideoActions on EditSubtitleScreenState {
           originalSubtitles: originalSubtitles,
           subtitleCollectionId: widget.subtitleId,
           videoPlayerState: _videoPlayerKey.currentState,
-          onSecondarySubtitlesLoaded: (secondarySubtitles) {
+          onSecondarySubtitlesLoaded: (secondarySubtitles,
+              {required bool fromOriginal}) {
             _setEditLineState(() {
               _secondarySubtitles = secondarySubtitles;
               _showSecondarySubtitles = true;

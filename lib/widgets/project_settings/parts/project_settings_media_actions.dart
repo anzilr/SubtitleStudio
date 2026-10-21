@@ -222,7 +222,10 @@ extension _ProjectSettingsMediaActions on _ProjectSettingsSheetState {
         }
 
         if (parsedSubtitles.isNotEmpty) {
-          widget.onSecondarySubtitlesLoaded?.call(parsedSubtitles);
+          widget.onSecondarySubtitlesLoaded?.call(
+            parsedSubtitles,
+            fromOriginal: false,
+          );
           await ref.read(editorPreferencesRepositoryProvider).saveSecondarySubtitlePath(
             widget.session.subtitleCollectionId,
             filePath,
@@ -266,21 +269,15 @@ extension _ProjectSettingsMediaActions on _ProjectSettingsSheetState {
   }
 
   Future<void> _useOriginalAsSecondary() async {
-    List<SimpleSubtitleLine> originalTextSubtitles = [];
-
-    for (var line in widget.subtitleCollection.lines) {
-      if (line.original.isNotEmpty) {
-        originalTextSubtitles.add(SimpleSubtitleLine(
-          index: line.index,
-          startTime: line.startTime,
-          endTime: line.endTime,
-          text: line.original.replaceAll('<br>', '\n'),
-        ));
-      }
-    }
+    final originalTextSubtitles = EditorSecondarySubtitleService.fromOriginal(
+      widget.subtitleCollection.lines,
+    );
 
     if (originalTextSubtitles.isNotEmpty) {
-      widget.onSecondarySubtitlesLoaded?.call(originalTextSubtitles);
+      widget.onSecondarySubtitlesLoaded?.call(
+        originalTextSubtitles,
+        fromOriginal: true,
+      );
       await ref.read(editorPreferencesRepositoryProvider).setSecondaryIsOriginal(
         widget.session.subtitleCollectionId,
         true,

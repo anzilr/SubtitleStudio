@@ -11,6 +11,7 @@ import 'package:subtitle_studio/utils/subtitle_index.dart';
 import 'package:subtitle_studio/widgets/video_player_widget.dart';
 import 'package:subtitle_studio/utils/subtitle_parser.dart';
 import 'package:subtitle_studio/screens/edit/models/subtitle_entry.dart';
+import 'package:subtitle_studio/screens/edit/services/editor_secondary_subtitle_service.dart';
 
 /// Inputs that scope one Editor controller instance.
 class EditConfiguration {
@@ -114,22 +115,18 @@ class EditController extends Notifier<EditState> {
       // Load secondary subtitles if configured
       List<Subtitle> secondarySubtitles = [];
       List<SimpleSubtitleLine> originalSecondarySubtitles = [];
+      var secondarySubtitleSource = EditorSecondarySubtitleSource.none;
       final secondaryData = await _videoRepo.loadSavedSecondarySubtitle(subtitleCollectionId);
       
       if (secondaryData != null) {
         if (secondaryData.useOriginal) {
-          // Use original text as secondary
-          originalSecondarySubtitles = lines.map((line) {
-            return SimpleSubtitleLine(
-              index: line.index,
-              startTime: line.startTime,
-              endTime: line.endTime,
-              text: line.original,
-            );
-          }).toList();
+          secondarySubtitleSource = EditorSecondarySubtitleSource.originalText;
+          originalSecondarySubtitles =
+              EditorSecondarySubtitleService.fromOriginal(lines);
           secondarySubtitles = _subtitleRepo.generateSimpleSubtitles(originalSecondarySubtitles);
         } else if (secondaryData.subtitles != null) {
           // Use external subtitle file
+          secondarySubtitleSource = EditorSecondarySubtitleSource.external;
           originalSecondarySubtitles = secondaryData.subtitles!;
           secondarySubtitles = _subtitleRepo.generateSimpleSubtitles(originalSecondarySubtitles);
         }
@@ -161,6 +158,7 @@ class EditController extends Notifier<EditState> {
         isVideoLoaded: isVideoLoaded,
         secondarySubtitles: secondarySubtitles,
         originalSecondarySubtitles: originalSecondarySubtitles,
+        secondarySubtitleSource: secondarySubtitleSource,
         highlightedIndex: cueNumberToListIndex(lastEditedIndex),
         floatingControlsEnabled: floatingControlsEnabled,
         isMsoneEnabled: isMsoneEnabled,
@@ -196,12 +194,7 @@ class EditController extends Notifier<EditState> {
   /// while those operations are migrated incrementally.
   void replaceSubtitleLinesLocally(List<SubtitleLine> lines) {
     final immutableLines = List<SubtitleLine>.unmodifiable(lines);
-    _setState(
-      state.copyWith(
-        subtitleLines: immutableLines,
-        generatedSubtitles: _subtitleRepo.generateSubtitles(immutableLines),
-      ),
-    );
+    _setPrimaryLines(immutableLines);
   }
 
   /// Replace one in-memory subtitle line without writing to persistence.
@@ -215,12 +208,24 @@ class EditController extends Notifier<EditState> {
 
     final updatedLines = List<SubtitleLine>.from(state.subtitleLines);
     updatedLines[index] = line;
-    _setState(
-      state.copyWith(
-        subtitleLines: updatedLines,
-        generatedSubtitles: _subtitleRepo.generateSubtitles(updatedLines),
-      ),
+    _setPrimaryLines(updatedLines);
+  }
+
+  void _setPrimaryLines(List<SubtitleLine> lines) {
+    // Keep the original-text overlay in sync even while it is hidden.
+    // External tracks never derive their contents from the primary cue list.
+    final refreshedOriginal = EditorSecondarySubtitleService.refreshedOriginal(
+      source: state.secondarySubtitleSource,
+      primaryLines: lines,
     );
+    _setState(state.copyWith(
+      subtitleLines: lines,
+      generatedSubtitles: _subtitleRepo.generateSubtitles(lines),
+      originalSecondarySubtitles: refreshedOriginal,
+      secondarySubtitles: refreshedOriginal == null
+          ? null
+          : _subtitleRepo.generateSimpleSubtitles(refreshedOriginal),
+    ));
   }
 
   /// Refresh subtitle lines from database
@@ -232,38 +237,7 @@ class EditController extends Notifier<EditState> {
       logInfo('EditController: Refreshing subtitle lines');
 
       final lines = await _subtitleRepo.fetchLines(subtitleCollectionId);
-      final generatedSubtitles = _subtitleRepo.generateSubtitles(lines);
-
-      // Update secondary subtitles if using original text
-      List<Subtitle> secondarySubtitles = state.secondarySubtitles;
-      List<SimpleSubtitleLine> originalSecondarySubtitles = state.originalSecondarySubtitles;
-      
-      if (state.showSecondarySubtitles && originalSecondarySubtitles.isNotEmpty) {
-        // Check if using original text (by comparing first line)
-        final isUsingOriginal = lines.isNotEmpty && 
-            originalSecondarySubtitles.isNotEmpty &&
-            originalSecondarySubtitles.first.text == lines.first.original;
-        
-        if (isUsingOriginal) {
-          // Regenerate secondary from updated original text
-          originalSecondarySubtitles = lines.map((line) {
-            return SimpleSubtitleLine(
-              index: line.index,
-              startTime: line.startTime,
-              endTime: line.endTime,
-              text: line.original,
-            );
-          }).toList();
-          secondarySubtitles = _subtitleRepo.generateSimpleSubtitles(originalSecondarySubtitles);
-        }
-      }
-
-      _setState(state.copyWith(
-        subtitleLines: lines,
-        generatedSubtitles: generatedSubtitles,
-        secondarySubtitles: secondarySubtitles,
-        originalSecondarySubtitles: originalSecondarySubtitles,
-      ));
+      _setPrimaryLines(lines);
 
       logInfo('EditController: Refreshed ${lines.length} subtitle lines');
     } catch (e, stackTrace) {
@@ -845,6 +819,7 @@ class EditController extends Notifier<EditState> {
   void setSecondarySubtitlesLocally(
     List<SimpleSubtitleLine> originalSubtitles, {
     bool show = true,
+    bool fromOriginal = false,
   }) {
     final immutableOriginals =
         List<SimpleSubtitleLine>.unmodifiable(originalSubtitles);
@@ -856,6 +831,9 @@ class EditController extends Notifier<EditState> {
         originalSecondarySubtitles: immutableOriginals,
         secondarySubtitles: generated,
         showSecondarySubtitles: show,
+        secondarySubtitleSource: fromOriginal
+            ? EditorSecondarySubtitleSource.originalText
+            : EditorSecondarySubtitleSource.external,
       ),
     );
   }
@@ -867,6 +845,7 @@ class EditController extends Notifier<EditState> {
         originalSecondarySubtitles: const [],
         secondarySubtitles: const [],
         showSecondarySubtitles: false,
+        secondarySubtitleSource: EditorSecondarySubtitleSource.none,
       ),
     );
   }
@@ -889,6 +868,7 @@ class EditController extends Notifier<EditState> {
         originalSecondarySubtitles: secondaryData.subtitles,
         secondarySubtitles: secondarySubtitles,
         showSecondarySubtitles: true,
+        secondarySubtitleSource: EditorSecondarySubtitleSource.external,
       ));
 
       logInfo('EditController: Secondary subtitle loaded from file');
@@ -913,14 +893,8 @@ class EditController extends Notifier<EditState> {
 
       await _videoRepo.setUseOriginalAsSecondary(subtitleCollectionId, true);
 
-      final originalSecondarySubtitles = state.subtitleLines.map((line) {
-        return SimpleSubtitleLine(
-          index: line.index,
-          startTime: line.startTime,
-          endTime: line.endTime,
-          text: line.original,
-        );
-      }).toList();
+      final originalSecondarySubtitles =
+          EditorSecondarySubtitleService.fromOriginal(state.subtitleLines);
 
       final secondarySubtitles = _subtitleRepo.generateSimpleSubtitles(
         originalSecondarySubtitles,
@@ -930,6 +904,7 @@ class EditController extends Notifier<EditState> {
         originalSecondarySubtitles: originalSecondarySubtitles,
         secondarySubtitles: secondarySubtitles,
         showSecondarySubtitles: true,
+        secondarySubtitleSource: EditorSecondarySubtitleSource.originalText,
       ));
 
       logInfo('EditController: Original text set as secondary subtitle');
@@ -958,6 +933,7 @@ class EditController extends Notifier<EditState> {
         originalSecondarySubtitles: [],
         secondarySubtitles: [],
         showSecondarySubtitles: false,
+        secondarySubtitleSource: EditorSecondarySubtitleSource.none,
       ));
 
       logInfo('EditController: Secondary subtitles cleared');
