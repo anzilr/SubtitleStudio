@@ -33,8 +33,8 @@ final class DeviceProjectDocumentUpdateStorage
     final file = File(path);
     // Updating a missing original must not silently create a new .msone
     // document. Let the caller offer Save As instead.
-    if (!await file.exists()) return false;
     try {
+      if (!await file.exists()) return false;
       await file.writeAsString(content);
       return true;
     } on FileSystemException {
@@ -47,7 +47,9 @@ final class DeviceProjectDocumentUpdateStorage
     try {
       return await SafFileHandler.writeSafUri(
           uri, Uint8List.fromList(utf8.encode(content)));
-    } on FileSystemException {
+    } on Exception {
+      // A revoked SAF grant, missing plugin or provider failure must offer
+      // Save As rather than exposing document identifiers in UI errors.
       return false;
     }
   }
@@ -96,6 +98,8 @@ final class ProjectDocumentUpdateService {
         } on FormatException {
           return false;
         } on UnsupportedError {
+          return false;
+        } on ArgumentError {
           return false;
         }
       case StudioFileLocationKind.remoteUri:
