@@ -47,8 +47,7 @@ removed from the edited subtitle.
 - [Linux full Flutter CI run 39640233941](https://github.com/anzilr/SubtitleStudio/actions/runs/39640233941):
   **624 tests passed**, analyzer successful.
 - [Platform-sensitive CI run 39640233399](https://github.com/anzilr/SubtitleStudio/actions/runs/39640233399):
-  **Windows 80 tests passed**, analyzer successful. The macOS runner remained
-  **queued** at the time of this report; do not count macOS as accepted.
+  **Windows 80 and macOS 80 tests passed**, both analyzers successful.
 - No native platform application builds were run in Actions.
 
 ## Remaining acceptance

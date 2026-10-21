@@ -158,6 +158,23 @@ void main() {
     expect(files.lastWrite, isNull);
   });
 
+  test('Source View open shows blank cues and embedded blank text lines',
+      () async {
+    const sourceText =
+        '1\r\n00:00:01,000 --> 00:00:02,000\r\nAbove\r\n\r\nBelow\r\n\r\n'
+        '2\r\n00:00:03,000 --> 00:00:04,000\r\n\r\n';
+    final original = SubtitleTextCodec.encode(
+      sourceText, encoding: 'UTF-8 BOM');
+    final files = _MemorySourceFiles(original);
+    final session = await _open(files);
+
+    expect(session.first.subtitleEntries.map((cue) => cue.text),
+        ['Above\n\nBelow', '']);
+    expect(session.controller.rawSourceText, sourceText);
+    await session.controller.saveFile();
+    expect(files.lastWrite, orderedEquals(original));
+  });
+
   test('legacy bytes require explicit encoding instead of Latin-1 guessing',
       () async {
     final sourceText = '${_srtHeader}“Café”\r\n';

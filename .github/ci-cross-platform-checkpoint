@@ -7,3 +7,7 @@ encoding tests after the Linux analyzer reported three undefined identifiers.
 CP89 R2 October 21 2026: desktop SRT save and shared encoding export changed.
 Run focused Windows/macOS host Flutter analyzer and file/encoding tests, plus
 iOS simulated adapter coverage. No platform application builds in Actions.
+
+CP89 R3 October 21 2026: import/open/save SRT blank cues and blank text lines
+on all supported hosts. Targeted Windows/macOS Flutter analyzer and parser,
+file-access and encoding tests; iOS simulated adapters. Never platform builds.

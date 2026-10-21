@@ -80,6 +80,16 @@ their existing behavior. Details and pending native scenarios:
 
 ### CP89 — Encoding and text round-trip
 
+**CP89 R3 (October 21, 2026):** Preserve empty subtitle cues, intentionally
+blank text lines and whitespace when opening/importing SRT through the shared
+parser, structured Isar import and Editor raw-source Save. Optional
+hearing-impaired cleanup retains preexisting blank cues. The rules use valid
+cue headers to identify boundaries and remove only one structural separator;
+raw Source View retains byte-exact newline style. Added unit, Isar and Source
+View regressions. [R3 report](CHECKPOINT89_R3_BLANK_CUE_IMPORT_2026-10-21.md).
+**Verification pending:** Linux full and Windows/macOS focused Flutter-only
+checks; native smoke acceptance still remains.
+
 **CP89 R2 (October 21, 2026):** Editor export now honors explicitly blank
 edited cues instead of restoring the original text, and desktop file export
 validates a shared encoded byte result before touching the destination.
@@ -88,8 +98,7 @@ Windows-1252, and incompatible charset failures. This change is
 platform-sensitive: Linux full suite plus focused Windows/macOS Flutter checks
 are required, without application builds. [Checkpoint report](CHECKPOINT89_R2_EDITED_EXPORT_ROUNDTRIP_2026-10-21.md).
 **Verification:** [Linux 624 tests / clean analyzer](https://github.com/anzilr/SubtitleStudio/actions/runs/39640233941),
-[Windows 80 tests / clean analyzer](https://github.com/anzilr/SubtitleStudio/actions/runs/39640233399);
-macOS runner still queued at the report update.
+[Windows and macOS each 80 tests / clean analyzer](https://github.com/anzilr/SubtitleStudio/actions/runs/39640233399).
 Native acceptance and import → editor line-ending retention remain pending.
 
 **CP89 R1 (October 21, 2026):** Raw Source View now uses the shared strict

@@ -150,3 +150,10 @@ encoder and validates bytes before touching destination or creating folders.
 Exercise edited/force-original cues, host file preservation and Isar import/edit
 charset roundtrip. Run Flutter pub get, analyze and full tests ONLY. No native
 Android, iOS, macOS, Windows, Linux or Web app builds in GitHub Actions.
+
+CP89 R3 October 21 2026: preserve empty subtitle cues and internal blank text
+lines in shared SRT parser, actual import/Isar pipeline, Source View open and
+Editor raw-source Save. Optional hearing-impaired cleanup preserves originally
+empty captions. Regression tests cover CRLF, EOF whitespace, short millisecond
+timestamp support and raw cue validation. Full Linux Flutter analyzer/tests,
+no platform app builds in Actions.

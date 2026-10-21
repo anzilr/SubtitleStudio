@@ -73,5 +73,18 @@ void main() {
       expect(removeHearingImpairedText([source]), isEmpty);
       expect(source.original, '[LOUD MUSIC] ♪');
     });
+
+    test('keeps preexisting blank cues and blank lines when cleanup is enabled',
+        () {
+      final blank = _line(index: 1, original: '');
+      final multiline = _line(
+        index: 2,
+        original: 'Hello\n\nWorld',
+      );
+      final cleaned = removeHearingImpairedText([blank, multiline]);
+
+      expect(cleaned.map((cue) => cue.original), ['', 'Hello\n\nWorld']);
+      expect(cleaned.first, isNot(same(blank)));
+    });
   });
 }

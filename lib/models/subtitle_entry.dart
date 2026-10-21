@@ -28,10 +28,11 @@ class SubtitleEntry {
     final normalized = srtText
         .replaceFirst('\uFEFF', '')
         .replaceAll('\r\n', '\n')
-        .replaceAll('\r', '\n')
-        .trim();
+        .replaceAll('\r', '\n');
     final lines = normalized.split('\n');
-    if (lines.length < 3) return null;
+    // A cue can intentionally have no subtitle text at all. Its timing
+    // header is sufficient; do not trim spaces or internal blank text lines.
+    if (lines.length < 2) return null;
 
     final index = lines.first.trim();
     if (!RegExp(r'^\d+$').hasMatch(index)) return null;
@@ -47,7 +48,7 @@ class SubtitleEntry {
       index: index,
       startTime: timingMatch.group(1)!,
       endTime: timingMatch.group(2)!,
-      text: lines.skip(2).join('\n').trim(),
+      text: lines.skip(2).join('\n'),
     );
   }
 

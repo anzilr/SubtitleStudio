@@ -64,4 +64,8 @@ jobs:
             test/secondary_subtitle_storage_test.dart \
             test/subtitle_encoding_decoder_test.dart \
             test/subtitle_extended_encoding_service_test.dart \
+            test/subtitle_parser_srt_vtt_test.dart \
+            test/subtitle_processor_hearing_impaired_test.dart \
+            test/subtitle_entry_test.dart \
+            test/raw_srt_document_test.dart \
             test/srt_encoding_integration_test.dart

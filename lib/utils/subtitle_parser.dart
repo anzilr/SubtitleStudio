@@ -14,6 +14,23 @@ class SimpleSubtitleLine {
 }
 
 class SubtitleParser {
+  static final RegExp _srtNumberedCue = RegExp(r'^\d+$');
+
+  /// An empty line is not necessarily a cue boundary: subtitles may contain
+  /// intentional blank text lines. The next valid timestamp header is the
+  /// boundary, with an optional numeric cue index immediately before it.
+  static bool _startsSrtCue(List<String> lines, int index) {
+    final current = lines[index].trim();
+    if (current.contains('-->') &&
+        _parseCueTimingLine(current, allowShortHours: false) != null) {
+      return true;
+    }
+    return _srtNumberedCue.hasMatch(current) &&
+        index + 1 < lines.length &&
+        lines[index + 1].contains('-->') &&
+        _parseCueTimingLine(lines[index + 1], allowShortHours: false) != null;
+  }
+
   // Parse SRT format
   static List<SimpleSubtitleLine> parseSrt(String content) {
     final normalized = _normalizeSubtitleText(content);
@@ -31,7 +48,7 @@ class SubtitleParser {
 
       int? cueIndex;
       final current = lines[cursor].trim();
-      if (RegExp(r'^\d+$').hasMatch(current) &&
+      if (_srtNumberedCue.hasMatch(current) &&
           cursor + 1 < lines.length &&
           _parseCueTimingLine(lines[cursor + 1], allowShortHours: false) !=
               null) {
@@ -50,34 +67,23 @@ class SubtitleParser {
       }
       cursor++;
 
-      final textLines = <String>[];
-      while (cursor < lines.length) {
-        if (lines[cursor].trim().isEmpty) {
-          break;
-        }
-
-        // Tolerate SRT files that omit the blank separator between cues.
-        final looksLikeNextNumberedCue =
-            RegExp(r'^\d+$').hasMatch(lines[cursor].trim()) &&
-            cursor + 1 < lines.length &&
-            _parseCueTimingLine(
-                  lines[cursor + 1],
-                  allowShortHours: false,
-                ) !=
-                null;
-        final looksLikeNextUnnumberedCue =
-            _parseCueTimingLine(
-                  lines[cursor],
-                  allowShortHours: false,
-                ) !=
-                null;
-
-        if (looksLikeNextNumberedCue || looksLikeNextUnnumberedCue) {
-          break;
-        }
-
-        textLines.add(lines[cursor]);
+      final textStart = cursor;
+      while (cursor < lines.length && !_startsSrtCue(lines, cursor)) {
         cursor++;
+      }
+      var textEnd = cursor;
+
+      // String.split adds a final empty element when the file ends in a
+      // newline. It is not part of the subtitle. Of the remaining trailing
+      // blank lines, one is the SRT cue separator; any others are text.
+      final hasFinalNewline = normalized.endsWith('\n');
+      if (cursor == lines.length && hasFinalNewline &&
+          textEnd > textStart && lines[textEnd - 1].isEmpty) {
+        textEnd--;
+      }
+      if ((cursor < lines.length || hasFinalNewline) &&
+          textEnd > textStart && lines[textEnd - 1].trim().isEmpty) {
+        textEnd--;
       }
 
       subtitles.add(
@@ -85,7 +91,7 @@ class SubtitleParser {
           index: cueIndex ?? generatedIndex,
           startTime: timing.$1,
           endTime: timing.$2,
-          text: textLines.join('\n'),
+          text: lines.sublist(textStart, textEnd).join('\n'),
         ),
       );
       generatedIndex = (cueIndex ?? generatedIndex) + 1;
@@ -194,7 +200,7 @@ class SubtitleParser {
   }) {
     final timestampPattern = allowShortHours
         ? r'(?:\d{1,3}:)?\d{2}:\d{2}[\.,]\d{3}'
-        : r'\d{1,3}:\d{2}:\d{2}[\.,]\d{3}';
+        : r'\d{1,3}:\d{2}:\d{2}[\.,]\d{1,3}';
 
     final match = RegExp(
       '^\\s*($timestampPattern)\\s*-->\\s*($timestampPattern)(?:\\s+.*)?\\s*\$',

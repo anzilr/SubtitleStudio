@@ -5,6 +5,7 @@ import 'package:subtitle_studio/services/subtitle_import_repository.dart';
 import 'package:subtitle_studio/services/subtitle_text_codec.dart';
 import 'package:subtitle_studio/utils/srt_compiler.dart';
 import 'package:subtitle_studio/utils/subtitle_parser.dart';
+import 'package:subtitle_studio/utils/subtitle_processor.dart';
 
 import 'support/test_isar_harness.dart';
 
@@ -130,6 +131,38 @@ void main() {
         expect(exported.map((cue) => cue.text), [edited, '']);
         expect(roundtrip.content, isNot(contains('Remove this caption')));
       }
+    });
+
+    test('real import keeps empty and multiline SRT cues through Isar export',
+        () async {
+      const input =
+          '1\r\n00:00:01,000 --> 00:00:02,000\r\nFirst\r\n\r\nSecond\r\n\r\n'
+          '2\r\n00:00:03,000 --> 00:00:04,000\r\n\r\n'
+          '3\r\n00:00:05,000 --> 00:00:06,000\r\n  padded  \r\n\r\n'
+          '4\r\n00:00:07,5 --> 00:00:08,50\r\nLast';
+      final result = await processSubtitleContentWithoutContext(
+        input,
+        'blank-cues.srt',
+        '/projects/blank-cues.srt',
+        repository: repository,
+        encoding: 'UTF-8',
+      );
+
+      final stored = await harness.isar.subtitleCollections.get(
+        result.subtitleCollectionId,
+      );
+      expect(stored, isNotNull);
+      final originals = stored!.lines.map((cue) => cue.original).toList();
+      expect(originals, ['First\n\nSecond', '', '  padded  ', 'Last']);
+      expect(stored.lines.last.startTime, '00:00:07,500');
+      expect(stored.lines.last.endTime, '00:00:08,500');
+      final exported = await SrtCompiler.generateSrtBytesExtended(
+        stored.lines,
+        encoding: stored.encoding,
+      );
+      final decoded = SubtitleTextCodec.decode(exported);
+      final parsedAgain = SubtitleParser.parseSrt(decoded.content);
+      expect(parsedAgain.map((cue) => cue.text), originals);
     });
 
     test('last edited session update reuses the existing preferences row',

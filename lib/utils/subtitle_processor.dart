@@ -36,6 +36,7 @@ import 'package:subtitle_studio/models/subtitle_import_result.dart';
 import 'package:subtitle_studio/services/subtitle_import_repository.dart';
 import 'package:subtitle_studio/services/subtitle_encoding_decoder.dart';
 import 'package:subtitle_studio/utils/subtitle_sorting.dart'; // Enhanced subtitle sorting
+import 'package:subtitle_studio/utils/subtitle_parser.dart';
 
 /// Process and import subtitle file with comprehensive cleaning and validation options
 ///
@@ -307,81 +308,16 @@ List<SubtitleLine> _processSubtitleLines(
   return _reindexSubtitles(lines);
 }
 
-/// Parses SRT content into structured subtitle lines with performance optimizations
+/// Parse imports with the same cue boundaries used by Source View and
+/// secondary subtitles. In particular, empty cues and embedded blank text
+/// lines are data, not invalid entries to be discarded on open/import.
 List<SubtitleLine> _parseSrtContent(String content) {
-  // Use more efficient line splitting for better performance
-  final lines = content.split('\n');
-  final List<SubtitleLine> subtitles = <SubtitleLine>[];
-
-  int? currentIndex;
-  String? startTime, endTime;
-  List<String> textLines = <String>[];
-  bool isInSubtitle = false;
-
-  // Pre-compile regex patterns for better performance
-  final indexPattern = RegExp(r'^\d+$');
-  final timePattern = RegExp(
-    r'(\d{2}:\d{2}:\d{2},\d{1,3})\s*-->\s*(\d{2}:\d{2}:\d{2},\d{1,3})',
-  );
-
-  for (var i = 0; i < lines.length; i++) {
-    final line = lines[i].trim();
-
-    if (line.isEmpty) {
-      // Empty line means end of current subtitle entry
-      if (isInSubtitle &&
-          startTime != null &&
-          endTime != null &&
-          textLines.isNotEmpty) {
-        final subtitleLine =
-            SubtitleLine()
-              ..index = currentIndex ?? subtitles.length + 1
-              ..startTime = startTime
-              ..endTime = endTime
-              ..original = textLines.join('\n')
-              ..edited = null;
-
-        subtitles.add(subtitleLine);
-      }
-      isInSubtitle = false;
-      currentIndex = null;
-      startTime = null;
-      endTime = null;
-      textLines = <String>[]; // Clear list for reuse
-    } else if (!isInSubtitle && indexPattern.hasMatch(line)) {
-      // Start new subtitle with an index
-      isInSubtitle = true;
-      currentIndex = int.parse(line);
-    } else if (isInSubtitle && line.contains('-->')) {
-      // Timestamp line - use faster contains check before regex
-      final timeMatch = timePattern.firstMatch(line);
-      if (timeMatch != null) {
-        startTime = _fixTimeFormat(timeMatch.group(1)!);
-        endTime = _fixTimeFormat(timeMatch.group(2)!);
-      }
-    } else if (isInSubtitle) {
-      // Text content
-      textLines.add(line);
-    }
-  }
-
-  // Add the last subtitle if exists
-  if (isInSubtitle &&
-      startTime != null &&
-      endTime != null &&
-      textLines.isNotEmpty) {
-    final subtitleLine =
-        SubtitleLine()
-          ..index = currentIndex ?? subtitles.length + 1
-          ..startTime = startTime
-          ..endTime = endTime
-          ..original = textLines.join('\n')
-          ..edited = null;
-
-    subtitles.add(subtitleLine);
-  }
-
-  return subtitles;
+  return SubtitleParser.parseSrt(content).map((cue) => SubtitleLine()
+    ..index = cue.index
+    ..startTime = _fixTimeFormat(cue.startTime.replaceAll('.', ','))
+    ..endTime = _fixTimeFormat(cue.endTime.replaceAll('.', ','))
+    ..original = cue.text
+    ..edited = null).toList();
 }
 
 /// Fixes time format to ensure it's in HH:mm:ss,SSS format
@@ -447,6 +383,20 @@ List<SubtitleLine> removeHearingImpairedText(List<SubtitleLine> subtitles) {
   final List<SubtitleLine> cleanedSubtitles = [];
 
   for (var subtitle in subtitles) {
+    // An intentionally empty cue contains no hearing-impaired annotation to
+    // remove. Keep it even when the optional cleanup filter is enabled.
+    if (subtitle.original.trim().isEmpty) {
+      cleanedSubtitles.add(SubtitleLine()
+        ..index = subtitle.index
+        ..startTime = subtitle.startTime
+        ..endTime = subtitle.endTime
+        ..original = subtitle.original
+        ..edited = subtitle.edited
+        ..marked = subtitle.marked
+        ..comment = subtitle.comment
+        ..resolved = subtitle.resolved);
+      continue;
+    }
     String cleanText = subtitle.original;
 
     // STEP 1: Remove multi-line and single-line bracketed text first (before line splitting)
@@ -467,6 +417,10 @@ List<SubtitleLine> removeHearingImpairedText(List<SubtitleLine> subtitles) {
     final List<String> cleanedLines = [];
 
     for (var line in lines) {
+      if (line.trim().isEmpty) {
+        cleanedLines.add(line); // An existing intentional blank text line.
+        continue;
+      }
       String cleanLine = line;
 
       // Remove parenthetical descriptions when preceded by dash: -(text), - (text)
@@ -547,7 +501,7 @@ List<SubtitleLine> removeHearingImpairedText(List<SubtitleLine> subtitles) {
     }
 
     // Rejoin lines with newlines to preserve formatting
-    final finalText = cleanedLines.join('\n').trim();
+    final finalText = cleanedLines.join('\n');
 
     // Only include subtitles that have meaningful content after cleaning.
     // Return a new embedded object instead of mutating the caller's line. This

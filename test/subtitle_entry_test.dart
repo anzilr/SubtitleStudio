@@ -36,5 +36,19 @@ void main() {
         isNull,
       );
     });
+
+    test('parses a deliberately empty cue without trimming other cue text', () {
+      final empty = SubtitleEntry.fromSrtText(
+        '7\n00:00:07,000 --> 00:00:08,000\n',
+      );
+      expect(empty, isNotNull);
+      expect(empty!.text, '');
+
+      final spaced = SubtitleEntry.fromSrtText(
+        '8\n00:00:09,000 --> 00:00:10,000\n  First  \n\nSecond  ',
+      );
+      expect(spaced, isNotNull);
+      expect(spaced!.text, '  First  \n\nSecond  ');
+    });
   });
 }

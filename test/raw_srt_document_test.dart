@@ -40,4 +40,35 @@ void main() {
     );
     expect(restored.single.text, 'Edited text');
   });
+
+  test('raw editor retains blank cues and intentional blank lines on Save', () {
+    final entries = <SubtitleEntry>[
+      SubtitleEntry(
+        index: '1', startTime: '00:00:01,000',
+        endTime: '00:00:02,000', text: 'Above\n\nBelow',
+      ),
+      SubtitleEntry(
+        index: '2', startTime: '00:00:03,000',
+        endTime: '00:00:04,000', text: '',
+      ),
+      SubtitleEntry(
+        index: '3', startTime: '00:00:05,000',
+        endTime: '00:00:06,000', text: '  padded  ',
+      ),
+    ];
+    final restored = RawSrtDocument.parseStrict(
+      RawSrtDocument.compose(entries),
+    );
+    expect(restored.map((cue) => cue.text),
+        ['Above\n\nBelow', '', '  padded  ']);
+    expect(restored.map((cue) => cue.toSrtString()),
+        entries.map((cue) => cue.toSrtString()));
+  });
+
+  test('a malformed following numbered cue still rejects the raw save', () {
+    expect(() => RawSrtDocument.parseStrict(
+      '1\n00:00:01,000 --> 00:00:02,000\nValid\n\n'
+      '2\n00:00:03,000 --> Missing\nBroken',
+    ), throwsFormatException);
+  });
 }
