@@ -20,3 +20,8 @@ CP90 R1 October 21 2026: Edit Line direct-save/Save As ownership extracted,
 original document locator and encoded-byte output enforced; verify host Flutter
 tests and analysis on Windows/macOS with simulated Android/iOS permission paths.
 No platform application builds in Actions.
+
+CP90 R2 October 21 2026: main Editor direct-file Save uses strict selected
+encoding, original document identity, native macOS security-scoped bookmarks
+and existing-file-only writes. Host Flutter analysis and targeted file/encoding
+tests on Windows and macOS; simulated Android/iOS provider behavior. No builds.

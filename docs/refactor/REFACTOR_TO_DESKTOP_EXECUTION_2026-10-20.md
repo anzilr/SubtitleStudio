@@ -139,6 +139,20 @@ analyzer](https://github.com/anzilr/SubtitleStudio/actions/runs/39648844537),
 analyzers](https://github.com/anzilr/SubtitleStudio/actions/runs/39648844324).
 Native Android/iOS/desktop file-provider smoke tests remain outstanding.
 
+**CP90 R2 (October 21, 2026):** The main Editor's direct Save action now
+delegates charset-validated SRT compilation and existing-file writes to an
+injectable `EditorDirectSaveService`. The service reuses the established
+file-access adapter, never substitutes the display path for an authoritative
+Android document URI, resolves and releases native macOS security-scoped
+bookmarks, and returns a typed result to the Editor. Unsupported encodings
+abort without modifying a file; unavailable permissions still invoke the
+existing Save As interaction. Legacy path migration remains in the owning
+repository only after a successful write. No storage schema, project-history
+or mobile layout changes.
+[R2 report](CHECKPOINT90_R2_EDITOR_DIRECT_SAVE_SERVICE_2026-10-21.md).
+Linux full-suite and Windows/macOS targeted host gates are triggered for this
+file-save change; native file-provider acceptance is separate.
+
 - Identify and isolate the largest remaining mixed-responsibility Editor/Edit Line/Source View modules; decouple UI from persistence/media/filesystem operations while preserving existing Riverpod state and checkpoint behavior.
 - Prefer injectable services/coordinators, typed outcomes and widget tests. Verify source editing round trips, comment/mark preservation, secondary track fallback, keyboard and Android Back behavior.
 - Keep the shared core reusable by both Flutter mobile widgets and the later desktop presentation.

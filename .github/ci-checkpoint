@@ -169,3 +169,8 @@ SAF grant failure redirecting to legacy display hints, preserve intentionally
 empty edits on manual save and navigation autosave. Full Flutter analyze/test
 on Linux; dedicated Windows/macOS host adapter suite via separate checkpoint
 marker. No platform builds in any GitHub Actions job.
+CP90 R2 October 21 2026: main Editor direct Save now delegates to the
+injectable encoded-byte writer, preserving selected charset, original SAF
+document URI, macOS bookmark scope and Save As fallback. New regressions for
+strict encoding and revoked document/bookmark. Full Flutter analyzer/test
+on Linux only; no platform application builds in GitHub Actions.

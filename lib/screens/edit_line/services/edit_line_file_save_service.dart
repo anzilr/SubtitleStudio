@@ -119,6 +119,13 @@ final class EditLineFileSaveService {
         : collection.filePath;
     if (location == null || location.trim().isEmpty) return false;
 
+    return writeExistingLocator(location, bytes);
+  }
+
+  /// Shared existing-document writer for callers that have resolved an
+  /// authorized locator (e.g. a macOS security-scoped bookmark). The caller
+  /// retains responsibility for releasing any scoped resource after writing.
+  Future<bool> writeExistingLocator(String location, Uint8List bytes) async {
     try {
       final identity = StudioFileIdentity.fromLocator(location);
       if (identity.kind != StudioFileLocationKind.androidDocument &&

@@ -14,67 +14,33 @@ extension _EditProjectActions on _EditScreenState {
       }
 
       final currentLines = await _controller.loadSubtitleLines();
-      final srtContent = SrtCompiler.generateSrtContent(currentLines);
-      bool saveSuccessful = false;
-
-      // Attempt to save directly
+      // Shared, strict encoding and file-access policy. Neither the Widget
+      // nor this UI extension writes bytes to platform files directly.
+      final EditorDirectSaveResult result;
       try {
-        if (Platform.isMacOS) {
-          final srtBookmark = subtitleCollection.macOsSrtBookmark;
-          if (srtBookmark != null) {
-            String? srtPath;
-            try {
-              srtPath = await MacOSBookmarkManager.resolveBookmark(base64Decode(srtBookmark));
-              await File(srtPath!).writeAsString(srtContent);
-              saveSuccessful = true;
-                        } finally {
-              if (srtPath != null) {
-                await MacOSBookmarkManager.stopAccessingSecurityScopedResource(srtPath);
-              }
-            }
-          }
-        } else {
-          // Try originalFileUri first, fall back to filePath for older entries
-          String? originalFileUri = subtitleCollection.originalFileUri;
-          String? filePath = subtitleCollection.filePath;
-          
-          // Use originalFileUri if available, otherwise fall back to filePath
-          final String? targetPath =
-              (originalFileUri?.isNotEmpty ?? false) ? originalFileUri : filePath;
-
-          if (targetPath != null && targetPath.isNotEmpty) {
-            print('Attempting to save to: $targetPath');
-            if (await PlatformFileHandler.writeFile(
-              content: srtContent,
-              filePath: targetPath,
-              fileName: subtitleCollection.fileName,
-              mimeType: 'application/x-subrip',
-            )) {
-              saveSuccessful = true;
-              print('Save successful to: $targetPath');
-              
-              // Update originalFileUri if it wasn't set (for older entries)
-              if (originalFileUri == null || originalFileUri.isEmpty) {
-                final updated = await _controller.updateOriginalFileUri(targetPath);
-                if (updated) {
-                  print('Updated originalFileUri to: $targetPath');
-                } else {
-                  debugPrint('File saved, but originalFileUri metadata update failed.');
-                }
-              }
-            } else {
-              print('PlatformFileHandler.writeFile returned false for: $targetPath');
-            }
-          } else {
-            print('No valid file path found (originalFileUri and filePath are both empty)');
-          }
-        }
-      } catch (e) {
-        print('Direct save failed: $e');
-        print('Stack trace: ${StackTrace.current}');
+        result = await ref.read(editorDirectSaveServiceProvider)
+            .save(subtitleCollection, currentLines);
+      } on FormatException {
+        if (mounted) SnackbarHelper.showError(context,
+            'Subtitle text cannot be saved with this encoding. '
+            'Choose a compatible encoding in Project Settings.');
+        return;
+      } on UnsupportedError {
+        if (mounted) SnackbarHelper.showError(context,
+            'The selected encoding is unavailable on this device. '
+            'Choose a compatible encoding in Project Settings.');
+        return;
       }
 
-      if (saveSuccessful) {
+      if (!mounted) return;
+      if (result.saved) {
+        final legacyPath = result.legacyFilePathToPersist;
+        if (legacyPath != null && legacyPath.isNotEmpty) {
+          // Preserve the existing legacy project migration through its typed
+          // repository, never through an old mutable Isar object.
+          await _controller.updateOriginalFileUri(legacyPath);
+          if (!mounted) return;
+        }
         if (mounted) SnackbarHelper.showSuccess(context, 'File saved successfully!');
         return;
       }
