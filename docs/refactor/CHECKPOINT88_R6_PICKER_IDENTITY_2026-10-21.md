@@ -30,4 +30,4 @@ Continue CP89 encoding once the remaining critical CP88 paths are converged. Git
 
 ## CI
 
-Final R6 Flutter quality gate to be recorded after completion.
+[Final CP88 R6 GitHub Actions run 39617810442](https://github.com/anzilr/SubtitleStudio/actions/runs/39617810442) — **SUCCESS**, October 21, 2026. **592 Flutter tests passed** and `flutter analyze` reported **No issues found** (zero errors, warnings or informational lints). No Android, Windows, Web, Linux, iOS, or macOS builds ran in CI. Native picker and persisted-source compatibility checks remain outstanding.

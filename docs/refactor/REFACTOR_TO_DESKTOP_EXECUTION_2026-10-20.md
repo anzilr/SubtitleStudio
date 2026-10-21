@@ -33,6 +33,9 @@ The earlier sections of `REFACTOR_ROADMAP_V4.md` include historical "immediate n
 
 ### CP88 — Source View and file-access ownership [ACTIVE]
 
+**CP88 R6 typed picker identity (October 21, 2026):** `StudioPickedFileReference` separates authoritative `accessLocator` (content URI/native path) from display-only `displayPath`; the old picker map retains `displayPath`, `safUri`, and `bytes` while adding `accessLocator` for migrated consumers. Raw SAF/local-path logging is redacted. [R6 report](CHECKPOINT88_R6_PICKER_IDENTITY_2026-10-21.md) · [Final Flutter CI: 592 tests, analyzer no issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39617810442). **Not yet a full migration:** the legacy string-returning Android `pickFile` call still provides a normalized display path; CP88 R7 must audit/migrate its consumers before changing that API. Native Android SAF / desktop verification is pending.
+
+
 **CP88 R5 project-update boundary (October 21, 2026):** Existing `.msone` updates now delegate to the injectable, typed [ProjectDocumentUpdateService](CHECKPOINT88_R5_PROJECT_UPDATE_2026-10-21.md): Android document write vs real native file, converted `file://` URIs, rejection of remote/opaque destinations, and no silent creation of a missing original. Real desktop temporary-file and fake-platform regressions. [Final CI: 587 tests passed, zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39615780906). **Native Android SAF and Windows acceptance still pending**. CP88 next: picker/import and video locator semantics, especially separating SAF display paths from actual access identity; CP89 encoding remains next major refactor.
 
 
