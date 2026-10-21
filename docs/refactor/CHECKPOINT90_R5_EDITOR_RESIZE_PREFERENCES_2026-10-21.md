@@ -2,7 +2,7 @@
 
 Date: October 21, 2026
 Branch: `refactor/riverpod-architecture`
-Verification: Linux Flutter analyzer/full suite pending
+Verification: Linux Flutter analyzer/full suite passed
 
 ## Problem and refactor
 
@@ -32,8 +32,9 @@ mobile debounce intervals, last-value-wins coalescing, independent channels,
 flush-on-dispose, safe repeated flush/late calls, write ordering when the
 first save is still pending, and recovery after write failure.
 
-Full Linux Flutter `pub get`, `analyze` and `test` run through GitHub Actions
-without platform builds. This checkpoint changes UI state/preferences only,
+The [Linux GitHub Actions run 39659967724](https://github.com/anzilr/SubtitleStudio/actions/runs/39659967724)
+passed **671 Flutter tests with zero analyzer issues** (`pub get`, `analyze`,
+`test` only). This checkpoint changes UI state/preferences only,
 not Android SAF, local file paths or encoding; the optional Windows/macOS
 file-host matrix is intentionally not requested.
 

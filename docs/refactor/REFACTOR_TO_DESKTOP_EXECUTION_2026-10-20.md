@@ -189,7 +189,7 @@ canceling timers. Failures do not poison later saves. The UI layout and
 native media lifecycle are unchanged; Edit Line's separate legacy timers
 remain for a scoped follow-up.
 [R5 report](CHECKPOINT90_R5_EDITOR_RESIZE_PREFERENCES_2026-10-21.md).
-**Verification:** Linux full Flutter analyzer/tests pending; platform file
+**Verification:** [Linux 671 Flutter tests / clean analyzer](https://github.com/anzilr/SubtitleStudio/actions/runs/39659967724); platform file
 matrix not applicable to this UI-preference-only change.
 
 - Identify and isolate the largest remaining mixed-responsibility Editor/Edit Line/Source View modules; decouple UI from persistence/media/filesystem operations while preserving existing Riverpod state and checkpoint behavior.
