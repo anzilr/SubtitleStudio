@@ -501,7 +501,17 @@ List<SubtitleLine> removeHearingImpairedText(List<SubtitleLine> subtitles) {
     }
 
     // Rejoin lines with newlines to preserve formatting
-    final finalText = cleanedLines.join('\n');
+    var finalText = cleanedLines.join('\n');
+    // Cleanup may leave a newline where a removed leading/trailing sound
+    // annotation used to be. Preserve originally blank edge lines, but do
+    // not create *new* edge blanks solely because an annotation was deleted.
+    final originalLines = subtitle.original.split('\n');
+    if (originalLines.first.trim().isNotEmpty) {
+      finalText = finalText.replaceFirst(RegExp(r'^(?:[ \t]*\n)+'), '');
+    }
+    if (originalLines.last.trim().isNotEmpty) {
+      finalText = finalText.replaceFirst(RegExp(r'(?:\n[ \t]*)+$'), '');
+    }
 
     // Only include subtitles that have meaningful content after cleaning.
     // Return a new embedded object instead of mutating the caller's line. This

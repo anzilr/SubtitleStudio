@@ -11,3 +11,7 @@ iOS simulated adapter coverage. No platform application builds in Actions.
 CP89 R3 October 21 2026: import/open/save SRT blank cues and blank text lines
 on all supported hosts. Targeted Windows/macOS Flutter analyzer and parser,
 file-access and encoding tests; iOS simulated adapters. Never platform builds.
+
+CP89 R3 cleanup regression retest: source-blank preservation must coexist with
+hearing-impaired annotation removal. Focused Windows/macOS Flutter tests and
+analyzer only. No app builds.

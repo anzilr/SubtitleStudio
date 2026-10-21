@@ -157,3 +157,8 @@ Editor raw-source Save. Optional hearing-impaired cleanup preserves originally
 empty captions. Regression tests cover CRLF, EOF whitespace, short millisecond
 timestamp support and raw cue validation. Full Linux Flutter analyzer/tests,
 no platform app builds in Actions.
+
+CP89 R3 cleanup regression retest: remove *generated* leading/trailing newlines
+left by deleted sound-effect annotations, but preserve explicitly blank edge
+lines from the original cue. Retest complete Linux Flutter analyzer/tests;
+never build any platform application in Actions.

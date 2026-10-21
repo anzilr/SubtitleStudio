@@ -55,7 +55,11 @@ strict raw-SRT Save path had a third indiscriminate blank-line split.
 
 - Flutter SDK is unavailable in this workspace; GitHub Flutter-only CI is
   the executable verification gate for this change.
-- **CP89 R3 CI pending**. No Android/iOS/Windows/macOS/Linux app builds will
+- First Linux check reported one existing hearing-impaired cleanup regression:
+  deleting a leading annotation left an unintended newline. The cleanup now
+  removes artifact edge newlines unless the original cue had blank edge lines;
+  new regression cases cover both. Verification must use the updated rerun.
+- **CP89 R3 final CI pending**. No Android/iOS/Windows/macOS/Linux app builds will
   run in GitHub Actions.
 - Generic SRT cannot unambiguously distinguish every surplus separator blank
   from an intentional leading or trailing empty text line. The rule here is

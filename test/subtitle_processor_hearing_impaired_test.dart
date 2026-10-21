@@ -81,10 +81,24 @@ void main() {
         index: 2,
         original: 'Hello\n\nWorld',
       );
-      final cleaned = removeHearingImpairedText([blank, multiline]);
+      final edgeBlanks = _line(index: 3, original: '\nHello\n');
+      final cleaned = removeHearingImpairedText(
+        [blank, multiline, edgeBlanks],
+      );
 
-      expect(cleaned.map((cue) => cue.original), ['', 'Hello\n\nWorld']);
+      expect(cleaned.map((cue) => cue.original),
+          ['', 'Hello\n\nWorld', '\nHello\n']);
       expect(cleaned.first, isNot(same(blank)));
+    });
+
+    test('does not mistake cleaned sound annotations for original blank lines',
+        () {
+      final source = _line(
+        index: 1,
+        original: '[door closes] \nHello there\n[music playing]',
+      );
+      final cleaned = removeHearingImpairedText([source]);
+      expect(cleaned.single.original, 'Hello there');
     });
   });
 }
