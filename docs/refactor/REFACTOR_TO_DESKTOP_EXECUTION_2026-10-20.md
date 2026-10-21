@@ -42,6 +42,7 @@ validated; subtitle extraction requires an `accessLocator`. `.msone` project
 and comment imports already use picked Android document bytes and preserve
 their existing behavior. Details and pending native scenarios:
 [R8 report](CHECKPOINT88_R8_PROJECT_SETTINGS_MEDIA_PICKERS_2026-10-21.md).
+**Final R8 Flutter-only CI: [604 tests, zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39629226171).**
 **Android and Windows real picker/grant acceptance remains outstanding.**
 
 

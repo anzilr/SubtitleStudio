@@ -57,7 +57,12 @@ Pre-existing `studio_picked_file_reference_test.dart` additionally covers
 ## Verification and outstanding acceptance
 
 - Local `git diff --check`: passed.
-- Flutter analyzer and tests: **pending GitHub Actions result**.
+- Flutter-only GitHub Actions gate: **604 tests passed**, `flutter analyze`
+  **No issues found**, workflow **successful**. Final verification:
+  [run 39629226171](https://github.com/anzilr/SubtitleStudio/actions/runs/39629226171)
+  at commit `80a28e24e9f0bc3d2fcfaf26773fa567dd8509b5`.
+  Initial R8 gate also passed 604 tests and clean analysis:
+  [run 39628408445](https://github.com/anzilr/SubtitleStudio/actions/runs/39628408445).
 - Android physical-device checks: **not yet performed**. Reopen Project
   Settings with and without the Editor callback, select a large video, then
   relaunch to confirm the saved `content://` locator remains usable; similarly
