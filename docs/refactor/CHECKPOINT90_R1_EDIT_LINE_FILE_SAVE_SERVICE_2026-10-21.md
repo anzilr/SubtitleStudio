@@ -2,7 +2,7 @@
 
 Date: October 21, 2026
 Branch: `refactor/riverpod-architecture`
-Verification: pending GitHub Flutter analysis/tests, no platform builds
+Verification: Linux/Windows/macOS Flutter tests passed; no platform builds
 
 ## Scope
 
@@ -45,6 +45,16 @@ keeps the prior edited value, comment, mark and resolution metadata.
 - Windows escaped `file://` locator, Save As cancellation and authority capture.
 - Targeted Windows/macOS workflow includes `edit_line_file_save_service_test`.
 - Only Flutter `pub get`, `analyze`, and `test` run in CI; no platform builds.
+
+## Automated gate results
+
+- [Linux full suite](https://github.com/anzilr/SubtitleStudio/actions/runs/39648844537):
+  **642 passed**, analyzer clean.
+- [Windows/macOS targeted suite](https://github.com/anzilr/SubtitleStudio/actions/runs/39648844324):
+  **111 passed on each host**, both analyzers clean, including all seven new
+  Edit Line byte-save regression tests.
+- Android/iOS: simulated adapter tests only. Physical native file-provider
+  acceptance remains outstanding.
 
 ## Deferred / native verification
 

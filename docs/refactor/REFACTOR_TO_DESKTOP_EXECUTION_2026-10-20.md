@@ -89,7 +89,9 @@ raw Source View retains byte-exact newline style. Added unit, Isar and Source
 View regressions. [R3 report](CHECKPOINT89_R3_BLANK_CUE_IMPORT_2026-10-21.md).
 **Verification:** [Linux 635 tests / clean analyzer](https://github.com/anzilr/SubtitleStudio/actions/runs/39644802316),
 [Windows 104 targeted tests / clean analyzer](https://github.com/anzilr/SubtitleStudio/actions/runs/39644802337).
-macOS runner still queued; native smoke acceptance remains separate.
+The R3 macOS runner was canceled while queued; it is not counted as passed.
+Native smoke acceptance remains separate. CP90 R1 later passed the macOS
+targeted regression suite on the same branch.
 
 **CP89 R2 (October 21, 2026):** Editor export now honors explicitly blank
 edited cues instead of restoring the original text, and desktop file export
@@ -131,8 +133,11 @@ URIs never silently fall back to synthetic display paths when access is
 revoked. Manual Save and navigation autosave permit deliberately blank edited
 text, retaining the previous edited value in the checkpoint before-state.
 [R1 report](CHECKPOINT90_R1_EDIT_LINE_FILE_SAVE_SERVICE_2026-10-21.md).
-**Verification pending:** Linux full Flutter suite; targeted Windows/macOS
-host checks; native Android/iOS/desktop file-provider smoke tests.
+**Code-level verification:** [Linux full Flutter suite: 642 tests and clean
+analyzer](https://github.com/anzilr/SubtitleStudio/actions/runs/39648844537),
+[Windows and macOS targeted host suites: 111 tests each and clean
+analyzers](https://github.com/anzilr/SubtitleStudio/actions/runs/39648844324).
+Native Android/iOS/desktop file-provider smoke tests remain outstanding.
 
 - Identify and isolate the largest remaining mixed-responsibility Editor/Edit Line/Source View modules; decouple UI from persistence/media/filesystem operations while preserving existing Riverpod state and checkpoint behavior.
 - Prefer injectable services/coordinators, typed outcomes and widget tests. Verify source editing round trips, comment/mark preservation, secondary track fallback, keyboard and Android Back behavior.
