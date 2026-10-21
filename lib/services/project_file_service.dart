@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart' as fp;
 import 'package:subtitle_studio/utils/platform_file_handler.dart';
+import 'package:subtitle_studio/core/file_access/project_document_update_service.dart';
 
 /// Platform file-I/O boundary for .msone project documents.
 ///
@@ -55,21 +56,11 @@ class ProjectFileService {
   static Future<bool> updateExistingProject({
     required String content,
     required String projectFilePath,
-  }) async {
-    if (Platform.isAndroid && projectFilePath.startsWith('content://')) {
-      return PlatformFileHandler.writeFile(
+    ProjectDocumentUpdateService updater =
+        const ProjectDocumentUpdateService(),
+  }) =>
+      updater.update(
         content: content,
-        filePath: projectFilePath,
+        projectFilePath: projectFilePath,
       );
-    }
-
-    if (Platform.isIOS) {
-      // iOS document-provider paths are not assumed to remain writable after
-      // the picker closes. The caller will fall back to Save As.
-      return false;
-    }
-
-    await File(projectFilePath).writeAsString(content);
-    return true;
-  }
 }
