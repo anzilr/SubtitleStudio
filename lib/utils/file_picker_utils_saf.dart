@@ -416,7 +416,7 @@ class FilePickerConvenience {
     final fileInfo = await FilePickerSAF.pickFileUriOnly(
       context: context,
       title: 'Select Video File',
-      allowedExtensions: ['.mp4', '.mkv', '.avi', '.mov', '.m4v', '.webm'],
+      allowedExtensions: ['.mp4', '.mkv', '.avi', '.mov', '.m4v', '.webm', '.wmv', '.flv'],
       pickText: 'Select Video',
     );
     
@@ -440,7 +440,7 @@ class FilePickerConvenience {
     final fileInfo = await FilePickerSAF.pickFileUriOnly(
       context: context,
       title: 'Select Video File',
-      allowedExtensions: ['.mp4', '.mkv', '.avi', '.mov', '.m4v', '.webm'],
+      allowedExtensions: ['.mp4', '.mkv', '.avi', '.mov', '.m4v', '.webm', '.wmv', '.flv'],
       pickText: 'Select Video',
     );
     

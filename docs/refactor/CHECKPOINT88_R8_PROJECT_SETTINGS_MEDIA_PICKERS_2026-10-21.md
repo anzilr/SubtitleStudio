@@ -30,7 +30,8 @@ path; it is **not** a native path and must not be used for file access.
 - Both video picker convenience APIs use this reference. Bad document/locator
   combinations fail closed and show a generic selection error.
 - Project Settings fallback video selection is URI-only on Android (no full
-  MKV/MP4 memory read) and retains native desktop path behavior.
+  MKV/MP4 memory read) and retains native desktop path behavior. The shared
+  picker also keeps the legacy fallback's WMV/FLV choices available.
 - Project Settings secondary subtitle selection stores a real SAF locator for
   reopening, while continuing to parse in-memory bytes immediately. Canceling
   the native dialog no longer attempts `File(null)`.
