@@ -209,35 +209,9 @@ extension _HomeNavigationActions on _HomeScreenContentState {
             debugPrint('Home Source View: SAF document selected');
           }
           
-          // Load file content from URI (openFile now returns URI-only for memory safety)
-          String? fileContent;
-          try {
-            final contentBytes = await SafFileHandler.readFileFromUri(fileInfo.uri);
-            try {
-              fileContent = utf8.decode(contentBytes);
-            } catch (e) {
-              // If UTF-8 fails, try Latin-1 as fallback
-              try {
-                fileContent = latin1.decode(contentBytes);
-              } catch (e2) {
-                if (kDebugMode) {
-                  debugPrint('Source View: decoding unavailable (${e2.runtimeType})');
-                }
-              }
-            }
-          } catch (e) {
-            if (kDebugMode) {
-              debugPrint('Source View: document read failed (${e.runtimeType})');
-            }
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Unable to read selected document')),
-              );
-            }
-            return;
-          }
-          
-          // Navigate to source view screen with SAF URI and pre-loaded content
+          // Pass the authoritative URI and let Source View read the original
+          // bytes through its typed SAF boundary and strict shared codec.
+          // Do not lose BOM/legacy charset information by pre-decoding here.
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -245,7 +219,6 @@ extension _HomeNavigationActions on _HomeScreenContentState {
                 filePath: fileInfo.uri, // Authoritative document locator
                 displayName: fileInfo.fileName,
                 safUri: fileInfo.uri,
-                fileContent: fileContent, // Pass pre-loaded content
               ),
             ),
           ).then((_) {

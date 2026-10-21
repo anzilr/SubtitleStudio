@@ -131,3 +131,11 @@ CP88 R8 October 21 2026: Project Settings fallback video picker must use URI-onl
 CP88 R8 compatibility follow-up: retain WMV and FLV filters that were available in the legacy Project Settings video replacement picker after migrating it to the shared URI-only video API. Recheck analyzer and complete Flutter tests only; never platform builds in Actions.
 
 CP88 R9 cross-platform quality gate October 21 2026: Source View file:// read/write URI decoding for native Windows/POSIX with persisted locator unchanged; injectable secondary subtitle Windows conversion; fake iOS Save As document policy and sandbox file URI tests; genuine host temp file URI tests. Linux full Flutter tests, Windows/macOS focused Flutter file/encoding tests; iOS simulated adapter tests. Flutter pub get/analyze/test ONLY across all runners, absolutely no native platform app builds in Actions.
+
+CP89 R1 October 21 2026: Source View shares strict subtitle text codec with
+import/export; preserve Unicode BOM and raw newlines on Save/Save As, never
+silently guess Latin-1, provide explicit legacy encoding choice, and reject
+unrepresentable edits before writing. Full Linux Flutter analyze/test gate;
+Windows/macOS focused host gate requested separately via
+.github/ci-cross-platform-checkpoint for platform-sensitive edits only.
+No native builds in Actions.

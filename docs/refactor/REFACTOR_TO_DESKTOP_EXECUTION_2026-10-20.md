@@ -79,6 +79,19 @@ their existing behavior. Details and pending native scenarios:
 - Finish import/export/Source View source identity convergence before declaration of Phase 7 completed.
 
 ### CP89 — Encoding and text round-trip
+
+**CP89 R1 (October 21, 2026):** Raw Source View now uses the shared strict
+byte codec for reading and saving, preserves UTF BOMs and original newlines,
+and offers an explicit legacy charset chooser. Android Home no longer
+pre-decodes SAF bytes as UTF-8/Latin-1. Save As checks representability before
+creating a document. Source View controller round-trip tests cover Unicode,
+Windows code pages and lossless failure handling.
+[Checkpoint report](CHECKPOINT89_R1_SOURCE_VIEW_ENCODING_2026-10-21.md).
+**Verification in GitHub CI pending.** Windows/macOS Flutter checks now run
+only on a separate, explicitly changed platform-sensitive checkpoint marker;
+the routine Linux full-suite gate remains unchanged. Native iOS testing is
+still required.
+
 - Audit the **current** unified `SubtitleExtendedEncodingService` and its existing support rather than reimplement outdated CP65 limitations.
 - Make raw Source View decode/encode use a shared proven encoding + BOM policy; preserve user edits, newline form, unrepresentable-character errors and selected source encoding without silent fallback. Test UTF-8/16 BOM, Windows code pages, Android SAF and invalid byte sequences.
 - Explicit preview/manual override where ambiguous; lossless save/load tests, including non-Latin scripts. Do not change existing saved Isar schema solely to finish encoding.

@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
-import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/screens/source_view/source_view_saf_grant_repository.dart';
 import 'package:subtitle_studio/screens/source_view/source_view_state.dart';
@@ -8,6 +6,7 @@ import 'package:subtitle_studio/screens/source_view/source_view_file_target.dart
 import 'package:subtitle_studio/models/subtitle_entry.dart';
 import 'package:subtitle_studio/utils/app_logger.dart';
 import 'package:subtitle_studio/screens/source_view/source_view_file_access.dart';
+import 'package:subtitle_studio/services/subtitle_extended_encoding_service.dart';
 import 'package:subtitle_studio/utils/subtitle_parser.dart';
 
 /// Riverpod controller for Source View state
@@ -52,6 +51,11 @@ final sourceViewControllerProvider =
     NotifierProvider<SourceViewController, SourceViewState>(
   SourceViewController.new,
   dependencies: [sourceViewConfigProvider],
+);
+
+/// Shares the strict import/export codec; injectable for native charset tests.
+final sourceViewEncodingServiceProvider = Provider<SubtitleExtendedEncodingService>(
+  (ref) => SubtitleExtendedEncodingService.standard,
 );
 
 class SourceViewController extends Notifier<SourceViewState> {
@@ -144,17 +148,20 @@ class SourceViewController extends Notifier<SourceViewState> {
   }
 
   /// Load file content from storage with encoding detection
-  Future<void> _loadFileContent(String? preloadedContent) async {
+  Future<void> _loadFileContent(String? preloadedContent,
+      {String? selectedEncoding}) async {
     try {
       _setState(state.toLoading());
 
       String content;
-      Encoding encoding = utf8;
+      String encoding = 'UTF-8';
       
       if (preloadedContent != null) {
         // Use pre-loaded content (from SAF file selection)
         content = preloadedContent;
-        encoding = utf8; // Assume UTF-8 for pre-loaded content
+        // Preloaded text has already lost any original byte/BOM metadata.
+        // The Android picker now passes the URI alone so bytes are decoded
+        // here; this path remains for existing in-memory callers.
         await AppLogger.instance.info('Using preloaded content: ${content.length} chars');
       } else {
         // The platform adapter owns SAF, native fallback and revoked grants.
@@ -166,15 +173,12 @@ class SourceViewController extends Notifier<SourceViewState> {
         final bytes = await ref.read(sourceViewFileAccessProvider).read(target);
         if (_disposed) return;
 
-        // Try to detect encoding (simple detection - UTF-8 first, then fallback)
-        try {
-          content = utf8.decode(bytes);
-          encoding = utf8;
-        } catch (e) {
-          // If UTF-8 fails, try Latin-1 as fallback
-          content = latin1.decode(bytes);
-          encoding = latin1;
-        }
+        // Strict UTF-8/BOM auto-detection; an ambiguous legacy file must be
+        // reopened with an explicit charset, never silently as Latin-1.
+        final decoded = await ref.read(sourceViewEncodingServiceProvider)
+            .decode(bytes, selectedEncoding: selectedEncoding);
+        content = decoded.content;
+        encoding = decoded.encoding;
       }
       
       // Keep the source's actual whitespace and line endings for raw editing.
@@ -188,7 +192,10 @@ class SourceViewController extends Notifier<SourceViewState> {
       await AppLogger.instance.info('Loaded source view for $_logFileName');
       
     } catch (e) {
-      _setState(state.toError('Could not load this subtitle file.'));
+      _setState(state.toError(e is FormatException || e is UnsupportedError
+          ? 'The file encoding could not be decoded. Use "Open with encoding" '
+              'to select its original charset or one available on this device.'
+          : 'Could not load this subtitle file.'));
       await AppLogger.instance.error(
         'Source View file loading failed (${e.runtimeType})',
         context: 'SourceViewController._loadFileContent',
@@ -282,6 +289,19 @@ class SourceViewController extends Notifier<SourceViewState> {
     await _loadFileContent(null);
   }
 
+  Future<List<String>> availableEncodings() =>
+      ref.read(sourceViewEncodingServiceProvider).availableEncodings();
+
+  /// Refuse to discard edits when the user selects another source charset.
+  Future<void> reopenWithEncoding(String? encoding) async {
+    if (state.isSaving || state.isLoading || state.hasUnsavedChanges) {
+      _setState(state.toSaveError(
+          'Save or discard your current edits before reopening this file.'));
+      return;
+    }
+    await _loadFileContent(null, selectedEncoding: encoding);
+  }
+
   /// Save current file content back to storage with original encoding
   Future<void> saveFile() async {
     try {
@@ -289,8 +309,10 @@ class SourceViewController extends Notifier<SourceViewState> {
       
       final content = _rawSourceText ?? state.toSrtContent();
       
-      // Encode using the detected encoding
-      final bytes = Uint8List.fromList(state.fileEncoding.encode(content));
+      // Preserve charset, BOM and original newline characters exactly.
+      // A non-representable edit fails before any bytes reach storage.
+      final bytes = await ref.read(sourceViewEncodingServiceProvider)
+          .encode(content, encoding: state.encodingName);
       final target = SourceViewFileTarget.resolve(
         filePath: state.filePath,
         safUri: state.safUri,
@@ -322,9 +344,12 @@ class SourceViewController extends Notifier<SourceViewState> {
       }
       
     } catch (e) {
-      _setState(state.toSaveError('Could not save the subtitle file.'));
+      _setState(state.toSaveError(e is FormatException || e is UnsupportedError
+          ? 'This edit cannot be saved in ${state.encodingName} without '
+              'losing characters. The original file was not changed.'
+          : 'Could not save the subtitle file.'));
       await AppLogger.instance.error(
-        'Error saving file in source view: $e',
+        'Error saving file in source view (${e.runtimeType})',
         context: 'SourceViewController.saveFile',
         extra: _safeLogContext,
       );
@@ -335,6 +360,16 @@ class SourceViewController extends Notifier<SourceViewState> {
   Future<void> saveAsFile() async {
     try {
       _setState(state.toSaving());
+
+      final content = _rawSourceText ?? state.toSrtContent();
+      if (content.isEmpty) {
+        _setState(state.toSaveError('No content to save. The file appears to be empty.'));
+        return;
+      }
+      // Validate and encode *before* asking Android to create a document,
+      // so an unrepresentable edit cannot leave behind an empty destination.
+      final bytes = await ref.read(sourceViewEncodingServiceProvider)
+          .encode(content, encoding: state.encodingName);
       
       // Get the current file name as a default
       final currentFileName = state.filePath.split('/').last;
@@ -349,7 +384,7 @@ class SourceViewController extends Notifier<SourceViewState> {
         fileName = '$nameWithoutExt.srt';
       }
       
-      await AppLogger.instance.info('Save As filename: $fileName');
+      await AppLogger.instance.info('Source View Save As destination prepared');
       
       // Use SAF to create a new document
       final fileAccess = ref.read(sourceViewFileAccessProvider);
@@ -368,22 +403,13 @@ class SourceViewController extends Notifier<SourceViewState> {
       
       await AppLogger.instance.info('Save As location selected');
       
-      final content = state.toSrtContent();
-      
-      if (content.isEmpty) {
-        _setState(state.toSaveError('No content to save. The file appears to be empty.'));
-        await AppLogger.instance.warning('Save As aborted: no content available');
-        return;
-      }
-      
-      // Always use UTF-8 encoding for new files
-      final encoder = utf8;
-      final bytes = encoder.encode(content);
+      // Save As preserves the chosen source encoding and BOM as well as
+      // exact whitespace; explicit transcoding is a separate user decision.
       await AppLogger.instance.info('Save As encoded bytes length: ${bytes.length}');
       
       // Save to the new location
       final writeResult = await fileAccess.writeCreatedDocument(
-        safInfo, Uint8List.fromList(bytes),
+        safInfo, bytes,
       );
       if (_disposed) return;
       
@@ -395,9 +421,12 @@ class SourceViewController extends Notifier<SourceViewState> {
       }
       
     } catch (e) {
-      _setState(state.toSaveError('Could not save the subtitle file to that location.'));
+      _setState(state.toSaveError(e is FormatException || e is UnsupportedError
+          ? 'This edit cannot be saved in ${state.encodingName} without '
+              'losing characters. No document was created.'
+          : 'Could not save the subtitle file to that location.'));
       await AppLogger.instance.error(
-        'Error saving file as in source view: $e',
+        'Error saving file as in source view (${e.runtimeType})',
         context: 'SourceViewController.saveAsFile',
         extra: _safeLogContext,
       );

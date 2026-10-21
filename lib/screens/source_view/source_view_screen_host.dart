@@ -114,7 +114,8 @@ class _SourceViewRiverpodHost extends ConsumerWidget {
       if (next.errorMessage != null &&
           next.errorMessage != previous?.errorMessage) {
         SnackbarHelper.showError(context, next.errorMessage!);
-        controller.clearMessages();
+        // Keep a failed load visible in the body so users can reopen the
+        // original bytes with an explicit encoding from the app bar.
       }
 
       if (next.saveMessage != null &&
@@ -231,9 +232,20 @@ class _SourceViewWidget extends StatelessWidget {
               color: tokens.mutedText,
             ),
           ),
+          Text(
+            state.encodingName,
+            style: TextStyle(fontSize: 11, color: tokens.mutedText),
+          ),
         ],
       ),
       actions: [
+        IconButton(
+          tooltip: 'Open with encoding',
+          icon: const Icon(Icons.text_fields),
+          onPressed: state.isLoading || state.isSaving
+              ? null
+              : () => _showEncodingPicker(context),
+        ),
         PopupMenuButton<String>(
           icon: Icon(
             Icons.save,
@@ -279,6 +291,62 @@ class _SourceViewWidget extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  Future<void> _showEncodingPicker(BuildContext context) async {
+    if (state.hasUnsavedChanges) {
+      SnackbarHelper.showError(
+          context, 'Save or discard your edits before changing encoding.');
+      return;
+    }
+
+    List<String> choices;
+    try {
+      choices = await controller.availableEncodings();
+    } catch (_) {
+      if (context.mounted) {
+        SnackbarHelper.showError(context, 'Unable to query available encodings.');
+      }
+      return;
+    }
+    if (!context.mounted) return;
+
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: SizedBox(
+          height: MediaQuery.sizeOf(sheetContext).height * 0.65,
+          child: Column(
+            children: [
+              const ListTile(
+                title: Text('Open with encoding'),
+                subtitle: Text('Choose the original charset for this file. '
+                    'This rereads its bytes without converting them.'),
+              ),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: choices.length + 1,
+                  itemBuilder: (itemContext, index) {
+                    final automatic = index == 0;
+                    final label = automatic ? 'Auto (BOM / UTF-8)' : choices[index - 1];
+                    return ListTile(
+                      title: Text(label),
+                      selected: !automatic && label == state.encodingName,
+                      onTap: () => Navigator.of(sheetContext).pop(
+                          automatic ? '__auto__' : label),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (!context.mounted || selected == null) return;
+    await controller.reopenWithEncoding(selected == '__auto__' ? null : selected);
   }
 
   /// Build the main body content based on current state

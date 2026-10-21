@@ -1,6 +1,5 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
-import 'dart:convert';
 import 'package:subtitle_studio/models/subtitle_entry.dart';
 
 /// Immutable state model for the SourceViewScreen
@@ -22,7 +21,9 @@ class SourceViewState extends Equatable {
   
   // Edit state
   final bool hasUnsavedChanges;
-  final Encoding fileEncoding;
+  /// Canonical charset label, including BOM when present. Dart's Encoding
+  /// cannot represent the extended subtitle charsets or a BOM preference.
+  final String encodingName;
   
   // Save state
   final bool isSaving;
@@ -38,7 +39,7 @@ class SourceViewState extends Equatable {
     this.isInitialized = false,
     this.errorMessage,
     this.hasUnsavedChanges = false,
-    this.fileEncoding = utf8,
+    this.encodingName = 'UTF-8',
     this.isSaving = false,
     this.saveMessage,
     this.saveSuccessful = false,
@@ -70,11 +71,11 @@ class SourceViewState extends Equatable {
   /// Loaded state
   SourceViewState toLoaded({
     required List<SubtitleEntry> entries,
-    required Encoding encoding,
+    required String encoding,
   }) {
     return copyWith(
       subtitleEntries: entries,
-      fileEncoding: encoding,
+      encodingName: encoding,
       isLoading: false,
       isInitialized: true,
       errorMessage: null,
@@ -139,7 +140,7 @@ class SourceViewState extends Equatable {
     bool? isInitialized,
     String? errorMessage,
     bool? hasUnsavedChanges,
-    Encoding? fileEncoding,
+    String? encodingName,
     bool? isSaving,
     String? saveMessage,
     bool? saveSuccessful,
@@ -153,7 +154,7 @@ class SourceViewState extends Equatable {
       isInitialized: isInitialized ?? this.isInitialized,
       errorMessage: errorMessage,
       hasUnsavedChanges: hasUnsavedChanges ?? this.hasUnsavedChanges,
-      fileEncoding: fileEncoding ?? this.fileEncoding,
+      encodingName: encodingName ?? this.encodingName,
       isSaving: isSaving ?? this.isSaving,
       saveMessage: saveMessage,
       saveSuccessful: saveSuccessful ?? this.saveSuccessful,
@@ -185,7 +186,7 @@ class SourceViewState extends Equatable {
         isInitialized,
         errorMessage,
         hasUnsavedChanges,
-        fileEncoding,
+        encodingName,
         isSaving,
         saveMessage,
         saveSuccessful,
