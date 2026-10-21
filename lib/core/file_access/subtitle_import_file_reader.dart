@@ -82,7 +82,7 @@ final class SubtitleImportFileReader {
 
   final SubtitleImportByteAccess _access;
 
-  Future<Uint8List> read(SubtitleImportFileReference selection) {
+  Future<Uint8List> read(SubtitleImportFileReference selection) async {
     switch (selection.source.kind) {
       case StudioFileLocationKind.androidDocument:
         if (!_access.isAndroid) {
