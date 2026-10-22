@@ -14,8 +14,12 @@ class FakeHistoryCommands implements HistoryGraphCommands {
   final List<HistoryRef> refs;
   final Checkpoint checkpoint;
 
-  FakeHistoryCommands({this.corrupt = false, this.detached = false})
-      : refs = [
+  FakeHistoryCommands({
+    this.corrupt = false,
+    this.detached = false,
+    String? description,
+    String operationType = 'snapshot',
+  }) : refs = [
           _ref('HEAD', 'head', 1,
               attached: detached ? null : 'refs/heads/main'),
           _ref('refs/heads/main', 'branch', 1),
@@ -24,8 +28,8 @@ class FakeHistoryCommands implements HistoryGraphCommands {
           sessionId: 1,
           subtitleCollectionId: 9,
           timestamp: DateTime.utc(2026, 10, 13),
-          operationType: 'snapshot',
-          description: 'Initial state',
+          operationType: operationType,
+          description: description ?? 'Initial state',
           parentCheckpointId: null,
           isActive: true,
           checkpointType: 'snapshot',
@@ -154,6 +158,32 @@ void main() {
     expect(find.byKey(
         const ValueKey('history-ref-menu-refs/bookmarks/review')),
         findsOneWidget);
+  });
+
+  testWidgets('visual history humanizes automatic subtitle edit labels',
+      (tester) async {
+    final commands = FakeHistoryCommands(
+      operationType: 'edit',
+      description: 'Edited line 12',
+    );
+    await tester.pumpWidget(_host(commands));
+    await tester.pumpAndSettle();
+    expect(find.text('Edited subtitle 12'), findsOneWidget);
+    expect(find.text('Edited line 12'), findsNothing);
+    expect(commands.checkpoint.description, 'Edited line 12');
+    expect(commands.checkpoint.operationType, 'edit');
+  });
+
+  testWidgets('custom save point title stays exactly as entered',
+      (tester) async {
+    final commands = FakeHistoryCommands(
+      operationType: 'manual',
+      description: 'Before final review',
+    );
+    await tester.pumpWidget(_host(commands));
+    await tester.pumpAndSettle();
+    expect(find.text('Before final review'), findsOneWidget);
+    expect(commands.checkpoint.description, 'Before final review');
   });
 
   testWidgets('corrupt graph shows retry rather than fake history',

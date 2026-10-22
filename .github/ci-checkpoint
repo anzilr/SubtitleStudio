@@ -304,3 +304,13 @@ old Check out commit finder to Restore this version and target the exact
 branch confirmation text rather than every chip containing current branch.
 Run full Flutter analyze/tests once for final acceptance. No native
 application builds or multiplatform host testing.
+
+CP91 R3 October 22 2026: replace raw automatic Edit History operation
+descriptions in both graph and classic sheet with shared plain-language
+subtitle-focused titles. Map edits, adds, deletes, splits, merges, review
+marks/comments/resolution, first project version and external changes,
+while retaining exact user-defined save-point names and unknown legacy
+descriptions. Classic SNAPSHOT/MANUAL labels become Saved version/Save
+point; classic restore confirmations and snapshot buttons use clearer copy.
+No history schema/ref mutation. Run only Linux Flutter analyze and tests
+in one batch; NO platform builds or multi-platform CI matrix.

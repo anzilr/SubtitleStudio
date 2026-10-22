@@ -325,7 +325,10 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
           Expanded(child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(node.description, maxLines: 2,
+              Text(CheckpointHistoryLabels.entryTitle(
+                  operationType: node.operationType,
+                  description: node.description,
+                ), maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontWeight: FontWeight.w600)),
               Text(CheckpointHistoryLabels.versionDetails(node),
@@ -348,7 +351,7 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
           PopupMenuButton<String>(
             key: ValueKey('history-node-menu-' + node.checkpointId.toString()),
             enabled: !_busy,
-            tooltip: 'Checkpoint actions',
+            tooltip: 'Saved version options',
             onSelected: (value) {
               if (value == 'checkout') {
                 _checkout(target: 'version ' + label, branch: false,

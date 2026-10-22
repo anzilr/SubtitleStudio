@@ -41,6 +41,107 @@ class CheckpointHistoryLabels {
     return parts.join(' · ');
   }
 
+  static final RegExp _edited = RegExp(r'^Edited line (\d+)$');
+  static final RegExp _added = RegExp(r'^Added line at position (\d+)$');
+  static final RegExp _deleted = RegExp(r'^Deleted line (\d+)$');
+  static final RegExp _split = RegExp(r'^Split line (\d+)$');
+  static final RegExp _merged = RegExp(r'^Merged lines (\d+) and (\d+)$');
+  static final RegExp _marked = RegExp(r'^Marked line (\d+)$');
+  static final RegExp _unmarked = RegExp(r'^Unmarked line (\d+)$');
+  static final RegExp _comment = RegExp(r'^Updated comment on line (\d+)$');
+  static final RegExp _resolved = RegExp(r'^Updated resolution of line (\d+)$');
+
+  static String? _matchOne(String title, RegExp pattern, String prefix,
+      {String suffix = ''}) {
+    final match = pattern.firstMatch(title);
+    return match == null ? null : '$prefix ${match[1]}$suffix';
+  }
+
+  static String? _matchMerge(String title) {
+    final match = _merged.firstMatch(title);
+    return match == null ? null
+        : 'Combined subtitles ${match[1]} and ${match[2]}';
+  }
+
+  static String? _matchAnnotation(String title) =>
+      _matchOne(title, _marked, 'Marked subtitle',
+          suffix: ' for review') ??
+      _matchOne(title, _unmarked, 'Removed review mark from subtitle') ??
+      _matchOne(title, _comment, 'Updated note on subtitle') ??
+      _matchOne(title, _resolved, 'Updated review status of subtitle');
+
+  static String? _matchEdit(String title) =>
+      _matchOne(title, _edited, 'Edited subtitle') ??
+      _matchAnnotation(title);
+
+  /// Display-only title for an edit-history entry.
+  ///
+  /// The database keeps its original operation type and description, because
+  /// imported projects, undo/redo, and existing history formats depend on
+  /// those fields. Only known machine-generated descriptions are rewritten.
+  /// Manual names and unfamiliar descriptions must be displayed verbatim.
+  static String entryTitle({
+    required String operationType,
+    required String description,
+  }) {
+    if (operationType == 'manual') {
+      return description == 'Manual checkpoint' || description.trim().isEmpty
+          ? 'Save point created'
+          : description;
+    }
+
+    final title = description.trim();
+    if (title == 'Initial state' && operationType == 'snapshot') {
+      return 'Project started';
+    }
+    if (title == 'Snapshot' && operationType == 'snapshot') {
+      return 'Saved project version';
+    }
+    if (title == 'Captured external subtitle changes' &&
+        operationType == 'sync') {
+      return 'Saved changes made outside the editor';
+    }
+
+
+    // Only translate well-known generated descriptions, scoped by the
+    // persisted operation type. Keep all custom/imported strings intact.
+    final pattern = switch (operationType) {
+      'edit' => _matchEdit(title),
+      'add' => _matchOne(title, _added, 'Added subtitle'),
+      'delete' => _matchOne(title, _deleted, 'Deleted subtitle'),
+      'split' => _matchOne(title, _split, 'Split subtitle', suffix: ' into two'),
+      'merge' => _matchMerge(title),
+      'annotation' => _matchAnnotation(title),
+      _ => null,
+    };
+    if (pattern != null) return pattern;
+
+    if (title.isEmpty) {
+      return switch (operationType) {
+        'add' => 'Added subtitles',
+        'delete' => 'Deleted subtitles',
+        'split' => 'Split a subtitle',
+        'merge' => 'Combined subtitles',
+        'edit' => 'Edited subtitles',
+        'effect' => 'Applied subtitle effect',
+        'sync' => 'Updated subtitle timing',
+        'snapshot' => 'Saved project version',
+        _ => 'Saved change',
+      };
+    }
+    return title;
+  }
+
+  /// The small marker shown on the classic timeline.
+  static String entryBadge({
+    required String operationType,
+    required String checkpointType,
+  }) {
+    if (operationType == 'manual') return 'Save point';
+    if (checkpointType == 'snapshot') return 'Saved version';
+    return 'Edit';
+  }
+
   static String checkoutTitle({required bool branch}) =>
       branch ? 'Switch to this branch?' : 'Restore this version?';
 

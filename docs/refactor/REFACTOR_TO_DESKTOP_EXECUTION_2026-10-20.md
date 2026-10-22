@@ -329,6 +329,21 @@ wording, detached history, protected main and bookmark restores.
 [R2 report](CHECKPOINT91_R2_HISTORY_PLAIN_LANGUAGE_2026-10-22.md).
 **Verification:** [Linux 732 Flutter tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39828660986).
 
+**CP91 R3 (October 22, 2026):** Shared `CheckpointHistoryLabels.entryTitle`
+now presents known automatic checkpoint descriptions in subtitle-editor
+language across **both visual and classic Edit History**: "Edited subtitle",
+"Added subtitle", "Deleted subtitle", "Split subtitle", "Combined subtitles",
+"Marked for review", "Updated note" and "Updated review status".
+First-version and external-change labels are also clarified; the classic
+`SNAPSHOT` and `MANUAL` chips display "Saved version" and "Save point",
+and its restore buttons explain the action without Git vocabulary.
+This is **display-only**: the raw persisted operation types, descriptions,
+reference names, branch protections and `.msone` history data remain
+unchanged. Custom manual titles and unrecognized legacy events display
+unchanged. Ten mapping-contract tests and two graph widget regressions.
+[R3 report](CHECKPOINT91_R3_EDIT_HISTORY_ENTRY_LABELS_2026-10-22.md).
+**Verification:** Linux Flutter analysis/full tests pending.
+
 ### CP91 — Outstanding roadmap UX needed on mobile
 - Deliver the Git-style **visual checkpoint history** with plain-language controls, accessible list alternative and protected refs; preserve `.msone` compatibility and multi-branch correctness.
 - Complete compact mobile Edit Line usability and core component consistency only to the extent planned by the already-approved UX roadmap; retain Carbon Zero and other shipped skins.

@@ -6,6 +6,7 @@ import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/screens/screen_help.dart';
 import 'package:subtitle_studio/widgets/checkpoint_history_panel.dart';
 import 'package:subtitle_studio/services/checkpoint_timeline.dart';
+import 'package:subtitle_studio/services/checkpoint_history_labels.dart';
 
 /// Edit History Sheet - User-friendly undo/redo interface
 /// 
@@ -202,7 +203,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Undo to This Point?',
+                        'Restore this version?',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -212,7 +213,10 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Go back to: ${checkpoint.description}',
+                  'Go back to: ${CheckpointHistoryLabels.entryTitle(
+                          operationType: checkpoint.operationType,
+                          description: checkpoint.description,
+                        )}',
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
                 const SizedBox(height: 16),
@@ -278,7 +282,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                         backgroundColor: Theme.of(context).primaryColor,
                         foregroundColor: Theme.of(context).colorScheme.onPrimary,
                       ),
-                      child: const Text('Undo to Here'),
+                      child: const Text('Restore version'),
                     ),
                   ],
                 ),
@@ -369,7 +373,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Saves a named snapshot in this project\'s history, not a separate backup file. Use a bookmark to label an existing commit without adding a snapshot.',
+                        'Saves a named version in this project\'s edit history, not a separate backup file. A bookmark can name an existing version without making a new one.',
                         style: TextStyle(
                           fontSize: 13,
                           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
@@ -454,7 +458,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                     SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Create In-app Snapshot',
+                        'Save Project Version',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -479,7 +483,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                           Icon(Icons.info_outline, size: 16, color: Theme.of(context).colorScheme.tertiary),
                           const SizedBox(width: 8),
                           Text(
-                            'What is an In-app Snapshot?',
+                            'What is a Saved Version?',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: Theme.of(context).colorScheme.tertiary,
@@ -489,7 +493,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Saves a snapshot in this project\'s edit history. It does not create a separate backup file. Export your project for an independent copy.',
+                        'Saves a complete version of your subtitles in Edit History. It does not create a separate backup file. Export the project if you need an independent copy.',
                         style: TextStyle(
                           fontSize: 13,
                           color: Theme.of(context).colorScheme.tertiary,
@@ -549,7 +553,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
       await _loadHistory();
       
       if (mounted) {
-        SnackbarHelper.showSuccess(context, 'In-app snapshot created: $name');
+        SnackbarHelper.showSuccess(context, 'Project version saved: $name');
       }
     }
   }
@@ -784,7 +788,10 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  checkpoint.description,
+                                  CheckpointHistoryLabels.entryTitle(
+                                    operationType: checkpoint.operationType,
+                                    description: checkpoint.description,
+                                  ),
                                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -814,7 +821,10 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                                             ),
                                             const SizedBox(width: 4),
                                             Text(
-                                              'SNAPSHOT',
+                                              CheckpointHistoryLabels.entryBadge(
+                                                operationType: checkpoint.operationType,
+                                                checkpointType: checkpoint.checkpointType,
+                                              ),
                                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                                 color: mutedColor,
                                                 fontWeight: FontWeight.w800,
@@ -849,7 +859,10 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                                             ),
                                             const SizedBox(width: 4),
                                             Text(
-                                              'MANUAL',
+                                              CheckpointHistoryLabels.entryBadge(
+                                                operationType: checkpoint.operationType,
+                                                checkpointType: checkpoint.checkpointType,
+                                              ),
                                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                                 color: mutedColor,
                                                 fontWeight: FontWeight.w800,
@@ -941,7 +954,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '${_checkpoints.length} change${_checkpoints.length == 1 ? '' : 's'} recorded',
+                          '${_checkpoints.length} saved version${_checkpoints.length == 1 ? '' : 's'}',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: mutedColor,
                           ),
@@ -950,7 +963,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                     ),
                   ),
                   IconButton(
-                    tooltip: _showGraph ? 'Show classic timeline' : 'Show history graph',
+                    tooltip: _showGraph ? 'Show simple history list' : 'Show visual history',
                     onPressed: () => setState(() => _showGraph = !_showGraph),
                     icon: Icon(_showGraph ? Icons.view_timeline : Icons.account_tree_outlined),
                   ),
@@ -1073,7 +1086,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                         foregroundColor: Theme.of(context).colorScheme.onPrimary,
                       ),
                       icon: Icon(Icons.save, size: 18),
-                      label: const Text('Snapshot'),
+                      label: const Text('Save Version'),
                     ),
                   ),
                 ),
