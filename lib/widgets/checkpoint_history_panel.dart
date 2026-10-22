@@ -34,6 +34,7 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
   bool _busy = true;
   // Reserve dialogs too, so two actions cannot both receive confirmation.
   bool _dialogPending = false;
+  bool _showVisualLanes = true;
   int _generation = 0;
 
   HistoryGraphCommands get _actions => widget.commands ?? CheckpointHistoryActions(
@@ -268,14 +269,8 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
     }
   }
 
-  Widget _refMenu(HistoryGraphReference historyRef) {
-    final label = _shortName(historyRef);
-    return PopupMenuButton<String>(
-      key: ValueKey('history-ref-menu-' + historyRef.name),
-      tooltip: label + ' options',
-      enabled: !_busy && historyRef.kind != 'head',
-      onSelected: (value) => _referenceAction(value, historyRef),
-      itemBuilder: (_) => [
+  List<PopupMenuEntry<String>> _referenceMenuItems(
+      HistoryGraphReference historyRef) => [
         if (historyRef.kind == 'branch')
           const PopupMenuItem(value: 'switch',
               child: Text('Use this editing path')),
@@ -286,7 +281,84 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
           const PopupMenuItem(value: 'rename', child: Text('Rename')),
         if (historyRef.canDelete)
           const PopupMenuItem(value: 'delete', child: Text('Delete')),
-      ],
+      ];
+
+  Future<void> _manageReferences() async {
+    final graph = _graph;
+    if (_busy || graph == null) return;
+    final paths = graph.references
+        .where((ref) => ref.kind == 'branch').toList();
+    final bookmarks = graph.references
+        .where((ref) => ref.kind == 'bookmark').toList();
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (sheetContext) => SafeArea(
+        child: SizedBox(
+          height: MediaQuery.sizeOf(sheetContext).height * 0.65,
+          child: Column(children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 8, 8),
+              child: Row(children: [
+                Expanded(child: Text('Editing paths & bookmarks',
+                    style: Theme.of(sheetContext).textTheme.titleMedium)),
+                IconButton(
+                  tooltip: 'Close saved paths',
+                  onPressed: () => Navigator.of(sheetContext).pop(),
+                  icon: const Icon(Icons.close),
+                ),
+              ]),
+            ),
+            Expanded(child: ListView(children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 8, 16, 4),
+                child: Text('Editing paths'),
+              ),
+              for (final historyRef in paths)
+                _managedReferenceTile(sheetContext, historyRef),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 12, 16, 4),
+                child: Text('Bookmarks'),
+              ),
+              if (bookmarks.isEmpty)
+                const ListTile(title: Text('No bookmarks saved yet')),
+              for (final historyRef in bookmarks)
+                _managedReferenceTile(sheetContext, historyRef),
+            ])),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  Widget _managedReferenceTile(BuildContext sheetContext,
+      HistoryGraphReference historyRef) => ListTile(
+    key: ValueKey('history-manage-' + historyRef.name),
+    leading: Icon(historyRef.kind == 'branch'
+        ? Icons.call_split : Icons.bookmark_outline),
+    title: Text(_shortName(historyRef)),
+    subtitle: Text('Version #${historyRef.checkpointId}' +
+        (historyRef.isAttached ? ' · In use' : '')),
+    trailing: PopupMenuButton<String>(
+      key: ValueKey('history-manage-menu-' + historyRef.name),
+      tooltip: '${_shortName(historyRef)} options',
+      onSelected: (value) {
+        Navigator.of(sheetContext).pop();
+        _referenceAction(value, historyRef);
+      },
+      itemBuilder: (_) => _referenceMenuItems(historyRef),
+    ),
+  );
+
+  Widget _refMenu(HistoryGraphReference historyRef) {
+    final label = _shortName(historyRef);
+    return PopupMenuButton<String>(
+      key: ValueKey('history-ref-menu-' + historyRef.name),
+      tooltip: label + ' options',
+      enabled: !_busy && historyRef.kind != 'head',
+      onSelected: (value) => _referenceAction(value, historyRef),
+      itemBuilder: (_) => _referenceMenuItems(historyRef),
       child: Chip(
         visualDensity: VisualDensity.compact,
         avatar: Icon(historyRef.kind == 'head' ? Icons.adjust
@@ -301,22 +373,7 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
     final node = row.node;
     final label = '#' + node.checkpointId.toString();
     final railWidth = CheckpointHistoryRailPainter.railWidth(laneCount);
-    return Stack(children: [
-      Positioned.fill(
-        child: IgnorePointer(
-          child: CustomPaint(
-            key: ValueKey('history-rail-' + node.checkpointId.toString()),
-            painter: CheckpointHistoryRailPainter(
-              row: row,
-              laneCount: laneCount,
-              colors: Theme.of(context).colorScheme,
-            ),
-          ),
-        ),
-      ),
-      Padding(
-        padding: EdgeInsets.only(left: railWidth),
-        child: Card(
+    final card = Card(
       key: ValueKey('history-commit-' + node.checkpointId.toString()),
       margin: const EdgeInsets.only(bottom: 8),
       child: Padding(
@@ -369,8 +426,25 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
           ),
         ]),
       ),
+    );
+    if (!_showVisualLanes) return card;
+    return Stack(children: [
+      Positioned.fill(
+        child: IgnorePointer(
+          child: CustomPaint(
+            key: ValueKey('history-rail-' + node.checkpointId.toString()),
+            painter: CheckpointHistoryRailPainter(
+              row: row,
+              laneCount: laneCount,
+              colors: Theme.of(context).colorScheme,
+            ),
+          ),
+        ),
       ),
-    ),
+      Padding(
+        padding: EdgeInsets.only(left: railWidth),
+        child: card,
+      ),
     ]);
   }
 
@@ -408,7 +482,28 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
             icon: const Icon(Icons.refresh)),
         ]),
       ),
-      const SizedBox(
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: Row(children: [
+          Expanded(child: Text('Saved paths & bookmarks · '
+              '${graph.references.where((ref) => ref.kind != 'head').length}',
+              maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall)),
+          TextButton.icon(
+            key: const ValueKey('history-manage-references'),
+            onPressed: _busy ? null : _manageReferences,
+            icon: const Icon(Icons.tune, size: 18),
+            label: const Text('Manage'),
+          ),
+          IconButton(
+            key: const ValueKey('history-view-toggle'),
+            tooltip: _showVisualLanes ? 'Show list view' : 'Show version map',
+            onPressed: () => setState(() => _showVisualLanes = !_showVisualLanes),
+            icon: Icon(_showVisualLanes ? Icons.view_list : Icons.account_tree),
+          ),
+        ]),
+      ),
+      if (_showVisualLanes) const SizedBox(
         height: 36,
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,

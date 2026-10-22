@@ -324,3 +324,12 @@ with editing-path wording, while preserving Git refs, default branch
 protections, bookmark behavior and HEAD/tip guarded transactions.
 Pure display tests and widget tests assert no raw main/current branch.
 Only Flutter pub get/analyze/test on Linux, no app builds/host matrix.
+
+CP91 R5 October 22 2026: add compact, scrollable editing path and bookmark
+management, including a protected Main edits row and named reference actions.
+Add the in-panel version map/list toggle for users who prefer an accessible
+text-first history layout without decorative graph lanes. Preserve all
+backend refs, Isar/.msone data, branch/head guards, and restore confirmations.
+Widget regressions cover list/map switching, protected reference actions,
+renaming a named path from manager and a narrow 320px layout. Run Linux
+Flutter pub get/analyze/full tests only. No platform builds or host matrix.

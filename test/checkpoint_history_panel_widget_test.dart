@@ -298,4 +298,91 @@ void main() {
     expect(fake.lastExpectedTipId, 1);
     expect(find.text('Editing: Main edits'), findsOneWidget);
   });
+
+  testWidgets('list view hides decorative lanes but keeps version actions',
+      (tester) async {
+    await tester.pumpWidget(_host(FakeHistoryCommands()));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('history-rail-1')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('history-view-toggle')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('history-rail-1')), findsNothing);
+    expect(find.byKey(const ValueKey('history-legend')), findsNothing);
+    expect(find.text('Project started'), findsOneWidget);
+    expect(find.byKey(const ValueKey('history-node-menu-1')), findsOneWidget);
+    expect(find.byTooltip('Show version map'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('history-view-toggle')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('history-rail-1')), findsOneWidget);
+    expect(find.byKey(const ValueKey('history-legend')), findsOneWidget);
+  });
+
+  testWidgets('compact manager groups paths and bookmarks with safe actions',
+      (tester) async {
+    final fake = FakeHistoryCommands();
+    fake.refs.add(FakeHistoryCommands._ref(
+      'refs/heads/review', 'branch', 1,
+    ));
+    fake.refs.add(FakeHistoryCommands._ref(
+      'refs/bookmarks/before-review', 'bookmark', 1,
+    ));
+    await tester.pumpWidget(_host(fake));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('history-manage-references')));
+    await tester.pumpAndSettle();
+    expect(find.text('Editing paths & bookmarks'), findsOneWidget);
+    expect(find.byKey(const ValueKey('history-manage-refs/heads/main')),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey('history-manage-refs/heads/review')),
+        findsOneWidget);
+    expect(find.byKey(
+        const ValueKey('history-manage-refs/bookmarks/before-review')),
+        findsOneWidget);
+
+    await tester.tap(find.byKey(
+        const ValueKey('history-manage-menu-refs/heads/main')));
+    await tester.pumpAndSettle();
+    expect(find.text('Use this editing path'), findsOneWidget);
+    expect(find.text('Rename'), findsNothing);
+    expect(find.text('Delete'), findsNothing);
+    await tester.tap(find.text('Editing paths & bookmarks'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(
+        const ValueKey('history-manage-menu-refs/heads/review')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Rename'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('history-ref-name')),
+        'final-review');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(fake.refs.any((ref) => ref.name == 'refs/heads/final-review'),
+        isTrue);
+    expect(fake.refs.any((ref) => ref.name == 'refs/heads/main'), isTrue);
+    expect(fake.refs.any((ref) => ref.name == 'refs/bookmarks/before-review'),
+        isTrue);
+    expect(find.text('Editing: Main edits'), findsOneWidget);
+  });
+
+  testWidgets('history toolbar fits narrow mobile view', (tester) async {
+    tester.view.physicalSize = const Size(320, 720);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(_host(FakeHistoryCommands()));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const ValueKey('history-manage-references')),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey('history-view-toggle')),
+        findsOneWidget);
+  });
 }
