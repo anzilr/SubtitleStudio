@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/services/checkpoint_history_actions.dart';
 import 'package:subtitle_studio/services/checkpoint_history_graph.dart';
+import 'package:subtitle_studio/services/checkpoint_history_labels.dart';
 import 'package:subtitle_studio/services/checkpoint_history_lane_layout.dart';
 import 'package:subtitle_studio/widgets/checkpoint_history_rail.dart';
 
@@ -108,7 +109,7 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
   }
 
   String _shortName(HistoryGraphReference historyRef) =>
-      historyRef.name.replaceFirst(RegExp(r'^refs/(heads|bookmarks)/'), '');
+      CheckpointHistoryLabels.referenceName(historyRef);
 
   Future<String?> _enterName(String title, String prefix,
       {String initial = ''}) async {
@@ -165,14 +166,12 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
     try {
     final expectedHeadId = _graph!.headCheckpointId!;
     final confirmed = await _confirm(
-      branch ? 'Switch branch?' : 'Check out commit?',
-      branch
-        ? 'Restore ' + target + ' and attach HEAD to this branch. '
-          'Other named branch tips remain unchanged.'
-        : 'Restore ' + target + ' and detach HEAD. '
-          'Named branch tips and alternate history remain unchanged. '
-          'New edits will advance detached HEAD until a branch is selected.',
-      branch ? 'Switch' : 'Check out',
+      CheckpointHistoryLabels.checkoutTitle(branch: branch),
+      CheckpointHistoryLabels.checkoutMessage(
+        branch: branch,
+        target: target,
+      ),
+      branch ? 'Switch' : 'Restore',
     );
     if (!confirmed || !mounted) return;
     final request = ++_generation;
@@ -182,7 +181,7 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
       if (!mounted || request != _generation) return;
       if (result == null) {
         setState(() => _busy = false);
-        _notify('Checkout refused. History may have changed.');
+        _notify('History changed before the restore. Showing the latest versions.');
         await _reload();
         return;
       }
@@ -196,7 +195,7 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
     } catch (_) {
       if (!mounted || request != _generation) return;
       setState(() => _busy = false);
-      _notify('Checkout could not be confirmed. Reloading current history.');
+      _notify('Could not restore this version. Refreshing saved history.');
       await _reload();
     }
     } finally {
@@ -210,7 +209,7 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
     try {
     final branch = kind == 'branch';
     final name = await _enterName(
-      branch ? 'Create branch' : 'Bookmark commit',
+      branch ? 'Name new branch' : 'Name bookmark',
       branch ? 'refs/heads/' : 'refs/bookmarks/',
     );
     if (name == null || !mounted) return;
@@ -234,7 +233,7 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
           ifBranchTipId: historyRef.checkpointId,
         ));
     } else if (command == 'checkout') {
-      await _checkout(target: 'commit #' + historyRef.checkpointId.toString(),
+      await _checkout(target: 'version #' + historyRef.checkpointId.toString(),
         branch: false,
         action: (headId) => _actions.checkoutCommit(
           historyRef.checkpointId, ifCurrentHeadId: headId));
@@ -242,7 +241,7 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
       _dialogPending = true;
       try {
       final name = await _enterName(
-        'Rename ' + historyRef.kind,
+        historyRef.kind == 'branch' ? 'Rename branch' : 'Rename bookmark',
         historyRef.kind == 'branch' ? 'refs/heads/' : 'refs/bookmarks/',
         initial: _shortName(historyRef));
       if (name != null && mounted && name != historyRef.name) {
@@ -255,10 +254,11 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
     } else if (command == 'delete' && historyRef.canDelete) {
       _dialogPending = true;
       try {
-      final yes = await _confirm('Delete reference?',
-        'Remove "' + _shortName(historyRef) + '"? The checkpoint is not '
-        'deleted immediately, but may later become eligible for pruning.',
-        'Delete');
+      final yes = await _confirm('Remove saved name?',
+        'Remove "' + _shortName(historyRef) + '"? The saved version '
+        'is not deleted immediately, but could become eligible for '
+        'cleanup later if no branch or bookmark keeps it.',
+        'Remove');
       if (yes && mounted) {
         await _run(() => _actions.deleteReference(historyRef.name));
       }
@@ -281,7 +281,7 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
               child: Text('Switch to branch')),
         if (historyRef.kind == 'bookmark')
           const PopupMenuItem(value: 'checkout',
-              child: Text('Check out bookmarked commit')),
+              child: Text('Restore bookmarked version')),
         if (historyRef.canRename)
           const PopupMenuItem(value: 'rename', child: Text('Rename')),
         if (historyRef.canDelete)
@@ -292,7 +292,7 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
         avatar: Icon(historyRef.kind == 'head' ? Icons.adjust
           : historyRef.kind == 'branch' ? Icons.call_split : Icons.bookmark,
           size: 16),
-        label: Text(label + (historyRef.isAttached ? ' (attached)' : '')),
+        label: Text(CheckpointHistoryLabels.referenceLabel(historyRef)),
       ),
     );
   }
@@ -328,21 +328,14 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
               Text(node.description, maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontWeight: FontWeight.w600)),
-              Text(label + ' · ' +
-                (node.parentCheckpointId == null ? 'Root'
-                  : 'Parent #' + node.parentCheckpointId.toString()) +
-                (node.isHead ? ' · HEAD' : node.isHeadAncestor
-                  ? ' · HEAD ancestry' : '') +
-                (node.childCheckpointIds.length > 1
-                  ? ' · Fork (' + node.childCheckpointIds.length.toString()
-                      + ' children)' : ''),
+              Text(CheckpointHistoryLabels.versionDetails(node),
                 style: Theme.of(context).textTheme.bodySmall),
               if (node.references.isNotEmpty)
                 Wrap(spacing: 5, children: [
                   for (final historyRef in node.references)
                     ActionChip(
-                      label: Text(_shortName(historyRef) +
-                        (historyRef.isAttached ? ' ✓' : '')),
+                      label: Text(CheckpointHistoryLabels.referenceLabel(
+                          historyRef)),
                       onPressed: _busy || historyRef.kind == 'head' ? null : () {
                         _referenceAction(historyRef.kind == 'branch'
                           ? 'switch' : 'checkout', historyRef);
@@ -358,7 +351,7 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
             tooltip: 'Checkpoint actions',
             onSelected: (value) {
               if (value == 'checkout') {
-                _checkout(target: 'checkpoint ' + label, branch: false,
+                _checkout(target: 'version ' + label, branch: false,
                   action: (headId) => _actions.checkoutCommit(
                     node.checkpointId, ifCurrentHeadId: headId));
               } else {
@@ -366,9 +359,9 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
               }
             },
             itemBuilder: (_) => const [
-              PopupMenuItem(value: 'checkout', child: Text('Check out commit')),
-              PopupMenuItem(value: 'branch', child: Text('Create branch here')),
-              PopupMenuItem(value: 'bookmark', child: Text('Bookmark this commit')),
+              PopupMenuItem(value: 'checkout', child: Text('Restore this version')),
+              PopupMenuItem(value: 'branch', child: Text('Start a branch here')),
+              PopupMenuItem(value: 'bookmark', child: Text('Bookmark this version')),
             ],
           ),
         ]),
@@ -403,10 +396,7 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
         padding: const EdgeInsets.symmetric(horizontal: 12),
         child: Row(children: [
           Expanded(child: Text(
-            graph.isDetached
-              ? 'Detached HEAD at #' + graph.headCheckpointId.toString()
-              : 'On ' + graph.attachedBranchName!
-                .replaceFirst('refs/heads/', ''),
+            CheckpointHistoryLabels.status(graph),
             key: const ValueKey('history-head-status'),
             maxLines: 2,
             style: Theme.of(context).textTheme.titleSmall)),
@@ -415,7 +405,30 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
             icon: const Icon(Icons.refresh)),
         ]),
       ),
-      SizedBox(height: 64, child: ListView.builder(
+      const SizedBox(
+        height: 36,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: EdgeInsets.symmetric(horizontal: 12),
+          child: Row(
+            key: ValueKey('history-legend'),
+            children: [
+              Icon(Icons.radio_button_checked, size: 16),
+              SizedBox(width: 4),
+              Text('Current version'),
+              SizedBox(width: 16),
+              Icon(Icons.linear_scale, size: 16),
+              SizedBox(width: 4),
+              Text('Earlier versions'),
+              SizedBox(width: 16),
+              Icon(Icons.call_split, size: 16),
+              SizedBox(width: 4),
+              Text('Branch point'),
+            ],
+          ),
+        ),
+      ),
+      SizedBox(height: 56, child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12),
         itemCount: graph.references.length,

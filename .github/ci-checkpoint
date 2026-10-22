@@ -288,3 +288,12 @@ graph validation, then render newest first; expected row IDs must be
 [4,3,2,1] rather than [3,4,2,1]. Initial CI had 722 passing and one
 assertion failure, clean analyzer. Final Flutter-only analyze/tests gate,
 no native builds or cross-platform host matrix.
+
+CP91 R2 October 22 2026: improve checkpoint history terminology and
+accessible legend. Preserve persisted Git refs, HEAD/tip guards, and all
+checkout semantics; presentation now labels current version, starting
+point, branch point, restoring version, switching named branch, and
+disconnected editing outside a named branch with clear confirmations.
+Six pure labels/confirmation tests and three widget regressions (plus
+updated R1 wording expectations). Run flutter pub get, flutter analyze
+and flutter test on Linux only; no native builds and no platform matrix.

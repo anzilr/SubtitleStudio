@@ -317,6 +317,18 @@ HEAD, multiple branch tips and long histories.
 [R1 report](CHECKPOINT91_R1_VISUAL_HISTORY_LANES_2026-10-22.md).
 **Verification:** [Linux 723 Flutter tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39826276757).
 
+**CP91 R2 (October 22, 2026):** The visual history screen now
+uses plain-language labels for current saved version, prior edits,
+branch points, bookmarks and restore operations, with a compact
+theme-aware legend. Confirmations explicitly distinguish switching a
+named branch from restoring an individual version outside any branch.
+Protected reference affordances, persisted names, parent relationships,
+and HEAD/tip concurrency checks remain unchanged.
+Six pure text contract tests and three additional widget tests cover
+wording, detached history, protected main and bookmark restores.
+[R2 report](CHECKPOINT91_R2_HISTORY_PLAIN_LANGUAGE_2026-10-22.md).
+**Verification:** Batched Linux Flutter analyzer/full tests pending.
+
 ### CP91 — Outstanding roadmap UX needed on mobile
 - Deliver the Git-style **visual checkpoint history** with plain-language controls, accessible list alternative and protected refs; preserve `.msone` compatibility and multi-branch correctness.
 - Complete compact mobile Edit Line usability and core component consistency only to the extent planned by the already-approved UX roadmap; retain Carbon Zero and other shipped skins.

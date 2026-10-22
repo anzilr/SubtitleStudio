@@ -8,14 +8,16 @@ import 'package:subtitle_studio/widgets/checkpoint_history_panel.dart';
 
 class FakeHistoryCommands implements HistoryGraphCommands {
   final bool corrupt;
+  final bool detached;
   int? lastExpectedHeadId;
   int? lastExpectedTipId;
   final List<HistoryRef> refs;
   final Checkpoint checkpoint;
 
-  FakeHistoryCommands({this.corrupt = false})
+  FakeHistoryCommands({this.corrupt = false, this.detached = false})
       : refs = [
-          _ref('HEAD', 'head', 1, attached: 'refs/heads/main'),
+          _ref('HEAD', 'head', 1,
+              attached: detached ? null : 'refs/heads/main'),
           _ref('refs/heads/main', 'branch', 1),
         ],
         checkpoint = Checkpoint(
@@ -118,7 +120,7 @@ void main() {
   testWidgets('displays actual HEAD and named branch labels', (tester) async {
     await tester.pumpWidget(_host(FakeHistoryCommands()));
     await tester.pumpAndSettle();
-    expect(find.text('On main'), findsOneWidget);
+    expect(find.text('Working on main'), findsOneWidget);
     expect(find.byKey(const ValueKey('history-commit-1')), findsOneWidget);
     // The visual history track is drawn next to the existing action card;
     // graph rendering must not remove the accessible commit information.
@@ -126,6 +128,9 @@ void main() {
     expect(find.byKey(const ValueKey('history-ref-menu-refs/heads/main')),
         findsOneWidget);
     expect(find.byKey(const ValueKey('history-head-status')), findsOneWidget);
+    expect(find.byKey(const ValueKey('history-legend')), findsOneWidget);
+    expect(find.text('Earlier versions'), findsOneWidget);
+    expect(find.text('Branch point'), findsOneWidget);
   });
 
   testWidgets('bookmark menu creates and displays persistent-style ref',
@@ -136,7 +141,7 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('history-node-menu-1')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Bookmark this commit'));
+    await tester.tap(find.text('Bookmark this version'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const ValueKey('history-ref-name')),
         'review');
@@ -171,13 +176,57 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Check out commit'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('detach HEAD'), findsOneWidget);
-    await tester.tap(find.text('Check out').last);
+    expect(find.textContaining('without switching to a branch'), findsOneWidget);
+    await tester.tap(find.text('Restore').last);
     await tester.pumpAndSettle();
 
     expect(fake.lastExpectedHeadId, 1);
-    expect(find.textContaining('Checkout refused'), findsOneWidget);
-    expect(find.text('On main'), findsOneWidget);
+    expect(find.textContaining('History changed before the restore'), findsOneWidget);
+    expect(find.text('Working on main'), findsOneWidget);
+  });
+
+
+  testWidgets('detached history explains that no branch is selected',
+      (tester) async {
+    await tester.pumpWidget(_host(FakeHistoryCommands(detached: true)));
+    await tester.pumpAndSettle();
+    expect(find.text('Version #1 · Not on a branch'), findsOneWidget);
+    expect(find.text('Working on main'), findsNothing);
+    expect(find.byKey(const ValueKey('history-rail-1')), findsOneWidget);
+  });
+
+  testWidgets('protected main branch cannot be renamed or deleted in menu',
+      (tester) async {
+    final fake = FakeHistoryCommands();
+    await tester.pumpWidget(_host(fake));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('history-ref-menu-refs/heads/main')));
+    await tester.pumpAndSettle();
+    expect(find.text('Switch to branch'), findsOneWidget);
+    expect(find.text('Rename'), findsNothing);
+    expect(find.text('Delete'), findsNothing);
+  });
+
+  testWidgets('restoring a bookmark keeps branch checkout distinct',
+      (tester) async {
+    final fake = FakeHistoryCommands();
+    fake.refs.add(FakeHistoryCommands._ref(
+      'refs/bookmarks/review', 'bookmark', 1,
+    ));
+    await tester.pumpWidget(_host(fake));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('history-ref-menu-refs/bookmarks/review')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Restore bookmarked version'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('branches and bookmarks stay unchanged'),
+        findsOneWidget);
+    await tester.tap(find.text('Restore').last);
+    await tester.pumpAndSettle();
+    expect(fake.lastExpectedHeadId, 1);
+    expect(fake.lastExpectedTipId, isNull);
   });
 
   testWidgets('named checkout guards both HEAD and observed branch tip',
@@ -191,12 +240,12 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Switch to branch'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('attach HEAD'), findsOneWidget);
+    expect(find.textContaining('current branch'), findsOneWidget);
     await tester.tap(find.text('Switch').last);
     await tester.pumpAndSettle();
 
     expect(fake.lastExpectedHeadId, 1);
     expect(fake.lastExpectedTipId, 1);
-    expect(find.text('On main'), findsOneWidget);
+    expect(find.text('Working on main'), findsOneWidget);
   });
 }
