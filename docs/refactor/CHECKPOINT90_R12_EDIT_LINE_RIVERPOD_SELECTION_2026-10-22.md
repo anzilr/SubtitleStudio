@@ -26,6 +26,9 @@ loaded a fresh UI row without publishing the same selection to Riverpod.
 - The Edit Line controller now publishes the successful `saveDraftLine`
   result and resets its initial text/time baseline only after a confirmed
   commit. Rejected writes leave prior selection and baseline unchanged.
+- The legacy widget adopts that newly projected collection and cue after
+  Save rather than mutating the old collection object held by the earlier
+  Riverpod state snapshot.
 - Navigation and new-cue load paths explicitly inform the controller of
   the selected cue and displayed edited text (which can differ from stored
   text when showing the original). The legacy mobile widget and its form

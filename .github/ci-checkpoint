@@ -246,3 +246,8 @@ unsaved line, reset persistence baseline after successful save, never mutate
 previous provider state's embedded subtitle lines. Six pure projection tests.
 Run flutter pub get/analyze/test on Linux ONLY; no native platform builds
 or Windows/macOS test matrix.
+
+CP90 R12 final UI handoff October 22 2026: after save Edit Line
+adopts the controller's detached committed collection/selection instead of
+modifying an old cached Riverpod state collection. Final full Flutter
+analyze/test gate; no native builds or host matrix.

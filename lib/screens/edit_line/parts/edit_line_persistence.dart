@@ -24,11 +24,20 @@ extension _EditLinePersistence on EditSubtitleScreenState {
     if (!result.saved || result.savedLine == null) return false;
     if (!mounted) return true;
 
-    final savedLine = result.savedLine!;
-    final committedLines = result.persistedLines!;
+    // The controller already accepted the exact transactional result and
+    // projected detached row copies. Adopt that snapshot instead of
+    // mutating the prior Riverpod collection retained by this widget.
+    final selectedState = _editLineState;
+    final savedLine = selectedState.subtitleLine ?? result.savedLine!;
+    final savedCollection = selectedState.subtitleCollection;
+    if (savedCollection == null) {
+      // Persistence succeeded; leave the current UI untouched if the
+      // controller state is no longer available.
+      return true;
+    }
     _setEditLineState(() {
       _subtitleLine = savedLine;
-      collection.lines = committedLines;
+      _subtitle = savedCollection;
       _currentIndexController.text = savedLine.index.toString();
     });
     _markSubtitlesForRegeneration();
