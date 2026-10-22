@@ -358,6 +358,23 @@ the display wording and reference behavior.
 [R4 report](CHECKPOINT91_R4_FRIENDLY_EDITING_PATH_LABELS_2026-10-22.md).
 **Verification:** [Linux 746 Flutter tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39832780788).
 
+**CP91 R5 (October 22, 2026):** The visual Edit History now offers an
+in-panel map/list toggle. List mode removes decorative history rails and
+the rail legend while keeping the same version details and protected
+restore actions. A compact **Manage** panel groups editing paths and
+bookmarks in a scrollable, labeled list, including the active path and
+saved version number. Both the quick-access chips and manager reuse the
+same permission-aware actions, so protected `refs/heads/main` remains
+unrenamable and undeletable. Three widget tests cover mode switching,
+grouped management/renaming/protections and a narrow 320px viewport.
+The checkpoint store, graph, restore transaction guards and `.msone`
+format are unchanged. [R5 report](CHECKPOINT91_R5_COMPACT_HISTORY_ACCESSIBILITY_2026-10-22.md).
+**Verification:** [Linux 749 Flutter tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39835416671).
+
+**Next:** CP91 R6 begins the compact portrait Edit Line pilot using the
+existing shared editor services and shipped skins; keep desktop layouts
+isolated and defer platform builds to native acceptance.
+
 ### CP91 — Outstanding roadmap UX needed on mobile
 - Deliver the Git-style **visual checkpoint history** with plain-language controls, accessible list alternative and protected refs; preserve `.msone` compatibility and multi-branch correctness.
 - Complete compact mobile Edit Line usability and core component consistency only to the extent planned by the already-approved UX roadmap; retain Carbon Zero and other shipped skins.
