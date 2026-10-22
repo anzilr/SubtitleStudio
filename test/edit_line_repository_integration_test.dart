@@ -3,6 +3,7 @@ import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/screens/edit_line/repositories/edit_line_preferences_repository.dart';
 import 'package:subtitle_studio/screens/edit_line/repositories/edit_line_repository.dart';
+import 'package:subtitle_studio/screens/edit_line/services/edit_line_draft_save_service.dart';
 import 'package:subtitle_studio/services/checkpoint_repository.dart';
 import 'package:subtitle_studio/services/checkpoint_history_metadata.dart';
 
@@ -88,6 +89,71 @@ void main() {
   });
 
   group('EditLineRepository persistence', () {
+    test('draft save persists a blank edit with immutable checkpoint before-state',
+        () async {
+      final ids = await _seed(harness);
+      await harness.isar.writeTxn(() async {
+        final collection =
+            (await harness.isar.subtitleCollections.get(ids.collectionId))!;
+        collection.lines.first.edited = 'Earlier translation';
+        await harness.isar.subtitleCollections.put(collection);
+      });
+
+      final history = CheckpointRepository(harness.isar);
+      await history.createInitialSnapshot(
+        sessionId: ids.sessionId,
+        subtitleCollectionId: ids.collectionId,
+      );
+      final original =
+          (await repository.fetchSubtitleLine(ids.collectionId, 1))!;
+      final saver = EditLineDraftSaveService(
+        saveExisting: (line, {beforeLine}) =>
+            repository.saveSubtitleLineChanges(
+          collectionId: ids.collectionId,
+          updatedLine: line,
+          beforeLine: beforeLine,
+          sessionId: ids.sessionId,
+        ),
+        insertNew: (line, index) => repository.addSubtitleLineWithHistory(
+          collectionId: ids.collectionId,
+          line: line,
+          insertIndex: index,
+          sessionId: ids.sessionId,
+        ),
+        updateLastEditedIndex: (index) =>
+            repository.updateLastEditedIndex(ids.sessionId, index),
+      );
+
+      final result = await saver.save(
+        currentLine: original,
+        originalText: 'Updated source',
+        editedText: '',
+        startTime: original.startTime,
+        endTime: original.endTime,
+        initialOriginalText: original.original,
+        initialStartTime: original.startTime,
+        initialEndTime: original.endTime,
+        isEditMode: false,
+        insertLine: false,
+        insertIndex: 0,
+      );
+
+      expect(result.saved, isTrue);
+      expect(original.edited, 'Earlier translation');
+      expect(original.original, 'One');
+      final stored =
+          (await repository.fetchSubtitleLine(ids.collectionId, 1))!;
+      expect(stored.edited, '');
+      expect(stored.original, 'Updated source');
+      final checkpoints = await harness.isar.checkpoints
+          .filter().sessionIdEqualTo(ids.sessionId).sortByTimestamp().findAll();
+      expect(checkpoints, hasLength(2));
+      expect(checkpoints.last.deltas, hasLength(1));
+      expect(checkpoints.last.deltas.single.beforeState?.edited,
+          'Earlier translation');
+      expect(checkpoints.last.deltas.single.afterState?.edited, '');
+    });
+
     test('Save As updates paths without overwriting subsequent subtitle edits',
         () async {
       final ids = await _seed(harness);

@@ -5,6 +5,7 @@ import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/screens/edit_line/edit_line_state.dart';
 import 'package:subtitle_studio/screens/edit_line/repositories/edit_line_repository.dart';
 import 'package:subtitle_studio/screens/edit_line/repositories/edit_line_preferences_repository.dart';
+import 'package:subtitle_studio/screens/edit_line/services/edit_line_draft_save_service.dart';
 import 'package:subtitle_studio/screens/edit/services/editor_resize_preference_coordinator.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 import 'package:subtitle_studio/widgets/video_player_widget.dart';
@@ -537,6 +538,59 @@ class EditLineController extends Notifier<EditLineState> {
       updatedLine: line,
       sessionId: state.sessionId,
       beforeLine: beforeLine,
+    );
+  }
+
+  /// Persist a detached form draft for both explicit Save and navigation
+  /// autosave; never mutate the widget's line before the commit succeeds.
+  Future<EditLineDraftSaveResult> saveDraftLine({
+    required SubtitleLine currentLine,
+    required String originalText,
+    required String editedText,
+    required String startTime,
+    required String endTime,
+    required String initialOriginalText,
+    required String initialStartTime,
+    required String initialEndTime,
+    required bool isEditMode,
+    required bool insertLine,
+    required int insertIndex,
+  }) {
+    final repository = _repository;
+    final collectionId = _subtitleCollectionId;
+    final sessionId = state.sessionId;
+    final saver = EditLineDraftSaveService(
+      saveExisting: (line, {beforeLine}) =>
+          repository.saveSubtitleLineChanges(
+        collectionId: collectionId,
+        updatedLine: line,
+        beforeLine: beforeLine,
+        sessionId: sessionId,
+      ),
+      insertNew: (line, index) => repository.addSubtitleLineWithHistory(
+        collectionId: collectionId,
+        line: line,
+        insertIndex: index,
+        sessionId: sessionId,
+      ),
+      updateLastEditedIndex: (index) =>
+          repository.updateLastEditedIndex(sessionId, index),
+      onIndexUpdateError: (error, _) => logWarning(
+        'Edit Line last-edited index update failed (${error.runtimeType})',
+      ),
+    );
+    return saver.save(
+      currentLine: currentLine,
+      originalText: originalText,
+      editedText: editedText,
+      startTime: startTime,
+      endTime: endTime,
+      initialOriginalText: initialOriginalText,
+      initialStartTime: initialStartTime,
+      initialEndTime: initialEndTime,
+      isEditMode: isEditMode,
+      insertLine: insertLine,
+      insertIndex: insertIndex,
     );
   }
 

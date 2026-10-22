@@ -199,3 +199,9 @@ Flutter suite only; no application builds in GitHub Actions.
 CP90 R6 verification follow-up: remove obsolete typed-data import and unused
 test fake constructor parameter flagged by the R6 analyzer. Re-run full Linux
 Flutter analysis and tests to confirm a zero-diagnostic final checkpoint.
+CP90 R7 October 21 2026: consolidate Edit Line manual Save and navigation
+autosave into a detached draft commit service, preserving blank edits, cue
+metadata, and checkpoint before-state. Honor repository rejection, avoid
+mutating the UI/preview on failure, and treat post-commit last-index updates
+as noncritical. Verify with pure service tests and Isar checkpoint integration
+plus full Linux Flutter analysis/tests; no application builds in CI.

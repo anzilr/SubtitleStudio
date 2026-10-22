@@ -1,6 +1,46 @@
 part of '../../screen_edit_line.dart';
 
 extension _EditLinePersistence on EditSubtitleScreenState {
+  /// One persistence path for explicit Save and navigation autosave.
+  /// Keep a failed write detached from the active line and preview.
+  Future<bool> _commitCurrentDraftLine() async {
+    final currentLine = _subtitleLine;
+    final collection = _subtitle;
+    if (currentLine == null || collection == null) return false;
+
+    final result = await _editLineController.saveDraftLine(
+      currentLine: currentLine,
+      originalText: _originalController.text,
+      editedText: _editedController.text,
+      startTime: _startTimeController.text,
+      endTime: _endTimeController.text,
+      initialOriginalText: _initialOriginalText,
+      initialStartTime: _initialStartTime,
+      initialEndTime: _initialEndTime,
+      isEditMode: _isEditMode,
+      insertLine: _isEditMode && !collection.lines.contains(currentLine),
+      insertIndex: collection.lines.length,
+    );
+    if (!result.saved || result.savedLine == null) return false;
+    if (!mounted) return true;
+
+    final savedLine = result.savedLine!;
+    _setEditLineState(() {
+      _subtitleLine = savedLine;
+      final position = collection.lines.indexWhere(
+        (line) => line.index == savedLine.index,
+      );
+      if (position >= 0) {
+        collection.lines[position] = savedLine;
+      } else {
+        collection.lines.add(savedLine);
+      }
+    });
+    _markSubtitlesForRegeneration();
+    _generateSubtitles();
+    return true;
+  }
+
   Future<void> _fetchSubtitleLine(subtitleId, lineIndex) async {
     // Clear any existing validation errors when loading a new line
     _setEditLineState(() {
@@ -168,66 +208,10 @@ extension _EditLinePersistence on EditSubtitleScreenState {
       }
 
       try {
-        final beforeEdited = _subtitleLine!.edited;
-        if (_isEditMode) {
-          // In edit mode, always update edited text (even if empty, to save the change)
-          _subtitleLine!.edited = _editedController.text.replaceAll(
-            '\n',
-            '<br>',
-          );
-        } else {
-          // In translation mode, update both original and edited text
-          // Always update edited text to preserve the change (even if empty)
-          _subtitleLine!.edited = _editedController.text.replaceAll(
-            '\n',
-            '<br>',
-          );
-          _subtitleLine!.original = _originalController.text;
+        if (!await _commitCurrentDraftLine()) {
+          throw StateError('Subtitle changes were not committed');
         }
-
-        // Update combined time controllers and use them for saving (validate during save)
-        _updateCombinedTimeControllers(validateTime: true);
-        _subtitleLine!.startTime = _startTimeController.text;
-        _subtitleLine!.endTime = _endTimeController.text;
-
-        // Handle new lines in edit mode
-        if (_isEditMode && !_subtitle!.lines.contains(_subtitleLine)) {
-          await Future.microtask(() async {
-            await _editLineController.addLine(
-              _subtitleLine!,
-              _subtitle!.lines.length,
-            );
-          });
-        } else {
-          // Store the line state before changes for checkpoint
-          final lineBeforeChanges = SubtitleLine()
-            ..index = _subtitleLine!.index
-            ..startTime = _initialStartTime
-            ..endTime = _initialEndTime
-            ..original = _initialOriginalText
-            ..edited = beforeEdited
-            ..marked = _subtitleLine!.marked
-            ..comment = _subtitleLine!.comment
-            ..resolved = _subtitleLine!.resolved;
-          
-          // Call the database function for existing lines asynchronously
-          await Future.microtask(() async {
-            await _editLineController.saveCompleteLine(
-              _subtitleLine!,
-              beforeLine: lineBeforeChanges,
-            );
-          });
-        }
-
-        await Future.microtask(() async {
-          await _editLineController.updateLastEditedIndex(_subtitleLine!.index);
-        });
-
-        // Mark subtitles for regeneration and regenerate subtitles for video player after saving changes (async)
-        await Future.microtask(() {
-          _markSubtitlesForRegeneration();
-          _generateSubtitles();
-        });
+        if (!mounted) return true;
 
         // Check if we should save directly to file
         if (_isSaveToFileEnabled && _subtitle != null) {
@@ -362,65 +346,7 @@ extension _EditLinePersistence on EditSubtitleScreenState {
       }
 
       try {
-        final beforeEdited = _subtitleLine!.edited;
-        if (_isEditMode) {
-          // In edit mode, always update edited text (even if empty, to save the change)
-          _subtitleLine!.edited = _editedController.text.replaceAll(
-            '\n',
-            '<br>',
-          );
-        } else {
-          // In translation mode, update both original and edited text
-          // Always update edited text to preserve the change (even if empty)
-          _subtitleLine!.edited = _editedController.text.replaceAll(
-            '\n',
-            '<br>',
-          );
-          _subtitleLine!.original = _originalController.text;
-        }
-
-        // Update combined time controllers and use them for saving (validate during save)
-        _updateCombinedTimeControllers(validateTime: true);
-        _subtitleLine!.startTime = _startTimeController.text;
-        _subtitleLine!.endTime = _endTimeController.text;
-        // Handle new lines in edit mode
-        if (_isEditMode && !_subtitle!.lines.contains(_subtitleLine)) {
-          await Future.microtask(() async {
-            await _editLineController.addLine(
-              _subtitleLine!,
-              _subtitle!.lines.length,
-            );
-          });
-        } else {
-          // Store the line state before changes for checkpoint (for silent save)
-          final lineBeforeChanges = SubtitleLine()
-            ..index = _subtitleLine!.index
-            ..startTime = _initialStartTime
-            ..endTime = _initialEndTime
-            ..original = _initialOriginalText
-            ..edited = beforeEdited
-            ..marked = _subtitleLine!.marked
-            ..comment = _subtitleLine!.comment
-            ..resolved = _subtitleLine!.resolved;
-          
-          // Call the database function for existing lines asynchronously
-          await Future.microtask(() async {
-            await _editLineController.saveCompleteLine(
-              _subtitleLine!,
-              beforeLine: lineBeforeChanges,
-            );
-          });
-        }
-
-        await Future.microtask(() async {
-          await _editLineController.updateLastEditedIndex(_subtitleLine!.index);
-        });
-
-        // Mark subtitles for regeneration and regenerate for video player after saving changes (async)
-        await Future.microtask(() {
-          _markSubtitlesForRegeneration();
-          _generateSubtitles();
-        });
+        if (!await _commitCurrentDraftLine()) return false;
 
         // Clear validation errors after successful save
         if (mounted) {
