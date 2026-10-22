@@ -46,9 +46,10 @@ native media decoding, playback engine, themes or desktop UI.
 
 ## Verification
 
-The batched Flutter-only Linux gate (dependency resolution, analyzer,
-full tests) is requested with this change. The exact CI result will be
-recorded when the workflow completes. Windows/macOS file-host checks are
+[GitHub Actions Linux run 39812415589](https://github.com/anzilr/SubtitleStudio/actions/runs/39812415589)
+finished successfully with **687 Flutter tests passed** and **zero analyzer
+issues** (`flutter analyze`: `No issues found`). The full suite gained
+five passing regressions over CP90 R8. Windows/macOS file-host checks are
 not required for this state-only batch, and no native builds run in CI.
 
 ## Remaining and known limitations

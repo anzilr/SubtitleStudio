@@ -239,7 +239,7 @@ incorrect new-cue placeholders when the project changes. Deferred video
 seeks are invalidated with the matching load token. No native media or
 persistent-data format changes.
 [R9 report](CHECKPOINT90_R9_EDIT_LINE_NAVIGATION_LIFECYCLE_2026-10-22.md).
-**Verification:** Batched Linux analysis/full Flutter test gate pending.
+**Verification:** [Linux 687 tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39812415589).
 
 - Identify and isolate the largest remaining mixed-responsibility Editor/Edit Line/Source View modules; decouple UI from persistence/media/filesystem operations while preserving existing Riverpod state and checkpoint behavior.
 - Prefer injectable services/coordinators, typed outcomes and widget tests. Verify source editing round trips, comment/mark preservation, secondary track fallback, keyboard and Android Back behavior.
