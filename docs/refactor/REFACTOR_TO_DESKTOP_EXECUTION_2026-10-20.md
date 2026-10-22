@@ -414,9 +414,22 @@ underlying branch/HEAD transaction semantics remain unchanged.
 [R7 R2 report](CHECKPOINT91_R7_R2_BRANCH_CREATION_FEEDBACK_2026-10-22.md).
 **Verification:** [Linux 762 Flutter tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39847963076).
 
-**Next:** CP91 R8 begins the compact portrait Edit Line pilot using the
-existing shared editor services and shipped skins; keep desktop layouts
-isolated and defer platform builds to native acceptance.
+**CP91 R8 (October 22, 2026):** After the user confirmed that branch
+creation works on Android, the portrait Edit Line pilot now uses compact
+screen-size metrics on phones at most 430 logical pixels wide in portrait.
+The reference Original cue shrinks to 76px and the active Edited cue grows
+to 120px; inline video uses a bounded 170–200px height, with smaller padding
+and gaps. Start/End Time fields stack at under 380px of usable section
+width to avoid squeezing timestamp inputs. All field controllers, keyboard
+selection, undo, Riverpod state, media lifetime, skins, saves and desktop/
+landscape defaults are unchanged. Widget tests cover responsive widths and
+layout safety; native Android visual acceptance is pending.
+[R8 report](CHECKPOINT91_R8_COMPACT_PORTRAIT_EDIT_LINE_2026-10-22.md).
+**Verification:** [Linux 764 Flutter tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39851877690).
+
+**Next:** R8 physical-device acceptance for portrait editing, followed by
+CP91 R9 compact action ergonomics if required; then CP92 cleanup and CP93
+refactor acceptance. Desktop workspace layouts remain isolated.
 
 ### CP91 — Outstanding roadmap UX needed on mobile
 - Deliver the Git-style **visual checkpoint history** with plain-language controls, accessible list alternative and protected refs; preserve `.msone` compatibility and multi-branch correctness.
