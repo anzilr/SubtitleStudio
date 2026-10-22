@@ -211,6 +211,49 @@ void main() {
         findsOneWidget);
   });
 
+  testWidgets('new branch appears in picker and focuses its history without checkout',
+      (tester) async {
+    final fake = _forkedCommands();
+    await tester.pumpWidget(_host(fake));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('history-node-menu-4')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Branch from this point'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('history-ref-name')),
+        'my-new-branch');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(fake.refs.any((ref) => ref.name == 'refs/heads/my-new-branch' &&
+        ref.targetCheckpointId == 4), isTrue);
+    expect(find.text('Showing my-new-branch · 3 points'), findsOneWidget);
+    expect(find.byKey(const ValueKey('history-commit-4')), findsOneWidget);
+    expect(find.byKey(const ValueKey('history-commit-3')), findsNothing);
+    expect(find.text('Editing: Main path'), findsOneWidget);
+    expect(fake.lastExpectedHeadId, isNull);
+
+    // Viewing a branch and moving the editor HEAD are separate actions.
+    await tester.tap(find.byKey(
+        const ValueKey('history-switch-selected-branch')));
+    await tester.pumpAndSettle();
+    expect(find.text('Switch to this path?'), findsOneWidget);
+    await tester.tap(find.text('Switch path').last);
+    await tester.pumpAndSettle();
+    expect(fake.lastExpectedHeadId, 3);
+    expect(fake.lastExpectedTipId, 4);
+
+    await tester.tap(find.byKey(const ValueKey('history-branch-picker')));
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(PopupMenuItem<String>, 'my-new-branch'),
+        findsOneWidget);
+    await tester.tap(find.widgetWithText(PopupMenuItem<String>, 'All branches'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('history-commit-3')), findsOneWidget);
+    expect(find.byKey(const ValueKey('history-filter-status')), findsNothing);
+  });
+
   testWidgets('visual history humanizes automatic subtitle edit labels',
       (tester) async {
     final commands = FakeHistoryCommands(
@@ -271,7 +314,7 @@ void main() {
       (tester) async {
     await tester.pumpWidget(_host(FakeHistoryCommands(detached: true)));
     await tester.pumpAndSettle();
-    expect(find.text('Editing from point #1 · Separate path'), findsOneWidget);
+    expect(find.text('Editing from point #1 · Separate branch'), findsOneWidget);
     expect(find.text('Editing: Main path'), findsNothing);
     expect(find.byKey(const ValueKey('history-rail-1')), findsOneWidget);
   });
@@ -504,6 +547,20 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Showing Main path · 2 points'), findsOneWidget);
     expect(find.byKey(const ValueKey('history-commit-13')), findsNothing);
+
+    // Even branches far outside the horizontal chip strip remain selectable.
+    await tester.tap(find.byKey(const ValueKey('history-branch-picker')));
+    await tester.pumpAndSettle();
+    final lastBranch = find.byWidgetPredicate((widget) =>
+        widget is PopupMenuItem<String> &&
+        widget.value == 'refs/heads/path-13');
+    await tester.ensureVisible(lastBranch);
+    await tester.pumpAndSettle();
+    await tester.tap(lastBranch);
+    await tester.pumpAndSettle();
+    expect(find.text('Showing path-13 · 2 points'), findsOneWidget);
+    expect(find.byKey(const ValueKey('history-commit-13')), findsOneWidget);
+    expect(find.byKey(const ValueKey('history-commit-2')), findsNothing);
     expect(tester.takeException(), isNull);
   });
 }

@@ -44,8 +44,8 @@ void main() {
     expect(title('snapshot', 'Initial state'), 'Project started');
     expect(title('sync', 'Captured external subtitle changes'),
         'Saved changes made outside the editor');
-    expect(title('snapshot', ''), 'Saved project version');
-    expect(title('snapshot', 'Snapshot'), 'Saved project version');
+    expect(title('snapshot', ''), 'Saved project point');
+    expect(title('snapshot', 'Snapshot'), 'Saved project point');
   });
 
   test('does not modify personally named manual save points', () {
@@ -77,7 +77,7 @@ void main() {
   test('classic badges use recognizable names without schema edits', () {
     expect(CheckpointHistoryLabels.entryBadge(
         operationType: 'snapshot', checkpointType: 'snapshot'),
-        'Saved version');
+        'Saved point');
     expect(CheckpointHistoryLabels.entryBadge(
         operationType: 'manual', checkpointType: 'delta'),
         'Save point');

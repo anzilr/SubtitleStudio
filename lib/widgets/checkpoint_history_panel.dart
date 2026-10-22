@@ -106,7 +106,8 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
       SnackBar(content: Text(message)));
   }
 
-  Future<void> _run(Future<CheckpointHistoryGraph> Function() operation) async {
+  Future<void> _run(Future<CheckpointHistoryGraph> Function() operation,
+      {String? focusCreatedBranch}) async {
     if (_busy) return;
     final request = ++_generation;
     setState(() => _busy = true);
@@ -116,7 +117,10 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
       setState(() {
         _graph = updated;
         _lanes = CheckpointHistoryLaneLayout.fromGraph(updated);
-        if (!updated.references.any((ref) =>
+        if (focusCreatedBranch != null && updated.references.any((ref) =>
+            ref.kind == 'branch' && ref.name == focusCreatedBranch)) {
+          _selectedBranchName = focusCreatedBranch;
+        } else if (!updated.references.any((ref) =>
             ref.kind == 'branch' && ref.name == _selectedBranchName)) {
           _selectedBranchName = null;
         }
@@ -250,7 +254,7 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
       if (!mounted || request != _generation) return;
       if (result == null) {
         setState(() => _busy = false);
-        _notify('History changed before the restore. Showing the latest versions.');
+        _notify('History changed before the restore. Showing the latest points.');
         await _reload();
         return;
       }
@@ -264,7 +268,7 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
     } catch (_) {
       if (!mounted || request != _generation) return;
       setState(() => _busy = false);
-      _notify('Could not restore this version. Refreshing saved history.');
+      _notify('Could not restore this point. Refreshing saved history.');
       await _reload();
     }
     } finally {
@@ -284,7 +288,8 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
     if (name == null || !mounted) return;
     await _run(() => branch
       ? _actions.createBranch(name: name, checkpointId: checkpointId)
-      : _actions.createBookmark(name: name, checkpointId: checkpointId));
+      : _actions.createBookmark(name: name, checkpointId: checkpointId),
+      focusCreatedBranch: branch ? name : null);
     } finally {
       _dialogPending = false;
     }
@@ -472,6 +477,72 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
     );
   }
 
+  /// Unlike the horizontal chips, this picker always exposes every branch,
+  /// including names created beyond the edge of a narrow screen.
+  Widget _branchPicker(List<HistoryGraphReference> branches,
+      Map<String, Color> branchColors,
+      HistoryGraphReference? selectedBranch) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+      child: Row(children: [
+        Text('View branch', style: Theme.of(context).textTheme.bodySmall),
+        const SizedBox(width: 10),
+        Expanded(child: PopupMenuButton<String>(
+          key: const ValueKey('history-branch-picker'),
+          tooltip: 'Choose branch to view',
+          enabled: !_busy,
+          onSelected: (name) => setState(() =>
+              _selectedBranchName = name.isEmpty ? null : name),
+          itemBuilder: (_) => [
+            PopupMenuItem<String>(
+              value: '',
+              child: Row(children: [
+                const Icon(Icons.layers_outlined, size: 18),
+                const SizedBox(width: 8),
+                const Expanded(child: Text('All branches')),
+                if (selectedBranch == null) const Icon(Icons.check, size: 18),
+              ]),
+            ),
+            for (final branch in branches)
+              PopupMenuItem<String>(
+                value: branch.name,
+                child: Row(children: [
+                  Icon(Icons.call_split, size: 18,
+                      color: branchColors[branch.name]),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(_shortName(branch),
+                      overflow: TextOverflow.ellipsis)),
+                  if (selectedBranch?.name == branch.name)
+                    const Icon(Icons.check, size: 18),
+                ]),
+              ),
+          ],
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              border: Border.all(color: scheme.outline),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(children: [
+              Icon(selectedBranch == null
+                  ? Icons.layers_outlined : Icons.call_split,
+                  size: 18,
+                  color: selectedBranch == null
+                      ? scheme.onSurfaceVariant
+                      : branchColors[selectedBranch.name]),
+              const SizedBox(width: 8),
+              Expanded(child: Text(selectedBranch == null
+                  ? 'All branches' : _shortName(selectedBranch),
+                  maxLines: 1, overflow: TextOverflow.ellipsis)),
+              const Icon(Icons.arrow_drop_down),
+            ]),
+          ),
+        )),
+      ]),
+    );
+  }
+
   Widget _commitRow(CheckpointHistoryLaneRow row, int laneCount,
       _HistoryRailStyle style, Map<String, Color> branchColors) {
     final node = row.node;
@@ -602,6 +673,8 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
     // without horizontal scrolling on compact phones.
     final visibleRefs = graph.references
         .where((ref) => ref.kind != 'head').toList();
+    final branches = graph.references
+        .where((ref) => ref.kind == 'branch').toList();
     return Column(children: [
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -637,6 +710,7 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
           ),
         ]),
       ),
+      _branchPicker(branches, branchColors, selectedBranch),
       if (selectedBranch != null)
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -657,6 +731,20 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
               child: const Text('Show all'),
             ),
           ]),
+        ),
+      if (selectedBranch != null && !selectedBranch.isAttached)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              key: const ValueKey('history-switch-selected-branch'),
+              onPressed: _busy ? null : () =>
+                  _referenceAction('switch', selectedBranch),
+              icon: const Icon(Icons.swap_horiz, size: 18),
+              label: const Text('Switch to this branch'),
+            ),
+          ),
         ),
       if (_showVisualLanes && selectedBranch == null && lanes.laneCount > 6)
         const Padding(

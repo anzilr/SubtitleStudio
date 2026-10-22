@@ -25,7 +25,7 @@ class CheckpointHistoryLabels {
   static String status(CheckpointHistoryGraph graph) {
     if (graph.headCheckpointId == null) return 'No history points yet';
     if (graph.isDetached) {
-      return 'Editing from point #${graph.headCheckpointId} · Separate path';
+      return 'Editing from point #${graph.headCheckpointId} · Separate branch';
     }
     final attached = graph.attachedBranchName!;
     final name = attached == 'refs/heads/main'
@@ -103,7 +103,7 @@ class CheckpointHistoryLabels {
       return 'Project started';
     }
     if (title == 'Snapshot' && operationType == 'snapshot') {
-      return 'Saved project version';
+      return 'Saved project point';
     }
     if (title == 'Captured external subtitle changes' &&
         operationType == 'sync') {
@@ -133,7 +133,7 @@ class CheckpointHistoryLabels {
         'edit' => 'Edited subtitles',
         'effect' => 'Applied subtitle effect',
         'sync' => 'Updated subtitle timing',
-        'snapshot' => 'Saved project version',
+        'snapshot' => 'Saved project point',
         _ => 'Saved change',
       };
     }
@@ -146,7 +146,7 @@ class CheckpointHistoryLabels {
     required String checkpointType,
   }) {
     if (operationType == 'manual') return 'Save point';
-    if (checkpointType == 'snapshot') return 'Saved version';
+    if (checkpointType == 'snapshot') return 'Saved point';
     return 'Edit';
   }
 

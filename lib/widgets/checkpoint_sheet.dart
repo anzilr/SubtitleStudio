@@ -458,7 +458,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                     SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Save Project Version',
+                        'Save Project Point',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -483,7 +483,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                           Icon(Icons.info_outline, size: 16, color: Theme.of(context).colorScheme.tertiary),
                           const SizedBox(width: 8),
                           Text(
-                            'What is a Saved Version?',
+                            'What is a Saved Point?',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: Theme.of(context).colorScheme.tertiary,
@@ -553,7 +553,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
       await _loadHistory();
       
       if (mounted) {
-        SnackbarHelper.showSuccess(context, 'Project version saved: $name');
+        SnackbarHelper.showSuccess(context, 'Project point saved: $name');
       }
     }
   }
@@ -954,7 +954,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '${_checkpoints.length} saved version${_checkpoints.length == 1 ? '' : 's'}',
+                          '${_checkpoints.length} saved point${_checkpoints.length == 1 ? '' : 's'}',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: mutedColor,
                           ),

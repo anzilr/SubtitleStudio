@@ -352,3 +352,12 @@ horizontal viewport. Scroll it into view in the test, and omit the redundant
 disabled HEAD chip from the compact selector so the active branch is visible
 earlier on real phones. Preserve all graph and reference data. Repeat only
 Flutter dependency resolution, analysis and full tests; no native builds.
+
+CP91 R7 October 22 2026: Edit History branch discoverability follow-up.
+Rename saved versions to saved points and Separate path to Separate branch.
+After Branch from this point succeeds, focus the newly created branch's
+history without changing editor HEAD. Keep a visible View branch selector
+with every named branch even when the horizontal chips are offscreen, plus
+an explicit guarded Switch to this branch action for editing. Add widget
+tests for new branch creation, selection, narrow screens with many branches,
+and language consistency. Flutter analyze and tests only; no app builds.
