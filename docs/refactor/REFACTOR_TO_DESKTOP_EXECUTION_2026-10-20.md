@@ -388,7 +388,20 @@ filter behavior, and a many-branch 320px screen.
 [R6 report](CHECKPOINT91_R6_BRANCH_FOCUS_TERMINOLOGY_2026-10-22.md).
 **Verification:** [Linux 756 Flutter tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39840768237).
 
-**Next:** CP91 R7 begins the compact portrait Edit Line pilot using the
+**CP91 R7 (October 22, 2026):** Follow-up to branch filtering: the edit
+history selector now has a permanently accessible **View branch** menu
+listing all named branches even when quick-access chips scroll offscreen.
+After **Branch from this point**, the new branch is automatically selected
+for viewing, without changing HEAD. A separate, guarded **Switch to this
+branch** action is available when it is not the current editing branch.
+The classic history UI says **saved points**, and detached history says
+**Separate branch**. Older project storage, custom titles, branch refs and
+protected checkout behavior are unchanged. New widget regressions cover
+creation, selection and a many-branch 320px screen.
+[R7 report](CHECKPOINT91_R7_BRANCH_DISCOVERY_SAVED_POINTS_2026-10-22.md).
+**Verification:** [Linux 757 Flutter tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39843632143).
+
+**Next:** CP91 R8 begins the compact portrait Edit Line pilot using the
 existing shared editor services and shipped skins; keep desktop layouts
 isolated and defer platform builds to native acceptance.
 
