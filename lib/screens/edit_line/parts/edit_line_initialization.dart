@@ -92,13 +92,20 @@ extension _EditLineInitialization on EditSubtitleScreenState {
     _instantCharacterCountUpdate();
   }
 
-  Future<void> _seekWhenVideoPlayerReady(Duration position) async {
+  Future<void> _seekWhenVideoPlayerReady(
+    Duration position, {
+    required int seekToken,
+    required String videoPath,
+  }) async {
     final player = await waitForVideoPlayerReady(_videoPlayerKey);
-    if (!mounted || player == null) return;
+    if (!mounted ||
+        !_isVideoLoaded ||
+        _selectedVideoPath != videoPath ||
+        !_mediaRequests.isCurrentSeek(seekToken) ||
+        player == null ||
+        !identical(player, _videoPlayerKey.currentState)) return;
     player.seekTo(position);
-    if (_isRepeatModeEnabled) {
-      player.pause();
-    }
+    if (_isRepeatModeEnabled) player.pause();
   }
 
   /// Register hotkey shortcuts using MSoneHotkeyManager
@@ -142,8 +149,16 @@ extension _EditLineInitialization on EditSubtitleScreenState {
   }
 
   Future<void> _syncVideoPlayerWhenReady() async {
+    final mediaToken = _mediaRequests.captureMedia();
+    final videoPath = _selectedVideoPath;
+    if (mediaToken == null || videoPath == null) return;
     final player = await waitForVideoPlayerReady(_videoPlayerKey);
-    if (!mounted || player == null) return;
+    if (!mounted ||
+        !_isVideoLoaded ||
+        _selectedVideoPath != videoPath ||
+        !_mediaRequests.isCurrentMedia(mediaToken) ||
+        player == null ||
+        !identical(player, _videoPlayerKey.currentState)) return;
     _syncVideoPlayerState();
   }
 
@@ -162,13 +177,18 @@ extension _EditLineInitialization on EditSubtitleScreenState {
   // Load video file for edit mode
   // Unload video (optimized single setState)
   Future<void> _unloadVideo() async {
+    _mediaRequests.invalidateMedia();
+    _mediaRequests.invalidatePicker();
+    _stopRepeatPlayback();
     _setEditLineState(() {
       _selectedVideoPath = null;
       _isVideoVisible = false;
       _isVideoLoaded = false;
+      _isVideoPlaying = false;
     });
 
-    await _editLineController.removeVideoPath();
+    await _videoPathWrites.clearPath();
+    if (!mounted) return;
     SnackbarHelper.showInfo(
       context,
       'Video unloaded',

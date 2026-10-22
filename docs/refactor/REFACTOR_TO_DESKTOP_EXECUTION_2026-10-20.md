@@ -241,6 +241,16 @@ persistent-data format changes.
 [R9 report](CHECKPOINT90_R9_EDIT_LINE_NAVIGATION_LIFECYCLE_2026-10-22.md).
 **Verification:** [Linux 687 tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39812415589).
 
+**CP90 R10 (October 22, 2026):** Edit Line video readiness/selection is now
+guarded by explicit request tokens. Pending player-ready seeks, media state
+synchronization and picker callbacks are ignored after newer selections,
+Unload or route disposal; initial ready-state seeking works even before the
+VideoPlayerWidget key attaches. Persisted video path Save/Unload requests
+are serialized with a repository captured while Riverpod is active, so a
+delayed path Save cannot resurrect a subsequently unloaded video.
+[R10 report](CHECKPOINT90_R10_EDIT_LINE_MEDIA_LIFECYCLE_2026-10-22.md).
+**Verification:** Batched Linux full Flutter analyzer/tests pending.
+
 - Identify and isolate the largest remaining mixed-responsibility Editor/Edit Line/Source View modules; decouple UI from persistence/media/filesystem operations while preserving existing Riverpod state and checkpoint behavior.
 - Prefer injectable services/coordinators, typed outcomes and widget tests. Verify source editing round trips, comment/mark preservation, secondary track fallback, keyboard and Android Back behavior.
 - Keep the shared core reusable by both Flutter mobile widgets and the later desktop presentation.

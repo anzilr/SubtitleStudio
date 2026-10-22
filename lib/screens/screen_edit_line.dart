@@ -49,6 +49,8 @@ import 'package:subtitle_studio/screens/edit_line/widgets/edit_line_placeholders
 import 'package:subtitle_studio/screens/edit_line/widgets/dictionary_sheets.dart';
 import 'package:subtitle_studio/screens/edit_line/services/ai_context_builder.dart';
 import 'package:subtitle_studio/screens/edit_line/services/edit_line_file_save_service.dart';
+import 'package:subtitle_studio/screens/edit_line/services/edit_line_media_request_coordinator.dart';
+import 'package:subtitle_studio/screens/edit_line/services/edit_line_video_path_write_queue.dart';
 import 'package:subtitle_studio/screens/edit_line/services/edit_line_navigation_guard.dart';
 import 'package:subtitle_studio/widgets/ai_explanation_sheet.dart';
 
@@ -125,6 +127,7 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
   // Cache persistence while the ConsumerState is mounted. Riverpod ref cannot
   // be read during State.dispose(), even by an asynchronously called helper.
   late final EditLineRepository _colorHistoryRepository;
+  late final EditLineVideoPathWriteQueue _videoPathWrites;
   SubtitleLine? _subtitleLine; // To hold the fetched subtitle line
   SubtitleCollection? _subtitle; // To hold the fetched subtitle collection
   bool isEditingEnabled = false;
@@ -209,6 +212,8 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
   // storage because extensions cannot own instance fields.
   bool _needSubtitleRegeneration = true;
   final EditLineNavigationGuard _navigationGuard = EditLineNavigationGuard();
+  final EditLineMediaRequestCoordinator _mediaRequests =
+      EditLineMediaRequestCoordinator();
 
   void _markSubtitlesForRegeneration() {
     _needSubtitleRegeneration = true;
@@ -251,6 +256,15 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
   void initState() {
     super.initState();
     _colorHistoryRepository = ref.read(editLineRepositoryProvider);
+    // Capture the repository while Riverpod is active. Pending writes remain
+    // valid during screen teardown without reading a disposed ref.
+    _videoPathWrites = EditLineVideoPathWriteQueue(
+      save: (path) => _colorHistoryRepository.saveVideoPath(
+        widget.subtitleId,
+        path,
+      ),
+      clear: () => _colorHistoryRepository.removeVideoPath(widget.subtitleId),
+    );
     _originalController = TextEditingController();
     _editedController = TextEditingController();
     _startTimeController = TextEditingController();
@@ -344,6 +358,7 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
   void dispose() {
     // Invalidates in-flight loads before async callbacks can access widgets.
     _navigationGuard.dispose();
+    _mediaRequests.dispose();
     // Cancel any pending timers
     _characterCountTimer?.cancel();
     _timeUpdateTimer?.cancel();

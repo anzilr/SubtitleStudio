@@ -2,27 +2,31 @@ part of '../../screen_edit_line.dart';
 
 extension _EditLineNavigation on EditSubtitleScreenState {
   void _seekVideoToSubtitle() {
-    if (_isVideoLoaded &&
-        _videoPlayerKey.currentState != null &&
-        _subtitleLine != null) {
-      final startTime = parseTimeString(_subtitleLine!.startTime);
-      // Add 50ms offset to ensure subtitle is visible after seeking
-      // This prevents the subtitle from disappearing when seeking to exact start time
-      final seekPosition = startTime + const Duration(milliseconds: 50);
+    // Every call invalidates older pending readiness waits, even when there
+    // is no longer a loaded video or selected cue.
+    final seekToken = _mediaRequests.beginSeek();
+    if (seekToken == null || !mounted || !_isVideoLoaded ||
+        _subtitleLine == null) return;
 
-      // Check if video player is initialized
-      if (_videoPlayerKey.currentState!.isInitialized()) {
-        _videoPlayerKey.currentState!.seekTo(seekPosition);
-        // Pause video if repeat mode is enabled to prevent autoplay on navigation
-        if (_isRepeatModeEnabled) {
-          _videoPlayerKey.currentState!.pause();
-        }
-      } else {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          unawaited(_seekWhenVideoPlayerReady(seekPosition));
-        });
-      }
+    final sourcePath = _selectedVideoPath;
+    if (sourcePath == null) return;
+    final seekPosition = parseTimeString(_subtitleLine!.startTime) +
+        const Duration(milliseconds: 50);
+    final player = _videoPlayerKey.currentState;
+
+    if (player != null && player.isInitialized()) {
+      player.seekTo(seekPosition);
+      if (_isRepeatModeEnabled) player.pause();
+      return;
     }
+
+    // The video widget may not yet be mounted during the initial frame.
+    // The request will be discarded if a new cue/video wins or route closes.
+    unawaited(_seekWhenVideoPlayerReady(
+      seekPosition,
+      seekToken: seekToken,
+      videoPath: sourcePath,
+    ));
   }
 
   void _nextSubtitle(subtitleId, int _lineIndex) {

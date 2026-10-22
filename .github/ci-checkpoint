@@ -219,3 +219,11 @@ ignore stale out-of-order collection reloads, invalidate pending seeks and
 callbacks on route disposal, guard missing or out-of-range cue requests,
 and require validation/autosave for Jump. Focused lifecycle/debounce tests.
 Only Linux flutter pub get/analyze/test; no app builds in GitHub Actions.
+
+CP90 R10 October 22 2026: Edit Line async video readiness contract.
+Invalidate older seeks when cue/video selection changes; reject late player
+readiness callbacks after unload, replacement or route disposal; guard
+file-picker completion after route disposal. Serialize video preference path
+writes so Unload cannot race behind an older delayed Save. Regression tests
+for stale seek, picker epochs, teardown and ordered/failing writes. Linux
+Flutter pub get/analyze/test ONLY; never native platform builds in Actions.

@@ -33,38 +33,43 @@ extension _EditLineVideoActions on EditSubtitleScreenState {
   }
 
   Future<void> _pickVideoFile() async {
+    final pickerToken = _mediaRequests.beginPicker();
+    if (pickerToken == null) return;
     final filePath = await FilePickerConvenience.pickVideoFile(
       context: context,
     );
+    if (!mounted || !_mediaRequests.isCurrentPicker(pickerToken) ||
+        filePath == null) return;
 
-    if (filePath != null) {
-      _setEditLineState(() {
-        _selectedVideoPath = filePath;
-        _isVideoVisible = true;
-        _isVideoLoaded = true;
-      });
+    _mediaRequests.invalidateMedia();
+    final mediaToken = _mediaRequests.captureMedia();
+    _setEditLineState(() {
+      _selectedVideoPath = filePath;
+      _isVideoVisible = true;
+      _isVideoLoaded = true;
+      _isVideoPlaying = false;
+    });
 
-      // Save video path to preferences for this subtitle collection
-      await _editLineController.saveVideoPath(filePath);
+    await _videoPathWrites.savePath(filePath);
+    if (!mounted || !_mediaRequests.isCurrentPicker(pickerToken) ||
+        !_mediaRequests.isCurrentMedia(mediaToken) ||
+        _selectedVideoPath != filePath) return;
 
-      // Generate subtitles for video player
-      _markSubtitlesForRegeneration();
-      _generateSubtitles();
-
-      // Seek to current subtitle if available
-      if (_subtitleLine != null) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
+    _markSubtitlesForRegeneration();
+    _generateSubtitles();
+    if (_subtitleLine != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _mediaRequests.isCurrentMedia(mediaToken) &&
+            _selectedVideoPath == filePath) {
           _seekVideoToSubtitle();
-        });
-      }
-
-      // Show success message
-      SnackbarHelper.showSuccess(
-        context,
-        'Video loaded successfully',
-        duration: const Duration(seconds: 2),
-      );
+        }
+      });
     }
+    SnackbarHelper.showSuccess(
+      context,
+      'Video loaded successfully',
+      duration: const Duration(seconds: 2),
+    );
   }
 
   Future<void> _syncWithVideoPosition() async {
