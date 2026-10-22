@@ -342,7 +342,7 @@ reference names, branch protections and `.msone` history data remain
 unchanged. Custom manual titles and unrecognized legacy events display
 unchanged. Ten mapping-contract tests and two graph widget regressions.
 [R3 report](CHECKPOINT91_R3_EDIT_HISTORY_ENTRY_LABELS_2026-10-22.md).
-**Verification:** Linux Flutter analysis/full tests pending.
+**Verification:** [Linux 744 tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39830916901).
 
 ### CP91 — Outstanding roadmap UX needed on mobile
 - Deliver the Git-style **visual checkpoint history** with plain-language controls, accessible list alternative and protected refs; preserve `.msone` compatibility and multi-branch correctness.

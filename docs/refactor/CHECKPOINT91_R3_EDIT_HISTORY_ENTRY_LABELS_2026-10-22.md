@@ -69,8 +69,12 @@ bookmarks are untouched.
 
 One Linux Flutter-only job: dependency resolution, `flutter analyze`,
 and full `flutter test`. No native application builds, other platform
-runners, or per-change CI dispatch. Record the exact result after the
-run completes.
+runners, or per-change CI dispatch. The final [Linux Flutter CI run #39830916901](https://github.com/anzilr/SubtitleStudio/actions/runs/39830916901)
+completed successfully with **744 tests passed** and `flutter analyze`
+reporting **No issues found**. This includes 10 pure mapping tests
+and 2 graph widget tests for the new edit-history labels.
+The accepted code commit is [`501cbbd`](https://github.com/anzilr/SubtitleStudio/commit/501cbbdbe95b41d7ae3448e3d3e601c3c38938c9).
+No native app builds or multiplatform tests were run.
 
 ## Next
 
