@@ -233,3 +233,8 @@ Avoid registration after Back while async Home cleanup completes. Route-owned
 registration and teardown are ordered, dispose invalidates callbacks, shared
 Editor shortcuts remain intact. Six pure lifecycle tests. Only flutter pub get,
 flutter analyze and flutter test; no native builds or cross-platform jobs.
+
+CP90 R10/R11 verification repair October 22 2026: visibility button now
+uses lifecycle-safe _seekVideoToSubtitle and invalidates pending seek on hide.
+R10 initial analyzer reported missing seekToken/videoPath in layout. Verify
+R10 and R11 together with Flutter analyze and full Flutter tests only.

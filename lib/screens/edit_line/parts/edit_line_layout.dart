@@ -102,13 +102,15 @@ extension _EditLineLayout on EditSubtitleScreenState {
                             _isVideoVisible = !_isVideoVisible;
                           });
 
-                          if (_isVideoVisible && _subtitleLine != null) {
-                            final startTime =
-                                parseTimeString(_subtitleLine!.startTime);
+                          if (!_isVideoVisible) {
+                            // The user hid the player. Reject previously
+                            // scheduled readiness waits and stale seeks.
+                            _mediaRequests.invalidateMedia();
+                          } else if (_subtitleLine != null) {
                             WidgetsBinding.instance.addPostFrameCallback((_) {
-                              unawaited(
-                                _seekWhenVideoPlayerReady(startTime),
-                              );
+                              if (mounted && _isVideoVisible && _isVideoLoaded) {
+                                _seekVideoToSubtitle();
+                              }
                             });
                           }
                         },

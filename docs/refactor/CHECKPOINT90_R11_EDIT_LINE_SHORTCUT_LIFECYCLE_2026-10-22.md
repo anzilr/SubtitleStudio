@@ -36,9 +36,11 @@ and repeated activation.
 
 ## Verification
 
-CP90 R10's prior Linux job remained queued without receiving a runner.
-The batched R11 Linux Flutter gate will cover both R10 and R11 test
-changes. Record exact results only after the run completes. Do not run
+CP90 R10's earlier analyzer failed before tests because the video
+visibility button still used the old, parameterless readiness helper.
+The follow-up repair updates that call site and invalidates old hidden
+player seeks. The combined R10/R11 Linux Flutter gate covers both code
+changes and their tests. Record exact results only after the run completes. Do not run
 Windows/macOS-specific checks or native platform builds.
 
 ## Updated native stability status

@@ -43,7 +43,13 @@ and error recovery. The full Linux Flutter analyzer and tests run in
 the existing CI gate. Native Android/iOS/macOS/Windows/Linux builds are
 not executed in GitHub Actions.
 
-Final CI counts and analyzer result will be recorded after completion.
+The original [R10 CI run 39814558939](https://github.com/anzilr/SubtitleStudio/actions/runs/39814558939)
+failed analyzer before tests: the video-visibility button still called the
+old seek helper without required `seekToken`/`videoPath` parameters.
+The R11 validation repair redirects that button to the lifecycle-safe
+`_seekVideoToSubtitle` path and invalidates pending requests when hidden.
+R10's tests and analyzer are being rechecked together with R11; the final
+result will be recorded after CI finishes.
 
 ## Remaining
 
