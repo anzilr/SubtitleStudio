@@ -41,8 +41,10 @@ desktop-preview changes.
 
 ## CI status
 
-The batched Linux Flutter gate is triggered with this implementation. Final
-counts and analyzer status will be appended after verification.
+The final [Linux GitHub Actions run #39810301827](https://github.com/anzilr/SubtitleStudio/actions/runs/39810301827)
+passed **682 Flutter tests** and `flutter analyze` reported **No issues found**.
+This is four additional tests over CP90 R7. Only dependency resolution,
+Flutter analysis, and Flutter tests ran.
 Windows/macOS platform file-host tests are not needed for a state-only change.
 No native platform builds run in GitHub Actions.
 

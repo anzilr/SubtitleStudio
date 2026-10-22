@@ -228,7 +228,7 @@ result. Next/Previous selects the neighbor *after* autosave. Legacy boolean
 save interfaces remain unchanged, and identical text/time collision cases
 are covered in Isar integration tests.
 [R8 report](CHECKPOINT90_R8_CUE_REORDER_SELECTION_2026-10-22.md).
-**Verification:** Full Linux Flutter analyzer/tests pending.
+**Verification:** [Linux 682 tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39810301827).
 
 - Identify and isolate the largest remaining mixed-responsibility Editor/Edit Line/Source View modules; decouple UI from persistence/media/filesystem operations while preserving existing Riverpod state and checkpoint behavior.
 - Prefer injectable services/coordinators, typed outcomes and widget tests. Verify source editing round trips, comment/mark preservation, secondary track fallback, keyboard and Android Back behavior.
