@@ -48,7 +48,11 @@ and clean selection state without resetting media/preferences.
 No Isar schema or `.msone` file-format changes, no video player
 implementation changes, and no desktop presentation changes. GitHub Actions
 runs Flutter dependency resolution, analyzer, and full tests on Linux only.
-The verified result will be appended once the CI job finishes.
+The final [Linux CI run #39818721441](https://github.com/anzilr/SubtitleStudio/actions/runs/39818721441)
+passed **707 Flutter tests** with `flutter analyze` reporting **No issues found**.
+This gate includes the final detached UI-to-Riverpod handoff fix in commit
+[`617ca84`](https://github.com/anzilr/SubtitleStudio/commit/617ca84356d6678f53784be24f5c12dcfa058e11).
+No native app builds or Windows/macOS host matrices ran.
 
 ## Remaining
 

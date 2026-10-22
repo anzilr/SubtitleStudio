@@ -276,7 +276,7 @@ after committed persistence. Previous Riverpod state snapshots aren't mutated
 in place. Six new regression tests cover reorder, metadata, blank cues,
 new slots and validation state.
 [R12 report](CHECKPOINT90_R12_EDIT_LINE_RIVERPOD_SELECTION_2026-10-22.md).
-**Verification:** Batched Linux Flutter analyzer and full tests pending.
+**Verification:** [Linux 707 Flutter tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39818721441).
 
 - Identify and isolate the largest remaining mixed-responsibility Editor/Edit Line/Source View modules; decouple UI from persistence/media/filesystem operations while preserving existing Riverpod state and checkpoint behavior.
 - Prefer injectable services/coordinators, typed outcomes and widget tests. Verify source editing round trips, comment/mark preservation, secondary track fallback, keyboard and Android Back behavior.
