@@ -36,100 +36,101 @@ extension _EditLinePersistence on EditSubtitleScreenState {
     return true;
   }
 
-  Future<void> _fetchSubtitleLine(subtitleId, lineIndex) async {
-    // Clear any existing validation errors when loading a new line
-    _setEditLineState(() {
-      _startTimeError = null;
-      _endTimeError = null;
-      _timeOrderError = null;
-    });
+  /// Reload the requested cue. A stale/disposed route must not commit an
+  /// earlier asynchronous result over a later navigation or touch controllers.
+  Future<bool> _fetchSubtitleLine(Object? _subtitleId, int lineIndex) async {
+    final loadGeneration = _navigationGuard.beginLoad();
+    if (loadGeneration == null) return false;
 
-    // Fetch the subtitle document using the provided ID
-    _subtitle = (await _editLineController.loadSubtitleCollection())!;
-
-    // Handle case when we're creating a new subtitle or at the end of the list
-    if (widget.index > _subtitle!.lines.length) {
-      if (widget.isNewSubtitle || _isEditMode) {
-        // Create an empty subtitle line when in edit mode or creating a new subtitle
-        _setEditLineState(() {
-          _subtitleLine =
-              SubtitleLine()
-                ..index =
-                    _subtitle!.lines.isEmpty ? 1 : _subtitle!.lines.length + 1
-                ..startTime = "00:00:00,000"
-                ..endTime = "00:00:05,000"
-                ..original = ""
-                ..edited = "";
-
-          _originalController.text = _subtitleLine!.original;
-          _editedController.text = _subtitleLine!.edited ?? '';
-          _startTimeController.text = _subtitleLine!.startTime;
-          _endTimeController.text = _subtitleLine!.endTime;
-          _currentIndexController.text = _subtitleLine!.index.toString();
-
-          // Parse time strings into individual components
-          _parseTimeString(_subtitleLine!.startTime, true);
-          _parseTimeString(_subtitleLine!.endTime, false);
-
-          // Store initial values for change tracking
-          _storeInitialValues();
-
-          // Character counts updated by Cubit
-        });
-
-        // Mark subtitles for regeneration and generate for video player
-        _markSubtitlesForRegeneration();
-        _generateSubtitles();
-        
-        return;
+    SubtitleCollection? collection;
+    try {
+      collection = await _editLineController.loadSubtitleCollection();
+    } catch (error, stackTrace) {
+      if (mounted && _navigationGuard.isCurrent(loadGeneration)) {
+        logError(
+          'Could not reload the selected subtitle line',
+          error: error,
+          stackTrace: stackTrace,
+          context: 'EditSubtitleScreen._fetchSubtitleLine',
+        );
       }
+      return false;
+    }
+    if (!mounted || !_navigationGuard.isCurrent(loadGeneration)) return false;
+    if (collection == null) {
+      logWarning(
+        'Edit Line collection unavailable while navigating',
+        context: 'EditSubtitleScreen._fetchSubtitleLine',
+      );
+      return false;
     }
 
-    // Check if lineIndex is within valid range before accessing the array
-    if (widget.index <= _subtitle!.lines.length &&
-        lineIndex >= 0 &&
-        lineIndex < _subtitle!.lines.length) {
-      _subtitleLine = _subtitle?.lines[lineIndex];
+    if (lineIndex >= 0 && lineIndex < collection.lines.length) {
+      final line = collection.lines[lineIndex];
       _setEditLineState(() {
-        _originalController.text = _subtitleLine!.original;
-        // Only set edited text if it exists, otherwise leave it empty
-        _editedController.text =
-            _subtitleLine!.edited != null
-                ? _subtitleLine!.edited!.replaceAll('<br>', '\n')
-                : '';
-        _startTimeController.text = _subtitleLine!.startTime;
-        _endTimeController.text = _subtitleLine!.endTime;
-        _currentIndexController.text = _subtitleLine!.index.toString();
-        // Apply show original line logic after setting controller values
+        _subtitle = collection;
+        _subtitleLine = line;
+        _startTimeError = null;
+        _endTimeError = null;
+        _timeOrderError = null;
+        _originalController.text = line.original;
+        _editedController.text = line.edited?.replaceAll('<br>', '\n') ?? '';
+        _startTimeController.text = line.startTime;
+        _endTimeController.text = line.endTime;
+        _currentIndexController.text = line.index.toString();
         _applyShowOriginalLine();
-
-        // Parse time strings into individual components
-        _parseTimeString(_subtitleLine!.startTime, true);
-        _parseTimeString(_subtitleLine!.endTime, false);
-
-        // Store initial values for change tracking
+        _parseTimeString(line.startTime, true);
+        _parseTimeString(line.endTime, false);
         _storeInitialValues();
-
-        // Character counts updated by Cubit
       });
 
-      // Mark subtitles for regeneration and generate for video player
       _markSubtitlesForRegeneration();
       _generateSubtitles();
-
-      // Seek video to current subtitle position if video is loaded
       if (_isVideoLoaded) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          _seekVideoToSubtitle();
+          if (mounted && _navigationGuard.isCurrent(loadGeneration)) {
+            _seekVideoToSubtitle();
+          }
         });
       }
-    } else {
-      // Handle the case when the line index is out of range
-      logError(
-        'Invalid line index: $lineIndex, max index: ${_subtitle!.lines.length - 1}',
-        context: 'EditSubtitleScreen._skipToLine',
-      );
+      return true;
     }
+
+    // Only a request for the next slot may produce a new cue. The original
+    // route index must not force creation when navigating to a valid row.
+    if (lineIndex == collection.lines.length &&
+        (widget.isNewSubtitle || _isEditMode)) {
+      final newLine = SubtitleLine()
+        ..index = collection.lines.length + 1
+        ..startTime = '00:00:00,000'
+        ..endTime = '00:00:05,000'
+        ..original = ''
+        ..edited = '';
+      _setEditLineState(() {
+        _subtitle = collection;
+        _subtitleLine = newLine;
+        _startTimeError = null;
+        _endTimeError = null;
+        _timeOrderError = null;
+        _originalController.text = newLine.original;
+        _editedController.text = '';
+        _startTimeController.text = newLine.startTime;
+        _endTimeController.text = newLine.endTime;
+        _currentIndexController.text = newLine.index.toString();
+        _parseTimeString(newLine.startTime, true);
+        _parseTimeString(newLine.endTime, false);
+        _storeInitialValues();
+      });
+      _markSubtitlesForRegeneration();
+      _generateSubtitles();
+      return true;
+    }
+
+    logWarning(
+      'Edit Line navigation requested an invalid cue index',
+      context: 'EditSubtitleScreen._fetchSubtitleLine',
+    );
+    return false;
   }
 
   Future<bool> _updateSubtitle(contxt) async {

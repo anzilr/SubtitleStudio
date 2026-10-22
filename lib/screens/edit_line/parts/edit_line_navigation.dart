@@ -25,185 +25,101 @@ extension _EditLineNavigation on EditSubtitleScreenState {
     }
   }
 
-  void _nextSubtitle(subtitleId, int _lineIndex) async {
-    // Don't stop repeat mode when navigating - let it continue
-    // Only stop if we're outside the custom range
-    if (_isRepeatModeEnabled && _isCustomRangeMode) {
-      final nextIndex = _subtitleLine?.index ?? 0;
-      if (_customRangeEndIndex != null && nextIndex > _customRangeEndIndex!) {
-        // We're going beyond the custom range, keep repeat but pause it temporarily
-        _stopRepeatPlayback();
+  void _nextSubtitle(subtitleId, int _lineIndex) {
+    unawaited(_navigateRelative(subtitleId, 1));
+  }
+
+  void _prevSubtitle(subtitleId, int _lineIndex) {
+    unawaited(_navigateRelative(subtitleId, -1));
+  }
+
+  /// A single navigation owns the save, reload and selection transition.
+  /// Additional taps cannot concurrently save a half-loaded cue.
+  Future<void> _navigateRelative(Object? subtitleId, int direction) {
+    return _navigationGuard.runExclusive(() async {
+      if (!mounted || _subtitleLine == null || _subtitle == null) return;
+      if (_hasValidationErrors()) {
+        SnackbarHelper.showError(
+          context,
+          'Please fix validation errors before navigating',
+          duration: const Duration(seconds: 2),
+        );
+        return;
       }
-    }
 
-    // Check for validation errors first
-    if (_hasValidationErrors()) {
-      SnackbarHelper.showError(
-        context,
-        'Please fix validation errors before navigating',
-        duration: const Duration(seconds: 2),
-      );
-      return;
-    }
-
-    // The save may reorder the selected cue; check bounds *after* saving.
-    if (_subtitleLine != null && _subtitle != null) {
-      // Save changes if auto-save is enabled or we're in normal mode
       if (_autoSaveWithNavigation || !_showOriginalLine) {
-        final saveSuccess = await _updateSubtitleSilently();
-        if (!saveSuccess) {
-          // Don't navigate if save failed
-          return;
-        }
+        if (!await _updateSubtitleSilently()) return;
       }
       if (!mounted || _subtitleLine == null || _subtitle == null) return;
-      final targetIndex = _subtitleLine!.index + 1;
-      if (targetIndex > _subtitle!.lines.length) {
+
+      // The current cue may have changed index after the saved timing edit.
+      final target = _subtitleLine!.index + direction;
+      if (target < 1 || target > _subtitle!.lines.length) {
         SnackbarHelper.showWarning(
           context,
-          'This is the last subtitle',
+          direction > 0 ? 'This is the last subtitle'
+                        : 'This is the first subtitle',
           duration: const Duration(seconds: 1),
         );
         return;
       }
-      await _fetchSubtitleLine(subtitleId, targetIndex - 1);
 
-      // Resume repeat if enabled
-      if (_isRepeatModeEnabled) {
-        final currentIndex =
-            (_subtitleLine?.index ?? 1) - 1; // Convert to 0-based
-        if (!_isCustomRangeMode) {
-          // For normal repeat mode, update to the new subtitle line
-          // This will update repeat timing with the new subtitle without changing play/pause state
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _updateRepeatTiming();
-          });
-        } else if (_customRangeStartIndex != null &&
-            _customRangeEndIndex != null &&
-            currentIndex >= _customRangeStartIndex! &&
-            currentIndex <= _customRangeEndIndex!) {
-          // For custom range mode, only restart if we're still in range
-          // Video is already paused by _seekVideoToSubtitle when repeat mode is enabled
-          // User needs to manually start playback
-        }
-      }
-    } else {
-      // Show a message when there's no next subtitle
-      SnackbarHelper.showWarning(
-        context,
-        'This is the last subtitle',
-        duration: const Duration(seconds: 1),
-      );
-    }
-  }
-
-  void _prevSubtitle(subtitleId, int _lineIndex) async {
-    // Don't stop repeat mode when navigating - let it continue
-    // Only stop if we're outside the custom range
-    if (_isRepeatModeEnabled && _isCustomRangeMode) {
-      final prevIndex =
-          (_subtitleLine?.index ?? 2) - 2; // Previous index in 0-based
-      if (_customRangeStartIndex != null &&
-          prevIndex < _customRangeStartIndex!) {
-        // We're going before the custom range, keep repeat but pause it temporarily
+      if (_isRepeatModeEnabled && _isCustomRangeMode &&
+          (_customRangeStartIndex == null ||
+           _customRangeEndIndex == null ||
+           target - 1 < _customRangeStartIndex! ||
+           target - 1 > _customRangeEndIndex!)) {
         _stopRepeatPlayback();
       }
-    }
 
-    // Check for validation errors first
-    if (_hasValidationErrors()) {
-      SnackbarHelper.showError(
-        context,
-        'Please fix validation errors before navigating',
-        duration: const Duration(seconds: 2),
-      );
-      return;
-    }
-
-    if (_subtitleLine != null && _subtitle != null) {
-      // Save changes if auto-save is enabled or we're in normal mode
-      if (_autoSaveWithNavigation || !_showOriginalLine) {
-        final saveSuccess = await _updateSubtitleSilently();
-        if (!saveSuccess) {
-          // Don't navigate if save failed
-          return;
-        }
-      }
-      if (!mounted || _subtitleLine == null) return;
-      final targetIndex = _subtitleLine!.index - 1;
-      if (targetIndex < 1) {
-        SnackbarHelper.showWarning(
-          context,
-          'This is the first subtitle',
-          duration: const Duration(seconds: 1),
-        );
+      if (!await _fetchSubtitleLine(subtitleId, target - 1) || !mounted) {
         return;
       }
-      await _fetchSubtitleLine(subtitleId, targetIndex - 1);
-
-      // Resume repeat if we're in range and it was enabled
-      if (_isRepeatModeEnabled) {
-        final currentIndex =
-            (_subtitleLine?.index ?? 1) - 1; // Convert to 0-based
-        if (!_isCustomRangeMode) {
-          // For normal repeat mode, update to the new subtitle line
-          // This will update repeat timing with the new subtitle without changing play/pause state
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _updateRepeatTiming();
-          });
-        } else if (_customRangeStartIndex != null &&
-            _customRangeEndIndex != null &&
-            currentIndex >= _customRangeStartIndex! &&
-            currentIndex <= _customRangeEndIndex!) {
-          // For custom range mode, only restart if we're still in range
-          // Video is already paused by _seekVideoToSubtitle when repeat mode is enabled
-          // User needs to manually start playback
-        }
-      }
-    } else {
-      // Show a message when there's no previous subtitle
-      SnackbarHelper.showWarning(
-        context,
-        'This is the first subtitle',
-        duration: const Duration(seconds: 1),
-      );
-    }
-  }
-
-  void _skipToLine(subtitleId, lineIndex) {
-    // Check if we're navigating outside custom range
-    if (_isRepeatModeEnabled && _isCustomRangeMode) {
-      if (_customRangeStartIndex != null &&
-          _customRangeEndIndex != null &&
-          (lineIndex < _customRangeStartIndex! ||
-              lineIndex > _customRangeEndIndex!)) {
-        // We're going outside the custom range, pause repeat temporarily
-        _stopRepeatPlayback();
-      }
-    }
-
-    // Navigate to the specified subtitle line
-    _setEditLineState(() {
-      _fetchSubtitleLine(subtitleId, lineIndex);
+      _resumeRepeatAfterLineNavigation();
     });
+  }
 
-    // Resume repeat if we're in range and it was enabled
-    if (_isRepeatModeEnabled) {
-      if (!_isCustomRangeMode) {
-        // For normal repeat mode, update to the new subtitle line
-        // This will update repeat timing with the new subtitle without changing play/pause state
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _updateRepeatTiming();
-        });
-      } else if (_customRangeStartIndex != null &&
-          _customRangeEndIndex != null &&
-          lineIndex >= _customRangeStartIndex! &&
-          lineIndex <= _customRangeEndIndex!) {
-        // For custom range mode, only restart if we're still in range
-        // Video is already paused by _seekVideoToSubtitle when repeat mode is enabled
-        // User needs to manually start playback
+  /// Go-to-line, marked-line selection and keyboard navigation all honor
+  /// the same unsaved-change and lifecycle checks.
+  void _skipToLine(subtitleId, int lineIndex) {
+    unawaited(_navigationGuard.runExclusive(() async {
+      if (!mounted || _subtitle == null || _subtitleLine == null) return;
+      if (lineIndex < 0 || lineIndex >= _subtitle!.lines.length) return;
+
+      if (_hasValidationErrors()) {
+        SnackbarHelper.showError(
+          context,
+          'Please fix validation errors before navigating',
+          duration: const Duration(seconds: 2),
+        );
+        return;
       }
-    }
+      if (_autoSaveWithNavigation || !_showOriginalLine) {
+        if (!await _updateSubtitleSilently()) return;
+      }
+      if (!mounted || _subtitle == null) return;
+      if (lineIndex >= _subtitle!.lines.length) return;
+
+      if (_isRepeatModeEnabled && _isCustomRangeMode &&
+          (_customRangeStartIndex == null ||
+           _customRangeEndIndex == null ||
+           lineIndex < _customRangeStartIndex! ||
+           lineIndex > _customRangeEndIndex!)) {
+        _stopRepeatPlayback();
+      }
+
+      if (!await _fetchSubtitleLine(subtitleId, lineIndex) || !mounted) return;
+      _resumeRepeatAfterLineNavigation();
+    }));
+  }
+
+  void _resumeRepeatAfterLineNavigation() {
+    if (!_isRepeatModeEnabled || _isCustomRangeMode) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _isRepeatModeEnabled && !_isCustomRangeMode) {
+        _updateRepeatTiming();
+      }
+    });
   }
 
   void _handleNextLineShortcut() {

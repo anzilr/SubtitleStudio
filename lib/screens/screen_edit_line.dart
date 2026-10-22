@@ -49,6 +49,7 @@ import 'package:subtitle_studio/screens/edit_line/widgets/edit_line_placeholders
 import 'package:subtitle_studio/screens/edit_line/widgets/dictionary_sheets.dart';
 import 'package:subtitle_studio/screens/edit_line/services/ai_context_builder.dart';
 import 'package:subtitle_studio/screens/edit_line/services/edit_line_file_save_service.dart';
+import 'package:subtitle_studio/screens/edit_line/services/edit_line_navigation_guard.dart';
 import 'package:subtitle_studio/widgets/ai_explanation_sheet.dart';
 
 part 'edit_line/parts/edit_line_dialog_actions.dart';
@@ -207,6 +208,7 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
   // Video subtitle cache invalidation flag. This must remain real State
   // storage because extensions cannot own instance fields.
   bool _needSubtitleRegeneration = true;
+  final EditLineNavigationGuard _navigationGuard = EditLineNavigationGuard();
 
   void _markSubtitlesForRegeneration() {
     _needSubtitleRegeneration = true;
@@ -340,6 +342,8 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
 
   @override
   void dispose() {
+    // Invalidates in-flight loads before async callbacks can access widgets.
+    _navigationGuard.dispose();
     // Cancel any pending timers
     _characterCountTimer?.cancel();
     _timeUpdateTimer?.cancel();

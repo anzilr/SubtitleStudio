@@ -230,6 +230,17 @@ are covered in Isar integration tests.
 [R8 report](CHECKPOINT90_R8_CUE_REORDER_SELECTION_2026-10-22.md).
 **Verification:** [Linux 682 tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39810301827).
 
+**CP90 R9 (October 22, 2026):** The Edit Line route now uses a
+`EditLineNavigationGuard` to serialize relative and jump navigation and
+invalidate stale asynchronous cue loads on newer refresh or route disposal.
+Jump to Line honors pending autosave and time validation. Cue refresh
+reads the requested index instead of the initial route index, preventing
+incorrect new-cue placeholders when the project changes. Deferred video
+seeks are invalidated with the matching load token. No native media or
+persistent-data format changes.
+[R9 report](CHECKPOINT90_R9_EDIT_LINE_NAVIGATION_LIFECYCLE_2026-10-22.md).
+**Verification:** Batched Linux analysis/full Flutter test gate pending.
+
 - Identify and isolate the largest remaining mixed-responsibility Editor/Edit Line/Source View modules; decouple UI from persistence/media/filesystem operations while preserving existing Riverpod state and checkpoint behavior.
 - Prefer injectable services/coordinators, typed outcomes and widget tests. Verify source editing round trips, comment/mark preservation, secondary track fallback, keyboard and Android Back behavior.
 - Keep the shared core reusable by both Flutter mobile widgets and the later desktop presentation.
