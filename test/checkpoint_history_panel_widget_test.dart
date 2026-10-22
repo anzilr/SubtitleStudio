@@ -10,6 +10,7 @@ import 'package:subtitle_studio/widgets/checkpoint_history_rail.dart';
 class FakeHistoryCommands implements HistoryGraphCommands {
   final bool corrupt;
   final bool detached;
+  bool rejectBranchCreation = false;
   int? lastExpectedHeadId;
   int? lastExpectedTipId;
   final List<HistoryRef> refs;
@@ -72,6 +73,9 @@ class FakeHistoryCommands implements HistoryGraphCommands {
   Future<CheckpointHistoryGraph> createBranch({
     required String name, required int checkpointId,
   }) async {
+    if (rejectBranchCreation) {
+      throw StateError('History reference name already exists or overlaps.');
+    }
     refs.add(_ref(name, 'branch', checkpointId));
     return load();
   }
@@ -229,6 +233,8 @@ void main() {
     expect(fake.refs.any((ref) => ref.name == 'refs/heads/my-new-branch' &&
         ref.targetCheckpointId == 4), isTrue);
     expect(find.text('Showing my-new-branch · 3 points'), findsOneWidget);
+    expect(find.textContaining('Branch "my-new-branch" created.'),
+        findsOneWidget);
     expect(find.byKey(const ValueKey('history-commit-4')), findsOneWidget);
     expect(find.byKey(const ValueKey('history-commit-3')), findsNothing);
     expect(find.text('Editing: Main path'), findsOneWidget);
@@ -252,6 +258,61 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('history-commit-3')), findsOneWidget);
     expect(find.byKey(const ValueKey('history-filter-status')), findsNothing);
+  });
+
+  testWidgets('invalid branch name stays in dialog and explains allowed names',
+      (tester) async {
+    final fake = FakeHistoryCommands();
+    await tester.pumpWidget(_host(fake));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('history-node-menu-1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Branch from this point'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('history-ref-name')),
+        'My New Branch');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('hyphens or underscores instead of spaces'),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey('history-ref-name')), findsOneWidget);
+    expect(fake.refs, hasLength(2));
+
+    await tester.enterText(find.byKey(const ValueKey('history-ref-name')),
+        'my-new-branch');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    expect(fake.refs.any((ref) => ref.name == 'refs/heads/my-new-branch'),
+        isTrue);
+    expect(find.text('Showing my-new-branch · 1 point'), findsOneWidget);
+  });
+
+  testWidgets('storage rejection is visible within the history panel',
+      (tester) async {
+    final fake = FakeHistoryCommands()..rejectBranchCreation = true;
+    await tester.pumpWidget(_host(fake));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('history-node-menu-1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Branch from this point'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('history-ref-name')),
+        'review');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('history-operation-feedback')),
+        findsOneWidget);
+    expect(find.textContaining('that name is already in use'), findsOneWidget);
+    expect(fake.refs, hasLength(2));
+    expect(find.text('Editing: Main path'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('history-dismiss-feedback')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('history-operation-feedback')),
+        findsNothing);
   });
 
   testWidgets('visual history humanizes automatic subtitle edit labels',

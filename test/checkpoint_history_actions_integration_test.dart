@@ -161,4 +161,43 @@ void main() {
     ), isNull);
     expect((await repository.getHeadCheckpoint(sessionId))!.id, movedTip);
   });
+
+  test('creating a branch after restoring an earlier point persists the ref',
+      () async {
+    late int sessionId;
+    late int collectionId;
+    await harness.isar.writeTxn(() async {
+      collectionId = await harness.isar.subtitleCollections.put(
+        SubtitleCollection(
+          fileName: 'restored-history.srt', encoding: 'UTF-8',
+          lines: [_line()],
+        ),
+      );
+      sessionId = await harness.isar.sessions.put(
+        Session(fileName: 'restored-history.srt',
+            subtitleCollectionId: collectionId),
+      );
+    });
+    final repository = CheckpointRepository(harness.isar);
+    final actions = CheckpointHistoryActions(repository, sessionId: sessionId);
+    final firstPoint = await repository.createInitialSnapshot(
+        sessionId: sessionId, subtitleCollectionId: collectionId);
+    final secondPoint = await repository.createManualCheckpoint(
+        sessionId: sessionId, subtitleCollectionId: collectionId,
+        customDescription: 'Before restore');
+    expect(secondPoint, isNot(firstPoint));
+
+    final restored = await actions.checkoutCommit(firstPoint);
+    expect(restored?.isDetached, isTrue);
+    final created = await actions.createBranch(
+        name: 'refs/heads/after-restore', checkpointId: firstPoint);
+    expect(created.isDetached, isTrue);
+    expect(created.headCheckpointId, firstPoint);
+    expect(created.references.singleWhere(
+        (ref) => ref.name == 'refs/heads/after-restore').checkpointId,
+        firstPoint);
+    expect((await actions.load()).references.any(
+        (ref) => ref.name == 'refs/heads/after-restore'), isTrue);
+    expect((await repository.getHeadCheckpoint(sessionId))!.id, firstPoint);
+  });
 }

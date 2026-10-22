@@ -361,3 +361,13 @@ with every named branch even when the horizontal chips are offscreen, plus
 an explicit guarded Switch to this branch action for editing. Add widget
 tests for new branch creation, selection, narrow screens with many branches,
 and language consistency. Flutter analyze and tests only; no app builds.
+
+CP91 R7 R2 October 22 2026: investigate user report that Branch from this
+point silently closes without adding a branch, including after restoring a
+point. Share portable history-ref validation rules between the Isar store
+and the naming dialog; invalid inputs (such as spaces) now stay in the
+dialog with an explicit correction. Show an in-panel success or failure
+message after a durable branch mutation; no error is hidden behind the
+bottom sheet. Add widget tests for invalid names and rejected persistence,
+plus an actual Isar integration test creating a branch after detached
+restore. Flutter pub get/analyze/tests only; no platform builds.

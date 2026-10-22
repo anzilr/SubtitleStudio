@@ -4,6 +4,7 @@ import 'package:subtitle_studio/services/checkpoint_head_reference.dart';
 import 'package:subtitle_studio/services/checkpoint_reference_catalog.dart';
 import 'package:subtitle_studio/services/checkpoint_reference_migration_plan.dart';
 import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
+import 'package:subtitle_studio/services/history_reference_naming.dart';
 
 /// Persistent reference boundary. In-transaction functions MUST be called
 /// inside the caller's Isar writeTxn, never through nested transactions.
@@ -121,22 +122,8 @@ class HistoryRefRepository {
     }
   }
 
-  static bool _validName(String name, String kind) {
-    if (name.length > 180) return false;
-    if (kind == 'head') return name == 'HEAD';
-    final prefix = switch (kind) {
-      'branch' => 'refs/heads/',
-      'bookmark' => 'refs/bookmarks/',
-      _ => '',
-    };
-    if (prefix.isEmpty || !name.startsWith(prefix)) return false;
-    final suffix = name.substring(prefix.length);
-    final safe = RegExp(r'^[A-Za-z0-9][A-Za-z0-9_.-]*');
-    return suffix.split('/').every((part) =>
-        part.isNotEmpty && part != '.' && part != '..' &&
-        !part.endsWith('.lock') &&
-        safe.firstMatch(part)?.end == part.length);
-  }
+  static bool _validName(String name, String kind) =>
+      HistoryReferenceNaming.isValid(name, kind);
 
   static bool _collides(String name, Iterable<String> existing) =>
       existing.any((other) =>

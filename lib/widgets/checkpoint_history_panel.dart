@@ -6,6 +6,7 @@ import 'package:subtitle_studio/services/checkpoint_history_branch_view.dart';
 import 'package:subtitle_studio/services/checkpoint_history_graph.dart';
 import 'package:subtitle_studio/services/checkpoint_history_labels.dart';
 import 'package:subtitle_studio/services/checkpoint_history_lane_layout.dart';
+import 'package:subtitle_studio/services/history_reference_naming.dart';
 import 'package:subtitle_studio/widgets/checkpoint_history_rail.dart';
 
 class _HistoryRailStyle {
@@ -40,6 +41,8 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
   CheckpointHistoryGraph? _graph;
   CheckpointHistoryLaneLayout? _lanes;
   String? _error;
+  String? _operationMessage;
+  bool _operationFailed = false;
   bool _busy = true;
   // Reserve dialogs too, so two actions cannot both receive confirmation.
   bool _dialogPending = false;
@@ -106,14 +109,18 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
       SnackBar(content: Text(message)));
   }
 
-  Future<void> _run(Future<CheckpointHistoryGraph> Function() operation,
-      {String? focusCreatedBranch}) async {
-    if (_busy) return;
+  Future<bool> _run(Future<CheckpointHistoryGraph> Function() operation,
+      {String? focusCreatedBranch, String actionName = 'Update history'}) async {
+    if (_busy) return false;
     final request = ++_generation;
-    setState(() => _busy = true);
+    setState(() { _busy = true; _operationMessage = null; });
     try {
       final updated = await operation();
-      if (!mounted || request != _generation) return;
+      if (!mounted || request != _generation) return false;
+      if (focusCreatedBranch != null && !updated.references.any((ref) =>
+          ref.kind == 'branch' && ref.name == focusCreatedBranch)) {
+        throw StateError('Created branch was not found in refreshed history.');
+      }
       setState(() {
         _graph = updated;
         _lanes = CheckpointHistoryLaneLayout.fromGraph(updated);
@@ -126,12 +133,37 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
         }
         _busy = false;
       });
-    } catch (_) {
-      if (!mounted || request != _generation) return;
+      return true;
+    } catch (error) {
+      if (!mounted || request != _generation) return false;
       setState(() => _busy = false);
-      _notify('History operation could not be completed. Reloading the latest state.');
+      final message = _historyErrorMessage(error, actionName);
       await _reload();
+      if (mounted && request + 1 == _generation) {
+        setState(() {
+          _operationMessage = message;
+          _operationFailed = true;
+        });
+      }
+      return false;
     }
+  }
+
+  String _historyErrorMessage(Object error, String actionName) {
+    if (error is FormatException) {
+      return '$actionName failed: invalid name. Use letters, numbers, hyphens or underscores.';
+    }
+    if (error is StateError) {
+      final reason = error.message.toString();
+      if (reason.contains('already exists') || reason.contains('overlaps')) {
+        return '$actionName failed: that name is already in use. Choose another name.';
+      }
+      if (reason.contains('belongs to another session') ||
+          reason.contains('missing')) {
+        return '$actionName failed: the history point could not be verified. Reopen the project and try again.';
+      }
+    }
+    return '$actionName could not be confirmed. Refresh history and try again.';
   }
 
   String _shortName(HistoryGraphReference historyRef) =>
@@ -187,31 +219,50 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
   Future<String?> _enterName(String title, String prefix,
       {String initial = ''}) async {
     var entered = initial;
+    String? inputError;
+    final kind = prefix == 'refs/heads/' ? 'branch' : 'bookmark';
     final suffix = await showDialog<String>(
       context: context,
-      builder: (dialog) => AlertDialog(
+      builder: (dialog) => StatefulBuilder(builder: (dialog, updateDialog) {
+        void save(String value) {
+          final trimmed = value.trim();
+          final error = HistoryReferenceNaming.validationError(
+              '$prefix$trimmed', kind);
+          if (error != null) {
+            updateDialog(() => inputError = error);
+            return;
+          }
+          Navigator.pop(dialog, trimmed);
+        }
+        return AlertDialog(
         title: Text(title),
         content: TextFormField(
           initialValue: initial,
-          onChanged: (value) => entered = value,
+          onChanged: (value) {
+            entered = value;
+            if (inputError != null) {
+              updateDialog(() => inputError = HistoryReferenceNaming
+                  .validationError('$prefix${value.trim()}', kind));
+            }
+          },
           key: const ValueKey('history-ref-name'),
           autofocus: true,
           decoration: const InputDecoration(
             labelText: 'Name',
-            helperText: 'Letters, digits, /, dot, dash or underscore',
-          ),
-          onFieldSubmitted: (value) => Navigator.pop(dialog, value),
+            helperText: 'Use review-fixes, not spaces',
+          ).copyWith(errorText: inputError, errorMaxLines: 3),
+          onFieldSubmitted: save,
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(dialog),
               child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(dialog, entered),
+          FilledButton(onPressed: () => save(entered),
               child: const Text('Save')),
         ],
-      ),
+      );
+      }),
     );
-    if (suffix == null || suffix.trim().isEmpty) return null;
-    return prefix + suffix.trim();
+    return suffix == null ? null : prefix + suffix;
   }
 
   Future<bool> _confirm(String title, String message, String action) async =>
@@ -286,10 +337,19 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
       branch ? 'refs/heads/' : 'refs/bookmarks/',
     );
     if (name == null || !mounted) return;
-    await _run(() => branch
+    final saved = await _run(() => branch
       ? _actions.createBranch(name: name, checkpointId: checkpointId)
       : _actions.createBookmark(name: name, checkpointId: checkpointId),
-      focusCreatedBranch: branch ? name : null);
+      focusCreatedBranch: branch ? name : null,
+      actionName: branch ? 'Create branch' : 'Save bookmark');
+    if (saved && mounted) {
+      setState(() {
+        _operationFailed = false;
+        _operationMessage = branch
+            ? 'Branch "${name.substring('refs/heads/'.length)}" created. Use Switch to this branch to edit there.'
+            : 'Bookmark "${name.substring('refs/bookmarks/'.length)}" saved.';
+      });
+    }
     } finally {
       _dialogPending = false;
     }
@@ -711,6 +771,39 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
         ]),
       ),
       _branchPicker(branches, branchColors, selectedBranch),
+      if (_operationMessage != null)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          child: Container(
+            key: const ValueKey('history-operation-feedback'),
+            padding: const EdgeInsets.fromLTRB(12, 5, 2, 5),
+            decoration: BoxDecoration(
+              color: _operationFailed
+                  ? scheme.errorContainer : scheme.secondaryContainer,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(children: [
+              Icon(_operationFailed ? Icons.error_outline : Icons.check_circle_outline,
+                  size: 18,
+                  color: _operationFailed
+                      ? scheme.onErrorContainer : scheme.onSecondaryContainer),
+              const SizedBox(width: 8),
+              Expanded(child: Text(_operationMessage!,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: _operationFailed
+                        ? scheme.onErrorContainer : scheme.onSecondaryContainer,
+                  ))),
+              IconButton(
+                key: const ValueKey('history-dismiss-feedback'),
+                tooltip: 'Dismiss history message',
+                icon: const Icon(Icons.close, size: 18),
+                color: _operationFailed
+                    ? scheme.onErrorContainer : scheme.onSecondaryContainer,
+                onPressed: () => setState(() => _operationMessage = null),
+              ),
+            ]),
+          ),
+        ),
       if (selectedBranch != null)
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -720,7 +813,7 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
             const SizedBox(width: 6),
             Expanded(child: Text(
               'Showing ${_shortName(selectedBranch)} · '
-              '${lanes.rows.length} points',
+              '${lanes.rows.length} point${lanes.rows.length == 1 ? '' : 's'}',
               key: const ValueKey('history-filter-status'),
               maxLines: 1, overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodySmall,
