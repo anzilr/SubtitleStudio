@@ -46,10 +46,13 @@ subtitle tests remain in the full suite.
 
 ## Verification
 
-Run Flutter dependency resolution, `flutter analyze` and the complete
-`flutter test` suite in the single Linux CI gate; no platform-specific
-runners or native application builds. Confirm counts and diagnostics
-before marking R14 accepted.
+The final [Linux Flutter-only CI run #39822724754](https://github.com/anzilr/SubtitleStudio/actions/runs/39822724754)
+completed successfully with **718 Flutter tests passing** and
+`flutter analyze` reporting **No issues found**. This includes the five
+new Isar/Riverpod race tests and the existing regression suite. The
+verified source commit is
+[`67285d9`](https://github.com/anzilr/SubtitleStudio/commit/67285d975a2f4fb81834422bfc6198e2bd05fff6).
+No native application builds or platform-specific host matrices ran.
 
 ## Remaining
 

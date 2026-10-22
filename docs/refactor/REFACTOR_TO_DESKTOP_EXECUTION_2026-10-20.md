@@ -299,7 +299,7 @@ saves and externally selected cues likewise supersede old loads; provider
 disposal closes the guard. Five Isar/Riverpod regression tests exercise
 stale reads, typing, time validation, no-op edits, and latest navigation.
 [R14 report](CHECKPOINT90_R14_CONTROLLER_NAVIGATION_DRAFT_GUARD_2026-10-22.md).
-**Verification:** Linux Flutter analysis and full tests pending.
+**Verification:** [Linux 718 tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39822724754).
 
 - Identify and isolate the largest remaining mixed-responsibility Editor/Edit Line/Source View modules; decouple UI from persistence/media/filesystem operations while preserving existing Riverpod state and checkpoint behavior.
 - Prefer injectable services/coordinators, typed outcomes and widget tests. Verify source editing round trips, comment/mark preservation, secondary track fallback, keyboard and Android Back behavior.
