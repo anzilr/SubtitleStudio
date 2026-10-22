@@ -124,7 +124,7 @@ void main() {
   testWidgets('displays actual HEAD and named branch labels', (tester) async {
     await tester.pumpWidget(_host(FakeHistoryCommands()));
     await tester.pumpAndSettle();
-    expect(find.text('Working on main'), findsOneWidget);
+    expect(find.text('Editing: Main edits'), findsOneWidget);
     expect(find.byKey(const ValueKey('history-commit-1')), findsOneWidget);
     // The visual history track is drawn next to the existing action card;
     // graph rendering must not remove the accessible commit information.
@@ -132,9 +132,28 @@ void main() {
     expect(find.byKey(const ValueKey('history-ref-menu-refs/heads/main')),
         findsOneWidget);
     expect(find.byKey(const ValueKey('history-head-status')), findsOneWidget);
+    expect(find.text('Main edits · In use'), findsWidgets);
+    expect(find.textContaining('current branch'), findsNothing);
+    expect(find.text('main'), findsNothing);
     expect(find.byKey(const ValueKey('history-legend')), findsOneWidget);
     expect(find.text('Earlier versions'), findsOneWidget);
-    expect(find.text('Branch point'), findsOneWidget);
+    expect(find.text('History split'), findsOneWidget);
+  });
+
+  testWidgets('named alternate path remains recognizable and active',
+      (tester) async {
+    final commands = FakeHistoryCommands();
+    commands.refs[0].symbolicBranchName = 'refs/heads/review';
+    commands.refs.add(FakeHistoryCommands._ref(
+      'refs/heads/review', 'branch', 1,
+    ));
+    await tester.pumpWidget(_host(commands));
+    await tester.pumpAndSettle();
+    expect(find.text('Editing: review'), findsOneWidget);
+    expect(find.text('review · In use'), findsWidgets);
+    expect(find.text('Main edits'), findsWidgets);
+    expect(find.textContaining('current branch'), findsNothing);
+    expect(commands.refs[0].symbolicBranchName, 'refs/heads/review');
   });
 
   testWidgets('bookmark menu creates and displays persistent-style ref',
@@ -206,13 +225,13 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Restore this version'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('without switching to a branch'), findsOneWidget);
+    expect(find.textContaining('on a separate editing path'), findsOneWidget);
     await tester.tap(find.text('Restore').last);
     await tester.pumpAndSettle();
 
     expect(fake.lastExpectedHeadId, 1);
     expect(find.textContaining('History changed before the restore'), findsOneWidget);
-    expect(find.text('Working on main'), findsOneWidget);
+    expect(find.text('Editing: Main edits'), findsOneWidget);
   });
 
 
@@ -220,8 +239,8 @@ void main() {
       (tester) async {
     await tester.pumpWidget(_host(FakeHistoryCommands(detached: true)));
     await tester.pumpAndSettle();
-    expect(find.text('Version #1 · Not on a branch'), findsOneWidget);
-    expect(find.text('Working on main'), findsNothing);
+    expect(find.text('Editing from version #1 · Separate path'), findsOneWidget);
+    expect(find.text('Editing: Main edits'), findsNothing);
     expect(find.byKey(const ValueKey('history-rail-1')), findsOneWidget);
   });
 
@@ -233,7 +252,7 @@ void main() {
     await tester.tap(
       find.byKey(const ValueKey('history-ref-menu-refs/heads/main')));
     await tester.pumpAndSettle();
-    expect(find.text('Switch to branch'), findsOneWidget);
+    expect(find.text('Use this editing path'), findsOneWidget);
     expect(find.text('Rename'), findsNothing);
     expect(find.text('Delete'), findsNothing);
   });
@@ -251,7 +270,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Restore bookmarked version'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('branches and bookmarks stay unchanged'),
+    expect(find.textContaining('editing paths and bookmarks stay available'),
         findsOneWidget);
     await tester.tap(find.text('Restore').last);
     await tester.pumpAndSettle();
@@ -268,15 +287,15 @@ void main() {
     await tester.tap(find.byKey(
       const ValueKey('history-ref-menu-refs/heads/main')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Switch to branch'));
+    await tester.tap(find.text('Use this editing path'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Restore the saved subtitles at branch "main"'),
+    expect(find.textContaining('Open the saved subtitles from "Main edits"'),
         findsOneWidget);
-    await tester.tap(find.text('Switch').last);
+    await tester.tap(find.text('Use path').last);
     await tester.pumpAndSettle();
 
     expect(fake.lastExpectedHeadId, 1);
     expect(fake.lastExpectedTipId, 1);
-    expect(find.text('Working on main'), findsOneWidget);
+    expect(find.text('Editing: Main edits'), findsOneWidget);
   });
 }

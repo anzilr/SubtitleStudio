@@ -7,23 +7,31 @@ class CheckpointHistoryLabels {
 
   static String referenceName(HistoryGraphReference ref) {
     if (ref.kind == 'head') return 'Current version';
+    // The protected built-in reference stays 'refs/heads/main' in storage.
+    // Only its visible name changes: subtitle editors should not need to
+    // understand Git's default branch name.
+    if (ref.kind == 'branch' && ref.name == 'refs/heads/main') {
+      return 'Main edits';
+    }
     return ref.name.replaceFirst(RegExp(r'^refs/(heads|bookmarks)/'), '');
   }
 
   static String referenceLabel(HistoryGraphReference ref) {
     final name = referenceName(ref);
-    if (ref.isAttached) return '$name (current branch)';
+    if (ref.isAttached) return '$name · In use';
     return name;
   }
 
   static String status(CheckpointHistoryGraph graph) {
     if (graph.headCheckpointId == null) return 'No saved versions yet';
     if (graph.isDetached) {
-      return 'Version #${graph.headCheckpointId} · Not on a branch';
+      return 'Editing from version #${graph.headCheckpointId} · Separate path';
     }
-    final branchName = graph.attachedBranchName!
-        .replaceFirst('refs/heads/', '');
-    return 'Working on $branchName';
+    final attached = graph.attachedBranchName!;
+    final name = attached == 'refs/heads/main'
+        ? 'Main edits'
+        : attached.replaceFirst('refs/heads/', '');
+    return 'Editing: $name';
   }
 
   static String versionDetails(HistoryGraphNode node) {
@@ -33,10 +41,10 @@ class CheckpointHistoryLabels {
     if (node.isHead) {
       parts.add('Current version');
     } else if (node.isHeadAncestor) {
-      parts.add('On current path');
+      parts.add('Earlier on this path');
     }
     if (node.childCheckpointIds.length > 1) {
-      parts.add('Branch point (${node.childCheckpointIds.length} paths)');
+      parts.add('History split (${node.childCheckpointIds.length} paths)');
     }
     return parts.join(' · ');
   }
@@ -143,19 +151,19 @@ class CheckpointHistoryLabels {
   }
 
   static String checkoutTitle({required bool branch}) =>
-      branch ? 'Switch to this branch?' : 'Restore this version?';
+      branch ? 'Use this editing path?' : 'Restore this version?';
 
   static String checkoutMessage({
     required bool branch,
     required String target,
   }) {
     if (branch) {
-      return 'Restore the saved subtitles at $target and make it your '
-          'current branch. Other branches and bookmarks stay unchanged.';
+      return 'Open the saved subtitles from $target and continue editing '
+          'there. Your other editing paths and bookmarks stay available.';
     }
-    return 'Restore the saved subtitles at $target without switching to '
-        'a branch. Your existing branches and bookmarks stay unchanged. '
-        'New edits continue separately from this version until you '
-        'switch to or create a branch.';
+    return 'Open the saved subtitles from $target on a separate editing '
+        'path. Your existing editing paths and bookmarks stay available. '
+        'New edits continue from this version without changing the names '
+        'or saved positions of your other paths.';
   }
 }

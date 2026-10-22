@@ -171,7 +171,7 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
         branch: branch,
         target: target,
       ),
-      branch ? 'Switch' : 'Restore',
+      branch ? 'Use path' : 'Restore',
     );
     if (!confirmed || !mounted) return;
     final request = ++_generation;
@@ -209,7 +209,7 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
     try {
     final branch = kind == 'branch';
     final name = await _enterName(
-      branch ? 'Name new branch' : 'Name bookmark',
+      branch ? 'Name editing path' : 'Name bookmark',
       branch ? 'refs/heads/' : 'refs/bookmarks/',
     );
     if (name == null || !mounted) return;
@@ -225,7 +225,7 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
       HistoryGraphReference historyRef) async {
     if (_busy || _dialogPending) return;
     if (command == 'switch') {
-      await _checkout(target: 'branch "' + _shortName(historyRef) + '"',
+      await _checkout(target: '"' + _shortName(historyRef) + '"',
         branch: true,
         action: (headId) => _actions.checkoutBranch(
           historyRef.name,
@@ -241,7 +241,7 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
       _dialogPending = true;
       try {
       final name = await _enterName(
-        historyRef.kind == 'branch' ? 'Rename branch' : 'Rename bookmark',
+        historyRef.kind == 'branch' ? 'Rename editing path' : 'Rename bookmark',
         historyRef.kind == 'branch' ? 'refs/heads/' : 'refs/bookmarks/',
         initial: _shortName(historyRef));
       if (name != null && mounted && name != historyRef.name) {
@@ -257,7 +257,7 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
       final yes = await _confirm('Remove saved name?',
         'Remove "' + _shortName(historyRef) + '"? The saved version '
         'is not deleted immediately, but could become eligible for '
-        'cleanup later if no branch or bookmark keeps it.',
+        'cleanup later if no editing path or bookmark keeps it.',
         'Remove');
       if (yes && mounted) {
         await _run(() => _actions.deleteReference(historyRef.name));
@@ -278,7 +278,7 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
       itemBuilder: (_) => [
         if (historyRef.kind == 'branch')
           const PopupMenuItem(value: 'switch',
-              child: Text('Switch to branch')),
+              child: Text('Use this editing path')),
         if (historyRef.kind == 'bookmark')
           const PopupMenuItem(value: 'checkout',
               child: Text('Restore bookmarked version')),
@@ -363,7 +363,7 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
             },
             itemBuilder: (_) => const [
               PopupMenuItem(value: 'checkout', child: Text('Restore this version')),
-              PopupMenuItem(value: 'branch', child: Text('Start a branch here')),
+              PopupMenuItem(value: 'branch', child: Text('Start another editing path')),
               PopupMenuItem(value: 'bookmark', child: Text('Bookmark this version')),
             ],
           ),
@@ -426,7 +426,7 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
               SizedBox(width: 16),
               Icon(Icons.call_split, size: 16),
               SizedBox(width: 4),
-              Text('Branch point'),
+              Text('History split'),
             ],
           ),
         ),

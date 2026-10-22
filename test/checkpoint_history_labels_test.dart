@@ -55,8 +55,15 @@ void main() {
     );
     final inactive = _reference('refs/heads/alternate', 'branch');
     expect(CheckpointHistoryLabels.referenceLabel(attached),
-        'main (current branch)');
+        'Main edits · In use');
     expect(CheckpointHistoryLabels.referenceLabel(inactive), 'alternate');
+    // Git-style storage and protection stay exact despite friendlier UI.
+    expect(CheckpointHistoryLabels.referenceName(attached), 'Main edits');
+    expect(CheckpointHistoryLabels.referenceLabel(
+      _reference('refs/heads/main', 'branch')), 'Main edits');
+    expect(CheckpointHistoryLabels.referenceLabel(
+      _reference('refs/heads/review', 'branch', attached: true)),
+      'review · In use');
     expect(attached.name, 'refs/heads/main');
     expect(attached.canDelete, isFalse);
   });
@@ -67,7 +74,7 @@ void main() {
     )), 'Version #4 · From #2 · Current version');
     expect(CheckpointHistoryLabels.versionDetails(_node(
       isHeadAncestor: true,
-    )), 'Version #4 · From #2 · On current path');
+    )), 'Version #4 · From #2 · Earlier on this path');
     expect(CheckpointHistoryLabels.versionDetails(_node(
       id: 1, parentId: null,
     )), 'Version #1 · First saved version');
@@ -76,18 +83,30 @@ void main() {
   test('branch points describe actual child count without Git jargon', () {
     final node = _node(children: [5, 6, 7]);
     expect(CheckpointHistoryLabels.versionDetails(node),
-        'Version #4 · From #2 · Branch point (3 paths)');
+        'Version #4 · From #2 · History split (3 paths)');
+  });
+
+  test('internal default branch never appears as raw UI text', () {
+    final protectedMain = _reference('refs/heads/main', 'branch',
+        attached: true);
+    final label = CheckpointHistoryLabels.referenceLabel(protectedMain);
+    expect(label, 'Main edits · In use');
+    expect(label, isNot(contains('main')));
+    expect(label, isNot(contains('current branch')));
+    expect(protectedMain.name, 'refs/heads/main');
+    expect(protectedMain.canRename, isFalse);
+    expect(protectedMain.canDelete, isFalse);
   });
 
   test('switch confirmation promises to preserve other named paths', () {
     expect(CheckpointHistoryLabels.checkoutTitle(branch: true),
-        'Switch to this branch?');
+        'Use this editing path?');
     final body = CheckpointHistoryLabels.checkoutMessage(
       branch: true,
-      target: 'branch "main"',
+      target: '"Main edits"',
     );
-    expect(body, contains('current branch'));
-    expect(body, contains('Other branches and bookmarks stay unchanged'));
+    expect(body, contains('continue editing there'));
+    expect(body, contains('other editing paths and bookmarks stay available'));
     expect(body, isNot(contains('detach HEAD')));
   });
 
@@ -98,8 +117,8 @@ void main() {
       branch: false,
       target: 'version #4',
     );
-    expect(body, contains('without switching to a branch'));
-    expect(body, contains('New edits continue separately'));
-    expect(body, contains('branches and bookmarks stay unchanged'));
+    expect(body, contains('on a separate editing path'));
+    expect(body, contains('New edits continue from this version'));
+    expect(body, contains('editing paths and bookmarks stay available'));
   });
 }

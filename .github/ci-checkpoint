@@ -314,3 +314,13 @@ descriptions. Classic SNAPSHOT/MANUAL labels become Saved version/Save
 point; classic restore confirmations and snapshot buttons use clearer copy.
 No history schema/ref mutation. Run only Linux Flutter analyze and tests
 in one batch; NO platform builds or multi-platform CI matrix.
+
+CP91 R4 October 22 2026: remove internal refs/heads/main and current branch
+text from Edit History UI. Protected main path is presented as Main edits;
+selected path has In use chip, header says Editing: Main edits or named
+alternate editing path. Detached state says Editing from version N ·
+Separate path. Replace branch-oriented menus, confirmations, and legend
+with editing-path wording, while preserving Git refs, default branch
+protections, bookmark behavior and HEAD/tip guarded transactions.
+Pure display tests and widget tests assert no raw main/current branch.
+Only Flutter pub get/analyze/test on Linux, no app builds/host matrix.

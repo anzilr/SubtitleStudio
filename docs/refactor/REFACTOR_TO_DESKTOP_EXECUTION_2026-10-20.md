@@ -344,6 +344,20 @@ unchanged. Ten mapping-contract tests and two graph widget regressions.
 [R3 report](CHECKPOINT91_R3_EDIT_HISTORY_ENTRY_LABELS_2026-10-22.md).
 **Verification:** [Linux 744 tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39830916901).
 
+**CP91 R4 (October 22, 2026):** Removed the remaining technical
+default-branch vocabulary from the visual Edit History UI. The persisted
+`refs/heads/main` now displays as **Main edits**, with **In use** for the
+active editing path; the header says **Editing: Main edits** or the user's
+selected path name. Editing from a detached version is described as a
+**Separate path**. Menus/confirmations say "Use this editing path" and
+"Start another editing path" instead of exposing the Git words "main",
+"current branch" and "checkout". The original protected default-branch
+name, Git-style reference identity, branch head/tip guards and portable
+project format remain unchanged. Extended label and widget tests verify
+the display wording and reference behavior.
+[R4 report](CHECKPOINT91_R4_FRIENDLY_EDITING_PATH_LABELS_2026-10-22.md).
+**Verification:** Flutter analysis and full tests pending.
+
 ### CP91 — Outstanding roadmap UX needed on mobile
 - Deliver the Git-style **visual checkpoint history** with plain-language controls, accessible list alternative and protected refs; preserve `.msone` compatibility and multi-branch correctness.
 - Complete compact mobile Edit Line usability and core component consistency only to the extent planned by the already-approved UX roadmap; retain Carbon Zero and other shipped skins.
