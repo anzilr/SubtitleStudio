@@ -238,3 +238,11 @@ CP90 R10/R11 verification repair October 22 2026: visibility button now
 uses lifecycle-safe _seekVideoToSubtitle and invalidates pending seek on hide.
 R10 initial analyzer reported missing seekToken/videoPath in layout. Verify
 R10 and R11 together with Flutter analyze and full Flutter tests only.
+
+CP90 R12 October 22 2026: explicit detached projection from committed Isar
+cue order and selected line into Riverpod EditLineState, including full
+collection metadata and edited text display. Synchronize loaded cue/new
+unsaved line, reset persistence baseline after successful save, never mutate
+previous provider state's embedded subtitle lines. Six pure projection tests.
+Run flutter pub get/analyze/test on Linux ONLY; no native platform builds
+or Windows/macOS test matrix.

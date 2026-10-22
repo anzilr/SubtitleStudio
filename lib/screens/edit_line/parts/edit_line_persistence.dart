@@ -84,6 +84,11 @@ extension _EditLinePersistence on EditSubtitleScreenState {
         _storeInitialValues();
       });
 
+      _editLineController.synchronizeLoadedCue(
+        collection: collection,
+        line: line,
+        visibleEditedText: _editedController.text,
+      );
       _markSubtitlesForRegeneration();
       _generateSubtitles();
       if (_isVideoLoaded) {
@@ -121,6 +126,11 @@ extension _EditLinePersistence on EditSubtitleScreenState {
         _parseTimeString(newLine.endTime, false);
         _storeInitialValues();
       });
+      _editLineController.synchronizeLoadedCue(
+        collection: collection,
+        line: newLine,
+        visibleEditedText: _editedController.text,
+      );
       _markSubtitlesForRegeneration();
       _generateSubtitles();
       return true;

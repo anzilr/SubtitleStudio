@@ -266,6 +266,18 @@ observed native `media_kit` hot-restart crash no longer occurs on the user's
 device. Do not carry it as a currently reproducible blocker. CP93 still
 includes ordinary playback/background/navigation smoke tests.
 
+**CP90 R12 (October 22, 2026):** The Edit Line widget and Riverpod
+controller now share a detached selected-cue projection after successful
+database saves, navigations and new-cue drafting. The projection copies all
+committed rows plus the source collection's ID, charset, original locator,
+file path and macOS bookmark; intentional blank and multiline edited text
+remain distinct. The controller's unsaved-change baseline is reset only
+after committed persistence. Previous Riverpod state snapshots aren't mutated
+in place. Six new regression tests cover reorder, metadata, blank cues,
+new slots and validation state.
+[R12 report](CHECKPOINT90_R12_EDIT_LINE_RIVERPOD_SELECTION_2026-10-22.md).
+**Verification:** Batched Linux Flutter analyzer and full tests pending.
+
 - Identify and isolate the largest remaining mixed-responsibility Editor/Edit Line/Source View modules; decouple UI from persistence/media/filesystem operations while preserving existing Riverpod state and checkpoint behavior.
 - Prefer injectable services/coordinators, typed outcomes and widget tests. Verify source editing round trips, comment/mark preservation, secondary track fallback, keyboard and Android Back behavior.
 - Keep the shared core reusable by both Flutter mobile widgets and the later desktop presentation.

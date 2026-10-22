@@ -6,6 +6,7 @@ import 'package:subtitle_studio/screens/edit_line/edit_line_state.dart';
 import 'package:subtitle_studio/screens/edit_line/repositories/edit_line_repository.dart';
 import 'package:subtitle_studio/screens/edit_line/repositories/edit_line_preferences_repository.dart';
 import 'package:subtitle_studio/screens/edit_line/services/edit_line_draft_save_service.dart';
+import 'package:subtitle_studio/screens/edit_line/services/edit_line_selection_projection.dart';
 import 'package:subtitle_studio/screens/edit/services/editor_resize_preference_coordinator.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 import 'package:subtitle_studio/widgets/video_player_widget.dart';
@@ -541,8 +542,36 @@ class EditLineController extends Notifier<EditLineState> {
     );
   }
 
-  /// Persist a detached form draft for both explicit Save and navigation
-  /// autosave; never mutate the widget's line before the commit succeeds.
+  /// Publish a detached, committed or reloaded cue snapshot to Riverpod.
+  /// This is the sole handoff from the legacy widget's selection to the
+  /// controller; the presentation layer keeps its existing text controllers.
+  void synchronizeLoadedCue({
+    required SubtitleCollection collection,
+    required SubtitleLine line,
+    required String visibleEditedText,
+  }) {
+    if (_disposed) return;
+    _publishSelectedCue(EditLineSelectionProjection.apply(
+      current: state,
+      collection: collection,
+      selectedLine: line,
+      orderedLines: collection.lines,
+      displayedEditedText: visibleEditedText,
+    ));
+  }
+
+  void _publishSelectedCue(EditLineState selectedState) {
+    if (_disposed) return;
+    _initialOriginalText = selectedState.originalText;
+    _initialEditedText = selectedState.editedText;
+    _initialStartTime = selectedState.startTime;
+    _initialEndTime = selectedState.endTime;
+    _setState(selectedState);
+    unawaited(_updateCharacterCounts());
+  }
+
+  /// Commit the draft and publish the exact post-transaction selection.
+  /// Failed saves leave Riverpod's prior snapshot and baseline unchanged.
   Future<EditLineDraftSaveResult> saveDraftLine({
     required SubtitleLine currentLine,
     required String originalText,
@@ -555,7 +584,7 @@ class EditLineController extends Notifier<EditLineState> {
     required bool isEditMode,
     required bool insertLine,
     required int insertIndex,
-  }) {
+  }) async {
     final repository = _repository;
     final collectionId = _subtitleCollectionId;
     final sessionId = state.sessionId;
@@ -579,7 +608,7 @@ class EditLineController extends Notifier<EditLineState> {
         'Edit Line last-edited index update failed (${error.runtimeType})',
       ),
     );
-    return saver.save(
+    final result = await saver.save(
       currentLine: currentLine,
       originalText: originalText,
       editedText: editedText,
@@ -592,6 +621,19 @@ class EditLineController extends Notifier<EditLineState> {
       insertLine: insertLine,
       insertIndex: insertIndex,
     );
+
+    final collection = state.subtitleCollection;
+    if (result.saved && !_disposed && collection != null &&
+        result.savedLine != null && result.persistedLines != null) {
+      _publishSelectedCue(EditLineSelectionProjection.apply(
+        current: state,
+        collection: collection,
+        selectedLine: result.savedLine!,
+        orderedLines: result.persistedLines!,
+        displayedEditedText: editedText,
+      ));
+    }
+    return result;
   }
 
   Future<bool> addLine(SubtitleLine line, int insertIndex) {
