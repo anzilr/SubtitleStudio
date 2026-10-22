@@ -371,7 +371,24 @@ The checkpoint store, graph, restore transaction guards and `.msone`
 format are unchanged. [R5 report](CHECKPOINT91_R5_COMPACT_HISTORY_ACCESSIBILITY_2026-10-22.md).
 **Verification:** [Linux 749 Flutter tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39835416671).
 
-**Next:** CP91 R6 begins the compact portrait Edit Line pilot using the
+**CP91 R6 (October 22, 2026):** At the user's request, Edit History now
+uses **Restore this point**, **Branch from this point**, **Save History**,
+**Main path**, and matching point/path language across graphical and
+classic history controls. Named branches receive separate color highlights
+across chip icons, commit-card markers and graph tracks. Tapping a branch
+filters the visible history to that branch's tip and all shared ancestors;
+it does not checkout or mutate HEAD. A **Show all** control restores the
+complete view. For many branches, the rail now reserves at most 80px
+(previously 106px); the inactive HEAD chip is removed from the compact
+selector to make the first actual branch more accessible. The full
+graph remains available but crowded histories explicitly invite focusing
+on one path. Graph, Isar, `.msone` and concurrent restore safeguards are
+unchanged. Seven new tests cover ancestry, ownership, color differentiation,
+filter behavior, and a many-branch 320px screen.
+[R6 report](CHECKPOINT91_R6_BRANCH_FOCUS_TERMINOLOGY_2026-10-22.md).
+**Verification:** [Linux 756 Flutter tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39840768237).
+
+**Next:** CP91 R7 begins the compact portrait Edit Line pilot using the
 existing shared editor services and shipped skins; keep desktop layouts
 isolated and defer platform builds to native acceptance.
 
