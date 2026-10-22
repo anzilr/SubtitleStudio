@@ -215,6 +215,124 @@ void main() {
     expect(after.isLoading, isFalse);
   });
 
+
+  test('typing a translation during navigation keeps the unsaved draft',
+      () async {
+    repository = _DelayedRepository(
+      harness.isar,
+      EditLinePreferencesRepository(harness.isar),
+    );
+    final controller = await createController();
+    final delayed = repository as _DelayedRepository;
+    delayed.blockedRead = Completer<void>();
+
+    final pending = controller.navigateToLine(2);
+    expect(providers.read(editLineControllerProvider).isLoading, isTrue);
+    controller.updateEditedText('New translation while loading');
+    expect(providers.read(editLineControllerProvider).isLoading, isFalse);
+    delayed.blockedRead!.complete();
+    await pending;
+
+    final selected = providers.read(editLineControllerProvider);
+    expect(selected.subtitleLine!.index, 1);
+    expect(selected.editedText, 'New translation while loading');
+    expect(selected.hasUnsavedChanges, isTrue);
+    expect(selected.isLoading, isFalse);
+    expect(selected.subtitleCollection!.lines.first.original, 'First');
+  });
+
+  test('typing source text during navigation invalidates its stale result',
+      () async {
+    repository = _DelayedRepository(
+      harness.isar,
+      EditLinePreferencesRepository(harness.isar),
+    );
+    final controller = await createController();
+    final delayed = repository as _DelayedRepository;
+    delayed.blockedRead = Completer<void>();
+
+    final pending = controller.navigateToLine(2);
+    controller.updateOriginalText('New source while loading');
+    delayed.blockedRead!.complete();
+    await pending;
+    final selected = providers.read(editLineControllerProvider);
+    expect(selected.subtitleLine!.index, 1);
+    expect(selected.originalText, 'New source while loading');
+    expect(selected.hasUnsavedChanges, isTrue);
+    expect(selected.isLoading, isFalse);
+  });
+
+  test('changing timing during a pending load retains time validation',
+      () async {
+    repository = _DelayedRepository(
+      harness.isar,
+      EditLinePreferencesRepository(harness.isar),
+    );
+    final controller = await createController();
+    final delayed = repository as _DelayedRepository;
+    delayed.blockedRead = Completer<void>();
+
+    final pending = controller.navigateToLine(2);
+    await controller.updateStartTime('00:00:03,000');
+    delayed.blockedRead!.complete();
+    await pending;
+    var state = providers.read(editLineControllerProvider);
+    expect(state.subtitleLine!.index, 1);
+    expect(state.startTime, '00:00:03,000');
+    expect(state.hasUnsavedChanges, isTrue);
+    expect(state.timeOrderError, isNotNull);
+    expect(state.isLoading, isFalse);
+
+    delayed.blockedRead = Completer<void>();
+    final second = controller.navigateToLine(2);
+    // A dirty draft must not issue another database read.
+    expect(providers.read(editLineControllerProvider).isLoading, isFalse);
+    delayed.blockedRead!.complete();
+    await second;
+    state = providers.read(editLineControllerProvider);
+    expect(state.subtitleLine!.index, 1);
+  });
+
+  test('no-op text update does not suppress a pending navigation',
+      () async {
+    repository = _DelayedRepository(
+      harness.isar,
+      EditLinePreferencesRepository(harness.isar),
+    );
+    final controller = await createController();
+    final delayed = repository as _DelayedRepository;
+    delayed.blockedRead = Completer<void>();
+
+    final pending = controller.navigateToLine(2);
+    controller.updateEditedText('Initial');
+    delayed.blockedRead!.complete();
+    await pending;
+    final selected = providers.read(editLineControllerProvider);
+    expect(selected.subtitleLine!.index, 2);
+    expect(selected.isLoading, isFalse);
+    expect(selected.hasUnsavedChanges, isFalse);
+  });
+
+  test('latest controller navigation supersedes an older pending read',
+      () async {
+    repository = _DelayedRepository(
+      harness.isar,
+      EditLinePreferencesRepository(harness.isar),
+    );
+    final controller = await createController();
+    final delayed = repository as _DelayedRepository;
+    delayed.blockedRead = Completer<void>();
+
+    final older = controller.navigateToLine(2);
+    final newer = controller.navigateToLine(1);
+    delayed.blockedRead!.complete();
+    await Future.wait([older, newer]);
+    final selected = providers.read(editLineControllerProvider);
+    expect(selected.subtitleLine!.index, 1);
+    expect(selected.isLoading, isFalse);
+    expect(selected.hasUnsavedChanges, isFalse);
+  });
+
   test('new cue direct Save inserts once and clears new-subtitle state',
       () async {
     final controller = await createController(newCue: true, editMode: true);

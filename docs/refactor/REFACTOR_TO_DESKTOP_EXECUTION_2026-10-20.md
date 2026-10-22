@@ -290,6 +290,17 @@ tests cover these paths.
 [R13 report](CHECKPOINT90_R13_CONTROLLER_SAVE_NAVIGATION_2026-10-22.md).
 **Verification:** [Linux 713 tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39821316874).
 
+**CP90 R14 (October 22, 2026):** The controller now reuses the existing
+tested `EditLineNavigationGuard` rather than retaining a duplicate
+navigation-generation counter. A newly typed source/translation or
+timestamp edit invalidates any pending async Isar navigation and clears
+its loading state; stale fetches cannot replace a newer draft. Committed
+saves and externally selected cues likewise supersede old loads; provider
+disposal closes the guard. Five Isar/Riverpod regression tests exercise
+stale reads, typing, time validation, no-op edits, and latest navigation.
+[R14 report](CHECKPOINT90_R14_CONTROLLER_NAVIGATION_DRAFT_GUARD_2026-10-22.md).
+**Verification:** Linux Flutter analysis and full tests pending.
+
 - Identify and isolate the largest remaining mixed-responsibility Editor/Edit Line/Source View modules; decouple UI from persistence/media/filesystem operations while preserving existing Riverpod state and checkpoint behavior.
 - Prefer injectable services/coordinators, typed outcomes and widget tests. Verify source editing round trips, comment/mark preservation, secondary track fallback, keyboard and Android Back behavior.
 - Keep the shared core reusable by both Flutter mobile widgets and the later desktop presentation.

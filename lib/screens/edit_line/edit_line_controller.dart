@@ -7,6 +7,7 @@ import 'package:subtitle_studio/screens/edit_line/repositories/edit_line_reposit
 import 'package:subtitle_studio/screens/edit_line/repositories/edit_line_preferences_repository.dart';
 import 'package:subtitle_studio/screens/edit_line/services/edit_line_draft_save_service.dart';
 import 'package:subtitle_studio/screens/edit_line/services/edit_line_selection_projection.dart';
+import 'package:subtitle_studio/screens/edit_line/services/edit_line_navigation_guard.dart';
 import 'package:subtitle_studio/screens/edit/services/editor_resize_preference_coordinator.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 import 'package:subtitle_studio/widgets/video_player_widget.dart';
@@ -91,9 +92,9 @@ class EditLineController extends Notifier<EditLineState> {
   String _initialEndTime = '';
 
   bool _disposed = false;
-  // Suppress out-of-order controller navigation loads. The Edit Line widget
-  // owns a separate route-level guard for user-facing navigation.
-  int _navigationRequestEpoch = 0;
+  // Reuse the route-tested generation guard for controller-level loads.
+  // The widget retains its own instance for user-facing navigation.
+  final EditLineNavigationGuard _navigationGuard = EditLineNavigationGuard();
   bool _textStreamsInitialized = false;
   EditorResizePreferenceCoordinator? _resizePreferences;
 
@@ -305,10 +306,14 @@ class EditLineController extends Notifier<EditLineState> {
 
   /// Update original text (called from widget's TextEditingController)
   void updateOriginalText(String text) {
+    if (_disposed) return;
     if (text != state.originalText) {
+      // A user edit that arrives during an Isar reload wins over that reload.
+      _navigationGuard.beginLoad();
       _setState(state.copyWith(
         originalText: text,
         hasUnsavedChanges: _checkUnsavedChanges(originalText: text),
+        isLoading: false,
       ));
       
       // Debounce stream updates
@@ -321,10 +326,13 @@ class EditLineController extends Notifier<EditLineState> {
 
   /// Update edited text (called from widget's TextEditingController)
   void updateEditedText(String text) {
+    if (_disposed) return;
     if (text != state.editedText) {
+      _navigationGuard.beginLoad();
       _setState(state.copyWith(
         editedText: text,
         hasUnsavedChanges: _checkUnsavedChanges(editedText: text),
+        isLoading: false,
       ));
       
       // Debounce stream updates
@@ -427,9 +435,12 @@ class EditLineController extends Notifier<EditLineState> {
 
   /// Update start time
   Future<void> updateStartTime(String time) async {
+    if (_disposed) return;
+    if (time != state.startTime) _navigationGuard.beginLoad();
     _setState(state.copyWith(
       startTime: time,
       hasUnsavedChanges: _checkUnsavedChanges(startTime: time),
+      isLoading: false,
     ));
 
     // Validate time
@@ -438,9 +449,12 @@ class EditLineController extends Notifier<EditLineState> {
 
   /// Update end time
   Future<void> updateEndTime(String time) async {
+    if (_disposed) return;
+    if (time != state.endTime) _navigationGuard.beginLoad();
     _setState(state.copyWith(
       endTime: time,
       hasUnsavedChanges: _checkUnsavedChanges(endTime: time),
+      isLoading: false,
     ));
 
     // Validate time
@@ -554,7 +568,7 @@ class EditLineController extends Notifier<EditLineState> {
     required String visibleEditedText,
   }) {
     if (_disposed) return;
-    ++_navigationRequestEpoch;
+    _navigationGuard.beginLoad();
     _publishSelectedCue(EditLineSelectionProjection.apply(
       current: state,
       collection: collection,
@@ -629,7 +643,7 @@ class EditLineController extends Notifier<EditLineState> {
     final collection = state.subtitleCollection;
     if (result.saved && !_disposed && collection != null &&
         result.savedLine != null && result.persistedLines != null) {
-      ++_navigationRequestEpoch;
+      _navigationGuard.beginLoad();
       _publishSelectedCue(EditLineSelectionProjection.apply(
         current: state,
         collection: collection,
@@ -759,12 +773,13 @@ class EditLineController extends Notifier<EditLineState> {
       return;
     }
 
-    final request = ++_navigationRequestEpoch;
+    final request = _navigationGuard.beginLoad();
+    if (request == null) return;
     _setState(state.copyWith(isLoading: true, clearErrorMessage: true));
     try {
       final collection =
           await _repository.fetchSubtitleCollection(_subtitleCollectionId);
-      if (_disposed || request != _navigationRequestEpoch) return;
+      if (_disposed || !_navigationGuard.isCurrent(request)) return;
       if (collection == null ||
           lineIndex < 1 ||
           lineIndex > collection.lines.length) {
@@ -783,14 +798,14 @@ class EditLineController extends Notifier<EditLineState> {
         orderedLines: collection.lines,
       ));
     } catch (error, stackTrace) {
-      if (_disposed || request != _navigationRequestEpoch) return;
+      if (_disposed || !_navigationGuard.isCurrent(request)) return;
       await logError(
         'Edit Line controller navigation failed',
         error: error,
         stackTrace: stackTrace,
         context: 'EditLineController.navigateToLine',
       );
-      if (_disposed || request != _navigationRequestEpoch) return;
+      if (_disposed || !_navigationGuard.isCurrent(request)) return;
       _setState(state.copyWith(
         isLoading: false,
         errorMessage: 'Failed to navigate to line $lineIndex',
@@ -894,6 +909,7 @@ class EditLineController extends Notifier<EditLineState> {
   void _disposeResources() {
     if (_disposed) return;
     _disposed = true;
+    _navigationGuard.dispose();
 
     logInfo(
       'EditLineController: Disposing resources',

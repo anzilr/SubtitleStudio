@@ -265,3 +265,12 @@ CP90 R13 final analyzer cleanup October 22 2026: remove unused Isar
 import from controller integration tests after 713 tests passed on initial
 full suite; require zero analyzer diagnostics on final flutter analyze and
 flutter test gate. No native builds, no host matrix.
+
+CP90 R14 October 22 2026: final controller navigation lifecycle audit.
+Reuse the route-tested EditLineNavigationGuard for the controller (remove
+duplicate manual epoch). Invalidate any pending Isar navigation on source,
+translation or timing edits; unblock loading when typed changes win;
+invalidate pending loads after committed saves or external route selection,
+and release the guard on provider disposal. Five Isar/Riverpod race tests.
+CI only flutter pub get, flutter analyze and flutter test on Linux;
+NO native builds or multi-host Flutter matrix.
