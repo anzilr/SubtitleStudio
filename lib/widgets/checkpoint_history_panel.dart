@@ -597,6 +597,11 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
     final branchColors = _branchColors(graph, scheme);
     final railStyles = _railStyles(
         graph, lanes, branchColors, scheme, selectedName);
+    // HEAD is already represented by the status and current-point marker;
+    // leaving its noninteractive chip out keeps the first branch reachable
+    // without horizontal scrolling on compact phones.
+    final visibleRefs = graph.references
+        .where((ref) => ref.kind != 'head').toList();
     return Column(children: [
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -685,10 +690,10 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
       SizedBox(height: 56, child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12),
-        itemCount: graph.references.length,
+        itemCount: visibleRefs.length,
         itemBuilder: (_, index) => Padding(
           padding: const EdgeInsets.only(right: 6),
-          child: Center(child: _refMenu(graph.references[index], branchColors)),
+          child: Center(child: _refMenu(visibleRefs[index], branchColors)),
         ),
       )),
       if (_busy) const LinearProgressIndicator(),

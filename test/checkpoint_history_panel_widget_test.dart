@@ -496,8 +496,11 @@ void main() {
         const ValueKey('history-rail-13'))).painter!
         as CheckpointHistoryRailPainter;
     expect(CheckpointHistoryRailPainter.railWidth(painter.laneCount), 80);
-    await tester.tap(find.byKey(
-        const ValueKey('history-branch-filter-refs/heads/main')));
+    final mainFilter = find.byKey(
+        const ValueKey('history-branch-filter-refs/heads/main'));
+    await tester.ensureVisible(mainFilter);
+    await tester.pumpAndSettle();
+    await tester.tap(mainFilter);
     await tester.pumpAndSettle();
     expect(find.text('Showing Main path · 2 points'), findsOneWidget);
     expect(find.byKey(const ValueKey('history-commit-13')), findsNothing);

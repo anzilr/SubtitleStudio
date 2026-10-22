@@ -345,3 +345,10 @@ Cap graph rail space at 80px so many branches cannot progressively squeeze
 the cards; show a many-path hint and allow focus on a single lane.
 Cover branch ancestry, colors, safe actions and narrow many-branch UI.
 Run one Linux Flutter pub get/analyze/full test batch only. No app builds.
+
+CP91 R6 final CI correction: first run #39839861321 passed Flutter analyze
+and 755 tests; one 320px many-branch widget test tapped a chip outside the
+horizontal viewport. Scroll it into view in the test, and omit the redundant
+disabled HEAD chip from the compact selector so the active branch is visible
+earlier on real phones. Preserve all graph and reference data. Repeat only
+Flutter dependency resolution, analysis and full tests; no native builds.
