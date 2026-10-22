@@ -174,7 +174,7 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('history-node-menu-1')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Check out commit'));
+    await tester.tap(find.text('Restore this version'));
     await tester.pumpAndSettle();
     expect(find.textContaining('without switching to a branch'), findsOneWidget);
     await tester.tap(find.text('Restore').last);
@@ -240,7 +240,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Switch to branch'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('current branch'), findsOneWidget);
+    expect(find.textContaining('Restore the saved subtitles at branch "main"'),
+        findsOneWidget);
     await tester.tap(find.text('Switch').last);
     await tester.pumpAndSettle();
 

@@ -297,3 +297,10 @@ disconnected editing outside a named branch with clear confirmations.
 Six pure labels/confirmation tests and three widget regressions (plus
 updated R1 wording expectations). Run flutter pub get, flutter analyze
 and flutter test on Linux only; no native builds and no platform matrix.
+
+CP91 R2 final gate October 22 2026: initial Linux analyzer clean,
+730 tests passed, two UI test expectations outdated/overbroad. Correct
+old Check out commit finder to Restore this version and target the exact
+branch confirmation text rather than every chip containing current branch.
+Run full Flutter analyze/tests once for final acceptance. No native
+application builds or multiplatform host testing.

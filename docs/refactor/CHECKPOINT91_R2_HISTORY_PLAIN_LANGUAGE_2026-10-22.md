@@ -53,7 +53,14 @@ view stays available for access and fallback.
 
 Use one Linux-only workflow with `flutter pub get`, `flutter analyze`
 and the complete `flutter test` suite. No native app builds or
-Windows/macOS host matrix. Record CI results once verified.
+Windows/macOS host matrix. The initial [Linux CI run 39827855675](https://github.com/anzilr/SubtitleStudio/actions/runs/39827855675)
+passed analysis (zero issues) with 730 tests passing and two test-only
+failures in `checkpoint_history_panel_widget_test.dart`. One still
+expected the renamed "Check out commit" menu item, and another matched
+"current branch" in three widgets rather than the intended dialog.
+The follow-up updates these expectations to the actual visible text;
+no history action, concurrency guard, data model, or presentation
+implementation changed. The final gate is recorded after verification.
 
 ## Next
 
