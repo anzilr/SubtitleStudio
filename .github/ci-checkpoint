@@ -371,3 +371,12 @@ message after a durable branch mutation; no error is hidden behind the
 bottom sheet. Add widget tests for invalid names and rejected persistence,
 plus an actual Isar integration test creating a branch after detached
 restore. Flutter pub get/analyze/tests only; no platform builds.
+
+CP91 R8 October 22 2026: compact portrait Edit Line pilot. Use screen-size
+presentation metrics for smaller video, asymmetric Original/Edited cue heights,
+tighter padding and vertical whitespace on <=430px portrait phones; keep
+tablet, desktop and landscape base heights. Stack Start/End Time fields when
+available width is under 380px, retaining existing controllers, edit actions,
+Riverpod state, media lifecycle, skins and project format. Add widget tests
+for portrait metrics and narrow/wide time layouts. Run Flutter pub get,
+Flutter analyze and full flutter test on Linux only. No platform builds.

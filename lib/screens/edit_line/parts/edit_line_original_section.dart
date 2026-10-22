@@ -14,7 +14,8 @@ extension _EditLineOriginalSection on EditSubtitleScreenState {
                                               Stack(
                                                 children: [
                                                   StudioCueFieldSurface(
-child:
+                                                    height: EditLinePortraitMetrics.of(context).originalCueHeight,
+                                                    child:
                                                         isRawEnabled
                                                             ? CustomHtmlText(
                                                               htmlContent:

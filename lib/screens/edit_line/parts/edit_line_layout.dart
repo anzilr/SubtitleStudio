@@ -5,6 +5,7 @@ extension _EditLineLayout on EditSubtitleScreenState {
     BuildContext context,
     bool shouldShowVideo,
   ) {
+      final portraitMetrics = EditLinePortraitMetrics.of(context);
       return FirstTimeInstructions(
         screenName: 'edit_line',
         instructions: editLineInstructions,
@@ -151,7 +152,7 @@ extension _EditLineLayout on EditSubtitleScreenState {
                                 // Video player at the top
                                 if (shouldShowVideo)
                                   SizedBox(
-                                    height: 240,
+                                    height: portraitMetrics.videoHeight,
                                     child: VideoPlayerWidget(
                                       key: _videoPlayerKey,
                                       videoPath: _selectedVideoPath!,
@@ -228,7 +229,7 @@ extension _EditLineLayout on EditSubtitleScreenState {
                                 // Main content in scrollable area
                                 Expanded(
                                   child: Padding(
-                                    padding: const EdgeInsets.all(16.0),
+                                    padding: EdgeInsets.all(portraitMetrics.contentPadding),
                                     child: SingleChildScrollView(
                                       controller: _scrollController,
                                       child: Column(
@@ -656,7 +657,7 @@ extension _EditLineLayout on EditSubtitleScreenState {
 
                                           // Time fields section - update keyboard type for both fields
                                           _buildEditLineTimeSection(),
-                                          const SizedBox(height: 16),
+                                          SizedBox(height: portraitMetrics.sectionGap),
                                         ],
                                       ),
                                     ),

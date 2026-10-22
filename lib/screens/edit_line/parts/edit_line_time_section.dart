@@ -57,27 +57,17 @@ extension _EditLineTimeSection on EditSubtitleScreenState {
                                               ),
                                               if (_isTimeVisible)
                                                 Padding(
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                        vertical: 16.0,
-                                                      ),
-                                                  child: Row(
-                                                    crossAxisAlignment: CrossAxisAlignment.start, // Align to top
-                                                    children: [
-                                                      Expanded(
-                                                        child: _buildTimeComponentFields(
-                                                          'Start Time',
-                                                          true,
-                                                        ),
-                                                      ),
-                                                      const SizedBox(width: 16),
-                                                      Expanded(
-                                                        child: _buildTimeComponentFields(
-                                                          'End Time',
-                                                          false,
-                                                        ),
-                                                      ),
-                                                    ],
+                                                  padding: EdgeInsets.symmetric(
+                                                    vertical: EditLinePortraitMetrics
+                                                        .of(context).sectionGap,
+                                                  ),
+                                                  child: EditLineTimeFieldsLayout(
+                                                    startField: _buildTimeComponentFields(
+                                                      'Start Time', true,
+                                                    ),
+                                                    endField: _buildTimeComponentFields(
+                                                      'End Time', false,
+                                                    ),
                                                   ),
                                                 ),
                                             ],

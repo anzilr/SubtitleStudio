@@ -5,7 +5,8 @@ extension _EditLineEditedTextSection on EditSubtitleScreenState {
     return Stack(
                                             children: [
                                               StudioCueFieldSurface(
-child:
+                                                height: EditLinePortraitMetrics.of(context).editedCueHeight,
+                                                child:
                                                     isRawEnabled &&
                                                             _editedController
                                                                 .text
