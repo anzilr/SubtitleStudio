@@ -249,7 +249,7 @@ VideoPlayerWidget key attaches. Persisted video path Save/Unload requests
 are serialized with a repository captured while Riverpod is active, so a
 delayed path Save cannot resurrect a subsequently unloaded video.
 [R10 report](CHECKPOINT90_R10_EDIT_LINE_MEDIA_LIFECYCLE_2026-10-22.md).
-**Verification:** Batched Linux full Flutter analyzer/tests pending.
+**Verification:** [Linux 701 Flutter tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39816216928) (combined CP90 R10/R11 gate).
 
 **CP90 R11 (October 22, 2026):** Edit Line shortcut registration and route
 teardown use a small asynchronous lifecycle coordinator. A route closed
@@ -259,7 +259,7 @@ also check route ownership before running. Shared parent Editor shortcuts
 retain their existing ownership. Six regression tests cover registration
 races, disposal, repeated activation and cleanup failures.
 [R11 report](CHECKPOINT90_R11_EDIT_LINE_SHORTCUT_LIFECYCLE_2026-10-22.md).
-**Verification:** Pending batched Linux Flutter analysis/full tests.
+**Verification:** [Linux 701 Flutter tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39816216928) (combined CP90 R10/R11 gate).
 
 **Media stability update (user report, October 22, 2026):** the previously
 observed native `media_kit` hot-restart crash no longer occurs on the user's

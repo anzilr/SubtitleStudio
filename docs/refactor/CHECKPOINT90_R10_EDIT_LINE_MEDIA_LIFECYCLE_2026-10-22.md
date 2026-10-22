@@ -51,6 +51,20 @@ The R11 validation repair redirects that button to the lifecycle-safe
 R10's tests and analyzer are being rechecked together with R11; the final
 result will be recorded after CI finishes.
 
+## Final verified result
+
+The initial R10 run 39814558939 failed its analyzer because the Edit
+Line video-visibility button used the old seek-helper signature. The
+follow-up code fix (commit
+[`5a7d251`](https://github.com/anzilr/SubtitleStudio/commit/5a7d25148d64923841be1092bd9590cb1d850a9b))
+routes that button through the guarded seek API and invalidates stale
+requests on hide.
+
+The final combined [R10/R11 Linux CI run 39816216928](https://github.com/anzilr/SubtitleStudio/actions/runs/39816216928)
+passed **701 Flutter tests** and `flutter analyze` reported
+**No issues found**. The platform-specific host matrix and all native
+build steps remained off.
+
 ## Remaining
 
 CP90 remaining Editor-state cleanup and native lifecycle acceptance hooks;

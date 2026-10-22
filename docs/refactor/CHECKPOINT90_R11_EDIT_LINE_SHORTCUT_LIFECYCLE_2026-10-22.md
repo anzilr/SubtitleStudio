@@ -50,6 +50,19 @@ crash no longer exists. Treat it as resolved by user observation;
 continue normal playback and route-lifecycle smoke acceptance in CP93
 without listing this crash as a current blocker.
 
+## Final verified result
+
+The final combined [R10/R11 Linux CI run 39816216928](https://github.com/anzilr/SubtitleStudio/actions/runs/39816216928)
+passed **701 Flutter tests** and **zero analyzer issues**. This verifies
+the six new desktop shortcut lifecycle cases, the eight R10 media request
+regressions, and all pre-existing suite tests.
+
+An intermediate analyzer failure was caused by R10's old video-visibility
+seek-helper call, corrected in
+[`5a7d251`](https://github.com/anzilr/SubtitleStudio/commit/5a7d25148d64923841be1092bd9590cb1d850a9b).
+The successful gate is the authoritative acceptance result. GitHub
+Actions ran dependency resolution, analysis, and Flutter tests only.
+
 ## Remaining
 
 Finish remaining CP90 Editor/service ownership audit, then CP91 checkpoint
