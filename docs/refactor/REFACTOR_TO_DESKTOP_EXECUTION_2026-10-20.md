@@ -25,7 +25,7 @@ The final physical Android capture `cp86_r11.log` (October 20, app PID 5954) sho
 
 **Implemented:** Riverpod entrypoints for Home/Editor/Edit Line/Source View/Waveform; shared Isar stores and integration harness; typed project documents/save coordinators; Git-style immutable checkpoint storage, branches/bookmarks and portable `.msone`; deprecated global `DatabaseHelper`, `PreferencesModel`, `CheckpointRepository.fromGlobal()` and legacy project DTO paths removed where previously verified. The Android MSone Back stale-navigation gesture problem was verified fixed in CP87 R13 on CPH2381. Appearance support is 4 skins × Light/Dark/Classic with Carbon Zero default, appearance audit frozen.
 
-**Not accepted yet:** complete Source View/path/grant handling and encoding symmetry; fragmented Editor controller/file access boundaries; large cross-layer UI classes; history visual map/nontechnical wording and compact mobile Edit Line; structured privacy-conscious logs/performance; compatibility shim cleanup; platform smoke acceptance. Native media-kit Flutter hot restart is not recently reverified; do not label it fixed or use hot restart as a routine device testing mechanism.
+**Not accepted yet:** complete Source View/path/grant handling and encoding symmetry; fragmented Editor controller/file access boundaries; large cross-layer UI classes; history visual map/nontechnical wording and compact mobile Edit Line; structured privacy-conscious logs/performance; compatibility shim cleanup; platform smoke acceptance. The previously reported media_kit hot-restart crash was reported no longer reproducible on the user's device on October 22, 2026; routine device testing can still use ordinary cold starts and route playback checks.
 
 The earlier sections of `REFACTOR_ROADMAP_V4.md` include historical "immediate next commits" from checkpoint 43 and older CP87 freeze descriptions. They are preserved for traceability and **are not the current active plan**.
 
@@ -304,6 +304,18 @@ stale reads, typing, time validation, no-op edits, and latest navigation.
 - Identify and isolate the largest remaining mixed-responsibility Editor/Edit Line/Source View modules; decouple UI from persistence/media/filesystem operations while preserving existing Riverpod state and checkpoint behavior.
 - Prefer injectable services/coordinators, typed outcomes and widget tests. Verify source editing round trips, comment/mark preservation, secondary track fallback, keyboard and Android Back behavior.
 - Keep the shared core reusable by both Flutter mobile widgets and the later desktop presentation.
+
+**CP91 R1 (October 22, 2026):** The existing checkpoint graph
+panel now draws connected theme-aware history lanes with distinct current
+HEAD marker, visible side branches, and converging parent links.
+`CheckpointHistoryLaneLayout` builds immutable newest-first tracks from
+the already validated graph; a painter draws only those actual links.
+The history list remains lazily built and all existing branch/bookmark
+operations and the classic accessible timeline stay available. Five
+graph-layout tests and a panel widget check cover roots, forks, detached
+HEAD, multiple branch tips and long histories.
+[R1 report](CHECKPOINT91_R1_VISUAL_HISTORY_LANES_2026-10-22.md).
+**Verification:** Linux Flutter analyzer/full tests pending.
 
 ### CP91 — Outstanding roadmap UX needed on mobile
 - Deliver the Git-style **visual checkpoint history** with plain-language controls, accessible list alternative and protected refs; preserve `.msone` compatibility and multi-branch correctness.

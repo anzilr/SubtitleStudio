@@ -120,6 +120,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('On main'), findsOneWidget);
     expect(find.byKey(const ValueKey('history-commit-1')), findsOneWidget);
+    // The visual history track is drawn next to the existing action card;
+    // graph rendering must not remove the accessible commit information.
+    expect(find.byKey(const ValueKey('history-rail-1')), findsOneWidget);
     expect(find.byKey(const ValueKey('history-ref-menu-refs/heads/main')),
         findsOneWidget);
     expect(find.byKey(const ValueKey('history-head-status')), findsOneWidget);

@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/services/checkpoint_history_actions.dart';
 import 'package:subtitle_studio/services/checkpoint_history_graph.dart';
+import 'package:subtitle_studio/services/checkpoint_history_lane_layout.dart';
+import 'package:subtitle_studio/widgets/checkpoint_history_rail.dart';
 
 /// Mobile presentation for the shared Git-inspired checkpoint graph.
 class CheckpointHistoryPanel extends ConsumerStatefulWidget {
@@ -26,6 +28,7 @@ class CheckpointHistoryPanel extends ConsumerStatefulWidget {
 
 class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel> {
   CheckpointHistoryGraph? _graph;
+  CheckpointHistoryLaneLayout? _lanes;
   String? _error;
   bool _busy = true;
   // Reserve dialogs too, so two actions cannot both receive confirmation.
@@ -62,11 +65,16 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
     try {
       final loaded = await _actions.load();
       if (!mounted || request != _generation) return;
-      setState(() { _graph = loaded; _busy = false; });
+      setState(() {
+        _graph = loaded;
+        _lanes = CheckpointHistoryLaneLayout.fromGraph(loaded);
+        _busy = false;
+      });
     } catch (_) {
       if (!mounted || request != _generation) return;
       setState(() {
         _graph = null;
+        _lanes = null;
         _busy = false;
         _error = 'Cannot display inconsistent checkpoint history.';
       });
@@ -86,7 +94,11 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
     try {
       final updated = await operation();
       if (!mounted || request != _generation) return;
-      setState(() { _graph = updated; _busy = false; });
+      setState(() {
+        _graph = updated;
+        _lanes = CheckpointHistoryLaneLayout.fromGraph(updated);
+        _busy = false;
+      });
     } catch (_) {
       if (!mounted || request != _generation) return;
       setState(() => _busy = false);
@@ -174,7 +186,11 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
         await _reload();
         return;
       }
-      setState(() { _graph = result; _busy = false; });
+      setState(() {
+        _graph = result;
+        _lanes = CheckpointHistoryLaneLayout.fromGraph(result);
+        _busy = false;
+      });
       // The owning sheet closes itself before invoking the editor callback.
       widget.onCheckpointRestored();
     } catch (_) {
@@ -281,20 +297,31 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
     );
   }
 
-  Widget _commitRow(HistoryGraphNode node) {
+  Widget _commitRow(CheckpointHistoryLaneRow row, int laneCount) {
+    final node = row.node;
     final label = '#' + node.checkpointId.toString();
-    return Card(
+    final railWidth = CheckpointHistoryRailPainter.railWidth(laneCount);
+    return Stack(children: [
+      Positioned.fill(
+        child: IgnorePointer(
+          child: CustomPaint(
+            key: ValueKey('history-rail-' + node.checkpointId.toString()),
+            painter: CheckpointHistoryRailPainter(
+              row: row,
+              laneCount: laneCount,
+              colors: Theme.of(context).colorScheme,
+            ),
+          ),
+        ),
+      ),
+      Padding(
+        padding: EdgeInsets.only(left: railWidth),
+        child: Card(
       key: ValueKey('history-commit-' + node.checkpointId.toString()),
       margin: const EdgeInsets.only(bottom: 8),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Icon(node.isHead ? Icons.radio_button_checked
-              : node.childCheckpointIds.length > 1
-                ? Icons.call_split : Icons.circle_outlined,
-            size: 22,
-            color: node.isHead ? Theme.of(context).colorScheme.primary : null),
-          const SizedBox(width: 10),
           Expanded(child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -346,7 +373,9 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
           ),
         ]),
       ),
-    );
+      ),
+    ),
+    ]);
   }
 
   @override
@@ -366,9 +395,9 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
         onPressed: _reload, icon: const Icon(Icons.refresh),
         label: const Text('No history yet · Refresh')));
     }
-    // Index the immutable topological list in reverse without copying it
-    // on every busy/refresh rebuild (important for large edit histories).
-    final nodes = graph.nodes;
+    // The lane layout is cached alongside each loaded history snapshot,
+    // avoiding repeated full-graph work on busy/refresh widget rebuilds.
+    final lanes = _lanes ?? CheckpointHistoryLaneLayout.fromGraph(graph);
     return Column(children: [
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -399,8 +428,9 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
       Expanded(child: ListView.builder(
         key: const ValueKey('history-graph-list'),
         padding: const EdgeInsets.all(12),
-        itemCount: nodes.length,
-        itemBuilder: (_, index) => _commitRow(nodes[nodes.length - index - 1]),
+        itemCount: lanes.rows.length,
+        itemBuilder: (_, index) =>
+            _commitRow(lanes.rows[index], lanes.laneCount),
       )),
     ]);
   }

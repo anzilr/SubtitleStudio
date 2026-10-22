@@ -274,3 +274,10 @@ invalidate pending loads after committed saves or external route selection,
 and release the guard on provider disposal. Five Isar/Riverpod race tests.
 CI only flutter pub get, flutter analyze and flutter test on Linux;
 NO native builds or multi-host Flutter matrix.
+
+CP91 R1 October 22 2026: visual Git-style history lane layout from
+validated checkpoint parent links and current HEAD; draw theme-aware rails
+beside the existing accessible history cards and preserved branch/bookmark
+checkout menus. Five pure graph-lane tests plus a widget integration check.
+Only flutter pub get, flutter analyze, flutter test on Linux. NO platform
+builds or Windows/macOS matrix; run once for this batched checkpoint.
