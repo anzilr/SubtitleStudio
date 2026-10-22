@@ -315,7 +315,7 @@ operations and the classic accessible timeline stay available. Five
 graph-layout tests and a panel widget check cover roots, forks, detached
 HEAD, multiple branch tips and long histories.
 [R1 report](CHECKPOINT91_R1_VISUAL_HISTORY_LANES_2026-10-22.md).
-**Verification:** Linux Flutter analyzer/full tests pending.
+**Verification:** [Linux 723 Flutter tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39826276757).
 
 ### CP91 — Outstanding roadmap UX needed on mobile
 - Deliver the Git-style **visual checkpoint history** with plain-language controls, accessible list alternative and protected refs; preserve `.msone` compatibility and multi-branch correctness.

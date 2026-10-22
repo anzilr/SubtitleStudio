@@ -55,7 +55,12 @@ test asserted the sibling IDs in the wrong display order. The graph
 sorts equal-depth/equal-time sibling nodes by ID ascending, then displays
 newest first. The follow-up test corrects the expected rows from
 `[3,4,2,1]` to `[4,3,2,1]`, without changing the validated layout or
-storage. The final clean gate will be recorded after completion.
+storage. The final [Linux Flutter CI run #39826276757](https://github.com/anzilr/SubtitleStudio/actions/runs/39826276757)
+completed successfully: **723 Flutter tests passed**, `flutter analyze`
+reported **No issues found**. The accepted source commit is
+[`1d43172`](https://github.com/anzilr/SubtitleStudio/commit/1d431725730597a0605b9389bd059545428b4c1d).
+Only Flutter dependency resolution, analysis and tests ran; no platform
+builds or other operating-system test matrix were triggered.
 
 ## Next CP91 stages
 
