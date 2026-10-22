@@ -227,3 +227,9 @@ file-picker completion after route disposal. Serialize video preference path
 writes so Unload cannot race behind an older delayed Save. Regression tests
 for stale seek, picker epochs, teardown and ordered/failing writes. Linux
 Flutter pub get/analyze/test ONLY; never native platform builds in Actions.
+
+CP90 R11 October 22 2026: Edit Line desktop shortcut lifecycle.
+Avoid registration after Back while async Home cleanup completes. Route-owned
+registration and teardown are ordered, dispose invalidates callbacks, shared
+Editor shortcuts remain intact. Six pure lifecycle tests. Only flutter pub get,
+flutter analyze and flutter test; no native builds or cross-platform jobs.

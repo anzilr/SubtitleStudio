@@ -51,6 +51,7 @@ import 'package:subtitle_studio/screens/edit_line/services/ai_context_builder.da
 import 'package:subtitle_studio/screens/edit_line/services/edit_line_file_save_service.dart';
 import 'package:subtitle_studio/screens/edit_line/services/edit_line_media_request_coordinator.dart';
 import 'package:subtitle_studio/screens/edit_line/services/edit_line_video_path_write_queue.dart';
+import 'package:subtitle_studio/screens/edit_line/services/edit_line_shortcut_lifecycle.dart';
 import 'package:subtitle_studio/screens/edit_line/services/edit_line_navigation_guard.dart';
 import 'package:subtitle_studio/widgets/ai_explanation_sheet.dart';
 
@@ -214,6 +215,8 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
   final EditLineNavigationGuard _navigationGuard = EditLineNavigationGuard();
   final EditLineMediaRequestCoordinator _mediaRequests =
       EditLineMediaRequestCoordinator();
+  final EditLineShortcutLifecycle _shortcutLifecycle =
+      EditLineShortcutLifecycle();
 
   void _markSubtitlesForRegeneration() {
     _needSubtitleRegeneration = true;
@@ -379,9 +382,11 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
 
     _saveColorHistory(); // Save color history when the screen is disposed
 
-    // Unregister only this screen's hotkey shortcuts (not all shortcuts globally)
-    // This prevents breaking shortcuts in the parent EditScreen
-    hotkey.MSoneHotkeyManager.instance.unregisterEditSubtitleScreenShortcuts();
+    // Complete in-flight registration before unregistering route shortcuts.
+    // Shared Editor shortcut ownership remains unchanged.
+    unawaited(_shortcutLifecycle.close(
+      hotkey.MSoneHotkeyManager.instance.unregisterEditSubtitleScreenShortcuts,
+    ));
 
     super.dispose();
   }

@@ -49,6 +49,7 @@ Final CI counts and analyzer result will be recorded after completion.
 
 CP90 remaining Editor-state cleanup and native lifecycle acceptance hooks;
 CP91 Git-style history/mobile editing UX; CP92 cleanup/profiling; CP93
-native-platform and project compatibility acceptance. The independently
-reported libmpv hot-restart SIGSEGV remains unresolved. Waveform
+native-platform and project compatibility acceptance. The previously reported libmpv hot-restart crash is no longer
+reproducible according to the user's October 22 device testing. This is a
+device-level status update, not a new automated native test result. Waveform
 experimental work and appearance changes remain deferred.

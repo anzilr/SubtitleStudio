@@ -108,44 +108,57 @@ extension _EditLineInitialization on EditSubtitleScreenState {
     if (_isRepeatModeEnabled) player.pause();
   }
 
-  /// Register hotkey shortcuts using MSoneHotkeyManager
+  /// Stale shortcut callbacks must never touch a disposed Edit Line route.
+  void Function() _guardShortcut(void Function() callback) => () {
+    if (mounted && _shortcutLifecycle.isActive) callback();
+  };
+
   Future<void> _registerHotkeyShortcuts() async {
-    // Unregister HomeScreen shortcuts to prevent conflicts (e.g., Ctrl+E)
-    await hotkey.MSoneHotkeyManager.instance.unregisterHomeScreenShortcuts();
-    
-    await hotkey.MSoneHotkeyManager.instance
-        .registerEditSubtitleScreenShortcuts(
-          onSave: _handleSaveShortcut,
-          onNextLine: _handleNextLineShortcut,
-          onPreviousLine: _handlePreviousLineShortcut,
-          onTextFormatting: _handleTextFormattingShortcut,
-          onDelete: _handleDeleteCurrentShortcut,
-          onPlayPause: _handlePlayPauseShortcut,
-          // New shortcuts
-          onMsoneDictionary: _showMsoneDictionary,
-          onOlamDictionary: _showOlamDictionary,
-          onUrbanDictionary: _showUrbanDictionary,
-          onColorPicker: _handleColorPickerShortcut,
-          onMarkLine: _handleMarkLineShortcut,
-          onMarkLineAndComment: _handleMarkLineAndCommentShortcut,
-          onJumpToLine: _handleJumpToLineShortcut,
-          onHelp: _handleHelpShortcut,
-          onSettings: _handleSettingsShortcut,
-          onPopScreen: _handlePopScreenShortcut,
-          // Add video control shortcuts
-          onToggleRepeat: _handleToggleRepeatShortcut,
-          onToggleRepeatRange: _handleToggleRepeatRangeShortcut,
-          onToggleFullscreen: _handleToggleFullscreenShortcut,
-          // New split and merge shortcuts
-          onSplitLine: _handleSplitLineShortcut,
-          onMergeLine: _handleMergeLineShortcut,
-          // Video sync shortcut
-          onSyncWithVideo: () => _syncWithVideoPosition(),
-          // Marked lines sheet shortcut
-          onShowMarkedLines: _showMarkedLinesModal,
-          // Paste original shortcut
-          onPasteOriginal: _handlePasteOriginalShortcut,
-        );
+    final manager = hotkey.MSoneHotkeyManager.instance;
+    try {
+      await _shortcutLifecycle.activate(
+        prepare: manager.unregisterHomeScreenShortcuts,
+        register: () => manager.registerEditSubtitleScreenShortcuts(
+          onSave: _guardShortcut(_handleSaveShortcut),
+          onNextLine: _guardShortcut(_handleNextLineShortcut),
+          onPreviousLine: _guardShortcut(_handlePreviousLineShortcut),
+          onTextFormatting: (format) {
+            if (mounted && _shortcutLifecycle.isActive) {
+              _handleTextFormattingShortcut(format);
+            }
+          },
+          onDelete: _guardShortcut(_handleDeleteCurrentShortcut),
+          onPlayPause: _guardShortcut(_handlePlayPauseShortcut),
+          onMsoneDictionary: _guardShortcut(_showMsoneDictionary),
+          onOlamDictionary: _guardShortcut(_showOlamDictionary),
+          onUrbanDictionary: _guardShortcut(_showUrbanDictionary),
+          onColorPicker: _guardShortcut(_handleColorPickerShortcut),
+          onMarkLine: _guardShortcut(_handleMarkLineShortcut),
+          onMarkLineAndComment: _guardShortcut(_handleMarkLineAndCommentShortcut),
+          onJumpToLine: _guardShortcut(_handleJumpToLineShortcut),
+          onHelp: _guardShortcut(_handleHelpShortcut),
+          onSettings: _guardShortcut(_handleSettingsShortcut),
+          onPopScreen: _guardShortcut(_handlePopScreenShortcut),
+          onToggleRepeat: _guardShortcut(_handleToggleRepeatShortcut),
+          onToggleRepeatRange: _guardShortcut(_handleToggleRepeatRangeShortcut),
+          onToggleFullscreen: _guardShortcut(_handleToggleFullscreenShortcut),
+          onSplitLine: _guardShortcut(_handleSplitLineShortcut),
+          onMergeLine: _guardShortcut(_handleMergeLineShortcut),
+          onSyncWithVideo: _guardShortcut(() {
+            unawaited(_syncWithVideoPosition());
+          }),
+          onShowMarkedLines: _guardShortcut(_showMarkedLinesModal),
+          onPasteOriginal: _guardShortcut(_handlePasteOriginalShortcut),
+        ),
+      );
+    } catch (error, stackTrace) {
+      await logError(
+        'Could not register Edit Line shortcuts',
+        error: error,
+        stackTrace: stackTrace,
+        context: 'EditSubtitleScreen._registerHotkeyShortcuts',
+      );
+    }
   }
 
   Future<void> _syncVideoPlayerWhenReady() async {
