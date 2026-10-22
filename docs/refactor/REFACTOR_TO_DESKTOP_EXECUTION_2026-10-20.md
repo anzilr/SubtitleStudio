@@ -278,6 +278,18 @@ new slots and validation state.
 [R12 report](CHECKPOINT90_R12_EDIT_LINE_RIVERPOD_SELECTION_2026-10-22.md).
 **Verification:** [Linux 707 Flutter tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39818721441).
 
+**CP90 R13 (October 22, 2026):** The controller's legacy boolean
+`saveSubtitle()` now delegates to the same transactional draft service
+used by manual Save and navigation autosave. It publishes the actual
+post-sort cue, preserves intentional blank edits and cue metadata, handles
+new-cue insertion, validates timestamp ranges, and avoids no-op checkpoint
+creation. Direct controller `navigateToLine()` now blocks dirty draft loss,
+reloads the entire committed Isar collection and discards asynchronous
+results superseded by a later selection. Six Isar/Riverpod integration
+tests cover these paths.
+[R13 report](CHECKPOINT90_R13_CONTROLLER_SAVE_NAVIGATION_2026-10-22.md).
+**Verification:** Full Linux Flutter analyzer/tests pending.
+
 - Identify and isolate the largest remaining mixed-responsibility Editor/Edit Line/Source View modules; decouple UI from persistence/media/filesystem operations while preserving existing Riverpod state and checkpoint behavior.
 - Prefer injectable services/coordinators, typed outcomes and widget tests. Verify source editing round trips, comment/mark preservation, secondary track fallback, keyboard and Android Back behavior.
 - Keep the shared core reusable by both Flutter mobile widgets and the later desktop presentation.

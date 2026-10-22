@@ -91,6 +91,9 @@ class EditLineController extends Notifier<EditLineState> {
   String _initialEndTime = '';
 
   bool _disposed = false;
+  // Suppress out-of-order controller navigation loads. The Edit Line widget
+  // owns a separate route-level guard for user-facing navigation.
+  int _navigationRequestEpoch = 0;
   bool _textStreamsInitialized = false;
   EditorResizePreferenceCoordinator? _resizePreferences;
 
@@ -551,6 +554,7 @@ class EditLineController extends Notifier<EditLineState> {
     required String visibleEditedText,
   }) {
     if (_disposed) return;
+    ++_navigationRequestEpoch;
     _publishSelectedCue(EditLineSelectionProjection.apply(
       current: state,
       collection: collection,
@@ -625,13 +629,14 @@ class EditLineController extends Notifier<EditLineState> {
     final collection = state.subtitleCollection;
     if (result.saved && !_disposed && collection != null &&
         result.savedLine != null && result.persistedLines != null) {
+      ++_navigationRequestEpoch;
       _publishSelectedCue(EditLineSelectionProjection.apply(
         current: state,
         collection: collection,
         selectedLine: result.savedLine!,
         orderedLines: result.persistedLines!,
         displayedEditedText: editedText,
-      ));
+      ).copyWith(isNewSubtitle: false));
     }
     return result;
   }
@@ -665,65 +670,64 @@ class EditLineController extends Notifier<EditLineState> {
     return _repository.updateLastEditedIndex(state.sessionId, index);
   }
 
-  /// Save subtitle line to database
+  /// Direct controller Save uses the same transactional draft path as the
+  /// Edit Line widget. The old boolean-only write could leave Riverpod on
+  /// an obsolete cue after timestamp sorting and silently lose blank edits.
   Future<bool> saveSubtitle() async {
+    if (_disposed || state.isLoading) return false;
+    final collection = state.subtitleCollection;
+    if (collection == null) return false;
+    final current = state.subtitleLine ??
+        (state.isNewSubtitle
+            ? (SubtitleLine()
+              ..index = collection.lines.length + 1
+              ..startTime = state.startTime
+              ..endTime = state.endTime
+              ..original = state.originalText
+              ..edited = state.editedText.replaceAll('\n', '<br>'))
+            : null);
+    if (current == null) return false;
+
+    final startError = TimeValidator.validateTimeString(state.startTime);
+    final endError = TimeValidator.validateTimeString(state.endTime);
+    final orderError = startError == null && endError == null
+        ? TimeValidator.validateTimeOrder(state.startTime, state.endTime)
+        : null;
+    if (startError != null || endError != null || orderError != null) {
+      _setState(state.copyWith(
+        startTimeError: startError,
+        endTimeError: endError,
+        timeOrderError: orderError,
+        clearStartTimeError: startError == null,
+        clearEndTimeError: endError == null,
+        clearTimeOrderError: orderError == null,
+      ));
+      return false;
+    }
+
+    // No new checkpoint is needed when the current cue has not changed.
+    if (!state.hasUnsavedChanges && !state.isNewSubtitle) return true;
+
     try {
-      await logInfo(
-        'EditLineController: Saving subtitle line',
-        context: 'EditLineController.saveSubtitle',
+      final inserting = current.index > collection.lines.length;
+      final result = await saveDraftLine(
+        currentLine: current,
+        originalText: state.originalText,
+        editedText: state.editedText,
+        startTime: state.startTime,
+        endTime: state.endTime,
+        initialOriginalText: _initialOriginalText,
+        initialStartTime: _initialStartTime,
+        initialEndTime: _initialEndTime,
+        isEditMode: state.isEditMode,
+        insertLine: inserting,
+        insertIndex: collection.lines.length,
       );
-
-      // Validate times first
-      if (state.startTimeError != null ||
-          state.endTimeError != null ||
-          state.timeOrderError != null) {
-        await logWarning(
-          'Cannot save: Time validation errors present',
-          context: 'EditLineController.saveSubtitle',
-        );
-        return false;
-      }
-
-      final previous = state.subtitleLine!;
-      final updated = SubtitleLine()
-        ..index = previous.index
-        ..startTime = state.startTime
-        ..endTime = state.endTime
-        ..original = state.originalText
-        ..edited = state.editedText
-        ..marked = previous.marked
-        ..comment = previous.comment
-        ..resolved = previous.resolved;
-      final success = await logPerformance(
-        'Save subtitle line',
-        () => _repository.saveSubtitleLineChanges(
-          collectionId: _subtitleCollectionId,
-          updatedLine: updated,
-          sessionId: state.sessionId,
-        ),
-        context: 'EditLineController',
-      );
-
-      if (success) {
-        // Update initial values to reflect saved state
-        _initialOriginalText = state.originalText;
-        _initialEditedText = state.editedText;
-        _initialStartTime = state.startTime;
-        _initialEndTime = state.endTime;
-
-        _setState(state.copyWith(hasUnsavedChanges: false));
-
-        await logInfo(
-          'EditLineController: Subtitle line saved successfully',
-          context: 'EditLineController.saveSubtitle',
-        );
-      }
-
-      return success;
-    } catch (e, stackTrace) {
+      return result.saved;
+    } catch (error, stackTrace) {
       await logError(
-        'EditLineController: Error saving subtitle',
-        error: e,
+        'Edit Line controller save failed',
+        error: error,
         stackTrace: stackTrace,
         context: 'EditLineController.saveSubtitle',
       );
@@ -731,83 +735,62 @@ class EditLineController extends Notifier<EditLineState> {
     }
   }
 
-  /// Navigate to next subtitle line
   Future<void> navigateNext() async {
-    if (state.subtitleLine == null) return;
-
-    final currentIndex = state.subtitleLine!.index;
-    final totalLines = state.subtitleCollection?.lines.length ?? 0;
-
-    if (currentIndex < totalLines) {
-      await navigateToLine(currentIndex + 1);
-    }
+    final currentIndex = state.subtitleLine?.index;
+    if (currentIndex == null) return;
+    await navigateToLine(currentIndex + 1);
   }
 
-  /// Navigate to previous subtitle line
   Future<void> navigatePrevious() async {
-    if (state.subtitleLine == null) return;
-
-    final currentIndex = state.subtitleLine!.index;
-
-    if (currentIndex > 1) {
-      await navigateToLine(currentIndex - 1);
-    }
+    final currentIndex = state.subtitleLine?.index;
+    if (currentIndex == null) return;
+    await navigateToLine(currentIndex - 1);
   }
 
-  /// Navigate to specific line
+  /// Controller consumers must not discard a draft or install stale rows.
+  /// Refresh the entire collection; a row-only reload cannot account for
+  /// reordering done by another checkpoint operation.
   Future<void> navigateToLine(int lineIndex) async {
+    if (_disposed) return;
+    if (state.hasUnsavedChanges) {
+      _setState(state.copyWith(
+        errorMessage: 'Save or discard changes before navigating.',
+      ));
+      return;
+    }
+
+    final request = ++_navigationRequestEpoch;
+    _setState(state.copyWith(isLoading: true, clearErrorMessage: true));
     try {
-      await logInfo(
-        'EditLineController: Navigating to line $lineIndex',
-        context: 'EditLineController.navigateToLine',
-      );
-
-      _setState(state.copyWith(isLoading: true));
-
-      final line = await _repository.fetchSubtitleLine(
-        _subtitleCollectionId,
-        lineIndex,
-      );
-
-      if (line == null) {
-        throw Exception('Subtitle line not found at index $lineIndex');
+      final collection =
+          await _repository.fetchSubtitleCollection(_subtitleCollectionId);
+      if (_disposed || request != _navigationRequestEpoch) return;
+      if (collection == null ||
+          lineIndex < 1 ||
+          lineIndex > collection.lines.length) {
+        _setState(state.copyWith(
+          isLoading: false,
+          errorMessage: 'Subtitle line not found at index $lineIndex',
+        ));
+        return;
       }
 
-      // Store new initial values
-      _initialOriginalText = line.original;
-      _initialEditedText = line.edited ?? '';
-      _initialStartTime = line.startTime;
-      _initialEndTime = line.endTime;
-
-      // Clear validation errors when loading new line
-      _setState(state.copyWith(
-        subtitleLine: line,
-        originalText: line.original,
-        editedText: line.edited ?? '',
-        startTime: line.startTime,
-        endTime: line.endTime,
-        hasUnsavedChanges: false,
-        isLoading: false,
-        clearStartTimeError: true,
-        clearEndTimeError: true,
-        clearTimeOrderError: true,
+      final line = collection.lines[lineIndex - 1];
+      _publishSelectedCue(EditLineSelectionProjection.apply(
+        current: state,
+        collection: collection,
+        selectedLine: line,
+        orderedLines: collection.lines,
       ));
-
-      // Update character counts for new line
-      _updateCharacterCounts();
-
-      await logInfo(
-        'EditLineController: Navigation complete to line $lineIndex',
-        context: 'EditLineController.navigateToLine',
-      );
-    } catch (e, stackTrace) {
+    } catch (error, stackTrace) {
+      if (_disposed || request != _navigationRequestEpoch) return;
       await logError(
-        'EditLineController: Error navigating to line $lineIndex',
-        error: e,
+        'Edit Line controller navigation failed',
+        error: error,
         stackTrace: stackTrace,
         context: 'EditLineController.navigateToLine',
       );
-
+      if (_disposed || request != _navigationRequestEpoch) return;
       _setState(state.copyWith(
         isLoading: false,
         errorMessage: 'Failed to navigate to line $lineIndex',

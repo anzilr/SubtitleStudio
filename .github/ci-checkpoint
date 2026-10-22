@@ -251,3 +251,12 @@ CP90 R12 final UI handoff October 22 2026: after save Edit Line
 adopts the controller's detached committed collection/selection instead of
 modifying an old cached Riverpod state collection. Final full Flutter
 analyze/test gate; no native builds or host matrix.
+
+CP90 R13 October 22 2026: consolidate the controller's direct save API
+onto the transactional EditLineDraftSaveService and committed selection
+projection. Handle new unsaved cues without null assertions; keep intentional
+blank text and cue metadata; reject invalid timestamps; avoid no-op history
+entries. Direct controller navigation refuses unsaved drafts, reloads full
+Isar ordering, and ignores stale async results after newer selection. Six
+Isar/Riverpod integration tests. CI ONLY flutter pub get, flutter analyze,
+flutter test on Linux; no native builds or Windows/macOS matrix.
