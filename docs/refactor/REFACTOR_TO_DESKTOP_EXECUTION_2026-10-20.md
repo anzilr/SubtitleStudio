@@ -205,6 +205,21 @@ were also removed. No file access, Isar schema or native-media changes.
 **Verification:** [Linux 672 tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39664510820);
 Windows/macOS file-host matrix not applicable.
 
+
+**CP90 R7 (October 22, 2026):** Edit Line manual Save and navigation
+autosave now delegate to a shared, injectable `EditLineDraftSaveService`.
+It prepares detached before/after cue copies, preserves intentional blank
+edited text, original-versus-edit mode, timing, comments, marks and resolution
+metadata, and asks the existing Isar/checkpoint transaction to commit.
+Rejected writes no longer update the UI's active cue, local collection or
+subtitle preview. Session last-edited index bookkeeping is noncritical
+after a successful checkpoint. Five service tests and one Isar checkpoint
+integration test were added.
+[R7 report](CHECKPOINT90_R7_EDIT_LINE_DRAFT_SAVE_2026-10-22.md).
+**Verification:** [Linux 678 Flutter tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39807708108).
+The Windows/macOS file-host matrix was not triggered because file access,
+project format and native media are unchanged.
+
 - Identify and isolate the largest remaining mixed-responsibility Editor/Edit Line/Source View modules; decouple UI from persistence/media/filesystem operations while preserving existing Riverpod state and checkpoint behavior.
 - Prefer injectable services/coordinators, typed outcomes and widget tests. Verify source editing round trips, comment/mark preservation, secondary track fallback, keyboard and Android Back behavior.
 - Keep the shared core reusable by both Flutter mobile widgets and the later desktop presentation.
