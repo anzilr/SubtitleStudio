@@ -60,7 +60,13 @@ expected the renamed "Check out commit" menu item, and another matched
 "current branch" in three widgets rather than the intended dialog.
 The follow-up updates these expectations to the actual visible text;
 no history action, concurrency guard, data model, or presentation
-implementation changed. The final gate is recorded after verification.
+implementation changed. The final [Linux Flutter-only CI run #39828660986](https://github.com/anzilr/SubtitleStudio/actions/runs/39828660986)
+completed successfully with **732 Flutter tests passed** and
+`flutter analyze` reporting **No issues found**. This includes six new
+pure copy-contract tests and three new widget tests, alongside the prior
+suite. The accepted code/test commit is
+[`a2331f6`](https://github.com/anzilr/SubtitleStudio/commit/a2331f6d2af1338ba801f7f26dd5546f99089864).
+No platform application builds or host matrices were run.
 
 ## Next
 

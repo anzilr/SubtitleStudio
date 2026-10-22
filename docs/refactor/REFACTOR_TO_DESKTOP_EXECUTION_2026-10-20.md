@@ -327,7 +327,7 @@ and HEAD/tip concurrency checks remain unchanged.
 Six pure text contract tests and three additional widget tests cover
 wording, detached history, protected main and bookmark restores.
 [R2 report](CHECKPOINT91_R2_HISTORY_PLAIN_LANGUAGE_2026-10-22.md).
-**Verification:** Batched Linux Flutter analyzer/full tests pending.
+**Verification:** [Linux 732 Flutter tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39828660986).
 
 ### CP91 — Outstanding roadmap UX needed on mobile
 - Deliver the Git-style **visual checkpoint history** with plain-language controls, accessible list alternative and protected refs; preserve `.msone` compatibility and multi-branch correctness.
