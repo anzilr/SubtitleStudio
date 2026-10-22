@@ -52,7 +52,10 @@ Six Isar-backed Riverpod controller integration tests in
 
 ## Verification
 
-The full Linux Flutter analysis/test workflow will run once for this batch.
+Initial [Flutter CI run #39820593566](https://github.com/anzilr/SubtitleStudio/actions/runs/39820593566)
+passed all **713 Flutter tests** but reported one unused-import warning in
+the new controller integration test. This follow-up removes that warning and
+uses a final Flutter-only gate to close the checkpoint with a clean analyzer.
 Only `flutter pub get`, `flutter analyze`, and `flutter test` are
 permitted in GitHub Actions; no native platform builds or cross-platform
 matrix are requested. The final result will be recorded after completion.

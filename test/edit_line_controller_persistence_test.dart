@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/screens/edit_line/edit_line_controller.dart';
 import 'package:subtitle_studio/screens/edit_line/repositories/edit_line_preferences_repository.dart';

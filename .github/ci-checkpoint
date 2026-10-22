@@ -260,3 +260,8 @@ entries. Direct controller navigation refuses unsaved drafts, reloads full
 Isar ordering, and ignores stale async results after newer selection. Six
 Isar/Riverpod integration tests. CI ONLY flutter pub get, flutter analyze,
 flutter test on Linux; no native builds or Windows/macOS matrix.
+
+CP90 R13 final analyzer cleanup October 22 2026: remove unused Isar
+import from controller integration tests after 713 tests passed on initial
+full suite; require zero analyzer diagnostics on final flutter analyze and
+flutter test gate. No native builds, no host matrix.
