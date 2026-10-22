@@ -58,7 +58,12 @@ the new controller integration test. This follow-up removes that warning and
 uses a final Flutter-only gate to close the checkpoint with a clean analyzer.
 Only `flutter pub get`, `flutter analyze`, and `flutter test` are
 permitted in GitHub Actions; no native platform builds or cross-platform
-matrix are requested. The final result will be recorded after completion.
+matrix are requested. The final [Linux Flutter-only CI run #39821316874](https://github.com/anzilr/SubtitleStudio/actions/runs/39821316874)
+completed successfully with **713 Flutter tests passed** and `flutter analyze`
+reporting **No issues found**. Its source is commit
+[`6b36836`](https://github.com/anzilr/SubtitleStudio/commit/6b368362c4594fbfa1e5187cb4cdd86458b80f4f).
+This includes six new Isar/Riverpod integration tests. No native builds
+or Windows/macOS host matrix were run.
 
 ## Remaining
 

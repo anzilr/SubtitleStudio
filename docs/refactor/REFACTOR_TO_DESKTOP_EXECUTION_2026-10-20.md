@@ -288,7 +288,7 @@ reloads the entire committed Isar collection and discards asynchronous
 results superseded by a later selection. Six Isar/Riverpod integration
 tests cover these paths.
 [R13 report](CHECKPOINT90_R13_CONTROLLER_SAVE_NAVIGATION_2026-10-22.md).
-**Verification:** Full Linux Flutter analyzer/tests pending.
+**Verification:** [Linux 713 tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39821316874).
 
 - Identify and isolate the largest remaining mixed-responsibility Editor/Edit Line/Source View modules; decouple UI from persistence/media/filesystem operations while preserving existing Riverpod state and checkpoint behavior.
 - Prefer injectable services/coordinators, typed outcomes and widget tests. Verify source editing round trips, comment/mark preservation, secondary track fallback, keyboard and Android Back behavior.
