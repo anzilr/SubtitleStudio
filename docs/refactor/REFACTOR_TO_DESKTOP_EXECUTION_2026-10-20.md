@@ -401,6 +401,19 @@ creation, selection and a many-branch 320px screen.
 [R7 report](CHECKPOINT91_R7_BRANCH_DISCOVERY_SAVED_POINTS_2026-10-22.md).
 **Verification:** [Linux 757 Flutter tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39843632143).
 
+**CP91 R7 R2 (October 22, 2026):** User reported that creating a new
+branch appeared to do nothing, both before and after restoring a point.
+The naming dialog previously accepted invalid names that the persistent
+Isar reference store would reject, and its generic error snackbar could
+be hidden behind the Edit History modal. The naming rules are now shared
+between UI and repository; invalid entries remain in the dialog with a
+clear correction. Successful branch creation and storage rejection now
+display durable, dismissible messages inside the history panel. A real
+Isar restore-then-create regression supplements the widget tests. The
+underlying branch/HEAD transaction semantics remain unchanged.
+[R7 R2 report](CHECKPOINT91_R7_R2_BRANCH_CREATION_FEEDBACK_2026-10-22.md).
+**Verification:** [Linux 762 Flutter tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39847963076).
+
 **Next:** CP91 R8 begins the compact portrait Edit Line pilot using the
 existing shared editor services and shipped skins; keep desktop layouts
 isolated and defer platform builds to native acceptance.
