@@ -2,10 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/services/checkpoint_history_actions.dart';
+import 'package:subtitle_studio/services/checkpoint_history_branch_view.dart';
 import 'package:subtitle_studio/services/checkpoint_history_graph.dart';
 import 'package:subtitle_studio/services/checkpoint_history_labels.dart';
 import 'package:subtitle_studio/services/checkpoint_history_lane_layout.dart';
 import 'package:subtitle_studio/widgets/checkpoint_history_rail.dart';
+
+class _HistoryRailStyle {
+  final Color markerColor;
+  final Map<int, Color> aboveColors;
+  final Map<int, Color> belowColors;
+
+  const _HistoryRailStyle(this.markerColor, this.aboveColors, this.belowColors);
+}
 
 /// Mobile presentation for the shared Git-inspired checkpoint graph.
 class CheckpointHistoryPanel extends ConsumerStatefulWidget {
@@ -35,6 +44,7 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
   // Reserve dialogs too, so two actions cannot both receive confirmation.
   bool _dialogPending = false;
   bool _showVisualLanes = true;
+  String? _selectedBranchName;
   int _generation = 0;
 
   HistoryGraphCommands get _actions => widget.commands ?? CheckpointHistoryActions(
@@ -51,6 +61,9 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
     super.didUpdateWidget(oldWidget);
     if (oldWidget.sessionId != widget.sessionId ||
         oldWidget.refreshVersion != widget.refreshVersion) {
+      if (oldWidget.sessionId != widget.sessionId) {
+        _selectedBranchName = null;
+      }
       _reload();
     }
   }
@@ -70,6 +83,10 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
       setState(() {
         _graph = loaded;
         _lanes = CheckpointHistoryLaneLayout.fromGraph(loaded);
+        if (!loaded.references.any((ref) =>
+            ref.kind == 'branch' && ref.name == _selectedBranchName)) {
+          _selectedBranchName = null;
+        }
         _busy = false;
       });
     } catch (_) {
@@ -99,6 +116,10 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
       setState(() {
         _graph = updated;
         _lanes = CheckpointHistoryLaneLayout.fromGraph(updated);
+        if (!updated.references.any((ref) =>
+            ref.kind == 'branch' && ref.name == _selectedBranchName)) {
+          _selectedBranchName = null;
+        }
         _busy = false;
       });
     } catch (_) {
@@ -111,6 +132,53 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
 
   String _shortName(HistoryGraphReference historyRef) =>
       CheckpointHistoryLabels.referenceName(historyRef);
+
+  void _focusBranch(HistoryGraphReference historyRef) {
+    if (_busy || historyRef.kind != 'branch') return;
+    setState(() => _selectedBranchName =
+        _selectedBranchName == historyRef.name ? null : historyRef.name);
+  }
+
+  Map<String, Color> _branchColors(
+      CheckpointHistoryGraph graph, ColorScheme scheme) {
+    final branches = graph.references.where((ref) => ref.kind == 'branch')
+        .map((ref) => ref.name).toList()..sort();
+    final brightness = scheme.brightness;
+    return {
+      for (var index = 0; index < branches.length; index++)
+        branches[index]: HSLColor.fromAHSL(
+          1, (35 + index * 137.508) % 360, 0.68,
+          brightness == Brightness.dark ? 0.67 : 0.39,
+        ).toColor(),
+    };
+  }
+
+  List<_HistoryRailStyle> _railStyles(
+      CheckpointHistoryGraph graph,
+      CheckpointHistoryLaneLayout lanes,
+      Map<String, Color> branchColors,
+      ColorScheme scheme,
+      String? selectedBranchName) {
+    final owners = CheckpointHistoryBranchView.displayOwners(graph);
+    final activeTracks = <int, Color>{};
+    final styles = <_HistoryRailStyle>[];
+    for (final row in lanes.rows) {
+      final above = Map<int, Color>.of(activeTracks);
+      for (final lane in row.joiningLanes) {
+        activeTracks.remove(lane);
+      }
+      final owner = selectedBranchName ?? owners[row.node.checkpointId];
+      final color = branchColors[owner] ?? scheme.outline;
+      if (row.node.parentCheckpointId != null) {
+        activeTracks[row.lane] = color;
+      }
+      styles.add(_HistoryRailStyle(
+        color, Map<int, Color>.unmodifiable(above),
+        Map<int, Color>.unmodifiable(activeTracks),
+      ));
+    }
+    return styles;
+  }
 
   Future<String?> _enterName(String title, String prefix,
       {String initial = ''}) async {
@@ -172,7 +240,7 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
         branch: branch,
         target: target,
       ),
-      branch ? 'Use path' : 'Restore',
+      branch ? 'Switch path' : 'Restore',
     );
     if (!confirmed || !mounted) return;
     final request = ++_generation;
@@ -210,7 +278,7 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
     try {
     final branch = kind == 'branch';
     final name = await _enterName(
-      branch ? 'Name editing path' : 'Name bookmark',
+      branch ? 'Name new branch' : 'Name bookmark',
       branch ? 'refs/heads/' : 'refs/bookmarks/',
     );
     if (name == null || !mounted) return;
@@ -234,7 +302,7 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
           ifBranchTipId: historyRef.checkpointId,
         ));
     } else if (command == 'checkout') {
-      await _checkout(target: 'version #' + historyRef.checkpointId.toString(),
+      await _checkout(target: 'point #' + historyRef.checkpointId.toString(),
         branch: false,
         action: (headId) => _actions.checkoutCommit(
           historyRef.checkpointId, ifCurrentHeadId: headId));
@@ -242,7 +310,7 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
       _dialogPending = true;
       try {
       final name = await _enterName(
-        historyRef.kind == 'branch' ? 'Rename editing path' : 'Rename bookmark',
+        historyRef.kind == 'branch' ? 'Rename branch' : 'Rename bookmark',
         historyRef.kind == 'branch' ? 'refs/heads/' : 'refs/bookmarks/',
         initial: _shortName(historyRef));
       if (name != null && mounted && name != historyRef.name) {
@@ -256,7 +324,7 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
       _dialogPending = true;
       try {
       final yes = await _confirm('Remove saved name?',
-        'Remove "' + _shortName(historyRef) + '"? The saved version '
+        'Remove "' + _shortName(historyRef) + '"? The history point '
         'is not deleted immediately, but could become eligible for '
         'cleanup later if no editing path or bookmark keeps it.',
         'Remove');
@@ -273,10 +341,10 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
       HistoryGraphReference historyRef) => [
         if (historyRef.kind == 'branch')
           const PopupMenuItem(value: 'switch',
-              child: Text('Use this editing path')),
+              child: Text('Switch to this path')),
         if (historyRef.kind == 'bookmark')
           const PopupMenuItem(value: 'checkout',
-              child: Text('Restore bookmarked version')),
+              child: Text('Restore bookmarked point')),
         if (historyRef.canRename)
           const PopupMenuItem(value: 'rename', child: Text('Rename')),
         if (historyRef.canDelete)
@@ -290,6 +358,7 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
         .where((ref) => ref.kind == 'branch').toList();
     final bookmarks = graph.references
         .where((ref) => ref.kind == 'bookmark').toList();
+    final branchColors = _branchColors(graph, Theme.of(context).colorScheme);
     await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -301,7 +370,7 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 8, 8),
               child: Row(children: [
-                Expanded(child: Text('Editing paths & bookmarks',
+                Expanded(child: Text('Branches & bookmarks',
                     style: Theme.of(sheetContext).textTheme.titleMedium)),
                 IconButton(
                   tooltip: 'Close saved paths',
@@ -313,10 +382,10 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
             Expanded(child: ListView(children: [
               const Padding(
                 padding: EdgeInsets.fromLTRB(16, 8, 16, 4),
-                child: Text('Editing paths'),
+                child: Text('Branches'),
               ),
               for (final historyRef in paths)
-                _managedReferenceTile(sheetContext, historyRef),
+                _managedReferenceTile(sheetContext, historyRef, branchColors),
               const Padding(
                 padding: EdgeInsets.fromLTRB(16, 12, 16, 4),
                 child: Text('Bookmarks'),
@@ -324,7 +393,7 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
               if (bookmarks.isEmpty)
                 const ListTile(title: Text('No bookmarks saved yet')),
               for (final historyRef in bookmarks)
-                _managedReferenceTile(sheetContext, historyRef),
+                _managedReferenceTile(sheetContext, historyRef, branchColors),
             ])),
           ]),
         ),
@@ -333,13 +402,20 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
   }
 
   Widget _managedReferenceTile(BuildContext sheetContext,
-      HistoryGraphReference historyRef) => ListTile(
+      HistoryGraphReference historyRef, Map<String, Color> branchColors) {
+    final color = branchColors[historyRef.name];
+    return ListTile(
     key: ValueKey('history-manage-' + historyRef.name),
     leading: Icon(historyRef.kind == 'branch'
-        ? Icons.call_split : Icons.bookmark_outline),
+        ? Icons.call_split : Icons.bookmark_outline, color: color),
     title: Text(_shortName(historyRef)),
-    subtitle: Text('Version #${historyRef.checkpointId}' +
-        (historyRef.isAttached ? ' · In use' : '')),
+    subtitle: Text('Point #${historyRef.checkpointId}' +
+        (historyRef.isAttached ? ' · In use' : '') +
+        (historyRef.kind == 'branch' ? ' · Tap to filter' : '')),
+    onTap: historyRef.kind == 'branch' ? () {
+      Navigator.of(sheetContext).pop();
+      _focusBranch(historyRef);
+    } : null,
     trailing: PopupMenuButton<String>(
       key: ValueKey('history-manage-menu-' + historyRef.name),
       tooltip: '${_shortName(historyRef)} options',
@@ -350,9 +426,36 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
       itemBuilder: (_) => _referenceMenuItems(historyRef),
     ),
   );
+  }
 
-  Widget _refMenu(HistoryGraphReference historyRef) {
+  Widget _refMenu(HistoryGraphReference historyRef,
+      Map<String, Color> branchColors) {
     final label = _shortName(historyRef);
+    if (historyRef.kind == 'branch') {
+      final color = branchColors[historyRef.name]!;
+      return Row(mainAxisSize: MainAxisSize.min, children: [
+        Tooltip(message: 'Show only ${_shortName(historyRef)} history',
+          child: ChoiceChip(
+          key: ValueKey('history-branch-filter-' + historyRef.name),
+          label: Text(CheckpointHistoryLabels.referenceLabel(historyRef)),
+          avatar: Icon(Icons.call_split, color: color, size: 16),
+          selected: _selectedBranchName == historyRef.name,
+          selectedColor: color.withValues(alpha: 0.20),
+          side: BorderSide(color: color.withValues(alpha: 0.75)),
+          onSelected: _busy ? null : (_) => _focusBranch(historyRef),
+          visualDensity: VisualDensity.compact,
+          ),
+        ),
+        PopupMenuButton<String>(
+          key: ValueKey('history-ref-menu-' + historyRef.name),
+          tooltip: '$label options',
+          enabled: !_busy,
+          icon: const Icon(Icons.more_vert, size: 18),
+          onSelected: (value) => _referenceAction(value, historyRef),
+          itemBuilder: (_) => _referenceMenuItems(historyRef),
+        ),
+      ]);
+    }
     return PopupMenuButton<String>(
       key: ValueKey('history-ref-menu-' + historyRef.name),
       tooltip: label + ' options',
@@ -369,7 +472,8 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
     );
   }
 
-  Widget _commitRow(CheckpointHistoryLaneRow row, int laneCount) {
+  Widget _commitRow(CheckpointHistoryLaneRow row, int laneCount,
+      _HistoryRailStyle style, Map<String, Color> branchColors) {
     final node = row.node;
     final label = '#' + node.checkpointId.toString();
     final railWidth = CheckpointHistoryRailPainter.railWidth(laneCount);
@@ -379,6 +483,8 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Container(width: 3, height: 44, color: style.markerColor),
+          const SizedBox(width: 8),
           Expanded(child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -394,11 +500,18 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
                 Wrap(spacing: 5, children: [
                   for (final historyRef in node.references)
                     ActionChip(
+                      avatar: historyRef.kind == 'branch'
+                          ? Icon(Icons.call_split, size: 15,
+                              color: branchColors[historyRef.name])
+                          : null,
                       label: Text(CheckpointHistoryLabels.referenceLabel(
                           historyRef)),
                       onPressed: _busy || historyRef.kind == 'head' ? null : () {
-                        _referenceAction(historyRef.kind == 'branch'
-                          ? 'switch' : 'checkout', historyRef);
+                        if (historyRef.kind == 'branch') {
+                          _focusBranch(historyRef);
+                        } else {
+                          _referenceAction('checkout', historyRef);
+                        }
                       },
                       visualDensity: VisualDensity.compact,
                     ),
@@ -408,10 +521,10 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
           PopupMenuButton<String>(
             key: ValueKey('history-node-menu-' + node.checkpointId.toString()),
             enabled: !_busy,
-            tooltip: 'Saved version options',
+            tooltip: 'History point options',
             onSelected: (value) {
               if (value == 'checkout') {
-                _checkout(target: 'version ' + label, branch: false,
+                _checkout(target: 'point ' + label, branch: false,
                   action: (headId) => _actions.checkoutCommit(
                     node.checkpointId, ifCurrentHeadId: headId));
               } else {
@@ -419,9 +532,9 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
               }
             },
             itemBuilder: (_) => const [
-              PopupMenuItem(value: 'checkout', child: Text('Restore this version')),
-              PopupMenuItem(value: 'branch', child: Text('Start another editing path')),
-              PopupMenuItem(value: 'bookmark', child: Text('Bookmark this version')),
+              PopupMenuItem(value: 'checkout', child: Text('Restore this point')),
+              PopupMenuItem(value: 'branch', child: Text('Branch from this point')),
+              PopupMenuItem(value: 'bookmark', child: Text('Bookmark this point')),
             ],
           ),
         ]),
@@ -437,6 +550,9 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
               row: row,
               laneCount: laneCount,
               colors: Theme.of(context).colorScheme,
+              markerColor: style.markerColor,
+              aboveColors: style.aboveColors,
+              belowColors: style.belowColors,
             ),
           ),
         ),
@@ -467,7 +583,20 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
     }
     // The lane layout is cached alongside each loaded history snapshot,
     // avoiding repeated full-graph work on busy/refresh widget rebuilds.
-    final lanes = _lanes ?? CheckpointHistoryLaneLayout.fromGraph(graph);
+    final selectedRefs = graph.references.where((ref) =>
+        ref.kind == 'branch' && ref.name == _selectedBranchName);
+    final selectedBranch = selectedRefs.isEmpty ? null : selectedRefs.first;
+    final selectedName = selectedBranch?.name;
+    final visibleIds = selectedName == null ? null
+        : CheckpointHistoryBranchView.ancestorIds(graph, selectedName);
+    final lanes = visibleIds == null
+        ? (_lanes ?? CheckpointHistoryLaneLayout.fromGraph(graph))
+        : CheckpointHistoryLaneLayout.fromGraph(
+            graph, visibleCheckpointIds: visibleIds);
+    final scheme = Theme.of(context).colorScheme;
+    final branchColors = _branchColors(graph, scheme);
+    final railStyles = _railStyles(
+        graph, lanes, branchColors, scheme, selectedName);
     return Column(children: [
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -485,7 +614,7 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12),
         child: Row(children: [
-          Expanded(child: Text('Saved paths & bookmarks · '
+          Expanded(child: Text('Branches & bookmarks · '
               '${graph.references.where((ref) => ref.kind != 'head').length}',
               maxLines: 1, overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodySmall)),
@@ -503,6 +632,33 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
           ),
         ]),
       ),
+      if (selectedBranch != null)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Row(children: [
+            Icon(Icons.call_split, size: 16,
+                color: branchColors[selectedBranch.name]),
+            const SizedBox(width: 6),
+            Expanded(child: Text(
+              'Showing ${_shortName(selectedBranch)} · '
+              '${lanes.rows.length} points',
+              key: const ValueKey('history-filter-status'),
+              maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall,
+            )),
+            TextButton(
+              key: const ValueKey('history-show-all'),
+              onPressed: () => setState(() => _selectedBranchName = null),
+              child: const Text('Show all'),
+            ),
+          ]),
+        ),
+      if (_showVisualLanes && selectedBranch == null && lanes.laneCount > 6)
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          child: Text('Many paths overlap here. Tap a branch to see its '
+              'history clearly; the list keeps every point available.'),
+        ),
       if (_showVisualLanes) const SizedBox(
         height: 36,
         child: SingleChildScrollView(
@@ -513,11 +669,11 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
             children: [
               Icon(Icons.radio_button_checked, size: 16),
               SizedBox(width: 4),
-              Text('Current version'),
+              Text('Current point'),
               SizedBox(width: 16),
               Icon(Icons.linear_scale, size: 16),
               SizedBox(width: 4),
-              Text('Earlier versions'),
+              Text('Earlier points'),
               SizedBox(width: 16),
               Icon(Icons.call_split, size: 16),
               SizedBox(width: 4),
@@ -532,7 +688,7 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
         itemCount: graph.references.length,
         itemBuilder: (_, index) => Padding(
           padding: const EdgeInsets.only(right: 6),
-          child: Center(child: _refMenu(graph.references[index])),
+          child: Center(child: _refMenu(graph.references[index], branchColors)),
         ),
       )),
       if (_busy) const LinearProgressIndicator(),
@@ -541,7 +697,8 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
         padding: const EdgeInsets.all(12),
         itemCount: lanes.rows.length,
         itemBuilder: (_, index) =>
-            _commitRow(lanes.rows[index], lanes.laneCount),
+            _commitRow(lanes.rows[index], lanes.laneCount,
+                railStyles[index], branchColors),
       )),
     ]);
   }

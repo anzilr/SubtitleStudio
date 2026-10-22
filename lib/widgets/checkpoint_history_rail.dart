@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:subtitle_studio/services/checkpoint_history_lane_layout.dart';
 
@@ -12,15 +13,21 @@ class CheckpointHistoryRailPainter extends CustomPainter {
   final CheckpointHistoryLaneRow row;
   final int laneCount;
   final ColorScheme colors;
+  final Color markerColor;
+  final Map<int, Color> aboveColors;
+  final Map<int, Color> belowColors;
 
   const CheckpointHistoryRailPainter({
     required this.row,
     required this.laneCount,
     required this.colors,
+    required this.markerColor,
+    required this.aboveColors,
+    required this.belowColors,
   });
 
   static double railWidth(int laneCount) =>
-      math.min(106.0, math.max(34.0, 28.0 + (laneCount - 1) * 19.0));
+      math.min(80.0, math.max(34.0, 28.0 + (laneCount - 1) * 19.0));
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -34,15 +41,9 @@ class CheckpointHistoryRailPainter extends CustomPainter {
     final joining = row.joiningLanes.toSet();
     final above = row.tracksAbove.toSet();
 
-    final muted = Paint()
-      ..color = colors.outline
-      ..strokeWidth = 1.8
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke
-      ..isAntiAlias = true;
-    final highlighted = Paint()
-      ..color = colors.primary
-      ..strokeWidth = 2.4
+    Paint trackPaint(Color color) => Paint()
+      ..color = color
+      ..strokeWidth = 2.3
       ..strokeCap = StrokeCap.round
       ..style = PaintingStyle.stroke
       ..isAntiAlias = true;
@@ -50,11 +51,11 @@ class CheckpointHistoryRailPainter extends CustomPainter {
     // Continue unrelated tracks unchanged; only parent edges actually
     // converging at this checkpoint are allowed to bend into its dot.
     for (final lane in row.tracksAbove) {
+      final paint = trackPaint(aboveColors[lane] ?? colors.outline);
       if (!joining.contains(lane)) {
-        canvas.drawLine(Offset(x(lane), 0), Offset(x(lane), size.height), muted);
+        canvas.drawLine(Offset(x(lane), 0), Offset(x(lane), size.height), paint);
         continue;
       }
-      final paint = row.node.isHeadAncestor ? highlighted : muted;
       if (lane == row.lane) {
         canvas.drawLine(Offset(mainX, 0), Offset(mainX, y), paint);
       } else {
@@ -67,14 +68,12 @@ class CheckpointHistoryRailPainter extends CustomPainter {
     }
 
     for (final lane in row.tracksBelow) {
+      final paint = trackPaint(belowColors[lane] ?? colors.outline);
       if (lane == row.lane) {
-        canvas.drawLine(
-          Offset(mainX, y),
-          Offset(mainX, size.height),
-          row.node.isHeadAncestor ? highlighted : muted,
-        );
+        canvas.drawLine(Offset(mainX, y),
+            Offset(mainX, size.height), paint);
       } else if (!above.contains(lane)) {
-        canvas.drawLine(Offset(x(lane), y), Offset(x(lane), size.height), muted);
+        canvas.drawLine(Offset(x(lane), y), Offset(x(lane), size.height), paint);
       }
     }
 
@@ -88,7 +87,7 @@ class CheckpointHistoryRailPainter extends CustomPainter {
     canvas.drawCircle(
       markerCenter, markerRadius,
       Paint()
-        ..color = active ? colors.primary : colors.surface
+        ..color = active ? markerColor : colors.surface
         ..strokeWidth = 2.2
         ..style = active ? PaintingStyle.fill : PaintingStyle.stroke,
     );
@@ -96,7 +95,7 @@ class CheckpointHistoryRailPainter extends CustomPainter {
       canvas.drawCircle(
         markerCenter, markerRadius,
         Paint()
-          ..color = row.node.isHeadAncestor ? colors.primary : colors.outline
+          ..color = markerColor
           ..strokeWidth = 2.2
           ..style = PaintingStyle.stroke,
       );
@@ -112,5 +111,8 @@ class CheckpointHistoryRailPainter extends CustomPainter {
   bool shouldRepaint(covariant CheckpointHistoryRailPainter oldDelegate) =>
       oldDelegate.row != row ||
       oldDelegate.laneCount != laneCount ||
-      oldDelegate.colors != colors;
+      oldDelegate.colors != colors ||
+      oldDelegate.markerColor != markerColor ||
+      !mapEquals(oldDelegate.aboveColors, aboveColors) ||
+      !mapEquals(oldDelegate.belowColors, belowColors);
 }

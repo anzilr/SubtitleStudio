@@ -33,12 +33,19 @@ class CheckpointHistoryLaneLayout {
   const CheckpointHistoryLaneLayout._(this.rows, this.laneCount);
 
   static CheckpointHistoryLaneLayout fromGraph(
-      CheckpointHistoryGraph graph) {
+      CheckpointHistoryGraph graph, {Set<int>? visibleCheckpointIds}) {
     final frontier = <int, int>{};
     final rows = <CheckpointHistoryLaneRow>[];
     var highestLane = -1;
 
     for (final node in graph.nodes.reversed) {
+      if (visibleCheckpointIds != null &&
+          !visibleCheckpointIds.contains(node.checkpointId)) continue;
+      if (visibleCheckpointIds != null &&
+          node.parentCheckpointId != null &&
+          !visibleCheckpointIds.contains(node.parentCheckpointId)) {
+        throw StateError('Filtered history cannot omit a visible parent.');
+      }
       final above = frontier.keys.toList()..sort();
       final joining = above
           .where((lane) => frontier[lane] == node.checkpointId)

@@ -333,3 +333,15 @@ backend refs, Isar/.msone data, branch/head guards, and restore confirmations.
 Widget regressions cover list/map switching, protected reference actions,
 renaming a named path from manager and a narrow 320px layout. Run Linux
 Flutter pub get/analyze/full tests only. No platform builds or host matrix.
+
+CP91 R6 October 22 2026: per-user Edit History refinements. Replace visible
+Restore this version with Restore this point, Start another editing path
+with Branch from this point, Save Version with Save History, and Main edits
+with Main path across graph and classic history controls. Use distinct
+theme-aware branch highlight colors in chips, cards and graph tracks.
+Tapping a branch filters to that branch's tip and shared ancestors,
+excluding other branches' exclusive commits without changing HEAD or data.
+Cap graph rail space at 80px so many branches cannot progressively squeeze
+the cards; show a many-path hint and allow focus on a single lane.
+Cover branch ancestry, colors, safe actions and narrow many-branch UI.
+Run one Linux Flutter pub get/analyze/full test batch only. No app builds.

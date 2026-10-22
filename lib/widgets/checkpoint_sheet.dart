@@ -203,7 +203,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Restore this version?',
+                        'Restore this point?',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -282,7 +282,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                         backgroundColor: Theme.of(context).primaryColor,
                         foregroundColor: Theme.of(context).colorScheme.onPrimary,
                       ),
-                      child: const Text('Restore version'),
+                      child: const Text('Restore point'),
                     ),
                   ],
                 ),
@@ -1086,7 +1086,7 @@ class _CheckpointSheetState extends ConsumerState<CheckpointSheet> {
                         foregroundColor: Theme.of(context).colorScheme.onPrimary,
                       ),
                       icon: Icon(Icons.save, size: 18),
-                      label: const Text('Save Version'),
+                      label: const Text('Save History'),
                     ),
                   ),
                 ),

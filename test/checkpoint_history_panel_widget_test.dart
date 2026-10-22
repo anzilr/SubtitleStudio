@@ -5,6 +5,7 @@ import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/services/checkpoint_history_actions.dart';
 import 'package:subtitle_studio/services/checkpoint_history_graph.dart';
 import 'package:subtitle_studio/widgets/checkpoint_history_panel.dart';
+import 'package:subtitle_studio/widgets/checkpoint_history_rail.dart';
 
 class FakeHistoryCommands implements HistoryGraphCommands {
   final bool corrupt;
@@ -13,17 +14,20 @@ class FakeHistoryCommands implements HistoryGraphCommands {
   int? lastExpectedTipId;
   final List<HistoryRef> refs;
   final Checkpoint checkpoint;
+  final List<Checkpoint> additionalCheckpoints;
 
   FakeHistoryCommands({
     this.corrupt = false,
     this.detached = false,
     String? description,
     String operationType = 'snapshot',
+    List<Checkpoint>? additionalCheckpoints,
   }) : refs = [
           _ref('HEAD', 'head', 1,
               attached: detached ? null : 'refs/heads/main'),
           _ref('refs/heads/main', 'branch', 1),
         ],
+        additionalCheckpoints = additionalCheckpoints ?? <Checkpoint>[],
         checkpoint = Checkpoint(
           sessionId: 1,
           subtitleCollectionId: 9,
@@ -52,7 +56,8 @@ class FakeHistoryCommands implements HistoryGraphCommands {
   Future<CheckpointHistoryGraph> load() async {
     if (corrupt) throw StateError('Bad history');
     return CheckpointHistoryGraph.build(
-      sessionId: 1, checkpoints: [checkpoint], persistentRefs: refs);
+      sessionId: 1, checkpoints: [checkpoint, ...additionalCheckpoints],
+      persistentRefs: refs);
   }
 
   @override
@@ -120,11 +125,38 @@ Widget _host(FakeHistoryCommands actions) => ProviderScope(
   ),
 );
 
+Checkpoint _childPoint(int id, int parent, {bool active = false}) =>
+    Checkpoint(
+      sessionId: 1,
+      subtitleCollectionId: 9,
+      timestamp: DateTime.utc(2026, 10, 22),
+      operationType: 'edit',
+      description: 'Edited line $id',
+      parentCheckpointId: parent,
+      isActive: active,
+      deltas: const [],
+      snapshot: const [],
+    )..id = id;
+
+FakeHistoryCommands _forkedCommands() {
+  final fake = FakeHistoryCommands(additionalCheckpoints: [
+    _childPoint(2, 1),
+    _childPoint(3, 2, active: true),
+    _childPoint(4, 2),
+  ]);
+  fake.checkpoint.isActive = false;
+  fake.refs[0].targetCheckpointId = 3;
+  fake.refs[1].targetCheckpointId = 3;
+  fake.refs.add(FakeHistoryCommands._ref(
+      'refs/heads/review', 'branch', 4));
+  return fake;
+}
+
 void main() {
   testWidgets('displays actual HEAD and named branch labels', (tester) async {
     await tester.pumpWidget(_host(FakeHistoryCommands()));
     await tester.pumpAndSettle();
-    expect(find.text('Editing: Main edits'), findsOneWidget);
+    expect(find.text('Editing: Main path'), findsOneWidget);
     expect(find.byKey(const ValueKey('history-commit-1')), findsOneWidget);
     // The visual history track is drawn next to the existing action card;
     // graph rendering must not remove the accessible commit information.
@@ -132,11 +164,11 @@ void main() {
     expect(find.byKey(const ValueKey('history-ref-menu-refs/heads/main')),
         findsOneWidget);
     expect(find.byKey(const ValueKey('history-head-status')), findsOneWidget);
-    expect(find.text('Main edits · In use'), findsWidgets);
+    expect(find.text('Main path · In use'), findsWidgets);
     expect(find.textContaining('current branch'), findsNothing);
     expect(find.text('main'), findsNothing);
     expect(find.byKey(const ValueKey('history-legend')), findsOneWidget);
-    expect(find.text('Earlier versions'), findsOneWidget);
+    expect(find.text('Earlier points'), findsOneWidget);
     expect(find.text('History split'), findsOneWidget);
   });
 
@@ -151,7 +183,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Editing: review'), findsOneWidget);
     expect(find.text('review · In use'), findsWidgets);
-    expect(find.text('Main edits'), findsWidgets);
+    expect(find.text('Main path'), findsWidgets);
     expect(find.textContaining('current branch'), findsNothing);
     expect(commands.refs[0].symbolicBranchName, 'refs/heads/review');
   });
@@ -164,7 +196,7 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('history-node-menu-1')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Bookmark this version'));
+    await tester.tap(find.text('Bookmark this point'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const ValueKey('history-ref-name')),
         'review');
@@ -223,7 +255,7 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('history-node-menu-1')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Restore this version'));
+    await tester.tap(find.text('Restore this point'));
     await tester.pumpAndSettle();
     expect(find.textContaining('on a separate editing path'), findsOneWidget);
     await tester.tap(find.text('Restore').last);
@@ -231,7 +263,7 @@ void main() {
 
     expect(fake.lastExpectedHeadId, 1);
     expect(find.textContaining('History changed before the restore'), findsOneWidget);
-    expect(find.text('Editing: Main edits'), findsOneWidget);
+    expect(find.text('Editing: Main path'), findsOneWidget);
   });
 
 
@@ -239,8 +271,8 @@ void main() {
       (tester) async {
     await tester.pumpWidget(_host(FakeHistoryCommands(detached: true)));
     await tester.pumpAndSettle();
-    expect(find.text('Editing from version #1 · Separate path'), findsOneWidget);
-    expect(find.text('Editing: Main edits'), findsNothing);
+    expect(find.text('Editing from point #1 · Separate path'), findsOneWidget);
+    expect(find.text('Editing: Main path'), findsNothing);
     expect(find.byKey(const ValueKey('history-rail-1')), findsOneWidget);
   });
 
@@ -252,7 +284,7 @@ void main() {
     await tester.tap(
       find.byKey(const ValueKey('history-ref-menu-refs/heads/main')));
     await tester.pumpAndSettle();
-    expect(find.text('Use this editing path'), findsOneWidget);
+    expect(find.text('Switch to this path'), findsOneWidget);
     expect(find.text('Rename'), findsNothing);
     expect(find.text('Delete'), findsNothing);
   });
@@ -268,7 +300,7 @@ void main() {
     await tester.tap(
       find.byKey(const ValueKey('history-ref-menu-refs/bookmarks/review')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Restore bookmarked version'));
+    await tester.tap(find.text('Restore bookmarked point'));
     await tester.pumpAndSettle();
     expect(find.textContaining('editing paths and bookmarks stay available'),
         findsOneWidget);
@@ -287,16 +319,16 @@ void main() {
     await tester.tap(find.byKey(
       const ValueKey('history-ref-menu-refs/heads/main')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Use this editing path'));
+    await tester.tap(find.text('Switch to this path'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Open the saved subtitles from "Main edits"'),
+    expect(find.textContaining('Open the saved subtitles from "Main path"'),
         findsOneWidget);
-    await tester.tap(find.text('Use path').last);
+    await tester.tap(find.text('Switch path').last);
     await tester.pumpAndSettle();
 
     expect(fake.lastExpectedHeadId, 1);
     expect(fake.lastExpectedTipId, 1);
-    expect(find.text('Editing: Main edits'), findsOneWidget);
+    expect(find.text('Editing: Main path'), findsOneWidget);
   });
 
   testWidgets('list view hides decorative lanes but keeps version actions',
@@ -333,7 +365,7 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('history-manage-references')));
     await tester.pumpAndSettle();
-    expect(find.text('Editing paths & bookmarks'), findsOneWidget);
+    expect(find.text('Branches & bookmarks'), findsOneWidget);
     expect(find.byKey(const ValueKey('history-manage-refs/heads/main')),
         findsOneWidget);
     expect(find.byKey(const ValueKey('history-manage-refs/heads/review')),
@@ -345,10 +377,10 @@ void main() {
     await tester.tap(find.byKey(
         const ValueKey('history-manage-menu-refs/heads/main')));
     await tester.pumpAndSettle();
-    expect(find.text('Use this editing path'), findsOneWidget);
+    expect(find.text('Switch to this path'), findsOneWidget);
     expect(find.text('Rename'), findsNothing);
     expect(find.text('Delete'), findsNothing);
-    await tester.tap(find.text('Editing paths & bookmarks'));
+    await tester.tap(find.text('Branches & bookmarks'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(
@@ -366,7 +398,7 @@ void main() {
     expect(fake.refs.any((ref) => ref.name == 'refs/heads/main'), isTrue);
     expect(fake.refs.any((ref) => ref.name == 'refs/bookmarks/before-review'),
         isTrue);
-    expect(find.text('Editing: Main edits'), findsOneWidget);
+    expect(find.text('Editing: Main path'), findsOneWidget);
   });
 
   testWidgets('history toolbar fits narrow mobile view', (tester) async {
@@ -384,5 +416,91 @@ void main() {
         findsOneWidget);
     expect(find.byKey(const ValueKey('history-view-toggle')),
         findsOneWidget);
+  });
+
+  testWidgets('branch chips use different colors and filter sibling commits',
+      (tester) async {
+    await tester.pumpWidget(_host(_forkedCommands()));
+    await tester.pumpAndSettle();
+
+    final mainChip = tester.widget<ChoiceChip>(find.byKey(
+        const ValueKey('history-branch-filter-refs/heads/main')));
+    final reviewChip = tester.widget<ChoiceChip>(find.byKey(
+        const ValueKey('history-branch-filter-refs/heads/review')));
+    final mainColor = (mainChip.avatar! as Icon).color;
+    final reviewColor = (reviewChip.avatar! as Icon).color;
+    expect(mainColor, isNot(reviewColor));
+    final mainRail = tester.widget<CustomPaint>(find.byKey(
+        const ValueKey('history-rail-3'))).painter!
+        as CheckpointHistoryRailPainter;
+    final reviewRail = tester.widget<CustomPaint>(find.byKey(
+        const ValueKey('history-rail-4'))).painter!
+        as CheckpointHistoryRailPainter;
+    expect(mainRail.markerColor, mainColor);
+    expect(reviewRail.markerColor, reviewColor);
+
+    await tester.tap(find.byKey(
+        const ValueKey('history-branch-filter-refs/heads/review')));
+    await tester.pumpAndSettle();
+    expect(find.text('Showing review · 3 points'), findsOneWidget);
+    expect(find.byKey(const ValueKey('history-commit-4')), findsOneWidget);
+    expect(find.byKey(const ValueKey('history-commit-3')), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('history-show-all')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('history-commit-3')), findsOneWidget);
+    expect(find.byKey(const ValueKey('history-filter-status')), findsNothing);
+  });
+
+  testWidgets('manager path tap filters without restoring HEAD',
+      (tester) async {
+    final fake = _forkedCommands();
+    await tester.pumpWidget(_host(fake));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('history-manage-references')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(
+        const ValueKey('history-manage-refs/heads/review')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Showing review · 3 points'), findsOneWidget);
+    expect(find.byKey(const ValueKey('history-commit-3')), findsNothing);
+    expect(fake.lastExpectedHeadId, isNull);
+    expect(fake.refs[0].targetCheckpointId, 3);
+  });
+
+  testWidgets('many branches retain usable cards at 320 pixels',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 720);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+    final fake = FakeHistoryCommands(additionalCheckpoints: [
+      for (var id = 2; id <= 13; id++)
+        _childPoint(id, 1, active: id == 2),
+    ]);
+    fake.checkpoint.isActive = false;
+    fake.refs[0].targetCheckpointId = 2;
+    fake.refs[1].targetCheckpointId = 2;
+    for (var id = 3; id <= 13; id++) {
+      fake.refs.add(FakeHistoryCommands._ref(
+          'refs/heads/path-$id', 'branch', id));
+    }
+
+    await tester.pumpWidget(_host(fake));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    final painter = tester.widget<CustomPaint>(find.byKey(
+        const ValueKey('history-rail-13'))).painter!
+        as CheckpointHistoryRailPainter;
+    expect(CheckpointHistoryRailPainter.railWidth(painter.laneCount), 80);
+    await tester.tap(find.byKey(
+        const ValueKey('history-branch-filter-refs/heads/main')));
+    await tester.pumpAndSettle();
+    expect(find.text('Showing Main path · 2 points'), findsOneWidget);
+    expect(find.byKey(const ValueKey('history-commit-13')), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 }

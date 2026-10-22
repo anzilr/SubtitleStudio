@@ -6,12 +6,12 @@ class CheckpointHistoryLabels {
   const CheckpointHistoryLabels._();
 
   static String referenceName(HistoryGraphReference ref) {
-    if (ref.kind == 'head') return 'Current version';
+    if (ref.kind == 'head') return 'Current point';
     // The protected built-in reference stays 'refs/heads/main' in storage.
     // Only its visible name changes: subtitle editors should not need to
     // understand Git's default branch name.
     if (ref.kind == 'branch' && ref.name == 'refs/heads/main') {
-      return 'Main edits';
+      return 'Main path';
     }
     return ref.name.replaceFirst(RegExp(r'^refs/(heads|bookmarks)/'), '');
   }
@@ -23,23 +23,23 @@ class CheckpointHistoryLabels {
   }
 
   static String status(CheckpointHistoryGraph graph) {
-    if (graph.headCheckpointId == null) return 'No saved versions yet';
+    if (graph.headCheckpointId == null) return 'No history points yet';
     if (graph.isDetached) {
-      return 'Editing from version #${graph.headCheckpointId} · Separate path';
+      return 'Editing from point #${graph.headCheckpointId} · Separate path';
     }
     final attached = graph.attachedBranchName!;
     final name = attached == 'refs/heads/main'
-        ? 'Main edits'
+        ? 'Main path'
         : attached.replaceFirst('refs/heads/', '');
     return 'Editing: $name';
   }
 
   static String versionDetails(HistoryGraphNode node) {
-    final parts = <String>['Version #${node.checkpointId}'];
+    final parts = <String>['Point #${node.checkpointId}'];
     final parent = node.parentCheckpointId;
-    parts.add(parent == null ? 'First saved version' : 'From #$parent');
+    parts.add(parent == null ? 'First history point' : 'From #$parent');
     if (node.isHead) {
-      parts.add('Current version');
+      parts.add('Current point');
     } else if (node.isHeadAncestor) {
       parts.add('Earlier on this path');
     }
@@ -151,7 +151,7 @@ class CheckpointHistoryLabels {
   }
 
   static String checkoutTitle({required bool branch}) =>
-      branch ? 'Use this editing path?' : 'Restore this version?';
+      branch ? 'Switch to this path?' : 'Restore this point?';
 
   static String checkoutMessage({
     required bool branch,
@@ -163,7 +163,7 @@ class CheckpointHistoryLabels {
     }
     return 'Open the saved subtitles from $target on a separate editing '
         'path. Your existing editing paths and bookmarks stay available. '
-        'New edits continue from this version without changing the names '
+        'New edits continue from this point without changing the names '
         'or saved positions of your other paths.';
   }
 }
