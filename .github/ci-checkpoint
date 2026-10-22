@@ -281,3 +281,10 @@ beside the existing accessible history cards and preserved branch/bookmark
 checkout menus. Five pure graph-lane tests plus a widget integration check.
 Only flutter pub get, flutter analyze, flutter test on Linux. NO platform
 builds or Windows/macOS matrix; run once for this batched checkpoint.
+
+CP91 R1 final verification October 22 2026: correct fork test sibling
+order. Equal-depth/equal-time nodes sort by checkpoint ID ascending in
+graph validation, then render newest first; expected row IDs must be
+[4,3,2,1] rather than [3,4,2,1]. Initial CI had 722 passing and one
+assertion failure, clean analyzer. Final Flutter-only analyze/tests gate,
+no native builds or cross-platform host matrix.

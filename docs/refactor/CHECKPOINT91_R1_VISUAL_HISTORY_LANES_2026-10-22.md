@@ -49,7 +49,13 @@ desktop-specific fork.
 One Linux workflow runs `flutter pub get`, `flutter analyze`, and the
 full `flutter test` suite. It does not build Android, iOS, desktop or
 web artifacts, and it does not run the Windows/macOS host matrix.
-Record CI result after the complete gate finishes.
+The initial [Linux run 39825640596](https://github.com/anzilr/SubtitleStudio/actions/runs/39825640596)
+passed analysis with zero issues and 722 tests, but one new fork-layout
+test asserted the sibling IDs in the wrong display order. The graph
+sorts equal-depth/equal-time sibling nodes by ID ascending, then displays
+newest first. The follow-up test corrects the expected rows from
+`[3,4,2,1]` to `[4,3,2,1]`, without changing the validated layout or
+storage. The final clean gate will be recorded after completion.
 
 ## Next CP91 stages
 

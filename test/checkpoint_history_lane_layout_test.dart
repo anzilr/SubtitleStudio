@@ -73,9 +73,11 @@ void main() {
     ]);
     final lanes = CheckpointHistoryLaneLayout.fromGraph(graph);
     expect(lanes.laneCount, 2);
-    expect(lanes.rows.map((r) => r.node.checkpointId), [3, 4, 2, 1]);
+    // Equal-depth, equal-time siblings are ID-sorted in the validated
+    // graph, then rendered newest-first. Visual lanes follow that order.
+    expect(lanes.rows.map((r) => r.node.checkpointId), [4, 3, 2, 1]);
     final tip = lanes.rows[1];
-    expect(tip.node.checkpointId, 4);
+    expect(tip.node.checkpointId, 3);
     expect(tip.tracksAbove, [0]);
     expect(tip.tracksBelow, [0, 1]);
     final joint = lanes.rows[2];
