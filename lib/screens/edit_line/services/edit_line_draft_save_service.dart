@@ -1,28 +1,34 @@
 import 'package:subtitle_studio/database/models/models.dart';
+import 'package:subtitle_studio/screens/edit_line/models/edit_line_committed_cue.dart';
 import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
 
-/// Detached result of a manual Edit Line save or navigation autosave.
-/// Failed writes leave the UI's original line object untouched.
+/// Failed saves keep both the active cue and the UI's collection unchanged.
 class EditLineDraftSaveResult {
   final bool saved;
   final SubtitleLine? savedLine;
+  final List<SubtitleLine>? persistedLines;
 
-  const EditLineDraftSaveResult._(this.saved, this.savedLine);
+  const EditLineDraftSaveResult._(
+    this.saved,
+    this.savedLine,
+    this.persistedLines,
+  );
 
-  const EditLineDraftSaveResult.failed() : this._(false, null);
+  const EditLineDraftSaveResult.failed() : this._(false, null, null);
 
-  EditLineDraftSaveResult.success(SubtitleLine line) : this._(true, line);
+  EditLineDraftSaveResult.success(EditLineCommittedCue committed)
+      : this._(true, committed.selectedLine, committed.lines);
 }
 
-/// Shared commit path for Edit Line's manual Save and navigation autosave.
+/// Single transaction-based path for manual Save and navigation autosave.
 ///
-/// Screen validation and messages remain in the UI; this service prepares
-/// detached checkpoint before/after lines, calls the existing transactional
-/// repository, and only reports success when it accepted the mutation.
+/// Existing and inserted cues both return the committed row order and actual
+/// selected index. No UI cache is changed when persistence rejects the draft.
 class EditLineDraftSaveService {
-  final Future<bool> Function(SubtitleLine, {SubtitleLine? beforeLine})
-      saveExisting;
-  final Future<bool> Function(SubtitleLine, int) insertNew;
+  final Future<EditLineCommittedCue?> Function(
+    SubtitleLine, {SubtitleLine? beforeLine}
+  ) saveExisting;
+  final Future<EditLineCommittedCue?> Function(SubtitleLine, int) insertNew;
   final Future<void> Function(int) updateLastEditedIndex;
   final void Function(Object error, StackTrace stackTrace)? onIndexUpdateError;
 
@@ -59,21 +65,19 @@ class EditLineDraftSaveService {
       updated.original = originalText;
     }
 
-    final accepted = insertLine
+    final committed = insertLine
         ? await insertNew(updated, insertIndex)
         : await saveExisting(updated, beforeLine: before);
-    if (!accepted) {
+    if (committed == null) {
       return const EditLineDraftSaveResult.failed();
     }
 
-    // Editing the session's last-selected index is bookkeeping, not part of
-    // the successful checkpoint transaction. Do not misreport a saved line
-    // as failed if this non-critical follow-up fails.
+    // Use the post-sort index, not the index before the transaction.
     try {
-      await updateLastEditedIndex(updated.index);
+      await updateLastEditedIndex(committed.selectedLine.index);
     } catch (error, stackTrace) {
       onIndexUpdateError?.call(error, stackTrace);
     }
-    return EditLineDraftSaveResult.success(updated);
+    return EditLineDraftSaveResult.success(committed);
   }
 }

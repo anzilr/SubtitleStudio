@@ -25,7 +25,7 @@ extension _EditLineNavigation on EditSubtitleScreenState {
     }
   }
 
-  void _nextSubtitle(subtitleId, lineIndex) async {
+  void _nextSubtitle(subtitleId, int _lineIndex) async {
     // Don't stop repeat mode when navigating - let it continue
     // Only stop if we're outside the custom range
     if (_isRepeatModeEnabled && _isCustomRangeMode) {
@@ -46,8 +46,8 @@ extension _EditLineNavigation on EditSubtitleScreenState {
       return;
     }
 
-    // Verify the next index is within bounds before navigating
-    if (lineIndex > 0 && lineIndex <= _subtitle!.lines.length) {
+    // The save may reorder the selected cue; check bounds *after* saving.
+    if (_subtitleLine != null && _subtitle != null) {
       // Save changes if auto-save is enabled or we're in normal mode
       if (_autoSaveWithNavigation || !_showOriginalLine) {
         final saveSuccess = await _updateSubtitleSilently();
@@ -56,8 +56,17 @@ extension _EditLineNavigation on EditSubtitleScreenState {
           return;
         }
       }
-      // Navigate to next subtitle
-      await _fetchSubtitleLine(subtitleId, lineIndex - 1);
+      if (!mounted || _subtitleLine == null || _subtitle == null) return;
+      final targetIndex = _subtitleLine!.index + 1;
+      if (targetIndex > _subtitle!.lines.length) {
+        SnackbarHelper.showWarning(
+          context,
+          'This is the last subtitle',
+          duration: const Duration(seconds: 1),
+        );
+        return;
+      }
+      await _fetchSubtitleLine(subtitleId, targetIndex - 1);
 
       // Resume repeat if enabled
       if (_isRepeatModeEnabled) {
@@ -88,7 +97,7 @@ extension _EditLineNavigation on EditSubtitleScreenState {
     }
   }
 
-  void _prevSubtitle(subtitleId, lineIndex) async {
+  void _prevSubtitle(subtitleId, int _lineIndex) async {
     // Don't stop repeat mode when navigating - let it continue
     // Only stop if we're outside the custom range
     if (_isRepeatModeEnabled && _isCustomRangeMode) {
@@ -111,7 +120,7 @@ extension _EditLineNavigation on EditSubtitleScreenState {
       return;
     }
 
-    if (lineIndex > 0 && lineIndex <= _subtitle!.lines.length) {
+    if (_subtitleLine != null && _subtitle != null) {
       // Save changes if auto-save is enabled or we're in normal mode
       if (_autoSaveWithNavigation || !_showOriginalLine) {
         final saveSuccess = await _updateSubtitleSilently();
@@ -120,8 +129,17 @@ extension _EditLineNavigation on EditSubtitleScreenState {
           return;
         }
       }
-      // Navigate to the previous subtitle line (lineIndex is 1-based, convert to 0-based for array access)
-      await _fetchSubtitleLine(subtitleId, lineIndex - 1);
+      if (!mounted || _subtitleLine == null) return;
+      final targetIndex = _subtitleLine!.index - 1;
+      if (targetIndex < 1) {
+        SnackbarHelper.showWarning(
+          context,
+          'This is the first subtitle',
+          duration: const Duration(seconds: 1),
+        );
+        return;
+      }
+      await _fetchSubtitleLine(subtitleId, targetIndex - 1);
 
       // Resume repeat if we're in range and it was enabled
       if (_isRepeatModeEnabled) {

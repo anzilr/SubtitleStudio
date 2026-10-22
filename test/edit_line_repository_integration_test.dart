@@ -108,13 +108,13 @@ void main() {
           (await repository.fetchSubtitleLine(ids.collectionId, 1))!;
       final saver = EditLineDraftSaveService(
         saveExisting: (line, {beforeLine}) =>
-            repository.saveSubtitleLineChanges(
+            repository.saveSubtitleLineChangesResolved(
           collectionId: ids.collectionId,
           updatedLine: line,
           beforeLine: beforeLine,
           sessionId: ids.sessionId,
         ),
-        insertNew: (line, index) => repository.addSubtitleLineWithHistory(
+        insertNew: (line, index) => repository.addSubtitleLineWithHistoryResolved(
           collectionId: ids.collectionId,
           line: line,
           insertIndex: index,
@@ -152,6 +152,112 @@ void main() {
       expect(checkpoints.last.deltas.single.beforeState?.edited,
           'Earlier translation');
       expect(checkpoints.last.deltas.single.afterState?.edited, '');
+    });
+
+
+    test('timing reorder returns committed selection and full row order',
+        () async {
+      final ids = await _seed(harness);
+      final history = CheckpointRepository(harness.isar);
+      await history.createInitialSnapshot(
+        sessionId: ids.sessionId,
+        subtitleCollectionId: ids.collectionId,
+      );
+      final original = (await repository.fetchSubtitleLine(
+        ids.collectionId, 1,
+      ))!;
+      final updated = _line(
+        index: 1,
+        original: 'One',
+        edited: '',
+        start: '00:00:03,000',
+        end: '00:00:03,900',
+      )..comment = 'moved cue';
+      final committed = await repository.saveSubtitleLineChangesResolved(
+        collectionId: ids.collectionId,
+        updatedLine: updated,
+        beforeLine: original,
+        sessionId: ids.sessionId,
+      );
+      expect(committed, isNotNull);
+      expect(committed!.selectedLine.index, 2);
+      expect(committed.selectedLine.original, 'One');
+      expect(committed.selectedLine.edited, '');
+      expect(committed.lines.map((line) => line.original).toList(),
+          ['Two', 'One']);
+      expect(committed.lines.map((line) => line.index).toList(), [1, 2]);
+      expect(original.index, 1);
+      final persisted = (await repository.fetchSubtitleCollection(
+        ids.collectionId,
+      ))!;
+      expect(persisted.lines.map((line) => line.original).toList(),
+          ['Two', 'One']);
+      expect((await history.validateHistory(ids.sessionId)).isHealthy, isTrue);
+    });
+
+    test('identical text and timecodes retain distinct cue identity',
+        () async {
+      final ids = await _seed(harness);
+      await harness.isar.writeTxn(() async {
+        final collection = (await harness.isar.subtitleCollections.get(
+          ids.collectionId,
+        ))!;
+        collection.lines[0]
+          ..original = 'Same'
+          ..edited = ''
+          ..comment = 'first cue';
+        collection.lines[1]
+          ..original = 'Same'
+          ..edited = ''
+          ..comment = 'second cue';
+        await harness.isar.subtitleCollections.put(collection);
+      });
+      final original = (await repository.fetchSubtitleLine(
+        ids.collectionId, 1,
+      ))!;
+      final updated = _line(
+        index: 1,
+        original: 'Same',
+        edited: '',
+        start: '00:00:02,000',
+        end: '00:00:02,900',
+      )..comment = 'first cue';
+      final committed = await repository.saveSubtitleLineChangesResolved(
+        collectionId: ids.collectionId,
+        updatedLine: updated,
+        beforeLine: original,
+        sessionId: ids.sessionId,
+      );
+      expect(committed, isNotNull);
+      expect(committed!.selectedLine.index, 1);
+      expect(committed.selectedLine.comment, 'first cue');
+      expect(committed.lines[1].comment, 'second cue');
+      expect(committed.lines.map((line) => line.original).toList(),
+          ['Same', 'Same']);
+    });
+
+    test('insertion returns post-sort index and exact ordered rows',
+        () async {
+      final ids = await _seed(harness);
+      final inserted = _line(
+        index: 3,
+        original: 'Early inserted',
+        edited: '',
+        start: '00:00:00,500',
+        end: '00:00:00,800',
+      );
+      final committed = await repository.addSubtitleLineWithHistoryResolved(
+        collectionId: ids.collectionId,
+        line: inserted,
+        insertIndex: 2,
+        sessionId: ids.sessionId,
+      );
+      expect(committed, isNotNull);
+      expect(committed!.selectedLine.index, 1);
+      expect(committed.lines.map((line) => line.original).toList(),
+          ['Early inserted', 'One', 'Two']);
+      expect(committed.lines.map((line) => line.index).toList(), [1, 2, 3]);
+      expect(inserted.index, 3);
     });
 
     test('Save As updates paths without overwriting subsequent subtitle edits',

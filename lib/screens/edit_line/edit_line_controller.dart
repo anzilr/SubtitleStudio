@@ -561,13 +561,13 @@ class EditLineController extends Notifier<EditLineState> {
     final sessionId = state.sessionId;
     final saver = EditLineDraftSaveService(
       saveExisting: (line, {beforeLine}) =>
-          repository.saveSubtitleLineChanges(
+          repository.saveSubtitleLineChangesResolved(
         collectionId: collectionId,
         updatedLine: line,
         beforeLine: beforeLine,
         sessionId: sessionId,
       ),
-      insertNew: (line, index) => repository.addSubtitleLineWithHistory(
+      insertNew: (line, index) => repository.addSubtitleLineWithHistoryResolved(
         collectionId: collectionId,
         line: line,
         insertIndex: index,

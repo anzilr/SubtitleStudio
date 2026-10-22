@@ -5,6 +5,7 @@ import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/utils/subtitle_sorting.dart';
 import 'package:subtitle_studio/screens/edit_line/repositories/edit_line_preferences_repository.dart';
+import 'package:subtitle_studio/screens/edit_line/models/edit_line_committed_cue.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 import 'package:subtitle_studio/widgets/video/subtitle.dart'; // For Subtitle
 import 'package:subtitle_studio/utils/subtitle_parser.dart'; // For SimpleSubtitleLine
@@ -175,15 +176,34 @@ class EditLineRepository {
     }
   }
 
-  /// Persist a complete line atomically with v2 checkpoint history.
+  /// Compatibility API for callers that need only the transaction outcome.
   Future<bool> saveSubtitleLineChanges({
     required Id collectionId,
     required SubtitleLine updatedLine,
     required int sessionId,
     SubtitleLine? beforeLine,
   }) async {
+    return await saveSubtitleLineChangesResolved(
+      collectionId: collectionId,
+      updatedLine: updatedLine,
+      sessionId: sessionId,
+      beforeLine: beforeLine,
+    ) != null;
+  }
+
+  /// Persist an edit and return the exact committed cue and sorted line order.
+  ///
+  /// The candidate object's index is updated by the same in-transaction
+  /// sorter that constructs the checkpoint. Never guess identity by text.
+  Future<EditLineCommittedCue?> saveSubtitleLineChangesResolved({
+    required Id collectionId,
+    required SubtitleLine updatedLine,
+    required int sessionId,
+    SubtitleLine? beforeLine,
+  }) async {
     try {
-      await _historyTransaction.commit(
+      late SubtitleLine candidate;
+      final committed = await _historyTransaction.commit(
         sessionId: sessionId,
         subtitleCollectionId: collectionId,
         operationType: 'edit',
@@ -204,14 +224,13 @@ class EditLineRepository {
               persistedBefore.endTime != updatedLine.endTime;
           final historyChanged =
               !CheckpointStateReducer.samePersistedLine(
-            persistedBefore,
-            updatedLine,
-          );
+                persistedBefore,
+                updatedLine,
+              );
 
-          final nextLines =
-              CheckpointStateReducer.copyLines(currentLines);
-          nextLines[arrayIndex] =
-              CheckpointStateReducer.copyLine(updatedLine);
+          final nextLines = CheckpointStateReducer.copyLines(currentLines);
+          candidate = CheckpointStateReducer.copyLine(updatedLine);
+          nextLines[arrayIndex] = candidate;
 
           if (timingChanged) {
             final sorted = sortAndReindexSubtitleLines(nextLines);
@@ -240,27 +259,47 @@ class EditLineRepository {
           );
         },
       );
-      return true;
+      final selectedIndex = candidate.index - 1;
+      return EditLineCommittedCue(
+        selectedLine: committed.persistedLines[selectedIndex],
+        lines: committed.persistedLines,
+      );
     } catch (error, stackTrace) {
       await logError(
         'Failed to save complete subtitle line',
         error: error,
         stackTrace: stackTrace,
-        context: 'EditLineRepository.saveSubtitleLineChanges',
+        context: 'EditLineRepository.saveSubtitleLineChangesResolved',
       );
-      return false;
+      return null;
     }
   }
 
-  /// Atomic insert used by active Edit Line UI.
+  /// Compatibility API for callers that only need the insertion outcome.
   Future<bool> addSubtitleLineWithHistory({
     required Id collectionId,
     required SubtitleLine line,
     required int insertIndex,
     required int sessionId,
   }) async {
+    return await addSubtitleLineWithHistoryResolved(
+      collectionId: collectionId,
+      line: line,
+      insertIndex: insertIndex,
+      sessionId: sessionId,
+    ) != null;
+  }
+
+  /// Insert and identify the inserted cue after sorting and reindexing.
+  Future<EditLineCommittedCue?> addSubtitleLineWithHistoryResolved({
+    required Id collectionId,
+    required SubtitleLine line,
+    required int insertIndex,
+    required int sessionId,
+  }) async {
     try {
-      await _historyTransaction.commit(
+      late SubtitleLine candidate;
+      final committed = await _historyTransaction.commit(
         sessionId: sessionId,
         subtitleCollectionId: collectionId,
         operationType: 'add',
@@ -269,8 +308,9 @@ class EditLineRepository {
           if (insertIndex < 0 || insertIndex > currentLines.length) {
             throw RangeError.index(insertIndex, currentLines, 'insertIndex');
           }
+          candidate = CheckpointStateReducer.copyLine(line);
           final next = CheckpointStateReducer.copyLines(currentLines)
-            ..insert(insertIndex, CheckpointStateReducer.copyLine(line));
+            ..insert(insertIndex, candidate);
           return CheckpointMutationPlan(
             nextLines: sortAndReindexSubtitleLines(next),
             deltas: [
@@ -283,15 +323,18 @@ class EditLineRepository {
           );
         },
       );
-      return true;
+      return EditLineCommittedCue(
+        selectedLine: committed.persistedLines[candidate.index - 1],
+        lines: committed.persistedLines,
+      );
     } catch (error, stackTrace) {
       await logError(
         'Failed to add subtitle line with history',
         error: error,
         stackTrace: stackTrace,
-        context: 'EditLineRepository.addSubtitleLineWithHistory',
+        context: 'EditLineRepository.addSubtitleLineWithHistoryResolved',
       );
-      return false;
+      return null;
     }
   }
 

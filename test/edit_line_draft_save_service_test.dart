@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:subtitle_studio/database/models/models.dart';
+import 'package:subtitle_studio/screens/edit_line/models/edit_line_committed_cue.dart';
 import 'package:subtitle_studio/screens/edit_line/services/edit_line_draft_save_service.dart';
 
 SubtitleLine _line({String? edited = 'Earlier translation'}) => SubtitleLine()
@@ -11,6 +12,9 @@ SubtitleLine _line({String? edited = 'Earlier translation'}) => SubtitleLine()
   ..marked = true
   ..comment = 'Review this'
   ..resolved = false;
+
+EditLineCommittedCue _committed(SubtitleLine line) =>
+    EditLineCommittedCue(selectedLine: line, lines: [line]);
 
 Future<EditLineDraftSaveResult> _save(
   EditLineDraftSaveService service,
@@ -46,7 +50,7 @@ void main() {
         saveExisting: (line, {beforeLine}) async {
           stored = line;
           before = beforeLine!;
-          return true;
+          return _committed(line);
         },
         insertNew: (_, __) async => fail('Unexpected insert in $mode'),
         updateLastEditedIndex: (index) async => indices.add(index),
@@ -86,9 +90,9 @@ void main() {
       saveExisting: (line, {beforeLine}) async {
         saved = line;
         expect(beforeLine!.edited, isNull);
-        return true;
+        return _committed(line);
       },
-      insertNew: (_, __) async => false,
+      insertNew: (_, __) async => null,
       updateLastEditedIndex: (_) async {},
     );
 
@@ -104,8 +108,8 @@ void main() {
     final current = _line();
     var indexUpdates = 0;
     final service = EditLineDraftSaveService(
-      saveExisting: (_, {beforeLine}) async => false,
-      insertNew: (_, __) async => false,
+      saveExisting: (_, {beforeLine}) async => null,
+      insertNew: (_, __) async => null,
       updateLastEditedIndex: (_) async { indexUpdates++; },
     );
 
@@ -127,7 +131,7 @@ void main() {
       insertNew: (line, index) async {
         expect(index, 7);
         expect(line.edited, 'New cue');
-        return accept;
+        return accept ? _committed(line) : null;
       },
       updateLastEditedIndex: (index) async => indices.add(index),
     );
@@ -145,13 +149,36 @@ void main() {
       () async {
     final errors = <Object>[];
     final service = EditLineDraftSaveService(
-      saveExisting: (_, {beforeLine}) async => true,
-      insertNew: (_, __) async => false,
+      saveExisting: (line, {beforeLine}) async => _committed(line),
+      insertNew: (_, __) async => null,
       updateLastEditedIndex: (_) async => throw StateError('index denied'),
       onIndexUpdateError: (error, _) => errors.add(error),
     );
 
     expect((await _save(service, _line())).saved, isTrue);
     expect(errors, hasLength(1));
+  });
+  test('committed position determines session last edited index',
+      () async {
+    final original = _line();
+    final updated = _line()..index = 1;
+    final neighbor = _line()
+      ..index = 2
+      ..original = 'Neighbor';
+    final savedIndices = <int>[];
+    final service = EditLineDraftSaveService(
+      saveExisting: (_, {beforeLine}) async => EditLineCommittedCue(
+        selectedLine: updated,
+        lines: [updated, neighbor],
+      ),
+      insertNew: (_, __) async => null,
+      updateLastEditedIndex: (index) async => savedIndices.add(index),
+    );
+    final result = await _save(service, original);
+    expect(result.saved, isTrue);
+    expect(result.savedLine!.index, 1);
+    expect(result.persistedLines!.map((line) => line.index), [1, 2]);
+    expect(savedIndices, [1]);
+    expect(original.index, 3);
   });
 }

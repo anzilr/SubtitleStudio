@@ -205,3 +205,10 @@ metadata, and checkpoint before-state. Honor repository rejection, avoid
 mutating the UI/preview on failure, and treat post-commit last-index updates
 as noncritical. Verify with pure service tests and Isar checkpoint integration
 plus full Linux Flutter analysis/tests; no application builds in CI.
+
+CP90 R8 October 22 2026: Edit Line save returns exact post-sort selected
+cue and full ordered Isar/checkpoint rows; no cached-row patch or identity
+guessing for equal-text/time subtitles. Next/previous navigation resolves
+adjacent cue after autosave. Regression tests cover sorting, blank edits,
+identity collisions and inserted cue position. Linux Flutter analyze/full
+tests ONLY; no native builds or unrelated Windows/macOS host matrix.

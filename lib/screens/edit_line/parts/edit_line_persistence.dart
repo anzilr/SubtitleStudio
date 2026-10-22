@@ -25,16 +25,11 @@ extension _EditLinePersistence on EditSubtitleScreenState {
     if (!mounted) return true;
 
     final savedLine = result.savedLine!;
+    final committedLines = result.persistedLines!;
     _setEditLineState(() {
       _subtitleLine = savedLine;
-      final position = collection.lines.indexWhere(
-        (line) => line.index == savedLine.index,
-      );
-      if (position >= 0) {
-        collection.lines[position] = savedLine;
-      } else {
-        collection.lines.add(savedLine);
-      }
+      collection.lines = committedLines;
+      _currentIndexController.text = savedLine.index.toString();
     });
     _markSubtitlesForRegeneration();
     _generateSubtitles();
@@ -215,25 +210,11 @@ extension _EditLinePersistence on EditSubtitleScreenState {
 
         // Check if we should save directly to file
         if (_isSaveToFileEnabled && _subtitle != null) {
-          // Get the current edited content from the UI, not from database
-          // Create an updated SubtitleLine with current form data
-          final updatedLine =
-              SubtitleLine()
-                ..index = _subtitleLine!.index
-                ..startTime = _startTimeController.text
-                ..endTime = _endTimeController.text
-                ..original = _originalController.text
-                ..edited = _editedController.text
-                ..marked = _subtitleLine!.marked;
-
-          // Create a copy of all lines and update the current one
-          final updatedLines = List<SubtitleLine>.from(_subtitle!.lines);
-          final currentIndex = updatedLines.indexWhere((line) => line.index == _subtitleLine!.index);
-          if (currentIndex != -1) {
-            updatedLines[currentIndex] = updatedLine;
-          }
-
-          await _performEnhancedFileSave(contxt, updatedLines);
+          // Export the exact post-transaction order and cue metadata.
+          await _performEnhancedFileSave(
+            contxt,
+            List<SubtitleLine>.from(_subtitle!.lines),
+          );
         } else {
           // Only show database-only success message if not saving to file
           if (!mounted) return true;

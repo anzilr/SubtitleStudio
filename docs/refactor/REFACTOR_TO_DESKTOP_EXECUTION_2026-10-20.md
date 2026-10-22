@@ -220,6 +220,16 @@ integration test were added.
 The Windows/macOS file-host matrix was not triggered because file access,
 project format and native media are unchanged.
 
+**CP90 R8 (October 22, 2026):** Repository commits now return the actual
+selected cue and complete sorted line order from the atomic Isar/checkpoint
+transaction after timing edits and insertion. Edit Line refreshes selection,
+in-memory subtitle rows, video projection, and Save-to-file data using that
+result. Next/Previous selects the neighbor *after* autosave. Legacy boolean
+save interfaces remain unchanged, and identical text/time collision cases
+are covered in Isar integration tests.
+[R8 report](CHECKPOINT90_R8_CUE_REORDER_SELECTION_2026-10-22.md).
+**Verification:** Full Linux Flutter analyzer/tests pending.
+
 - Identify and isolate the largest remaining mixed-responsibility Editor/Edit Line/Source View modules; decouple UI from persistence/media/filesystem operations while preserving existing Riverpod state and checkpoint behavior.
 - Prefer injectable services/coordinators, typed outcomes and widget tests. Verify source editing round trips, comment/mark preservation, secondary track fallback, keyboard and Android Back behavior.
 - Keep the shared core reusable by both Flutter mobile widgets and the later desktop presentation.
