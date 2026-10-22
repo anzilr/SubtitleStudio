@@ -59,9 +59,14 @@ of alternate paths, and preservation of protected reference actions.
 
 ## Verification
 
-One Linux-only CI run will execute `flutter pub get`,
-`flutter analyze` and full `flutter test`. No Android, iOS, web,
-Windows, macOS or Linux app builds and no operating-system test matrix.
+The final [Linux GitHub Actions run #39832780788](https://github.com/anzilr/SubtitleStudio/actions/runs/39832780788)
+passed **746 Flutter tests**, and `flutter analyze` reported **No issues
+found**. This includes new regression coverage for default-path aliases,
+alternate active paths, history controls, and unchanged internal ref
+identity/permissions. The verified code is
+[`1a05aa9`](https://github.com/anzilr/SubtitleStudio/commit/1a05aa9962991c9b3340c930f220f6456103db24).
+Only Flutter dependency resolution, analysis and tests ran on Linux;
+there were no native builds or multiplatform matrix checks.
 
 ## Next
 

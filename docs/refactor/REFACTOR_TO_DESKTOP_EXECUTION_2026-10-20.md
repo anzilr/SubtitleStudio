@@ -356,7 +356,7 @@ name, Git-style reference identity, branch head/tip guards and portable
 project format remain unchanged. Extended label and widget tests verify
 the display wording and reference behavior.
 [R4 report](CHECKPOINT91_R4_FRIENDLY_EDITING_PATH_LABELS_2026-10-22.md).
-**Verification:** Flutter analysis and full tests pending.
+**Verification:** [Linux 746 Flutter tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39832780788).
 
 ### CP91 — Outstanding roadmap UX needed on mobile
 - Deliver the Git-style **visual checkpoint history** with plain-language controls, accessible list alternative and protected refs; preserve `.msone` compatibility and multi-branch correctness.
