@@ -33,7 +33,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('LIVE · READ ONLY'), findsOneWidget);
-    expect(find.text('Live project.srt'), findsOneWidget);
+    expect(find.text('Live project.srt'), findsWidgets);
+    expect(find.text('Night Drive.mp4'), findsNothing);
     expect(find.text('Original live cue'), findsWidgets);
     expect(find.text('Edited live cue'), findsWidgets);
     expect(find.text('Encoding: UTF-8'), findsOneWidget);
