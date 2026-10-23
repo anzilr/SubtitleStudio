@@ -14,6 +14,8 @@ import 'studio_dock_session_snapshot.dart';
 import 'studio_dock_text_edit_service.dart';
 import 'studio_dock_media_plan.dart';
 import 'studio_dock_video_surface.dart';
+import 'studio_dock_waveform_surface.dart';
+import 'studio_dock_playback_link.dart';
 
 /// Shared live-session Studio Dock host. In DS3 R2 it can optionally expose
 /// text-only editing through the existing atomic history transaction.
@@ -54,6 +56,7 @@ class _StudioDockReadOnlySessionViewState
   late Future<StudioDockSessionSnapshot> _snapshot;
   Future<String?>? _videoPath;
   StudioDockSessionSnapshot? _latestBaseline;
+  final StudioDockPlaybackLink _playback = StudioDockPlaybackLink();
 
   Future<bool> _applyText(int cueNumber, String editedText) async {
     final baseline = _latestBaseline;
@@ -91,6 +94,7 @@ class _StudioDockReadOnlySessionViewState
 
   @override
   void dispose() {
+    _playback.dispose();
     if (widget.suppressParentEditorHotkeys) {
       MSoneHotkeyManager.instance.resumeCallbacks();
     }
@@ -190,6 +194,27 @@ class _StudioDockReadOnlySessionViewState
                 collectionId: session.collectionId,
                 videoPath: validVideoPath,
                 subtitles: StudioDockMediaPlan.overlayCues(session),
+                playback: _playback,
+              ),
+        waveformSurface: validVideoPath == null || !widget.allowNativePlayback
+            ? null
+            : StudioDockWaveformSurface(
+                key: ValueKey('studio-dock-waveform-${session.collectionId}'),
+                videoPath: validVideoPath,
+                collectionId: session.collectionId,
+                playback: _playback,
+                subtitles: [
+                  for (final line in session.cues)
+                    SubtitleLine()
+                      ..index = line.index
+                      ..startTime = line.start
+                      ..endTime = line.end
+                      ..original = line.original
+                      ..edited = line.storedEdited
+                      ..marked = line.marked
+                      ..comment = line.comment
+                      ..resolved = line.resolved,
+                ],
               ),
       );
       final mediaFuture = _videoPath;
