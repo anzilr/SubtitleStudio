@@ -432,3 +432,8 @@ privacy regression trace signatures; rerun full Flutter quality gate.
 CP92 R2 FFmpeg-helper audit follow-up: suppress personal path and SAF
 parameter interpolation in shared URI/path normalization diagnostics,
 without changing normalization or extraction operations.
+
+CP92 R3 October 23 2026: replace the Edit Line unsaved changes bottom sheet
+with a modal AlertDialog; retain Save, Discard and Cancel semantics, prevent
+duplicate save requests and system dismissal mid-save. Add dialog widget tests.
+Run only Flutter dependency resolution, analysis and tests; no platform builds.

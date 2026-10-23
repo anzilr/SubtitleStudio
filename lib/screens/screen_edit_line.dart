@@ -333,7 +333,7 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
 
   // Show confirmation dialog for unsaved changes
   Future<bool> _showUnsavedChangesDialog() async {
-    return showUnsavedChangesSheet(
+    return showUnsavedChangesDialog(
       context: context,
       onLeaveWithoutSaving: () {
         final currentIndex =

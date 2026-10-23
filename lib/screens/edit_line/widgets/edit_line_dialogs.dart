@@ -1,28 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:subtitle_studio/themes/studio_design_tokens.dart';
 
-Future<bool> showUnsavedChangesSheet({
+Future<bool> showUnsavedChangesDialog({
   required BuildContext context,
   required VoidCallback onLeaveWithoutSaving,
   required Future<bool> Function() onSave,
   required VoidCallback onSavedAndLeave,
 }) async {
-  return await showModalBottomSheet<bool>(
+  return await showDialog<bool>(
         context: context,
-        isScrollControlled: true,
-        enableDrag: true,
-        isDismissible: true,
-        backgroundColor: StudioDesignTokens.of(context).surface,
-        builder: (sheetContext) {
-          final tokens = StudioDesignTokens.of(sheetContext);
+        barrierDismissible: false,
+        builder: (dialogContext) {
+          final tokens = StudioDesignTokens.of(dialogContext);
           final primaryColor = tokens.primaryAction;
           final mutedColor = tokens.mutedText;
+          var isSaving = false;
 
-          return Container(
-            margin: const EdgeInsets.all(16),
-            child: AlertDialog(
+          return StatefulBuilder(
+            builder: (context, setDialogState) => PopScope(
+              canPop: !isSaving,
+              child: AlertDialog(
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(StudioRadius.sheet),
+                borderRadius: BorderRadius.circular(StudioRadius.card),
               ),
               title: Row(
                 children: [
@@ -42,7 +41,7 @@ Future<bool> showUnsavedChangesSheet({
                   Expanded(
                     child: Text(
                       'Unsaved Changes',
-                      style: Theme.of(sheetContext)
+                      style: Theme.of(dialogContext)
                           .textTheme
                           .titleLarge
                           ?.copyWith(fontWeight: FontWeight.bold),
@@ -50,8 +49,9 @@ Future<bool> showUnsavedChangesSheet({
                   ),
                   IconButton(
                     icon: const Icon(Icons.close),
-                    onPressed: () =>
-                        Navigator.of(sheetContext).pop(false),
+                    onPressed: isSaving
+                        ? null
+                        : () => Navigator.of(dialogContext).pop(false),
                     tooltip: 'Close (ESC)',
                   ),
                 ],
@@ -62,13 +62,12 @@ Future<bool> showUnsavedChangesSheet({
                 children: [
                   Text(
                     'You have unsaved changes in this subtitle line.',
-                    style:
-                        Theme.of(sheetContext).textTheme.bodyMedium,
+                    style: Theme.of(dialogContext).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'What would you like to do?',
-                    style: Theme.of(sheetContext)
+                    style: Theme.of(dialogContext)
                         .textTheme
                         .bodyMedium
                         ?.copyWith(color: mutedColor),
@@ -77,30 +76,50 @@ Future<bool> showUnsavedChangesSheet({
               ),
               actions: [
                 TextButton(
-                  onPressed: () {
-                    Navigator.of(sheetContext).pop(false);
-                    onLeaveWithoutSaving();
-                  },
+                  onPressed: isSaving
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: isSaving
+                      ? null
+                      : () {
+                          Navigator.of(dialogContext).pop(false);
+                          onLeaveWithoutSaving();
+                        },
                   style: TextButton.styleFrom(
                     foregroundColor: tokens.dangerText,
                   ),
                   child: const Text('Leave Without Saving'),
                 ),
                 ElevatedButton(
-                  onPressed: () async {
-                    final saved = await onSave();
-                    if (saved && sheetContext.mounted) {
-                      Navigator.of(sheetContext).pop(false);
-                      onSavedAndLeave();
-                    }
-                  },
+                  onPressed: isSaving
+                      ? null
+                      : () async {
+                          setDialogState(() => isSaving = true);
+                          var leaving = false;
+                          try {
+                            final saved = await onSave();
+                            if (saved && dialogContext.mounted) {
+                              leaving = true;
+                              Navigator.of(dialogContext).pop(false);
+                              onSavedAndLeave();
+                            }
+                          } finally {
+                            if (!leaving && dialogContext.mounted) {
+                              setDialogState(() => isSaving = false);
+                            }
+                          }
+                        },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,
                     foregroundColor: tokens.onPrimaryAction,
                   ),
-                  child: const Text('Save & Leave'),
+                  child: Text(isSaving ? 'Saving...' : 'Save & Leave'),
                 ),
               ],
+              ),
             ),
           );
         },
