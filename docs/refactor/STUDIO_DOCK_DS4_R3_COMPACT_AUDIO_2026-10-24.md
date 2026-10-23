@@ -28,3 +28,7 @@ Branch: feature/studio-dock-integration
 
 ## Follow-up safety guard
 - The compact Studio Dock waveform now passes enableTimeEditing=false, preventing right-click, long-press, and playhead double-click from entering local-only timing/add-line modes. Seeking, zoom, pan and wheel remain available. The default is true for established mobile behavior. Implement timing/insertion only through checkpoint-backed DS5 commands.
+
+## Final source quality gate
+- [Final Studio Dock quality run #40032338427](https://github.com/anzilr/SubtitleStudio/actions/runs/40032338427): **PASSED**, analyzer zero issues and **47 Studio Dock tests passed** after the no-unsaved-waveform-time-edit guard was included.
+- [Final full-repository Flutter quality run #40032498785](https://github.com/anzilr/SubtitleStudio/actions/runs/40032498785): triggered for the final source; full-suite completion and physical Windows media acceptance are separate, pending gates.
