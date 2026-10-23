@@ -491,3 +491,5 @@ DS3 R1 2026-10-23: feature/studio-dock-integration branches from current refacto
 DS3 R1 FINAL GATE 2026-10-23: live read-only real session route on native desktop only; prevent underlying editor keyboard actions via MSoneHotkeyManager callback suppression; test empty sessions and safe controls, ownership, no writes. Flutter pub get/analyze/test ONLY; no builds.
 
 DS3 R1 RERUN 2026-10-23: fix read-only widget analyzer check and unused test import; Flutter analyze and flutter test only, no builds.
+
+DS3 R1 FINAL PRESENTATION CHECK 2026-10-23: omit all fictional demo project metadata from real read-only Explorer, assert real session sidebar and no demo videos. Rerun Flutter-only CI, no native builds.
