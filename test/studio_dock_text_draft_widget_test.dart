@@ -79,6 +79,48 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('toolbar Import/New cannot bypass unsaved-draft confirmation',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    tester.view.physicalSize = const Size(1680, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    var imports = 0;
+    var creates = 0;
+    await tester.pumpWidget(MaterialApp(
+      home: DesktopWorkspacePreview(
+        liveReadOnly: true,
+        onApplyCueText: (_, __) async => true,
+        onImportFile: () => imports++,
+        onNewProject: () => creates++,
+        initialCues: const [WorkspaceDemoCue(
+          id: 1, start: '00:00:01,000', end: '00:00:02,000',
+          original: 'Original', edited: 'Earlier edit')],
+      ),
+    ));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+        find.byKey(const ValueKey('studio-edit-1-0')), 'Unsaved edit');
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('studio-dock-toolbar-import')));
+    await tester.pumpAndSettle();
+    expect(find.text('Unsaved subtitle edit'), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(imports, 0);
+    expect(creates, 0);
+
+    await tester.tap(find.byKey(const ValueKey('studio-dock-toolbar-new')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.descendant(
+      of: find.byType(AlertDialog), matching: find.text('Discard')));
+    await tester.pumpAndSettle();
+    expect(creates, 1);
+    expect(imports, 0);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('failed Apply retains draft and does not advance selection',
       (tester) async {
     await launch(tester, apply: (_, __) async => false);
