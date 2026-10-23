@@ -571,6 +571,16 @@ unchanged. [R7 report](CHECKPOINT92_R7_COMPATIBILITY_SHIM_CLEANUP_2026-10-23.md)
 - Native builds and smoke tests on Android and desktop operating systems on user/local machines. Preserve fast Back/touch behavior, media lifecycle, file/SAF grants and `.msone` roundtrip.
 - Resolve open P0/P1 core defects, publish a migration/compatibility summary, and declare the shared architecture ready.
 
+**CP93 R1 (October 23, 2026):** Begin acceptance with synthetic end-to-end
+`.msone` export→codec→fresh-Isar-import tests for deliberately empty cues,
+non-English/multiline subtitles, selected charset, detached HEAD, user-named
+branches/bookmarks and checkpoint parent-ID remapping. Add a legacy `.msone`
+fixture without a history-ref section and a distinct native Android/Windows
+smoke checklist. Runtime implementation remains unchanged; native sign-off
+must not be inferred from Linux CI.
+[R1 acceptance report](CHECKPOINT93_R1_PORTABILITY_ACCEPTANCE_2026-10-23.md).
+**Verification:** Pending Linux Flutter gate; device evidence pending.
+
 ### Production Desktop Workspace Integration / UI [AFTER CP93]
 - The presentation shell may be designed and previewed now on the isolated branch. After CP93, connect it to the shared Riverpod, Isar, project, checkpoint, encoding and file-access core without duplicating domain logic.
 - PC single-screen workflow: project navigator/history, video + waveform, cue editor/table, tools/sidebar; keyboard shortcuts, resizable panes and platform file dialogs.

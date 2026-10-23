@@ -454,3 +454,9 @@ CP92 R7 October 23 2026: remove unused SubtitleImportResult legacy map
 converters and deprecated Dart SAF openFileUriOnly forwarding alias while
 keeping the native Android URI-only picker and persisted project formats.
 Run full Flutter analysis and tests on Linux, without platform builds.
+
+CP93 R1 October 23 2026: add synthetic .msone project portability and
+legacy import integration acceptance against real Isar. Preserve blank cues,
+encoding preferences, detached HEAD and named refs across codec/ID remap.
+Run full Flutter analyze and tests in Linux CI; native device smoke remains
+separate and pending, without any platform build in GitHub Actions.
