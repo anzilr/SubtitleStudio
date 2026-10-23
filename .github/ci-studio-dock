@@ -13,3 +13,5 @@ DS4 R1.1 TEST FIX 2026-10-24: fix project-dialog dismissal lifecycle and branded
 DS4 R1.1 LAST GATE 2026-10-24: guard unsaved draft before toolbar New or Import; test Cancel/Discard; Studio Dock only, no classic UI or builds.
 
 DS4 R2 2026-10-24: link production WaveformWidget through the existing single media_kit player, player state, paced seek and Isar cue projection; focused Flutter analysis and tests only, no builds.
+
+DS4 R2 FINAL ANALYZE+TEST 2026-10-24: fixed SubtitleLine model import; added direct Attach Video with save path, native picker and draft guard. Test production waveform pair and video link. Flutter only; NO platform builds.
