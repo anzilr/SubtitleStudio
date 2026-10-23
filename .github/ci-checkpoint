@@ -428,3 +428,7 @@ Run Flutter pub get/analyze/test in Linux CI only; no native builds.
 
 CP92 R2 follow-up October 23 2026: escape literal dollar signs in
 privacy regression trace signatures; rerun full Flutter quality gate.
+
+CP92 R2 FFmpeg-helper audit follow-up: suppress personal path and SAF
+parameter interpolation in shared URI/path normalization diagnostics,
+without changing normalization or extraction operations.

@@ -40,9 +40,9 @@ class MobileFFmpeg implements FFmpegInterface {
       try {
         final uri = Uri.parse(uriOrPath);
         return uri.toFilePath();
-      } catch (e) {
+      } catch (_) {
         if (kDebugMode) {
-          print('Error parsing URI: $e, using original path');
+          print('Could not parse media file URI; using original locator');
         }
         // Fallback to removing file:// prefix
         return uriOrPath.replaceFirst('file://', '');
@@ -58,7 +58,7 @@ class MobileFFmpeg implements FFmpegInterface {
       normalizedPath = normalizedPath.replaceAll('\\', '/');
       
       if (kDebugMode && normalizedPath != uriOrPath) {
-        print('Unix-style path conversion: "$uriOrPath" → "$normalizedPath"');
+        print('Normalized Unix-style media path separators');
       }
       
       return normalizedPath;
@@ -79,18 +79,18 @@ class MobileFFmpeg implements FFmpegInterface {
         );
         if (safParameter != null) {
           if (kDebugMode) {
-            print('Converted SAF URI to FFmpeg parameter: $safParameter');
+            print('Converted SAF URI to FFmpeg input parameter');
           }
           return safParameter;
         } else {
           if (kDebugMode) {
-            print('Failed to convert SAF URI, using original path: $filePath');
+            print('Could not convert SAF URI; using original locator');
           }
           return filePath;
         }
-      } catch (e) {
+      } catch (_) {
         if (kDebugMode) {
-          print('Error converting SAF URI: $e, using original path: $filePath');
+          print('Could not convert SAF URI; using original locator');
         }
         return filePath;
       }
@@ -648,9 +648,9 @@ class SystemFFmpeg implements FFmpegInterface {
       try {
         final uri = Uri.parse(uriOrPath);
         return uri.toFilePath();
-      } catch (e) {
+      } catch (_) {
         if (kDebugMode) {
-          print('Error parsing URI: $e, using original path');
+          print('Could not parse media file URI; using original locator');
         }
         // Fallback to removing file:// prefix and normalizing
         return path.normalize(uriOrPath.replaceFirst('file://', ''));
@@ -670,7 +670,7 @@ class SystemFFmpeg implements FFmpegInterface {
       normalizedPath = path.normalize(normalizedPath);
       
       if (kDebugMode) {
-        print('Windows path conversion: "$uriOrPath" → "$normalizedPath"');
+        print('Normalized Windows media path separators');
       }
       
       return normalizedPath;
@@ -685,7 +685,7 @@ class SystemFFmpeg implements FFmpegInterface {
       normalizedPath = path.normalize(normalizedPath);
       
       if (kDebugMode) {
-        print('Unix path conversion: "$uriOrPath" → "$normalizedPath"');
+        print('Normalized Unix media path separators');
       }
       
       return normalizedPath;
