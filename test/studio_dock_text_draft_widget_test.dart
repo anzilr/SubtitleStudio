@@ -69,7 +69,10 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('desktop-cue-2')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Discard'));
+    await tester.tap(find.descendant(
+      of: find.byType(AlertDialog),
+      matching: find.text('Discard'),
+    ));
     await tester.pumpAndSettle();
     expect(find.text('Original 2'), findsWidgets);
     expect(find.text('Keep this draft'), findsNothing);
