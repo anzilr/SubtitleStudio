@@ -35,9 +35,12 @@ in thrown exceptions or application logging.
 ## Verification
 
 - `git diff --check`: clean locally.
-- Flutter SDK is unavailable in the session workspace. GitHub Linux
-  `flutter pub get`, `flutter analyze` and full `flutter test` gate:
-  **pending** (fill in run URL and counts after CI).
+- Flutter SDK was unavailable in the session workspace. The GitHub Linux
+  [Flutter quality gate (run 39941700751)](https://github.com/anzilr/SubtitleStudio/actions/runs/39941700751)
+  **passed: 779 tests and zero analyzer issues**, including all three new
+  `ffmpeg_diagnostic_privacy_test.dart` regressions.
+- Verified implementation commit:
+  `0f91fcb3a5bdf4a3b6b43ab5bd11336659445689`.
 - No Android/Windows/macOS/iOS application builds in GitHub Actions.
 
 ## Limitations and follow-ups

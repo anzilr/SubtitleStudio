@@ -520,7 +520,7 @@ Retain numerical status and system-tool installation guidance. New source
 guards and a missing-desktop-media privacy regression cover the Dart helper
 boundary; separate waveform/native logging remains for a later scoped audit.
 [R4 report](CHECKPOINT92_R4_FFMPEG_DIAGNOSTIC_PRIVACY_2026-10-23.md).
-**Verification:** pending Linux Flutter-only CI gate.
+**Verification:** [Linux 779 Flutter tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39941700751).
 
 ### CP93 — Core refactor acceptance and handoff
 - Flutter analysis and full unit/widget/Isar integration tests in GitHub Actions (dependency resolution + tests only; **no platform builds in CI**).
