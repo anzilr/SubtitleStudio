@@ -34,6 +34,36 @@ void main() {
     expect(loading.props, contains(const Duration(hours: 1)));
   });
 
+  test('waveform loader fill uses measured decoded time then zoom progress', () {
+    const unknown = WaveformLoading('unknown',
+      processedAudioTime: Duration(seconds: 35),
+    );
+    expect(unknown.extractedFraction, isNull);
+    expect(unknown.waveformFillFraction, isNull,
+        reason: 'A total cannot be invented for SAF/unknown durations');
+
+    const decoding = WaveformLoading('known',
+      progress: 0.1,
+      processedAudioTime: Duration(seconds: 25),
+      totalAudioTime: Duration(seconds: 100),
+    );
+    expect(decoding.extractedFraction, 0.25);
+    expect(decoding.waveformFillFraction, closeTo(0.2125, 0.0001));
+
+    const overflowing = WaveformLoading('known',
+      processedAudioTime: Duration(seconds: 120),
+      totalAudioTime: Duration(seconds: 100),
+    );
+    expect(overflowing.extractedFraction, 1.0);
+    expect(overflowing.waveformFillFraction, 0.85);
+
+    const building = WaveformLoading('known', progress: 0.65);
+    expect(building.waveformFillFraction, greaterThan(0.85));
+    expect(building.waveformFillFraction, lessThan(1));
+    const complete = WaveformLoading('known', progress: 1.0);
+    expect(complete.waveformFillFraction, 1.0);
+  });
+
   test('new extraction gets independent processed-media timeline', () {
     final old = WaveformDecodeProgress();
     final next = WaveformDecodeProgress();

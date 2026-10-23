@@ -62,6 +62,7 @@ extension _EditMediaPreferences on _EditScreenState {
         source,
         subtitleCollectionId: widget.subtitleCollectionId,
         audioTrackId: selection,
+        mediaDuration: _videoPlayerKey.currentState?.getDuration(),
       )),
       fail: (_) {
         unawaited(processor.dispatch(WaveformTrackSelectionFailed(
@@ -111,6 +112,7 @@ extension _EditMediaPreferences on _EditScreenState {
         ref.read(waveformControllerProvider.notifier).dispatch(LoadAudioFile(
           _selectedVideoPath!,
           subtitleCollectionId: widget.subtitleCollectionId,
+          mediaDuration: _videoPlayerKey.currentState?.getDuration(),
         ));
       }
     }

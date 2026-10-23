@@ -28,11 +28,15 @@ class WaveformDecodeProgress {
   }
 
   static String format(Duration time) {
+    return 'Audio processed: ${formatTime(time)}';
+  }
+
+  static String formatTime(Duration time) {
     final seconds = time.inSeconds;
     final hours = seconds ~/ 3600;
     final minutes = (seconds ~/ 60) % 60;
     final remainder = seconds % 60;
-    return 'Audio processed: $hours:'
+    return '$hours:'
         '${minutes.toString().padLeft(2, '0')}:'
         '${remainder.toString().padLeft(2, '0')}';
   }

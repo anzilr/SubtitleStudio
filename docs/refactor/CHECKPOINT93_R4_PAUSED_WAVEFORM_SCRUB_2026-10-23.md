@@ -2,7 +2,7 @@
 
 Date: October 23, 2026  
 Branch: `refactor/riverpod-architecture`  
-Android profile counters: observed on CPH2381; visual accuracy acceptance pending
+Android profile counters: observed on CPH2381; user accepted paused seek accuracy/responsiveness
 
 ## User-reported defect and profile evidence
 
@@ -65,9 +65,10 @@ files and playback engine are unchanged.
   report was near FFmpeg media handling/GC. The remaining `STATE_FLUSHED`
   events include genuine final seeks and track lifecycle operations and
   must not be reported as zero across the full session.
-- User-visible landing accuracy, pause preservation, smoothness, long-duration
-  seeks and wheel behavior are **not yet accepted** from the log alone.
+- On October 23, the user confirmed that paused waveform seeking was
+  **responsive and accurate** on the phone. This closes the originally
+  reported drag responsiveness and landing defect. Long-duration/wheel
+  scenarios remain distinct native-acceptance checks.
 
-Native accuracy still requires user observation and, if inaccurate, explicit
-request/ack timing measurements. Do not treat this checkpoint as closing
+Do not treat this acceptance as closing
 the remaining CP93 Android/Windows file and media smoke-test gates.

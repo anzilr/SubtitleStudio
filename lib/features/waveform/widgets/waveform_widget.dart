@@ -9,6 +9,7 @@ import 'package:subtitle_studio/features/waveform/state/waveform_state.dart';
 import 'package:subtitle_studio/features/waveform/state/waveform_event.dart';
 import 'package:subtitle_studio/features/waveform/widgets/waveform_painter.dart';
 import 'package:subtitle_studio/features/waveform/widgets/waveform_control_colors.dart';
+import 'package:subtitle_studio/features/waveform/widgets/waveform_loading_bars.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_tile_source.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_decode_progress.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_seek_coordinator.dart';

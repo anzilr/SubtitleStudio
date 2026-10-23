@@ -240,7 +240,10 @@ class WaveformController extends Notifier<WaveformState> {
     var currentProgress = 0.0;
     Duration? processedAudioTime;
     try {
-      _setState(WaveformLoading(event.filePath, progress: 0.0));
+      _setState(WaveformLoading(event.filePath,
+        progress: 0.0,
+        totalAudioTime: event.mediaDuration,
+      ));
 
       // Get selected audio track ID if available
       String? audioTrackId = event.audioTrackId;
@@ -263,6 +266,7 @@ class WaveformController extends Notifier<WaveformState> {
           _setState(WaveformLoading(event.filePath,
             progress: progress,
             processedAudioTime: processedAudioTime,
+            totalAudioTime: event.mediaDuration,
           ));
         },
         onDecodedAudioTime: (time) {
@@ -271,6 +275,7 @@ class WaveformController extends Notifier<WaveformState> {
           _setState(WaveformLoading(event.filePath,
             progress: currentProgress,
             processedAudioTime: time,
+            totalAudioTime: event.mediaDuration,
           ));
         },
       );
@@ -335,11 +340,8 @@ class WaveformController extends Notifier<WaveformState> {
         final newCenterPixel = newState.timeToPixel(centerTime);
         final newScroll = newCenterPixel - currentState.viewportWidth / 2;
         
-        // Calculate max scroll, ensuring it's not negative
-        final maxScroll = (newState.totalWidth - currentState.viewportWidth).clamp(0.0, double.infinity);
-        
         _setState(newState.copyWith(
-          scrollPosition: newScroll.clamp(0.0, maxScroll),
+          scrollPosition: newState.clampScrollPosition(newScroll),
         ));
         
         // Save zoom level to database
@@ -363,11 +365,8 @@ class WaveformController extends Notifier<WaveformState> {
         final newCenterPixel = newState.timeToPixel(centerTime);
         final newScroll = newCenterPixel - currentState.viewportWidth / 2;
         
-        // Calculate max scroll, ensuring it's not negative
-        final maxScroll = (newState.totalWidth - currentState.viewportWidth).clamp(0.0, double.infinity);
-        
         _setState(newState.copyWith(
-          scrollPosition: newScroll.clamp(0.0, maxScroll),
+          scrollPosition: newState.clampScrollPosition(newScroll),
         ));
         
         // Save zoom level to database
@@ -397,8 +396,7 @@ class WaveformController extends Notifier<WaveformState> {
   ) {
     if (state is WaveformReady) {
       final currentState = state as WaveformReady;
-      final maxScroll = (currentState.totalWidth - currentState.viewportWidth).clamp(0.0, double.infinity);
-      final clampedScroll = event.scrollPosition.clamp(0.0, maxScroll);
+      final clampedScroll = currentState.clampScrollPosition(event.scrollPosition);
       _setState(currentState.copyWith(scrollPosition: clampedScroll));
     }
   }
@@ -465,11 +463,9 @@ class WaveformController extends Notifier<WaveformState> {
       _holdPositionUntilSettled(event.time);
       final targetPixel = currentState.timeToPixel(event.time);
       final newScroll = targetPixel - currentState.viewportWidth / 2;
-      final maxScroll = (currentState.totalWidth - currentState.viewportWidth).clamp(0.0, double.infinity);
-
       _setState(currentState.copyWith(
         playbackPosition: event.time,
-        scrollPosition: newScroll.clamp(0.0, maxScroll),
+        scrollPosition: currentState.clampScrollPosition(newScroll),
       ));
     }
   }
@@ -521,7 +517,10 @@ class WaveformController extends Notifier<WaveformState> {
   ) {
     if (state is WaveformReady) {
       final currentState = state as WaveformReady;
-      _setState(currentState.copyWith(viewportWidth: event.width));
+      final resized = currentState.copyWith(viewportWidth: event.width);
+      _setState(resized.copyWith(
+        scrollPosition: resized.clampScrollPosition(resized.scrollPosition),
+      ));
     }
   }
 

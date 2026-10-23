@@ -150,19 +150,62 @@ void main() {
     expect(completed, hasLength(1));
   });
 
-  test('scroll seek targets use clamped geometry, including short audio', () {
+  test('manual scroll can place either endpoint under the editing cursor', () {
     final ready = _ready();
-    expect(ready.clampScrollPosition(-1000), 0);
+    expect(ready.minScrollPosition, -50);
+    expect(ready.maxScrollPosition, 9950);
+    expect(ready.clampScrollPosition(-1000), -50);
     expect(ready.centerTimeForScroll(-1000),
-        const Duration(milliseconds: 500));
-    expect(ready.clampScrollPosition(999999), 9900);
+        Duration.zero);
+    expect(ready.clampScrollPosition(999999), 9950);
     expect(ready.centerTimeForScroll(999999),
-        const Duration(milliseconds: 99500));
+        const Duration(seconds: 100));
+    expect(ready.centerTimeForScroll(0),
+        const Duration(milliseconds: 500),
+        reason: 'Existing paused seek precision in the middle is preserved');
 
     final short = _ready(totalSamples: 30);
-    expect(short.maxScrollPosition, 0);
+    expect(short.maxScrollPosition, -20);
+    expect(short.centerTimeForScroll(-999), Duration.zero);
     expect(short.centerTimeForScroll(999999),
         const Duration(milliseconds: 300));
+  });
+
+  test('cursor coordinate follows time at the start, center, and end', () {
+    final ready = _ready();
+    expect(ready.playheadViewportX, 0);
+    expect(ready.copyWith(playbackPosition: const Duration(milliseconds: 230))
+        .playheadViewportX, 23);
+    expect(ready.copyWith(
+      playbackPosition: const Duration(milliseconds: 5500),
+      scrollPosition: 500,
+    ).playheadViewportX, 50);
+    expect(ready.copyWith(
+      playbackPosition: const Duration(seconds: 100),
+      scrollPosition: ready.maxScrollPosition,
+    ).playheadViewportX, 50);
+  });
+
+  test('manual seek reaches exact zero and final audio sample', () async {
+    final container = ProviderContainer(overrides: [
+      waveformControllerProvider.overrideWith(_ReadyController.new),
+    ]);
+    addTearDown(container.dispose);
+    final controller = container.read(waveformControllerProvider.notifier);
+
+    controller.beginManualScrub();
+    await controller.dispatch(const ScrollSeekToTime(-999));
+    var state = container.read(waveformControllerProvider) as WaveformReady;
+    expect(state.playbackPosition, Duration.zero);
+    expect(state.playheadViewportX, 50);
+    controller.completeManualScrub(Duration.zero);
+
+    controller.beginManualScrub();
+    await controller.dispatch(const ScrollSeekToTime(999999));
+    state = container.read(waveformControllerProvider) as WaveformReady;
+    expect(state.playbackPosition, const Duration(seconds: 100));
+    expect(state.playheadViewportX, 50);
+    controller.completeManualScrub(state.playbackPosition);
   });
 
   test('stale playback cannot recenter during drag or before final seek ack',

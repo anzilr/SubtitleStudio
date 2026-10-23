@@ -20,14 +20,41 @@ class WaveformLoading extends WaveformState {
   final double progress; // 0.0 to 1.0
   /// FFmpeg media timeline processed so far; not a percentage of total duration.
   final Duration? processedAudioTime;
+  /// Optional duration from the player for this source. Unknown for a
+  /// standalone file or when the player has not established its timeline.
+  final Duration? totalAudioTime;
 
   const WaveformLoading(this.filePath, {
     this.progress = 0.0,
     this.processedAudioTime,
+    this.totalAudioTime,
   });
 
+  /// Only a valid, known source duration permits determinate extraction UI.
+  /// The later zoom-building phase has its own independent stage progress.
+  double? get extractedFraction {
+    final processed = processedAudioTime;
+    final total = totalAudioTime;
+    if (processed == null || total == null || total <= Duration.zero) {
+      return null;
+    }
+    return (processed.inMicroseconds / total.inMicroseconds)
+        .clamp(0.0, 1.0).toDouble();
+  }
+
+  /// Extraction fills 85% of the visual track, followed by real zoom-build
+  /// progress for the remainder. No percentage is exposed for an unknown
+  /// extraction duration, as stage weights are only presentation guidance.
+  double? get waveformFillFraction {
+    if (progress >= 0.35) {
+      return 0.85 + (progress - 0.35).clamp(0.0, 0.65) / 0.65 * 0.15;
+    }
+    final extraction = extractedFraction;
+    return extraction == null ? null : extraction * 0.85;
+  }
+
   @override
-  List<Object?> get props => [filePath, progress, processedAudioTime];
+  List<Object?> get props => [filePath, progress, processedAudioTime, totalAudioTime];
 }
 
 /// Waveform loaded and ready
@@ -93,20 +120,29 @@ class WaveformReady extends WaveformState {
   double get totalWidth =>
       (buffer.rawData.totalSamples / samplesPerPixel).toDouble();
 
-  /// Maximum valid waveform scroll; short clips may have no scroll at all.
-  double get maxScrollPosition =>
-      (totalWidth - viewportWidth).clamp(0.0, double.infinity);
+  /// Allow half a viewport of empty *visual* space on either side. This lets
+  /// the center editing cursor reach exactly 0 and the final audio sample,
+  /// even when the entire waveform is shorter than the viewport.
+  double get minScrollPosition => -viewportWidth / 2;
+
+  double get maxScrollPosition => totalWidth - viewportWidth / 2;
 
   double clampScrollPosition(double requested) =>
-      requested.clamp(0.0, maxScrollPosition);
+      requested.clamp(minScrollPosition, maxScrollPosition);
 
-  /// The time actually shown at the center after scroll clamping. Never seek
-  /// beyond a short waveform's real audio duration into blank viewport space.
+  /// The time actually shown at the center after scroll clamping.
   Duration centerTimeForScroll(double requested) {
     final centerPixel = (clampScrollPosition(requested) + viewportWidth / 2)
         .clamp(0.0, totalWidth);
     return pixelToTime(centerPixel);
   }
+
+  /// Shared projection for the painter and hit testing. Playback naturally
+  /// moves left-to-center, then center-to-right at the edges as the timeline
+  /// scrolls; manual scrolling may also position either endpoint at center.
+  double get playheadViewportX =>
+      (timeToPixel(playbackPosition) - scrollPosition)
+          .clamp(0.0, viewportWidth);
 
   /// Get visible time range based on scroll position and viewport
   Duration get visibleStartTime {

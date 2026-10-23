@@ -888,38 +888,10 @@ class WaveformPainter extends CustomPainter {
     );
   }
 
-  /// Draw playback position indicator (smart positioning)
+  /// Draw the actual playback cursor in waveform coordinates.
   void _drawPlaybackPosition(Canvas canvas, Size size) {
-    // Calculate pixels per second from sample rate and samples per pixel
-    final pixelsPerSec = sampleRate / samplesPerPixel;
-    
-    // Calculate indicator position based on playback and scroll
-    final playbackPixel = (playbackPosition.inMilliseconds / 1000.0) * pixelsPerSec;
-    final centerPosition = size.width / 2;
-    final totalWidth = zoomLevel.pixelCount.toDouble();
-    
-    double indicatorX;
-    
-    // Smart positioning:
-    // - Before center: moves from left (0 to center)
-    // - Middle: stays at center
-    // - At end: moves from center to right edge when scrolling stops
-    
-    if (playbackPixel <= centerPosition) {
-      // Beginning phase: indicator moves from left
-      indicatorX = playbackPixel - scrollOffset;
-    } else if (playbackPixel >= totalWidth - centerPosition) {
-      // End phase: waveform stops scrolling, indicator moves from center to right
-      // Calculate position relative to visible portion
-      final visibleStart = scrollOffset;
-      indicatorX = playbackPixel - visibleStart;
-    } else {
-      // Middle phase: indicator stays centered
-      indicatorX = centerPosition;
-    }
-    
-    // Clamp to viewport bounds
-    indicatorX = indicatorX.clamp(0.0, size.width);
+    final indicatorX = (_timeToPixel(playbackPosition) - scrollOffset)
+        .clamp(0.0, size.width);
 
     final playbackPaint = Paint()
       ..color = playbackColor

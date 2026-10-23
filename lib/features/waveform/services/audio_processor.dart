@@ -159,6 +159,7 @@ class AudioProcessor {
             waveformData = await _extractAndCachePCM(
               audioFilePath, subtitleCollectionId, onProgress, audioTrackId,
               expectedPath,
+              onDecodedAudioTime: onDecodedAudioTime,
             );
           }
         } else {
@@ -166,6 +167,7 @@ class AudioProcessor {
           waveformData = await _extractAndCachePCM(
               audioFilePath, subtitleCollectionId, onProgress, audioTrackId,
               expectedPath,
+              onDecodedAudioTime: onDecodedAudioTime,
             );
         }
       } else {
@@ -175,7 +177,11 @@ class AudioProcessor {
         }
         
         onProgress?.call(0.05);
-        waveformData = await _extractAudioToPCM(audioFilePath, audioTrackId: audioTrackId);
+        waveformData = await _extractAudioToPCM(
+          audioFilePath,
+          audioTrackId: audioTrackId,
+          onDecodedAudioTime: onDecodedAudioTime,
+        );
         onProgress?.call(0.15);
       }
 
@@ -412,6 +418,7 @@ class AudioProcessor {
     Function(double)? onProgress,
     String? audioTrackId,
     String cacheOutputPath,
+    {void Function(Duration)? onDecodedAudioTime}
   ) async {
     if (Platform.isWindows || Platform.isLinux) {
       await _checkFFmpegAvailability();
@@ -425,6 +432,7 @@ class AudioProcessor {
       cacheForCollection: subtitleCollectionId,
       audioTrackId: audioTrackId,
       cacheOutputPath: cacheOutputPath,
+      onDecodedAudioTime: onDecodedAudioTime,
     );
     
     onProgress?.call(0.15);

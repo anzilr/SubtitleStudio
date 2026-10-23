@@ -56,6 +56,7 @@ extension _EditMenuActions on _EditScreenState {
             ref.read(waveformControllerProvider.notifier).dispatch(LoadAudioFile(
               _selectedVideoPath!,
               subtitleCollectionId: widget.subtitleCollectionId,
+              mediaDuration: _videoPlayerKey.currentState?.getDuration(),
             ));
           }
         }

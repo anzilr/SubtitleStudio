@@ -428,25 +428,12 @@ extension _WaveformInteractions on WaveformWidgetState {
 
   // Get playhead X position on screen
   double _getPlayheadXPosition(WaveformReady state) {
-    final pixelsPerSec = state.buffer.sampleRate / state.samplesPerPixel;
-    final playbackPixel = (state.playbackPosition.inMilliseconds / 1000.0) * pixelsPerSec;
-    final centerPosition = state.viewportWidth / 2;
-    final totalWidth = state.currentZoomLevel.pixelCount.toDouble();
-    
-    double playheadX;
-    if (playbackPixel <= centerPosition) {
-      playheadX = playbackPixel - state.scrollPosition;
-    } else if (playbackPixel >= totalWidth - centerPosition) {
-      playheadX = playbackPixel - state.scrollPosition;
-    } else {
-      playheadX = centerPosition;
-    }
-    return playheadX.clamp(0.0, state.viewportWidth);
+    return state.playheadViewportX;
   }
 
-  // Get viewport center time
+  // Use the real cursor for new subtitles, including either padded endpoint.
   Duration _getViewportCenterTime(WaveformReady state) {
-    return state.centerTimeForScroll(state.scrollPosition);
+    return state.playbackPosition;
   }
 
   // Handle tap on waveform (empty area) - double tap to seek or exit edit mode or enter add line mode on playhead
@@ -462,7 +449,7 @@ extension _WaveformInteractions on WaveformWidgetState {
         if (_lastPlayheadTapTime != null &&
             now.difference(_lastPlayheadTapTime!) < WaveformWidgetState._doubleTapDuration) {
           // Double tap on playhead - enter add line mode with 2-second default duration
-          // Use viewport center time (where playhead visually appears)
+          // Use the actual playhead time, which need not be at the center.
           final startTime = _getViewportCenterTime(state);
           final endTime = startTime + const Duration(seconds: 2);
           
@@ -500,13 +487,9 @@ extension _WaveformInteractions on WaveformWidgetState {
     }
   }
 
-  /// Format the display time based on playback position or viewport center
+  /// Display the time at the actual red playhead, not the viewport midpoint.
   String _formatDisplayTime(WaveformReady state) {
-    // Always show viewport center time (where user is looking)
-    final centerPixel = state.scrollPosition + state.viewportWidth / 2;
-    final centerSample = (centerPixel * state.samplesPerPixel).round();
-    final centerMilliseconds = (centerSample * 1000 / state.buffer.sampleRate).round();
-    final displayTime = Duration(milliseconds: centerMilliseconds);
+    final displayTime = state.playbackPosition;
     
     // Format time as HH:mm:ss,SSS (matching subtitle format with comma)
     final hours = displayTime.inHours.toString().padLeft(2, '0');

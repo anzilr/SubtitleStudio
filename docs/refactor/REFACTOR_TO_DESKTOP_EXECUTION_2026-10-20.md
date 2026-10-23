@@ -626,7 +626,24 @@ drags produced 1,793 waveform position updates, **zero preview seeks** and
 33 final seeks, with adjacent native audio flushes. The capture had no fatal
 app error. Physical landing precision and subjective smoothness still require
 user confirmation; 22 skipped frames in six reports remain an independent
-performance signal. [Full result](CHECKPOINT93_R4_PAUSED_WAVEFORM_SCRUB_2026-10-23.md).
+performance signal. The user subsequently **accepted the paused seek as
+responsive and accurate**. [Full result](CHECKPOINT93_R4_PAUSED_WAVEFORM_SCRUB_2026-10-23.md).
+
+**CP93 R5 (October 23, 2026):** Follow-up waveform cursor/timing and loading
+polish. The time readout previously used the viewport midpoint even while the
+real cursor traveled left-to-center or center-to-right; editing and copy
+actions also inherited the wrong center time near boundaries. Time display,
+copy and new cue selection now follow the real playhead. Extend manual scroll
+with half-viewport visual padding so first/last samples can reach the center
+without native overshooting; preserve R4's seek throttling. The waveform
+generation loader now paints amplitude-style bars, filling against measured
+FFmpeg media time and the player-reported total when available, with a clearly
+indeterminate sweep for an unknown total. Forward FFmpeg time callbacks on the
+normal eager-PCM path as well as the optional compact peak path. Cache formats,
+playback engine and deferred CP86 experimental pipeline are unchanged.
+[R5 report](CHECKPOINT93_R5_WAVEFORM_EDGES_AND_LOADING_2026-10-23.md).
+**Verification:** Flutter analysis and full tests in GitHub CI; Android visual
+and native loading-speed acceptance pending.
 
 ### Production Desktop Workspace Integration / UI [AFTER CP93]
 - The presentation shell may be designed and previewed now on the isolated branch. After CP93, connect it to the shared Riverpod, Isar, project, checkpoint, encoding and file-access core without duplicating domain logic.

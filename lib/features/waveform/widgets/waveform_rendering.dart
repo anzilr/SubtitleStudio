@@ -32,7 +32,8 @@ extension _WaveformRendering on WaveformWidgetState {
   }
 
   Widget _buildLoadingState(WaveformLoading state) {
-    final loaderColor = Theme.of(context).colorScheme.primary;
+    final colors = Theme.of(context).colorScheme;
+    final preparing = state.progress >= 0.35;
     
     return Container(
       height: widget.height,
@@ -49,38 +50,41 @@ extension _WaveformRendering on WaveformWidgetState {
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Loader13 widget
-            SizedBox(
-              height: 60,
-              child: Center(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(3, (i) {
-                    return _BouncingDot(
-                      delay: Duration(milliseconds: i * 100),
-                      color: loaderColor,
-                    );
-                  }),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 320),
+                child: SizedBox(
+                  height: widget.height < 160 ? 36 : 48,
+                  width: double.infinity,
+                  child: WaveformLoadingBars(
+                    fillFraction: state.waveformFillFraction,
+                    activeColor: colors.primary,
+                    inactiveColor: colors.onSurfaceVariant.withValues(alpha: 0.18),
+                  ),
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 12),
             Text(
-              state.progress >= 0.2
+              preparing
                   ? 'Preparing waveform...'
                   : 'Generating waveform...',
               style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                fontSize: 16,
+                color: colors.onSurface.withValues(alpha: 0.85),
+                fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),
             ),
-            if (state.processedAudioTime != null && widget.height >= 160) ...[
+            if (!preparing && state.processedAudioTime != null && widget.height >= 160) ...[
               const SizedBox(height: 6),
               Text(
-                WaveformDecodeProgress.format(state.processedAudioTime!),
+                state.totalAudioTime != null && state.totalAudioTime! > Duration.zero
+                    ? '${WaveformDecodeProgress.format(state.processedAudioTime!)} / '
+                      '${WaveformDecodeProgress.formatTime(state.totalAudioTime!)}'
+                    : WaveformDecodeProgress.format(state.processedAudioTime!),
                 style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  color: colors.onSurfaceVariant,
                   fontSize: 12,
                 ),
               ),
@@ -664,68 +668,4 @@ extension _WaveformRendering on WaveformWidgetState {
 
   Color _getSubtitleHighlightColor(BuildContext context) =>
       WaveformControlColors.subtitleHighlight(Theme.of(context));
-}
-
-/// Bouncing dot widget for Loader13-style animation
-class _BouncingDot extends StatefulWidget {
-  final Duration delay;
-  final Color color;
-
-  const _BouncingDot({
-    required this.delay,
-    required this.color,
-  });
-
-  @override
-  State<_BouncingDot> createState() => _BouncingDotState();
-}
-
-class _BouncingDotState extends State<_BouncingDot>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 600),
-      vsync: this,
-    );
-
-    // Start animation after delay
-    Future.delayed(widget.delay, () {
-      if (mounted) {
-        _controller.repeat(reverse: true);
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return Transform.translate(
-          offset: Offset(0, -30 * _controller.value),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 5),
-            child: Container(
-              width: 10,
-              height: 10,
-              decoration: BoxDecoration(
-                color: widget.color,
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
 }
