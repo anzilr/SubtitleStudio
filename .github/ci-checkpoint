@@ -505,3 +505,5 @@ DS3 R2 FINISHED SOURCE 2026-10-24: retain drafts and guard in-app route pop, fre
 DS3 R2 REGRESSION GATE 2026-10-24: inspect failed-Apply transient SnackBar before widget-test pumpAndSettle consumes timeout; all Flutter-only checks, no builds.
 
 DS4 R1 FULL GATE 2026-10-24: studio dock existing media player ownership and shared hotkeys, rollback-safe legacy route handoff, checkpoint-backed text edits and responsive layout. Run flutter pub get / flutter analyze / flutter test only (no app builds).
+
+STUDIO DOCK ONLY 2026-10-24: native startup and file associations never enter classic Home/Editor. Reuse import/create repositories inside Dock, add toolbar New/Import with unsaved-draft guard; no platform builds; full flutter analyze/test only.
