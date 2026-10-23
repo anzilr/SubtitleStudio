@@ -528,7 +528,9 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
                     _dragHandle(onDelta: (dx) => setState(() =>
                         _sidebarWidth = (_sidebarWidth + dx)
                             .clamp(200.0, 340.0).toDouble())),
-                  Expanded(child: IndexedStack(
+                  Expanded(
+                    key: const ValueKey('studio-dock-center'),
+                    child: IndexedStack(
                     index: _section == 0 ? 0 : 1,
                     children: [
                       _editingWorkspace(),
