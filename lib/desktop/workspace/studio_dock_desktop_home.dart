@@ -256,6 +256,8 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
           sessionId: active.id,
           collectionId: active.subtitleCollectionId,
           onChooseProject: choose,
+          onImportFile: () => _importFile(),
+          onNewProject: _createProject,
           enableTextEditing: true,
           allowNativePlayback: true,
           suppressParentEditorHotkeys: false,
