@@ -5,3 +5,5 @@ DS4 R1 FIX 2026-10-24: first focused CI had 26 passing and 5 failing; fix unmock
 DS4 R1 FINAL GATE 2026-10-24: include classic player/hotkey unmount and restoration widget tests plus inject startup catalog. Focused flutter analyze and Studio Dock tests only; no platform builds.
 
 DS4 R1.1 2026-10-24: Studio Dock is the ONLY native desktop interface. Remove legacy Home/Editor transitions, import SRT/VTT/ASS/MSONE and create from Dock, route desktop file associations to Dock; focused Flutter analyzer and tests ONLY (no builds).
+
+DS4 R1.1 CI CORRECTION 2026-10-24: resolve two undefined desktop theme constants in branded empty view; remove unused imports, rerun full Flutter analysis and Studio Dock tests only, no builds.
