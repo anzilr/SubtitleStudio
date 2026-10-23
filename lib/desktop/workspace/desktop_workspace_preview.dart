@@ -480,9 +480,40 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   @override
   Widget build(BuildContext context) {
     if (widget.initialCues != null && _cues.isEmpty) {
-      return const Scaffold(body: Center(
-        child: Text('This subtitle session has no cues.'),
-      ));
+      return Scaffold(
+        backgroundColor: _background,
+        appBar: AppBar(
+          backgroundColor: _background,
+          title: Text(widget.projectTitle ?? 'Studio Dock'),
+          actions: [
+            if (widget.onChooseProject != null)
+              IconButton(
+                key: const ValueKey('studio-dock-switch-project'),
+                icon: const Icon(Icons.folder_open_outlined),
+                tooltip: 'Open or create another project',
+                onPressed: widget.onChooseProject,
+              ),
+          ],
+        ),
+        body: Center(child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.subtitles_outlined, size: 58, color: _muted),
+            const SizedBox(height: 12),
+            const Text('This project has no subtitle cues yet.'),
+            const SizedBox(height: 8),
+            const Text('Add-cue editing is planned for a future checkpoint.',
+                style: TextStyle(color: _muted)),
+            const SizedBox(height: 18),
+            if (widget.onChooseProject != null)
+              OutlinedButton.icon(
+                onPressed: widget.onChooseProject,
+                icon: const Icon(Icons.folder_open),
+                label: const Text('Projects and import'),
+              ),
+          ],
+        )),
+      );
     }
     return PopScope(
       canPop: !_hasDirtyDraft && !_savingDraft,
