@@ -110,9 +110,9 @@ class _SubtitleExtractOptionsSheetState
         if (Platform.isAndroid && videoPath.startsWith('content://') && fileName.contains('%')) {
           try {
             fileName = Uri.decodeFull(fileName);
-          } catch (e) {
+          } catch (_) {
             if (kDebugMode) {
-              print('Could not decode filename: $e');
+              print('Could not decode selected video filename');
             }
             // Keep the original filename if decoding fails
           }
@@ -240,8 +240,7 @@ class _SubtitleExtractOptionsSheetState
       _currentSafUri = null;
 
       if (kDebugMode) {
-        print('Starting subtitle extraction for track: ${track['title']}');
-        print('Selected video path: $_selectedVideoPath');
+        print('Starting subtitle extraction');
       }
 
       // Close the tracks sheet if open
@@ -299,13 +298,9 @@ class _SubtitleExtractOptionsSheetState
             '_',
           );
 
+        } catch (_) {
           if (kDebugMode) {
-            print('Original filename: $_fileName');
-            print('Cleaned filename: $cleanVideoFileName');
-          }
-        } catch (e) {
-          if (kDebugMode) {
-            print('Error cleaning filename, using fallback: $e');
+            print('Could not normalize selected filename; using fallback');
           }
           cleanVideoFileName = 'video';
         }
@@ -339,11 +334,7 @@ class _SubtitleExtractOptionsSheetState
         suggestedFileName = 'subtitle.$trackIdentifier.srt';
       }
 
-      if (kDebugMode) {
-        print(
-          'Opening save dialog with suggested filename: $suggestedFileName',
-        );
-      }
+      if (kDebugMode) print('Opening subtitle save dialog');
 
       // Use platform-specific file save approach
       String? outputFilePath;
@@ -370,9 +361,7 @@ class _SubtitleExtractOptionsSheetState
         }
       }
 
-      if (kDebugMode) {
-        print('Save dialog result: ${outputFilePath ?? "canceled"}');
-      }
+      if (kDebugMode) print('Save dialog accepted: ${outputFilePath != null}');
 
       if (outputFilePath == null) {
         if (kDebugMode) {
@@ -396,9 +385,9 @@ class _SubtitleExtractOptionsSheetState
               duration: const Duration(seconds: 4),
             );
           }
-        } catch (e) {
+        } catch (_) {
           if (kDebugMode) {
-            print('Error showing extraction started message: $e');
+            print('Could not show extraction started message');
           }
         }
       });
@@ -418,17 +407,14 @@ class _SubtitleExtractOptionsSheetState
           callback: widget.onSubtitleExtracted,
         ),
       );
-    } catch (e) {
+    } catch (_) {
       if (kDebugMode) {
         print('Subtitle extraction failed. Please try again.');
-        if (e is Exception) {
-          print('Exception details: ${e.toString()}');
-        }
       }
 
       // Try to show error on the root context if available
       try {
-        final message = 'Error extracting subtitle: $e';
+        const message = 'Error extracting subtitle. Please try another track or file.';
 
         await AppLogger.instance.error(
           message,
@@ -476,9 +462,6 @@ class _SubtitleExtractOptionsSheetState
       if (kDebugMode) {
         print('Starting extraction in separate method');
         print('Use direct save: $useDirectSave');
-        print('Selected output file: $outputFilePath');
-        print('Output directory: $outputDir');
-        print('Output filename: $outputFileName');
         print('Checking directory access...');
       }
 
@@ -488,9 +471,9 @@ class _SubtitleExtractOptionsSheetState
           outputDirectory: outputDir,
           useDirectSave: useDirectSave,
         );
-      } catch (e) {
+      } catch (_) {
         if (kDebugMode) {
-          print('Directory permission check failed: $e');
+          print('Directory permission check failed');
           print('This may be due to Android storage permissions');
         }
 
@@ -521,7 +504,7 @@ class _SubtitleExtractOptionsSheetState
         final destinationFile = File(FFmpegHelper.normalizePath(outputFilePath));
         
         if (kDebugMode) {
-          print('Checking if destination file exists: ${destinationFile.path}');
+          print('Checking whether destination file exists');
           print('File exists: ${await destinationFile.exists()}');
         }
         
@@ -532,9 +515,9 @@ class _SubtitleExtractOptionsSheetState
             if (rootContext.mounted) {
               LoadingOverlay.hide(rootContext);
             }
-          } catch (e) {
+          } catch (_) {
             if (kDebugMode) {
-              print('Error hiding loading overlay: $e');
+              print('Could not hide loading overlay');
             }
           }
           
@@ -594,9 +577,9 @@ class _SubtitleExtractOptionsSheetState
                   duration: const Duration(seconds: 3),
                 );
               }
-            } catch (e) {
+            } catch (_) {
               if (kDebugMode) {
-                print('Error showing cancellation message: $e');
+                print('Could not show extraction cancellation message');
               }
             }
             return; // Exit the method early
@@ -610,9 +593,9 @@ class _SubtitleExtractOptionsSheetState
                 message: 'Extracting subtitle...',
               );
             }
-          } catch (e) {
+          } catch (_) {
             if (kDebugMode) {
-              print('Error showing loading overlay: $e');
+              print('Could not show loading overlay');
             }
           }
         }
@@ -621,8 +604,6 @@ class _SubtitleExtractOptionsSheetState
       // Extract subtitle with a timeout to prevent hanging
       if (kDebugMode) {
         print('Extracting subtitle with FFmpegHelper...');
-        print('Video path: $videoPath');
-        print('Output directory: $outputDir');
         print('Subtitle index: $subtitleIndex');
       }
 
@@ -639,16 +620,12 @@ class _SubtitleExtractOptionsSheetState
         );
 
         if (kDebugMode) {
-          print('FFmpeg extracted to temp file: $tempOutputFile');
           final tempFileObj = File(tempOutputFile);
           final tempExists = await tempFileObj.exists();
           print('Temp file exists after extraction: $tempExists');
           if (tempExists) {
             final tempSize = await tempFileObj.length();
             print('Temp file size immediately after extraction: $tempSize bytes');
-          }
-          if (Platform.isIOS) {
-            print('iOS: Temp file created at: $tempOutputFile');
           }
         }
 
@@ -661,9 +638,9 @@ class _SubtitleExtractOptionsSheetState
               message: 'Moving file to selected location...',
             );
           }
-        } catch (e) {
+        } catch (_) {
           if (kDebugMode) {
-            print('Error updating loading message: $e');
+            print('Could not update loading message');
           }
         }
 
@@ -696,9 +673,9 @@ class _SubtitleExtractOptionsSheetState
                   message: 'Choosing save location...',
                 );
               }
-            } catch (e) {
+            } catch (_) {
               if (kDebugMode) {
-                print('Error updating loading message: $e');
+                print('Could not update loading message');
               }
             }
 
@@ -730,14 +707,9 @@ class _SubtitleExtractOptionsSheetState
                 ); // Remove .txt
               }
 
+            } catch (_) {
               if (kDebugMode) {
-                print('Original SAF path: ${savedFileInfo.path}');
-                print('Cleaned path: $cleanPath');
-                print('SAF URI: $safUri');
-              }
-            } catch (e) {
-              if (kDebugMode) {
-                print('Error cleaning path, using original: $e');
+                print('Could not decode SAF display path; using original');
               }
               // Use original path if decoding fails
               cleanPath = savedFileInfo.path;
@@ -750,9 +722,7 @@ class _SubtitleExtractOptionsSheetState
             // Store the content before deleting temp file (will be used later for processing)
             tempOutputFile = tempOutputFile; // Keep the temp file path for now - will delete after processing
 
-            if (kDebugMode) {
-              print('Saved via SAF to: $finalOutputPath');
-            }
+            if (kDebugMode) print('Saved extracted subtitle via SAF');
           } else if (Platform.isIOS) {
             // On iOS, use file picker to save the file
             final content = await tempFile.readAsString();
@@ -779,9 +749,9 @@ class _SubtitleExtractOptionsSheetState
                   message: 'Choosing save location...',
                 );
               }
-            } catch (e) {
+              } catch (_) {
               if (kDebugMode) {
-                print('Error updating loading message: $e');
+                  print('Could not update loading message');
               }
             }
 
@@ -803,8 +773,7 @@ class _SubtitleExtractOptionsSheetState
             // For iOS, we need to preserve the original temp file path for content reading
             // The temp file will be cleaned up later after content processing
             if (kDebugMode) {
-              print('Saved via iOS file picker to: $finalOutputPath');
-              print('Original temp file path preserved: $tempOutputFile');
+              print('Saved extracted subtitle via iOS file picker');
               print('Temp file still exists: ${await tempFile.exists()}');
             }
           } else {
@@ -818,7 +787,7 @@ class _SubtitleExtractOptionsSheetState
           }
         } else {
           throw Exception(
-            'Temporary extraction file not found: $tempOutputFile',
+            'Temporary extraction file not found',
           );
         }
 
@@ -831,20 +800,18 @@ class _SubtitleExtractOptionsSheetState
             LoadingOverlay.hide(rootContext);
             LoadingOverlay.show(rootContext, message: 'Processing subtitle...');
           }
-        } catch (e) {
+        } catch (_) {
           if (kDebugMode) {
-            print('Error updating loading message: $e');
+            print('Could not update loading message');
           }
         }
 
         if (kDebugMode) {
-          print(
-            'Extraction completed successfully! Final output: $outputFilePath',
-          );
+          print('Subtitle extraction completed successfully');
         }
-      } catch (e) {
+      } catch (_) {
         if (kDebugMode) {
-          print('FFmpeg extraction error: $e');
+          print('FFmpeg extraction failed');
         }
 
         // Try to hide loading overlay and show an error
@@ -858,7 +825,7 @@ class _SubtitleExtractOptionsSheetState
 
             SnackbarHelper.showError(
               rootContext,
-              'Failed to extract subtitle: $e',
+              'Failed to extract subtitle. Please try another track or file.',
               duration: const Duration(seconds: 5),
             );
           }
@@ -877,8 +844,7 @@ class _SubtitleExtractOptionsSheetState
       if (!verification.isValid) {
         final errorMessage = verification.exists
             ? 'Subtitle extraction failed - extracted file is empty (0 bytes)'
-            : 'Subtitle extraction failed - extracted file could not be found at: '
-                '${verification.normalizedOutputPath}';
+            : 'Subtitle extraction failed - extracted file could not be found';
 
         try {
           await AppLogger.instance.error(
@@ -923,8 +889,8 @@ class _SubtitleExtractOptionsSheetState
             outputFilePath: outputFilePath,
             useDirectSave: useDirectSave,
           );
-        } catch (e) {
-          throw Exception('Failed to read extracted subtitle content: $e');
+        } catch (_) {
+          throw Exception('Failed to read extracted subtitle content');
         }
 
       try {
@@ -942,10 +908,10 @@ class _SubtitleExtractOptionsSheetState
         } else {
           throw Exception('Context not available');
         }
-      } catch (e) {
+      } catch (_) {
         // Fall back to context-free processing with content
         if (kDebugMode) {
-          print('Using alternative processing approach: $e');
+          print('Using alternative subtitle processing approach');
         }
 
         // Process the SRT content directly without file path
@@ -964,7 +930,6 @@ class _SubtitleExtractOptionsSheetState
           print(
             'Subtitle collection ID: ${subtitleData.subtitleCollectionId}',
           );
-          print('Filename: ${subtitleData.fileName}');
           print('Session ID: ${subtitleData.sessionId}');
                 }
 
@@ -982,12 +947,12 @@ class _SubtitleExtractOptionsSheetState
                   .updateCollection(subtitle);
 
               if (kDebugMode) {
-                print('Updated originalFileUri to: $_currentSafUri');
+                print('Updated original subtitle file locator');
               }
             }
-          } catch (e) {
+          } catch (_) {
             if (kDebugMode) {
-              print('Error updating originalFileUri: $e');
+              print('Could not update original subtitle file locator');
             }
             // Continue with the process even if this fails
           }
@@ -1013,16 +978,16 @@ class _SubtitleExtractOptionsSheetState
             // Call the callback immediately after hiding overlay
             callback(extractedSession);
           }
-        } catch (e) {
+        } catch (_) {
           if (kDebugMode) {
-            print('Error hiding loading overlay or calling callback: $e');
+            print('Could not complete loading overlay or callback');
           }
         }
 
         return; // Successful completion
-            } catch (e) {
+      } catch (_) {
         if (kDebugMode) {
-          print('Error processing subtitle file: $e');
+          print('Error processing extracted subtitle file');
         }
 
         await SubtitleExtractionFileService.cleanupTemporaryFile(
@@ -1041,7 +1006,7 @@ class _SubtitleExtractOptionsSheetState
 
             SnackbarHelper.showError(
               rootContext,
-              'Failed to process subtitle file: $e',
+              'Failed to process subtitle file. Please try another track or file.',
               duration: const Duration(seconds: 5),
             );
           }
@@ -1053,16 +1018,16 @@ class _SubtitleExtractOptionsSheetState
       }
 
       // If we get here, something went wrong but no specific error was thrown
-    } catch (e) {
+    } catch (_) {
       // Global error handler
       if (kDebugMode) {
-        print('Error in _performExtraction: $e');
+        print('Unexpected subtitle extraction error');
       }
 
       // Try to hide loading overlay and show an error
       try {
         await AppLogger.instance.error(
-          'Error extracting subtitle: $e',
+          'Error extracting subtitle. Please try another track or file.',
           context: 'SubtitleExtractOptionsSheet._extractSubtitleWithAsync',
         );
         if (rootContext.mounted) {
@@ -1070,7 +1035,7 @@ class _SubtitleExtractOptionsSheetState
 
           SnackbarHelper.showError(
             rootContext,
-            'Error extracting subtitle: $e',
+            'Error extracting subtitle. Please try another track or file.',
             duration: const Duration(seconds: 5),
           );
         }

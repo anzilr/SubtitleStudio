@@ -48,9 +48,9 @@ class SubtitleExtractionFileService {
           outputDirectory: tempDir.path,
           outputFileName: outputFilePath,
         );
-      } catch (e) {
+      } catch (_) {
         if (kDebugMode) {
-          print('Error getting temp directory, using fallback: $e');
+          print('Could not access Android temp directory; using fallback');
         }
         return SubtitleExtractionPaths(
           outputDirectory: '/data/data/org.msone.subeditor/cache',
@@ -68,9 +68,9 @@ class SubtitleExtractionFileService {
           outputDirectory: tempDir.path,
           outputFileName: outputFileName,
         );
-      } catch (e) {
+      } catch (_) {
         if (kDebugMode) {
-          print('Error getting iOS temp directory, using fallback: $e');
+          print('Could not access iOS temp directory; using fallback');
         }
         final appDocsDir = await getApplicationDocumentsDirectory();
         return SubtitleExtractionPaths(
@@ -82,18 +82,13 @@ class SubtitleExtractionFileService {
 
     try {
       final tempDir = await getTemporaryDirectory();
-      if (kDebugMode) {
-        print(
-          'Using temp directory for desktop extraction: ${tempDir.path}',
-        );
-      }
       return SubtitleExtractionPaths(
         outputDirectory: tempDir.path,
         outputFileName: outputFileName,
       );
-    } catch (e) {
+    } catch (_) {
       if (kDebugMode) {
-        print('Error getting temp directory, using system temp: $e');
+        print('Could not access temp directory; using system temp');
       }
       return SubtitleExtractionPaths(
         outputDirectory: Directory.systemTemp.path,
@@ -117,23 +112,17 @@ class SubtitleExtractionFileService {
       if (!dirExists) {
         try {
           await outputDir.create(recursive: true);
+          if (kDebugMode) print('Created extraction output directory');
+        } catch (_) {
           if (kDebugMode) {
-            print('Created output directory: $outputDirectory');
+            print('Could not create extraction output directory');
           }
-        } catch (e) {
-          if (kDebugMode) {
-            print('Error creating directory: $e');
-          }
-          throw Exception('Cannot create directory: $e');
+          throw Exception('Cannot create extraction directory');
         }
       }
 
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final testFileName = '$outputDirectory/test_write_$timestamp.tmp';
-
-      if (kDebugMode) {
-        print('Testing write permissions with file: $testFileName');
-      }
 
       final testFile = File(testFileName);
       await testFile.writeAsString('test');
@@ -157,16 +146,12 @@ class SubtitleExtractionFileService {
       final cacheDir = Directory(outputDirectory);
       if (!await cacheDir.exists()) {
         await cacheDir.create(recursive: true);
-        if (kDebugMode) {
-          print(
-            'Created cache directory for SAF temp files: $outputDirectory',
-          );
-        }
+        if (kDebugMode) print('Created cache directory for SAF temp files');
       }
       return outputDirectory;
-    } catch (e) {
+    } catch (_) {
       if (kDebugMode) {
-        print('Error creating cache directory: $e');
+        print('Could not create cache directory');
       }
       return '/tmp';
     }
@@ -180,17 +165,12 @@ class SubtitleExtractionFileService {
         FFmpegHelper.normalizePath(outputFilePath);
     final destinationFile = File(normalizedOutputFilePath);
     final tempFile = File(tempOutputFile);
-    final normalizedTempPath = FFmpegHelper.normalizePath(tempOutputFile);
-
     if (kDebugMode) {
       print('Desktop extraction complete');
-      print('Temp file path: $tempOutputFile');
-      print('Normalized temp path: $normalizedTempPath');
-      print('Final output path: $normalizedOutputFilePath');
     }
 
     if (!await tempFile.exists()) {
-      throw Exception('Temp file not found: $tempOutputFile');
+      throw Exception('Temporary extraction file not found');
     }
 
     final tempFileSize = await tempFile.length();
@@ -209,16 +189,13 @@ class SubtitleExtractionFileService {
     if (await destinationFile.exists()) {
       await destinationFile.delete();
       if (kDebugMode) {
-        print('Deleted existing file at: $normalizedOutputFilePath');
+        print('Deleted existing destination file');
       }
     }
 
     await tempFile.copy(normalizedOutputFilePath);
     if (kDebugMode) {
-      print(
-        'Copied file from temp to final location: '
-        '$normalizedOutputFilePath',
-      );
+      print('Copied extracted file to final location');
       print('Verifying copied file...');
     }
 
@@ -236,7 +213,7 @@ class SubtitleExtractionFileService {
 
     await tempFile.delete();
     if (kDebugMode) {
-      print('Cleaned up temp file: $tempOutputFile');
+      print('Cleaned up temporary extraction file');
     }
 
     return normalizedOutputFilePath;
@@ -255,7 +232,6 @@ class SubtitleExtractionFileService {
         print(
           'iOS: Skipping file verification - file picker handles saving',
         );
-        print('Final output path: $normalizedOutputPath');
       }
       return SubtitleExtractionVerification(
         normalizedOutputPath: normalizedOutputPath,
@@ -304,8 +280,6 @@ class SubtitleExtractionFileService {
     }
 
     if (kDebugMode) {
-      print('Original output path: $outputFilePath');
-      print('Normalized output path: $normalizedOutputPath');
       print('File exists: $fileExists (after $attempts attempts)');
       if (fileExists) {
         print('File size: $fileSize bytes');
@@ -331,32 +305,23 @@ class SubtitleExtractionFileService {
 
     if (Platform.isIOS) {
       fileToRead = File(tempOutputFile);
-      if (kDebugMode) {
-        print('iOS: Reading from temp file: $tempOutputFile');
-      }
+      if (kDebugMode) print('iOS: Reading temporary extraction file');
     } else if (Platform.isAndroid && useDirectSave) {
       fileToRead = File(tempOutputFile);
-      if (kDebugMode) {
-        print('Android SAF: Reading from temp file: $tempOutputFile');
-      }
+      if (kDebugMode) print('Android SAF: Reading temporary extraction file');
     } else {
       fileToRead = File(outputFilePath);
-      if (kDebugMode) {
-        print('Desktop: Reading from final destination: $outputFilePath');
-      }
+      if (kDebugMode) print('Desktop: Reading saved extraction file');
     }
 
-    if (kDebugMode) {
-      print('Attempting to read file: ${fileToRead.path}');
-      print('File exists: ${await fileToRead.exists()}');
-    }
+    final fileExists = await fileToRead.exists();
+    if (kDebugMode) print('Extracted subtitle file exists: $fileExists');
 
-    if (!await fileToRead.exists()) {
+    if (!fileExists) {
       if (kDebugMode) {
-        print('File not found at: ${fileToRead.path}');
-        print('Current working directory: ${Directory.current.path}');
+        print('Extracted subtitle file is missing');
       }
-      throw Exception('Subtitle file not found: ${fileToRead.path}');
+      throw Exception('Extracted subtitle file not found');
     }
 
     final content = await fileToRead.readAsString();
@@ -379,11 +344,11 @@ class SubtitleExtractionFileService {
 
       await tempFile.delete();
       if (kDebugMode) {
-        print('$successMessage: $tempOutputFile');
+        print('Cleaned up temporary extraction file');
       }
-    } catch (e) {
+    } catch (_) {
       if (kDebugMode) {
-        print('Warning: Could not clean up temporary file: $e');
+        print('Warning: Could not clean up temporary extraction file');
       }
     }
   }
