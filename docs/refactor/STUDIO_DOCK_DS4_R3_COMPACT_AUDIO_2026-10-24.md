@@ -25,3 +25,6 @@ Branch: feature/studio-dock-integration
 ## Verified focused gate
 - [Studio Dock quality #40031931662](https://github.com/anzilr/SubtitleStudio/actions/runs/40031931662) — **passed**, zero Flutter analyzer issues and **47 focused Studio Dock tests passed**. This includes compact ready/loading/error states, explicit auto-vs-saved-audio semantics, and audio selection lifecycle.
 - Native playback/multi-audio stream fidelity is not established by widget tests; verify locally on Windows.
+
+## Follow-up safety guard
+- The compact Studio Dock waveform now passes enableTimeEditing=false, preventing right-click, long-press, and playhead double-click from entering local-only timing/add-line modes. Seeking, zoom, pan and wheel remain available. The default is true for established mobile behavior. Implement timing/insertion only through checkpoint-backed DS5 commands.
