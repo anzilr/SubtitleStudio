@@ -556,6 +556,15 @@ three samples gave median import/open/save/restore
 recorded different medians and one subsequently fixed import warning. These
 times are not native performance targets.
 
+**CP92 R7 (October 23, 2026):** Remove two confirmed-unused legacy-map
+converters on the typed subtitle import result and the deprecated Dart SAF
+URI-only forwarding alias. The sole alias caller uses `SafFileHandler.openFile`,
+which invokes the same unchanged native URI-only Android document picker.
+Typed result regression tests and a source-contract guard cover the change;
+persisted project/history/Isar schemas, document grants and mobile UI are
+unchanged. [R7 report](CHECKPOINT92_R7_COMPATIBILITY_SHIM_CLEANUP_2026-10-23.md).
+**Verification:** Pending Linux Flutter quality gate (no platform builds).
+
 ### CP93 — Core refactor acceptance and handoff
 - Flutter analysis and full unit/widget/Isar integration tests in GitHub Actions (dependency resolution + tests only; **no platform builds in CI**).
 - Native builds and smoke tests on Android and desktop operating systems on user/local machines. Preserve fast Back/touch behavior, media lifecycle, file/SAF grants and `.msone` roundtrip.

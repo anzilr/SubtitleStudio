@@ -248,8 +248,8 @@ class FilePickerSAF {
       // Convert file extensions to MIME types for SAF
       final mimeTypes = _extensionsToMimeTypes(allowedExtensions);
       
-      // Use the new URI-only method to avoid reading large file content
-      final fileInfo = await SafFileHandler.openFileUriOnly(
+      // openFile uses Android's URI-only picker without loading file bytes.
+      final fileInfo = await SafFileHandler.openFile(
         mimeTypes: mimeTypes,
       );
       

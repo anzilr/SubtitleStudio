@@ -19,41 +19,4 @@ class SubtitleImportResult {
     required this.session,
     required this.subtitleCollection,
   });
-
-  factory SubtitleImportResult.fromLegacyMap(Map<String, dynamic> data) {
-    final collectionId = data['subtitleCollectionId'];
-    final sessionId = data['sessionId'];
-    final session = data['session'];
-    final collection = data['subtitleCollection'];
-
-    if (collectionId is! int ||
-        sessionId is! int ||
-        session is! Session ||
-        collection is! SubtitleCollection) {
-      throw StateError('Subtitle import persistence returned invalid data.');
-    }
-
-    return SubtitleImportResult(
-      subtitleCollectionId: collectionId,
-      fileName: data['fileName'] is String ? data['fileName'] as String : '',
-      lastEditedIndex:
-          data['lastEditedIndex'] is int ? data['lastEditedIndex'] as int : null,
-      sessionId: sessionId,
-      editMode: data['editMode'] is bool ? data['editMode'] as bool : false,
-      session: session,
-      subtitleCollection: collection,
-    );
-  }
-
-  Map<String, dynamic> toLegacyMap() {
-    return {
-      'subtitleCollectionId': subtitleCollectionId,
-      'fileName': fileName,
-      'lastEditedIndex': lastEditedIndex,
-      'sessionId': sessionId,
-      'editMode': editMode,
-      'session': session,
-      'subtitleCollection': subtitleCollection,
-    };
-  }
 }

@@ -449,3 +449,8 @@ session/process output, media path and SAF locator diagnostics on mobile and
 desktop while preserving file access, output naming, extraction behavior and
 numeric error codes. Add focused privacy regressions and run Flutter pub get,
 analysis and the complete Flutter test suite on Linux; no native builds.
+
+CP92 R7 October 23 2026: remove unused SubtitleImportResult legacy map
+converters and deprecated Dart SAF openFileUriOnly forwarding alias while
+keeping the native Android URI-only picker and persisted project formats.
+Run full Flutter analysis and tests on Linux, without platform builds.

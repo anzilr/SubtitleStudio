@@ -82,25 +82,6 @@ class SafFileHandler {
     }
   }
 
-  /// Open a file using SAF ACTION_OPEN_DOCUMENT (URI only, no content reading)
-  /// 
-  /// This launches the system file picker and allows the user to select a file.
-  /// Returns a [SafFileInfo] object containing only the URI and display path.
-  /// 
-  /// **Note**: This method is now identical to [openFile]. Both methods use URI-only
-  /// mode to prevent OutOfMemoryError. Kept for backwards compatibility.
-  /// 
-  /// [mimeTypes] - List of MIME types to filter (e.g., ['video/*'])
-  /// [initialFileName] - Optional suggested filename for the picker
-  @Deprecated('Use openFile() instead - both methods now use URI-only mode')
-  static Future<SafFileInfo?> openFileUriOnly({
-    List<String>? mimeTypes,
-    String? initialFileName,
-  }) async {
-    // Delegate to openFile which now uses URI-only mode by default
-    return openFile(mimeTypes: mimeTypes, initialFileName: initialFileName);
-  }
-
   /// Create a new document using SAF ACTION_CREATE_DOCUMENT
   /// 
   /// This launches the system save dialog and allows the user to choose a location

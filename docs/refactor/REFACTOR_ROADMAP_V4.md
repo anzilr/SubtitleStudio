@@ -9,8 +9,10 @@
 > commands or stderr/log bodies. [R5 report](CHECKPOINT92_R5_WAVEFORM_FFMPEG_PRIVACY_2026-10-23.md).
 > **R6 measured:** [synthetic import/open/save/restore performance baselines](CHECKPOINT92_R6_CORE_WORKFLOW_BASELINES_2026-10-23.md)
 > (1,000 cues, three samples; Linux medians 36.77/0.56/3.92/23.33 ms).
-> **Next:** CP92 R7 proven-unused shim
-> cleanup, then CP93 shared-core/native acceptance. Keep the CP86 waveform
+> **CP92 R7 implemented, gate pending:** removed unused import-result map
+> converters and the Dart-only SAF picker alias, preserving native URI-only
+> document selection and stored formats. [R7 report](CHECKPOINT92_R7_COMPATIBILITY_SHIM_CLEANUP_2026-10-23.md).
+> **Next:** verify R7 and proceed to CP93 shared-core/native acceptance. Keep the CP86 waveform
 > optimization experiment isolated and the desktop preview demo-only.
 
 > **PARALLEL DESKTOP WORK APPROVED — 2026-10-20:** User elected to **see and refine a desktop UI now while CP88–CP93 refactoring continues**. A separate [desktop preview branch](https://github.com/anzilr/SubtitleStudio/tree/feature/desktop-workspace-preview) contains a demo-data-only Flutter workspace shell and an independent Windows entrypoint; it does not open or modify projects. Continue CP88–CP93 here. Full desktop *data/media integration and production acceptance* remain gated on shared-core readiness/CP93. This updates and supersedes the earlier "only after CP93 begin PC workspace" instruction below without reopening deferred CP86 waveform work. [Current parallel execution plan](REFACTOR_TO_DESKTOP_EXECUTION_2026-10-20.md).
