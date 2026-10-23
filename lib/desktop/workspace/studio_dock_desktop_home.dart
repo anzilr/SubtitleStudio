@@ -10,10 +10,19 @@ import 'studio_dock_read_only_session_view.dart';
 /// The default Windows/Linux/macOS entry screen. Unlike the original Home
 /// route, this opens the *real* Studio Dock for the most recently used session.
 ///
-/// This is a desktop read-only integration checkpoint. Import/create still
-/// uses the existing home flow until project creation is implemented here.
+/// Uses real checkpoint-backed text edits and the existing native video player.
+/// Import/create still uses the existing Home flow until DS5.
 class StudioDockDesktopHome extends ConsumerStatefulWidget {
-  const StudioDockDesktopHome({super.key});
+  const StudioDockDesktopHome({
+    super.key,
+    this.loadSessions,
+    this.sessionViewBuilder,
+  });
+
+  /// Injectable boundaries for desktop-route tests. Production uses the
+  /// existing Isar-backed SessionRepository and real Studio Dock view.
+  final Future<StudioDockSessionCatalog> Function()? loadSessions;
+  final Widget Function(Session, VoidCallback)? sessionViewBuilder;
 
   @override
   ConsumerState<StudioDockDesktopHome> createState() =>
@@ -21,7 +30,7 @@ class StudioDockDesktopHome extends ConsumerStatefulWidget {
 }
 
 class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
-  late Future<_DesktopSessions> _sessionsFuture;
+  late Future<StudioDockSessionCatalog> _sessionsFuture;
   int? _chosenSessionId;
   bool _classicFlowActive = false;
   int _reloadRevision = 0;
@@ -32,11 +41,12 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
     _sessionsFuture = _loadSessions();
   }
 
-  Future<_DesktopSessions> _loadSessions() async {
+  Future<StudioDockSessionCatalog> _loadSessions() async {
+    if (widget.loadSessions != null) return widget.loadSessions!();
     final repository = SessionRepository(ref.read(isarProvider));
     final sessions = await repository.fetchAllSessions();
     final lastId = await repository.getLastEditedSessionId();
-    return _DesktopSessions(sessions, lastId);
+    return StudioDockSessionCatalog(sessions, lastId);
   }
 
   void _refresh() {
@@ -68,7 +78,7 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
     }
   }
 
-  Future<void> _chooseProject(_DesktopSessions snapshot) async {
+  Future<void> _chooseProject(StudioDockSessionCatalog snapshot) async {
     final selectedId = await showDialog<int>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -127,7 +137,7 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<_DesktopSessions>(
+    return FutureBuilder<StudioDockSessionCatalog>(
       future: _sessionsFuture,
       builder: (context, state) {
         if (state.connectionState != ConnectionState.done) {
@@ -159,11 +169,15 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
                 : snapshot.sessions.first.id;
         final active = snapshot.sessions.firstWhere((s) => s.id == activeId);
 
+        final choose = () => _chooseProject(snapshot);
+        if (widget.sessionViewBuilder != null) {
+          return widget.sessionViewBuilder!(active, choose);
+        }
         return StudioDockReadOnlySessionView(
           key: ValueKey('studio-dock-active-session-$activeId-$_reloadRevision'),
           sessionId: active.id,
           collectionId: active.subtitleCollectionId,
-          onChooseProject: () => _chooseProject(snapshot),
+          onChooseProject: choose,
           enableTextEditing: true,
           allowNativePlayback: !_classicFlowActive,
           suppressParentEditorHotkeys: false,
@@ -206,8 +220,8 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
   );
 }
 
-class _DesktopSessions {
-  const _DesktopSessions(this.sessions, this.lastId);
+class StudioDockSessionCatalog {
+  const StudioDockSessionCatalog(this.sessions, this.lastId);
   final List<Session> sessions;
   final int? lastId;
 }
