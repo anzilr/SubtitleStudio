@@ -22,4 +22,5 @@ Branch: `feature/studio-dock-integration`
 ## Focused CI result
 
 - [Studio Dock Flutter quality #40033259224](https://github.com/anzilr/SubtitleStudio/actions/runs/40033259224) — passed, including analyzer and Studio Dock widget/integration regressions.
-- Full repository regression is the next quality gate; it has not been substituted with a native build.
+- [Full Flutter regression #40033528013](https://github.com/anzilr/SubtitleStudio/actions/runs/40033528013) — passed, **857 tests**, Flutter analyzer clean. No platform application builds were run in GitHub Actions.
+- Actual Windows playback, waveform track fidelity, and visual timing-editor acceptance remain device-host tasks.
