@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:isar_community/isar.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_project_actions.dart';
 import 'package:subtitle_studio/services/subtitle_import_repository.dart';
 import 'package:subtitle_studio/widgets/session_selection/session_project_import_repository.dart';
