@@ -70,7 +70,7 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
           child: Column(children: [
             const Text(
               'Choose a subtitle session to view in Studio Dock. '
-              'Editing and playback are not connected yet.',
+              'Text editing is enabled. Video playback is available when a saved media file exists.',
               style: TextStyle(fontSize: 12),
             ),
             const SizedBox(height: 12),
@@ -84,7 +84,7 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
                     leading: const Icon(Icons.subtitles_outlined),
                     title: Text(session.fileName,
                       maxLines: 1, overflow: TextOverflow.ellipsis),
-                    subtitle: Text('Session ${session.id} · read only'),
+                    subtitle: Text('Session ${session.id} · text editing'),
                     selected: session.id == _chosenSessionId,
                     onTap: () => Navigator.pop(dialogContext, session.id),
                   );
@@ -156,6 +156,7 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
           collectionId: active.subtitleCollectionId,
           onChooseProject: () => _chooseProject(snapshot),
           enableTextEditing: true,
+          allowNativePlayback: true,
         );
       },
     );
