@@ -383,15 +383,76 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
         ]),
       );
 
-  Widget _editingWorkspace() => Column(children: [
-    Expanded(flex: 5, child: Column(children: [
-      Expanded(child: _videoPanel()),
-      _transport(),
-      _waveformPanel(),
-    ])),
-    const SizedBox(height: 5, child: ColoredBox(color: _border)),
-    Expanded(flex: 4, child: _subtitleTable()),
-  ]);
+  Widget _editingWorkspace() => LayoutBuilder(
+    builder: (context, limits) {
+      final bands = StudioDockBands.resolve(
+        limits.maxHeight,
+        videoShare: _videoShare,
+        waveformShare: _waveformShare,
+      );
+      return Column(children: [
+        SizedBox(
+          key: const ValueKey('dock-video-band'),
+          height: bands.video,
+          child: Column(children: [
+            Expanded(child: _videoPanel()),
+            _transport(),
+          ]),
+        ),
+        _horizontalSplitter(
+          key: const ValueKey('splitter-video-waveform'),
+          onDelta: (dy) => setState(() {
+            final change = dy / limits.maxHeight;
+            _videoShare = (_videoShare + change).clamp(.24, .62);
+            _waveformShare = (_waveformShare - change).clamp(.11, .26);
+          }),
+          onReset: () => setState(() {
+            _videoShare = .43;
+            _waveformShare = .13;
+          }),
+        ),
+        SizedBox(
+          key: const ValueKey('dock-waveform-band'),
+          height: bands.waveform,
+          child: _waveformPanel(),
+        ),
+        _horizontalSplitter(
+          key: const ValueKey('splitter-waveform-table'),
+          onDelta: (dy) => setState(() =>
+            _waveformShare = (_waveformShare + dy / limits.maxHeight)
+                .clamp(.11, .26)),
+          onReset: () => setState(() {
+            _videoShare = .43;
+            _waveformShare = .13;
+          }),
+        ),
+        Expanded(
+          child: KeyedSubtree(
+            key: const ValueKey('dock-table-band'),
+            child: _subtitleTable(),
+          ),
+        ),
+      ]);
+    },
+  );
+
+  Widget _horizontalSplitter({
+    required Key key,
+    required ValueChanged<double> onDelta,
+    required VoidCallback onReset,
+  }) => MouseRegion(
+    key: key,
+    cursor: SystemMouseCursors.resizeRow,
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onVerticalDragUpdate: (details) => onDelta(details.delta.dy),
+      onDoubleTap: onReset,
+      child: const SizedBox(
+        height: StudioDockBands.splitter,
+        child: ColoredBox(color: _border),
+      ),
+    ),
+  );
 
   Widget _videoPanel() => Container(
     padding: const EdgeInsets.all(14),
@@ -477,7 +538,6 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   );
 
   Widget _waveformPanel() => Container(
-    height: 114,
     padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
     color: const Color(0xFF171B20),
     child: Column(children: [
