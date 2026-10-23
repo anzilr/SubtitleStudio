@@ -511,3 +511,5 @@ STUDIO DOCK ONLY 2026-10-24: native startup and file associations never enter cl
 DS4 R2 COMPLETE FLUTTER GATE 2026-10-24: integrate existing waveform with single native player and direct Attach Video; focused 42 tests clean; run complete flutter pub get/analyze/test only; no platform builds in GitHub Actions.
 
 DS4 R3 FULL SUITE 2026-10-24: compact production waveform controls and player-selected verified FFmpeg stream; 47 focused tests and analyzer clean. Run Flutter pub get/analyze/test only. NO platform builds.
+
+DS4 R3 FINAL SOURCE GATE 2026-10-24: final opt-in compact waveform and mpv-verified FFmpeg selected audio stream, legacy preferences respected for mobile, and disable waveform timing/add-line gestures until checkpoint-backed desktop editing exists. GitHub Actions flutter pub get/analyze/test only. NO native platform builds.
