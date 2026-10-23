@@ -17,12 +17,14 @@ class StudioDockDesktopHome extends ConsumerStatefulWidget {
     super.key,
     this.loadSessions,
     this.sessionViewBuilder,
+    this.classicHomeBuilder,
   });
 
   /// Injectable boundaries for desktop-route tests. Production uses the
   /// existing Isar-backed SessionRepository and real Studio Dock view.
   final Future<StudioDockSessionCatalog> Function()? loadSessions;
   final Widget Function(Session, VoidCallback)? sessionViewBuilder;
+  final WidgetBuilder? classicHomeBuilder;
 
   @override
   ConsumerState<StudioDockDesktopHome> createState() =>
@@ -68,7 +70,7 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
     if (!mounted) return;
     try {
       await Navigator.of(context).push(MaterialPageRoute<void>(
-        builder: (_) => const HomeScreen(),
+        builder: widget.classicHomeBuilder ?? (_) => const HomeScreen(),
       ));
     } finally {
       if (mounted) {
