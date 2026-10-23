@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/screens/edit/providers/subtitle_repository_provider.dart';
+import 'package:subtitle_studio/utils/msone_hotkey_manager.dart';
 
 import 'desktop_workspace_preview.dart';
 import 'studio_dock_session_loader.dart';
@@ -32,7 +33,16 @@ class _StudioDockReadOnlySessionViewState
   @override
   void initState() {
     super.initState();
+    // Suppress the still-mounted Editor's native in-app hotkeys while this
+    // read-only route is visible, then restore them on disposal.
+    MSoneHotkeyManager.instance.suspendCallbacks();
     _snapshot = _load();
+  }
+
+  @override
+  void dispose() {
+    MSoneHotkeyManager.instance.resumeCallbacks();
+    super.dispose();
   }
 
   Future<StudioDockSessionSnapshot> _load() {
