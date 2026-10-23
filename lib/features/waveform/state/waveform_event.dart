@@ -15,15 +15,20 @@ class LoadAudioFile extends WaveformEvent {
   final String? audioTrackId; // Selected audio track ID for multi-track videos
   /// Already-known source length for determinate extraction progress.
   final Duration? mediaDuration;
+  /// False for a player-resolved audio selection; null means explicit auto,
+  /// not an instruction to reuse an older persisted audio-track ID.
+  final bool useSavedAudioTrackPreference;
 
   const LoadAudioFile(this.filePath, {
     this.subtitleCollectionId,
     this.audioTrackId,
     this.mediaDuration,
+    this.useSavedAudioTrackPreference = true,
   });
 
   @override
-  List<Object?> get props => [filePath, subtitleCollectionId, audioTrackId, mediaDuration];
+  List<Object?> get props => [filePath, subtitleCollectionId, audioTrackId,
+      mediaDuration, useSavedAudioTrackPreference];
 }
 
 /// Zoom in (increase samples per pixel)
