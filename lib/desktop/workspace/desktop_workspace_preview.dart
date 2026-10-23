@@ -44,6 +44,7 @@ class DesktopWorkspacePreview extends StatefulWidget {
     this.projectTitle,
     this.encoding,
     this.onChooseProject,
+    this.onApplyCueText,
   });
 
   /// Supplied only by the DS3 real-session loader. Demo mode still owns its
@@ -53,6 +54,8 @@ class DesktopWorkspacePreview extends StatefulWidget {
   final String? projectTitle;
   final String? encoding;
   final VoidCallback? onChooseProject;
+  /// Non-null only when the production checkpoint-backed edit bridge is ready.
+  final Future<bool> Function(int cueNumber, String editedText)? onApplyCueText;
 
   @override
   State<DesktopWorkspacePreview> createState() =>
@@ -122,6 +125,10 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   double _videoShare = .43;
   double _waveformShare = .13;
   String _query = '';
+  int? _draftCueId;
+  String? _draftText;
+  int _draftRevision = 0;
+  bool _savingDraft = false;
   double _sidebarWidth = 240;
   double _inspectorWidth = 320;
 
@@ -286,7 +293,107 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
     });
   }
 
+  bool get _hasDirtyDraft => widget.onApplyCueText != null &&
+      _draftCueId == _selectedId &&
+      _draftText != null && _draftText != _selected.edited;
+
+  void _discardDraft() {
+    setState(() {
+      _draftCueId = null;
+      _draftText = null;
+      _draftRevision++;
+    });
+  }
+
+  Future<bool> _applyDraft() async {
+    final callback = widget.onApplyCueText;
+    if (callback == null || _savingDraft) return false;
+    if (!_hasDirtyDraft) return true;
+    final cueId = _selectedId;
+    final text = _draftText!;
+    setState(() => _savingDraft = true);
+    bool applied;
+    try {
+      applied = await callback(cueId, text);
+    } catch (_) {
+      applied = false;
+    }
+    if (!mounted) return false;
+    setState(() {
+      _savingDraft = false;
+      if (applied) {
+        final i = _cues.indexWhere((cue) => cue.id == cueId);
+        if (i >= 0) _cues[i] = _cues[i].copyWith(edited: text);
+        _draftCueId = null;
+        _draftText = null;
+        _draftRevision++;
+      }
+    });
+    if (!applied) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Could not apply this edit. The subtitle may have '
+            'changed elsewhere. Your draft is preserved.'),
+      ));
+    }
+    return applied;
+  }
+
+  Future<bool> _confirmDraftBeforeLeaving() async {
+    if (_savingDraft) return false;
+    if (!_hasDirtyDraft) return true;
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Unsaved subtitle edit'),
+        content: const Text('Apply this cue edit before leaving it?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, 'cancel'),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, 'discard'),
+            child: const Text('Discard'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, 'apply'),
+            child: const Text('Apply'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted) return false;
+    if (choice == 'discard') {
+      _discardDraft();
+      return true;
+    }
+    if (choice == 'apply') return _applyDraft();
+    return false;
+  }
+
+  Future<void> _chooseProjectSafely() async {
+    if (await _confirmDraftBeforeLeaving() && mounted) {
+      widget.onChooseProject?.call();
+    }
+  }
+
+  Future<void> _selectCueAfterConfirmation(int id,
+      {bool range = false, bool toggle = false}) async {
+    if (await _confirmDraftBeforeLeaving() && mounted) {
+      _applyCueSelection(id, range: range, toggle: toggle);
+    }
+  }
+
   void _selectCue(int id, {bool range = false, bool toggle = false}) {
+    if (id != _selectedId && _hasDirtyDraft) {
+      unawaited(_selectCueAfterConfirmation(
+          id, range: range, toggle: toggle));
+      return;
+    }
+    _applyCueSelection(id, range: range, toggle: toggle);
+  }
+
+  void _applyCueSelection(int id, {bool range = false, bool toggle = false}) {
     final visibleIds = _visible.map((cue) => cue.id).toList();
     if (!visibleIds.contains(id)) return;
     setState(() {
@@ -359,7 +466,16 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
         child: Text('This subtitle session has no cues.'),
       ));
     }
-    return CallbackShortcuts(
+    return PopScope(
+      canPop: !_hasDirtyDraft && !_savingDraft,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && !_savingDraft) {
+          unawaited(_confirmDraftBeforeLeaving().then((allowed) {
+            if (allowed && mounted) Navigator.of(context).maybePop();
+          }));
+        }
+      },
+      child: CallbackShortcuts(
       bindings: {
         // Only palette chord is new: the other shortcuts belong to
         // MSoneHotkeyManager and must not be duplicated here.
@@ -471,7 +587,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
           key: const ValueKey('studio-dock-switch-project'),
           icon: const Icon(Icons.folder_open_outlined),
           tooltip: 'Switch project',
-          onPressed: widget.onChooseProject,
+          onPressed: () => unawaited(_chooseProjectSafely()),
         ),
       const SizedBox(width: 6),
       IconButton(
