@@ -22,3 +22,8 @@ Branch: feature/studio-dock-integration
 - Studio Dock toolbar now has **Attach or change video**. It uses the established FilePickerSAF and VideoRepository, retaining macOS security-scoped bookmark persistence.
 - Attach/change requires the same unsaved-edit Apply/Discard/Cancel confirmation as switching projects. Cancel or invalid media leaves the existing saved video in place. A successful pick persists the path and mounts the corresponding video and waveform surfaces under path-specific keys, avoiding stale player/audio buffers.
 - No classic Editor is necessary for associating a video with a newly imported subtitle session.
+
+## Focused CI verified
+- GitHub Actions Studio Dock quality run #40030914403 passed: **42 tests passed, Flutter analyzer zero issues**. https://github.com/anzilr/SubtitleStudio/actions/runs/40030914403
+- Test scope covers video link seek/teardown, production injected waveform and video lifetime across navigation, Attach Video with unsaved drafts, and the existing Studio Dock import/edit/history regressions.
+- No Windows/macOS/Linux native build in Actions. In particular, FFmpeg waveform height at balanced 43/13/44, selected audio stream, and actual media seek fidelity need physical Windows verification.
