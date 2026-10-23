@@ -398,6 +398,18 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
       widget.onChooseProject?.call();
     }
   }
+  Future<void> _importFileSafely() async {
+    if (await _confirmDraftBeforeLeaving() && mounted) {
+      widget.onImportFile?.call();
+    }
+  }
+
+  Future<void> _newProjectSafely() async {
+    if (await _confirmDraftBeforeLeaving() && mounted) {
+      widget.onNewProject?.call();
+    }
+  }
+
 
   Future<void> _selectCueAfterConfirmation(int id,
       {bool range = false, bool toggle = false}) async {
@@ -650,14 +662,14 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
           key: const ValueKey('studio-dock-toolbar-import'),
           icon: const Icon(Icons.file_open_outlined),
           tooltip: 'Import subtitles or project',
-          onPressed: widget.onImportFile,
+          onPressed: () => unawaited(_importFileSafely()),
         ),
       if (widget.onNewProject != null)
         IconButton(
           key: const ValueKey('studio-dock-toolbar-new'),
           icon: const Icon(Icons.add_box_outlined),
           tooltip: 'New project',
-          onPressed: widget.onNewProject,
+          onPressed: () => unawaited(_newProjectSafely()),
         ),
       if (widget.onChooseProject != null)
         IconButton(
