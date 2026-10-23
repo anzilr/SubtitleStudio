@@ -603,6 +603,17 @@ fallback. Add both adapter and Source View controller regression tests.
 **790 tests passed, zero analyzer issues**. Android/Windows native acceptance
 remains pending, with no platform builds in GitHub Actions.
 
+**CP93 R4 (October 23, 2026):** User-reported paused-video waveform
+scrubbing was sluggish and inaccurate. Replace per-frame native seeks with
+visual-only dragging when paused (one final exact seek on release), bounded
+preview seeks when playing, and coalesced wheel seeking. Manual scroll owns
+the displayed playhead while native position updates lag; seek time now uses
+clamped visual scroll. Add regression tests and privacy-safe profile counters.
+This is an isolated stable-waveform seeking fix, **not** a merge of the
+deferred CP86 progressive decoding experiment.
+[R4 report](CHECKPOINT93_R4_PAUSED_WAVEFORM_SCRUB_2026-10-23.md).
+CI and native OnePlus profile gesture acceptance are pending.
+
 ### Production Desktop Workspace Integration / UI [AFTER CP93]
 - The presentation shell may be designed and previewed now on the isolated branch. After CP93, connect it to the shared Riverpod, Isar, project, checkpoint, encoding and file-access core without duplicating domain logic.
 - PC single-screen workflow: project navigator/history, video + waveform, cue editor/table, tools/sidebar; keyboard shortcuts, resizable panes and platform file dialogs.

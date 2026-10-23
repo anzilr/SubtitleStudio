@@ -1,20 +1,21 @@
 part of 'waveform_widget.dart';
 
 extension _WaveformInteractions on WaveformWidgetState {
-  void _handleScroll(PointerScrollEvent event, WaveformReady state) {
+  void _handleScroll(PointerScrollEvent event) {
     // Handle mouse wheel scroll
     if (event.scrollDelta.dy != 0) {
       // Horizontal scroll with mouse wheel
-      final newScrollPosition =
-          state.scrollPosition + event.scrollDelta.dy * 0.5;
+      final current = ref.read(waveformControllerProvider);
+      if (current is! WaveformReady) return;
+      final newScrollPosition = current.clampScrollPosition(
+        current.scrollPosition + event.scrollDelta.dy * 0.5,
+      );
+      if (newScrollPosition == current.scrollPosition) return;
+      final target = current.centerTimeForScroll(newScrollPosition);
+      _seekCoordinator.scrollWheel(target);
       ref.read(waveformControllerProvider.notifier).dispatch(
             ScrollSeekToTime(newScrollPosition),
           );
-      
-      // Calculate center viewport time and seek video
-      final centerPixel = newScrollPosition + state.viewportWidth / 2;
-      final centerTime = state.pixelToTime(centerPixel);
-      widget.onSeek?.call(centerTime);
     }
   }
 
@@ -81,6 +82,7 @@ extension _WaveformInteractions on WaveformWidgetState {
     
     // Normal waveform scrolling
     _lastScrollDragPosition = details.globalPosition.dx;
+    _seekCoordinator.startDrag();
   }
 
   void _handleWaveformPanUpdate(DragUpdateDetails details, WaveformReady state) {
@@ -213,21 +215,21 @@ extension _WaveformInteractions on WaveformWidgetState {
     
     // Normal waveform scrolling
     if (_lastScrollDragPosition == null) return;
-    
+    final current = ref.read(waveformControllerProvider);
+    if (current is! WaveformReady) return;
     final delta = details.globalPosition.dx - _lastScrollDragPosition!;
-    final newScrollPosition = state.scrollPosition - delta;
+    final newScrollPosition = current.clampScrollPosition(
+      current.scrollPosition - delta,
+    );
+    _lastScrollDragPosition = details.globalPosition.dx;
+    if (newScrollPosition == current.scrollPosition) return;
+    final target = current.centerTimeForScroll(newScrollPosition);
     
-    // Update scroll position and seek video to center viewport time
+    // Paint every drag update, but bound expensive native player seeks.
     ref.read(waveformControllerProvider.notifier).dispatch(
       ScrollSeekToTime(newScrollPosition),
     );
-    
-    // Calculate center viewport time and seek video
-    final centerPixel = newScrollPosition + state.viewportWidth / 2;
-    final centerTime = state.pixelToTime(centerPixel);
-    widget.onSeek?.call(centerTime);
-
-    _lastScrollDragPosition = details.globalPosition.dx;
+    _seekCoordinator.updateDrag(target);
   }
 
   void _handleWaveformPanEnd() {
@@ -251,6 +253,23 @@ extension _WaveformInteractions on WaveformWidgetState {
     
     // Normal waveform scrolling cleanup
     _lastScrollDragPosition = null;
+    _seekCoordinator.finishDrag();
+  }
+
+  void _handleWaveformPanCancel() {
+    _lastScrollDragPosition = null;
+    _seekCoordinator.cancel();
+    _mutateLocalState(() {
+      _isMovingEditOverlay = false;
+      _isMovingAddLineOverlay = false;
+      _isDraggingStartBar = false;
+      _isDraggingEndBar = false;
+      _isDraggingAddLineStartBar = false;
+      _isDraggingAddLineEndBar = false;
+      _overlayDragStartX = null;
+      _overlayDragOriginalStart = null;
+      _overlayDragOriginalEnd = null;
+    });
   }
 
   // Handle mouse click (for double-click detection to seek/highlight/add line)
@@ -305,8 +324,8 @@ extension _WaveformInteractions on WaveformWidgetState {
         // Double-click on subtitle - seek and highlight
         final subtitle = _currentSubtitles[subtitleIndex];
         final startTime = parseTimeString(subtitle.startTime);
-        widget.onSeek?.call(startTime);
         ref.read(waveformControllerProvider.notifier).dispatch(SeekToTime(startTime));
+        widget.onSeek?.call(startTime);
         // Pass 1-based index (subtitle.index) for highlighting
         widget.onSubtitleHighlight?.call(subtitle.index);
       } else {
@@ -427,10 +446,7 @@ extension _WaveformInteractions on WaveformWidgetState {
 
   // Get viewport center time
   Duration _getViewportCenterTime(WaveformReady state) {
-    final centerPixel = state.scrollPosition + state.viewportWidth / 2;
-    final centerSample = (centerPixel * state.samplesPerPixel).round();
-    final centerMilliseconds = (centerSample * 1000 / state.buffer.sampleRate).round();
-    return Duration(milliseconds: centerMilliseconds);
+    return state.centerTimeForScroll(state.scrollPosition);
   }
 
   // Handle tap on waveform (empty area) - double tap to seek or exit edit mode or enter add line mode on playhead
@@ -540,8 +556,8 @@ extension _WaveformInteractions on WaveformWidgetState {
         _lastTapTime != null &&
         now.difference(_lastTapTime!) < WaveformWidgetState._doubleTapDuration) {
       // Double tap - seek to subtitle start and highlight in list
-      widget.onSeek?.call(startTime);
       ref.read(waveformControllerProvider.notifier).dispatch(SeekToTime(startTime));
+      widget.onSeek?.call(startTime);
       // Pass 1-based index (subtitle.index) for highlighting
       widget.onSubtitleHighlight?.call(subtitle.index);
       
@@ -557,14 +573,13 @@ extension _WaveformInteractions on WaveformWidgetState {
   /// Seek to the tapped position
   void _seekToPosition(Offset localPosition, WaveformReady state) {
     final tapX = localPosition.dx;
-    final pixelPosition = state.scrollPosition + tapX;
+    final pixelPosition = (state.scrollPosition + tapX)
+        .clamp(0.0, state.totalWidth);
     final time = state.pixelToTime(pixelPosition);
 
-    // Notify parent
-    widget.onSeek?.call(time);
-
-    // Update state
+    // Hold the displayed seek target before native position callbacks arrive.
     ref.read(waveformControllerProvider.notifier).dispatch(SeekToTime(time));
+    widget.onSeek?.call(time);
   }
 
   /// Detect which subtitle was tapped (returns subtitle index or null)

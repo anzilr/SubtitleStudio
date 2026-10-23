@@ -33,6 +33,7 @@ class EditorVideoPane extends StatelessWidget {
   final void Function(int, String?)? onSubtitleCommentUpdated;
   final VoidCallback onLoadVideo;
   final ValueChanged<Duration> onSeek;
+  final bool Function() isVideoPlaying;
   final ValueChanged<int> onSubtitleHighlight;
   final Future<void> Function() onWaveformSubtitlesUpdated;
   final void Function(Duration startTime, Duration endTime)
@@ -62,6 +63,7 @@ class EditorVideoPane extends StatelessWidget {
     required this.onSubtitleCommentUpdated,
     required this.onLoadVideo,
     required this.onSeek,
+    required this.isVideoPlaying,
     required this.onSubtitleHighlight,
     required this.onWaveformSubtitlesUpdated,
     required this.onAddLineConfirmed,
@@ -143,6 +145,7 @@ class EditorVideoPane extends StatelessWidget {
                 sessionId: sessionId,
                 highlightedSubtitleIndex: highlightedSubtitleIndex,
                 onSeek: onSeek,
+                isVideoPlaying: isVideoPlaying,
                 onSubtitleHighlight: onSubtitleHighlight,
                 onSubtitlesUpdated: () {
                   onWaveformSubtitlesUpdated();

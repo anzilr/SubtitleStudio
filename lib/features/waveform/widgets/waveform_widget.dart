@@ -11,6 +11,7 @@ import 'package:subtitle_studio/features/waveform/widgets/waveform_painter.dart'
 import 'package:subtitle_studio/features/waveform/widgets/waveform_control_colors.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_tile_source.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_decode_progress.dart';
+import 'package:subtitle_studio/features/waveform/services/waveform_seek_coordinator.dart';
 import 'package:subtitle_studio/features/waveform/models/waveform_sample.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/widgets/settings_sheet.dart';
@@ -25,6 +26,8 @@ class WaveformWidget extends riverpod.ConsumerStatefulWidget {
   final List<SubtitleLine> subtitles;
   final Duration? playbackPosition;
   final Function(Duration)? onSeek;
+  /// Report whether video is running. Paused scrubs seek only on release.
+  final bool Function()? isVideoPlaying;
   final Function(int)? onSubtitleHighlight; // Callback to highlight subtitle in list
   final Function()? onSubtitlesUpdated; // Callback when subtitles are updated (for refreshing parent)
   final Function(Duration startTime, Duration endTime)? onAddLineConfirmed; // Callback when add line is confirmed with selected times
@@ -42,6 +45,7 @@ class WaveformWidget extends riverpod.ConsumerStatefulWidget {
     required this.subtitles,
     this.playbackPosition,
     this.onSeek,
+    this.isVideoPlaying,
     this.onSubtitleHighlight,
     this.onSubtitlesUpdated,
     this.onAddLineConfirmed,
@@ -112,6 +116,7 @@ class WaveformWidgetState extends riverpod.ConsumerState<WaveformWidget> {
   
   // For waveform scrolling
   double? _lastScrollDragPosition;
+  late final WaveformSeekCoordinator _seekCoordinator;
   
   // Static variables for mouse double-click (persist across rebuilds)
   static DateTime? _staticLastMouseClickTime;
@@ -123,6 +128,24 @@ class WaveformWidgetState extends riverpod.ConsumerState<WaveformWidget> {
     super.initState();
     // Initialize current subtitles from widget
     _currentSubtitles = List.from(widget.subtitles);
+    _seekCoordinator = WaveformSeekCoordinator(
+      shouldPreview: () => widget.isVideoPlaying?.call() ?? true,
+      onBegin: () =>
+          ref.read(waveformControllerProvider.notifier).beginManualScrub(),
+      onPreview: (position) => widget.onSeek?.call(position),
+      onComplete: (position) =>
+          ref.read(waveformControllerProvider.notifier).completeManualScrub(position),
+      onCancel: () =>
+          ref.read(waveformControllerProvider.notifier).cancelManualScrub(),
+    );
+  }
+
+  @override
+  void dispose() {
+    // In particular, a pending mouse-wheel idle timer may not seek after the
+    // editor leaves the screen or changes its video surface.
+    _seekCoordinator.dispose();
+    super.dispose();
   }
 
   // Synchronize external playback updates only after the current Flutter

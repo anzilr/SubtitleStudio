@@ -39,6 +39,43 @@ class WaveformController extends Notifier<WaveformState> {
   bool _disposed = false;
   int _loadEpoch = 0;
   int _stateWriteGeneration = 0;
+  bool _manualScrubActive = false;
+  DateTime? _lastManualScrubUpdate;
+  Duration? _pendingSeekPosition;
+  DateTime? _pendingSeekAt;
+
+  static const _seekSettleWindow = Duration(seconds: 2);
+  static const _seekAckTolerance = Duration(milliseconds: 250);
+
+  /// Manual movement owns the visible playhead until the final media seek
+  /// settles. Native position callbacks during this period can describe an
+  /// earlier seek, and must not drag the viewport backwards.
+  void beginManualScrub() {
+    if (state is! WaveformReady) return;
+    _manualScrubActive = true;
+    _lastManualScrubUpdate = DateTime.now();
+    _pendingSeekPosition = null;
+    _pendingSeekAt = null;
+  }
+
+  void completeManualScrub(Duration finalTarget) {
+    if (!_manualScrubActive) return;
+    _manualScrubActive = false;
+    _lastManualScrubUpdate = null;
+    _holdPositionUntilSettled(finalTarget);
+  }
+
+  void cancelManualScrub() {
+    _manualScrubActive = false;
+    _lastManualScrubUpdate = null;
+    _pendingSeekPosition = null;
+    _pendingSeekAt = null;
+  }
+
+  void _holdPositionUntilSettled(Duration position) {
+    _pendingSeekPosition = position;
+    _pendingSeekAt = DateTime.now();
+  }
 
   AudioProcessor get _audioProcessor =>
       ref.read(waveformAudioProcessorProvider);
@@ -195,6 +232,7 @@ class WaveformController extends Notifier<WaveformState> {
   Future<void> _onLoadAudioFile(
     LoadAudioFile event,
   ) async {
+    cancelManualScrub();
     final epoch = ++_loadEpoch;
     bool isCurrent() => !_disposed && _loadEpoch == epoch;
     // Kill old platform decoding as well as ignoring late Riverpod results.
@@ -370,6 +408,27 @@ class WaveformController extends Notifier<WaveformState> {
     UpdatePlaybackPosition event,
   ) {
     if (state is! WaveformReady) return;
+    final now = DateTime.now();
+    if (_manualScrubActive) {
+      // Avoid a permanent hold if a widget is removed mid-gesture without a
+      // pan-cancel notification (normal completion clears this immediately).
+      if (_lastManualScrubUpdate != null &&
+          now.difference(_lastManualScrubUpdate!) < const Duration(seconds: 5)) {
+        return;
+      }
+      cancelManualScrub();
+    }
+    final pending = _pendingSeekPosition;
+    if (pending != null) {
+      final acknowledged =
+          (event.position - pending).abs() <= _seekAckTolerance;
+      if (!acknowledged && _pendingSeekAt != null &&
+          now.difference(_pendingSeekAt!) < _seekSettleWindow) {
+        return;
+      }
+      _pendingSeekPosition = null;
+      _pendingSeekAt = null;
+    }
     final currentState = state as WaveformReady;
     var nextScroll = currentState.scrollPosition;
 
@@ -403,6 +462,7 @@ class WaveformController extends Notifier<WaveformState> {
   void _onSeekToTime(SeekToTime event) {
     if (state is WaveformReady) {
       final currentState = state as WaveformReady;
+      _holdPositionUntilSettled(event.time);
       final targetPixel = currentState.timeToPixel(event.time);
       final newScroll = targetPixel - currentState.viewportWidth / 2;
       final maxScroll = (currentState.totalWidth - currentState.viewportWidth).clamp(0.0, double.infinity);
@@ -442,12 +502,14 @@ class WaveformController extends Notifier<WaveformState> {
 
   /// Clear waveform
   void _onTrackSelectionFailed(WaveformTrackSelectionFailed event) {
+    cancelManualScrub();
     _loadEpoch++;
     _audioProcessor.cancelActive();
     _setState(WaveformError(event.message, filePath: event.filePath));
   }
 
   void _onClearWaveform(ClearWaveform event) {
+    cancelManualScrub();
     _loadEpoch++; // A cleared screen must not be repopulated by an old load.
     _audioProcessor.cancelActive();
     _setState(const WaveformInitial());
@@ -627,9 +689,16 @@ class WaveformController extends Notifier<WaveformState> {
   ) {
     if (state is WaveformReady) {
       final currentState = state as WaveformReady;
-      final maxScroll = (currentState.totalWidth - currentState.viewportWidth).clamp(0.0, double.infinity);
-      final clampedScroll = event.scrollPosition.clamp(0.0, maxScroll);
-      _setState(currentState.copyWith(scrollPosition: clampedScroll));
+      final clampedScroll = currentState.clampScrollPosition(event.scrollPosition);
+      if (_manualScrubActive) {
+        _lastManualScrubUpdate = DateTime.now();
+        _setState(currentState.copyWith(
+          scrollPosition: clampedScroll,
+          playbackPosition: currentState.centerTimeForScroll(clampedScroll),
+        ));
+      } else {
+        _setState(currentState.copyWith(scrollPosition: clampedScroll));
+      }
       // Video seeking is handled in the widget via widget.onSeek callback
     }
   }

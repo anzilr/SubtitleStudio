@@ -1,5 +1,14 @@
 # SubtitleStudio Refactor Roadmap v4
 
+> **CP93 R4 targeted waveform seek correction — 2026-10-23:** A paused-video
+> manual drag will now paint immediately without flooding native seeks,
+> finishing with one precise seek. Playing-mode previews are throttled;
+> wheel input is coalesced, native position reports cannot prematurely
+> recenter the active scroll, and boundary seek times use clamped positions.
+> [R4 report](CHECKPOINT93_R4_PAUSED_WAVEFORM_SCRUB_2026-10-23.md).
+> Automated and physical-device acceptance are still pending. This does not
+> resume the separately frozen CP86 progressive audio-decoding experiment.
+
 > **CURRENT CP92 STATUS — 2026-10-23:** CP92 R1–R7 cleanup, diagnostic
 > privacy, synthetic performance baselines and proven-unused compatibility
 > shim removal passed the Linux Flutter gate. Latest verified R7:

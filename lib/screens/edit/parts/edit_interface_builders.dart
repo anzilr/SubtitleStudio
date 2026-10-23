@@ -104,6 +104,7 @@ extension _EditInterfaceBuilders on _EditScreenState {
       onSeek: (position) {
         _videoPlayerKey.currentState?.seekTo(position);
       },
+      isVideoPlaying: () => _videoPlayerKey.currentState?.isPlaying() ?? false,
       onSubtitleHighlight: (index) {
         _scrollToIndexWithLoading(index);
         _setEditorState(() {

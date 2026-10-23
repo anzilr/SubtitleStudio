@@ -453,7 +453,7 @@ extension _WaveformRendering on WaveformWidgetState {
                           child: Listener(
                             onPointerSignal: (event) {
                               if (event is PointerScrollEvent) {
-                                _handleScroll(event, state);
+                                _handleScroll(event);
                               }
                             },
                             onPointerDown: (event) {
@@ -477,6 +477,7 @@ extension _WaveformRendering on WaveformWidgetState {
                               onPanStart: (details) => _handleWaveformPanStart(details, state),
                               onPanUpdate: (details) => _handleWaveformPanUpdate(details, state),
                               onPanEnd: (details) => _handleWaveformPanEnd(),
+                              onPanCancel: _handleWaveformPanCancel,
                               child: Builder(
                                 builder: (context) {
                                   final waveformPainter = WaveformPainter(

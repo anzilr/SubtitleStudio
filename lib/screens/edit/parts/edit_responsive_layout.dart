@@ -429,6 +429,7 @@ extension _EditResponsiveLayout on _EditScreenState {
                             subtitleCollectionId: widget.subtitleCollectionId,
                             sessionId: widget.sessionId,
                             highlightedSubtitleIndex: _highlightedIndex,
+                            isVideoPlaying: () => _videoPlayerKey.currentState?.isPlaying() ?? false,
                             onSeek: (Duration position) {
                               // Seek video to the selected position
                               if (_videoPlayerKey.currentState != null) {
@@ -595,6 +596,7 @@ extension _EditResponsiveLayout on _EditScreenState {
                       subtitleCollectionId: widget.subtitleCollectionId,
                       sessionId: widget.sessionId,
                       highlightedSubtitleIndex: _highlightedIndex,
+                      isVideoPlaying: () => _videoPlayerKey.currentState?.isPlaying() ?? false,
                       onSeek: (Duration position) {
                         // Seek video to the selected position
                         if (_videoPlayerKey.currentState != null) {

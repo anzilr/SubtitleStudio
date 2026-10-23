@@ -470,3 +470,8 @@ CP93 R3 October 23 2026: treat zero-byte Android SAF document responses as
 successful Source View reads, with no fallback to stale local caches. Verify
 direct empty content URI, null/failed provider fallback and empty Source View
 controller state. Linux Flutter analyze/tests only; no native platform builds.
+
+CP93 R4 October 23 2026: stabilize paused waveform scrubbing: visual updates
+without decoder seek flood, one precise release seek, playing-mode throttled
+preview, coalesced wheel idle, stale-native-position guard and clamped time
+mapping. Flutter analyze/tests only; profile gesture acceptance on phone.

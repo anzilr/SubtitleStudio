@@ -93,6 +93,21 @@ class WaveformReady extends WaveformState {
   double get totalWidth =>
       (buffer.rawData.totalSamples / samplesPerPixel).toDouble();
 
+  /// Maximum valid waveform scroll; short clips may have no scroll at all.
+  double get maxScrollPosition =>
+      (totalWidth - viewportWidth).clamp(0.0, double.infinity);
+
+  double clampScrollPosition(double requested) =>
+      requested.clamp(0.0, maxScrollPosition);
+
+  /// The time actually shown at the center after scroll clamping. Never seek
+  /// beyond a short waveform's real audio duration into blank viewport space.
+  Duration centerTimeForScroll(double requested) {
+    final centerPixel = (clampScrollPosition(requested) + viewportWidth / 2)
+        .clamp(0.0, totalWidth);
+    return pixelToTime(centerPixel);
+  }
+
   /// Get visible time range based on scroll position and viewport
   Duration get visibleStartTime {
     final startSample = (scrollPosition * samplesPerPixel).round();
