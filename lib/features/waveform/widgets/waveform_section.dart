@@ -105,11 +105,13 @@ class _WaveformSectionContent extends ConsumerWidget {
       await ref
           .read(waveformControllerProvider.notifier)
           .dispatch(LoadAudioFile(filePath));
-    } catch (e) {
+    } catch (_) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to load audio: $e'),
+          content: const Text(
+            'Unable to select waveform audio. Check file access and try again.',
+          ),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );

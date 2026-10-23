@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:typed_data';
 import 'dart:io';
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:subtitle_studio/features/waveform/models/waveform_sample.dart';
@@ -21,6 +20,16 @@ import 'package:subtitle_studio/utils/ffmpeg_helper.dart';
 import 'package:ffmpeg_kit_flutter_new_min_gpl/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new_min_gpl/ffmpeg_kit_config.dart';
 import 'package:subtitle_studio/features/waveform/repositories/waveform_preferences_repository.dart';
+
+/// A user-visible waveform failure with a deliberately path-free message.
+/// Do not attach native FFmpeg logs, commands or filesystem exceptions here.
+class WaveformProcessingFailure implements Exception {
+  final String message;
+  const WaveformProcessingFailure(this.message);
+
+  @override
+  String toString() => message;
+}
 
 /// Service for processing audio files into waveform data
 class AudioProcessor {
@@ -72,7 +81,7 @@ class AudioProcessor {
     final stopwatch = Stopwatch()..start();
     try {
       if (kDebugMode) {
-        print('AudioProcessor: Starting audio processing for: $audioFilePath');
+        print('AudioProcessor: Starting audio processing');
       }
 
       WaveformData waveformData;
@@ -115,7 +124,7 @@ class AudioProcessor {
             sampleRate: cache.sampleRate,
           )) {
             if (kDebugMode) {
-              print('AudioProcessor: Loading from cached PCM file: $pcmPath');
+              print('AudioProcessor: Loading cached PCM data');
             }
             
             // Load from cached PCM
@@ -236,11 +245,25 @@ class AudioProcessor {
       }
       onProgress?.call(1.0);
       return buffer;
-    } catch (e) {
+    } catch (error) {
       if (kDebugMode) {
-        print('AudioProcessor: Error processing audio: $e');
+        print('AudioProcessor: Audio processing failed');
       }
-      rethrow;
+      if (epoch != _requestEpoch) {
+        throw StateError('Waveform load was cancelled.');
+      }
+      if (error is WaveformProcessingFailure) rethrow;
+      // WaveformSafInput produces this fixed, path-free message when an
+      // Android document grant is no longer available. Retain the recovery
+      // advice but never surface arbitrary filesystem exception details.
+      if (error is FileSystemException &&
+          error.path == null &&
+          error.message == WaveformSafInput.documentAccessMessage) {
+        throw WaveformProcessingFailure(error.message);
+      }
+      throw const WaveformProcessingFailure(
+        'Unable to load waveform audio. Check media access and try again.',
+      );
     }
   }
 
@@ -476,14 +499,13 @@ class AudioProcessor {
       if (kDebugMode) {
         print('AudioProcessor: FFmpeg is available');
       }
-    } catch (e) {
-      throw Exception(
+    } catch (_) {
+      throw const WaveformProcessingFailure(
         'FFmpeg is not available on this system. '
         'Please install FFmpeg and ensure it is in your PATH.\n\n'
         'Installation instructions:\n'
         '• Windows: Download from ffmpeg.org or use: winget install ffmpeg\n'
-        '• Linux: sudo apt install ffmpeg (Ubuntu/Debian)\n\n'
-        'Error: $e'
+        '• Linux: sudo apt install ffmpeg (Ubuntu/Debian)'
       );
     }
   }
@@ -513,7 +535,7 @@ class AudioProcessor {
       generatedOutputPath = outputPath;
 
       if (kDebugMode) {
-        print('AudioProcessor: Extracting audio to PCM: $outputPath');
+        print('AudioProcessor: Extracting audio to PCM');
         if (cacheForCollection != null) {
           print('AudioProcessor: Will cache for collection ID: $cacheForCollection');
         }
@@ -554,10 +576,12 @@ class AudioProcessor {
           process.kill();
         }
         final stdoutDone = process.stdout.drain<void>();
-        final stderrDone = process.stderr.transform(utf8.decoder).join();
+        // Drain both streams concurrently so FFmpeg cannot block on a full
+        // pipe. Native stderr can contain absolute paths and media metadata.
+        final stderrDone = process.stderr.drain<void>();
         final exitCode = await process.exitCode;
         await stdoutDone;
-        final stderr = await stderrDone;
+        await stderrDone;
         if (identical(_activeDesktopProcess, process)) {
           _activeDesktopProcess = null;
         }
@@ -565,7 +589,10 @@ class AudioProcessor {
           throw StateError('Waveform extraction was cancelled.');
         }
         if (exitCode != 0) {
-          throw Exception('FFmpeg failed with exit code $exitCode: $stderr');
+          throw WaveformProcessingFailure(
+            'FFmpeg audio extraction failed (exit code $exitCode). '
+            'Check the selected audio track and file access.',
+          );
         }
         ffmpegDuration = ffmpegWatch.elapsed;
       } else if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
@@ -581,7 +608,7 @@ class AudioProcessor {
         final command = plan.ffmpegKitCommand();
 
         if (kDebugMode) {
-          print('AudioProcessor: FFmpegKit command: $command');
+          print('AudioProcessor: Starting native FFmpegKit extraction');
         }
         
         final ffmpegWatch = Stopwatch()..start();
@@ -617,9 +644,11 @@ class AudioProcessor {
 
         // No implicit retry: wrong-language track would corrupt the cache.
         if (returnCode == null || !returnCode.isValueSuccess()) {
-          final logs = await session.getLogs();
-          final logMessages = logs.map((log) => log.getMessage()).join('\n');
-          throw Exception('FFmpegKit failed with code ${returnCode?.getValue()}: $logMessages');
+          throw WaveformProcessingFailure(
+            'FFmpegKit audio extraction failed '
+            '(return code ${returnCode?.getValue() ?? 'unknown'}). '
+            'Check the selected audio track and file access.',
+          );
         }
         ffmpegDuration = ffmpegWatch.elapsed;
       } else {
@@ -638,7 +667,9 @@ class AudioProcessor {
       // Read raw PCM data
       final file = File(outputPath);
       if (!await file.exists()) {
-        throw Exception('FFmpeg failed to create output file');
+        throw const WaveformProcessingFailure(
+          'FFmpeg did not create waveform audio output.',
+        );
       }
 
       if (reduceToPeaks) {
@@ -715,7 +746,7 @@ class AudioProcessor {
         totalSamples: channelSamples[0].length,
         rawSamples: channelSamples,
       );
-    } catch (e) {
+    } catch (_) {
       // Never preserve a half-written temp PCM file on failed extraction,
       // rejected track selection, cache corruption or user cancellation.
       if (generatedOutputPath != null &&
@@ -724,7 +755,7 @@ class AudioProcessor {
         if (await output.exists()) await output.delete();
       }
       if (kDebugMode) {
-        print('AudioProcessor: Error extracting audio: $e');
+        print('AudioProcessor: Audio extraction failed');
       }
       rethrow;
     }

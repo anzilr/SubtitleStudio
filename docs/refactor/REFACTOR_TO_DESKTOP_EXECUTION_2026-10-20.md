@@ -522,6 +522,22 @@ boundary; separate waveform/native logging remains for a later scoped audit.
 [R4 report](CHECKPOINT92_R4_FFMPEG_DIAGNOSTIC_PRIVACY_2026-10-23.md).
 **Verification:** [Linux 779 Flutter tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39941700751).
 
+**CP92 R5 (October 23, 2026):** Finish the waveform audio diagnostic
+boundary: source/cache/temp paths and FFmpegKit command strings no longer
+appear in debug traces; desktop stderr is drained without retaining its
+contents, and native FFmpegKit session logs are not copied into Dart errors.
+Waveform loading surfaces only typed path-free extraction/SAF recovery
+messages, including the selected-track and installation guidance; unrelated
+filesystem/provider failures receive a generic safe message. Waveform picker,
+time-update and zoom-preference UI errors no longer print raw exceptions.
+Decode arguments, session-scoped cancellation, progress callbacks, cache
+formats, source identity and UI layout are unchanged. Controller regression
+tests cover private-path redaction and explicit safe native error messages;
+source guards protect the native diagnostic boundary.
+[R5 report](CHECKPOINT92_R5_WAVEFORM_FFMPEG_PRIVACY_2026-10-23.md).
+**Verification:** Flutter-only CI pending; native media-provider acceptance
+remains separate.
+
 ### CP93 — Core refactor acceptance and handoff
 - Flutter analysis and full unit/widget/Isar integration tests in GitHub Actions (dependency resolution + tests only; **no platform builds in CI**).
 - Native builds and smoke tests on Android and desktop operating systems on user/local machines. Preserve fast Back/touch behavior, media lifecycle, file/SAF grants and `.msone` roundtrip.

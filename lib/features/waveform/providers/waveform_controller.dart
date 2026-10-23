@@ -270,8 +270,13 @@ class WaveformController extends Notifier<WaveformState> {
       ));
     } catch (e) {
       if (!isCurrent()) return;
+      // Failed media adapters and repositories can throw path-bearing errors.
+      // Only explicitly path-free processor failures may reach the UI.
+      final detail = e is WaveformProcessingFailure
+          ? e.message
+          : 'Unable to load waveform audio. Check media access and try again.';
       _setState(WaveformError(
-        'Failed to load audio: ${e.toString()}',
+        'Failed to load audio: $detail',
         filePath: event.filePath,
       ));
     }
@@ -638,10 +643,10 @@ class WaveformController extends Notifier<WaveformState> {
         subtitleCollectionId: state.subtitleCollectionId!,
         zoomIndex: state.currentZoomIndex,
         verticalZoom: state.verticalZoom,
-      ).catchError((error) {
+      ).catchError((_) {
         // Silently catch errors - zoom preferences are not critical
         // ignore: avoid_print
-        print('Failed to save waveform zoom levels: $error');
+        print('Failed to save waveform zoom levels');
       });
     }
   }

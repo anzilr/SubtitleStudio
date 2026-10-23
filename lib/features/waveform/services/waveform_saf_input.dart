@@ -5,6 +5,10 @@ import 'dart:io';
 class WaveformSafInput {
   const WaveformSafInput._();
 
+  static const documentAccessMessage =
+      'Unable to open the selected Android document for waveform decoding. '
+      'Please select the file again to restore access.';
+
   static Future<String> resolve(
     String sourcePath, {
     required bool android,
@@ -19,9 +23,6 @@ class WaveformSafInput {
     } catch (_) {
       // Mask provider internals/document identifiers in user-visible errors.
     }
-    throw const FileSystemException(
-      'Unable to open the selected Android document for waveform decoding. '
-      'Please select the file again to restore access.',
-    );
+    throw const FileSystemException(documentAccessMessage);
   }
 }

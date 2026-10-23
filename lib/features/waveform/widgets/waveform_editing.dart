@@ -262,13 +262,13 @@ extension _WaveformEditing on WaveformWidgetState {
           ),
         );
       }
-    } catch (e) {
+    } catch (_) {
       // Show error message
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Error updating time: $e',
+              'Unable to update subtitle time. Please try again.',
               style: TextStyle(color: Theme.of(context).colorScheme.onError),
             ),
             backgroundColor: Theme.of(context).colorScheme.error,
