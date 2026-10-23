@@ -874,8 +874,8 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
         const Spacer(),
         const Icon(Icons.aspect_ratio, size: 15, color: _muted),
         const SizedBox(width: 8),
-        const Text('16:9  ·  Demo clip',
-            style: TextStyle(fontSize: 11, color: _muted)),
+        Text(widget.liveReadOnly ? 'Media not connected' : '16:9 · Demo clip',
+            style: const TextStyle(fontSize: 11, color: _muted)),
       ]),
       const SizedBox(height: 10),
       Expanded(
@@ -944,8 +944,8 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
       const SizedBox(width: 14),
       Text(_selected.start, style: const TextStyle(
           fontSize: 12, fontFeatures: [FontFeature.tabularFigures()])),
-      const Text(' /  00:12:45', style:
-        TextStyle(color: _muted, fontSize: 12)),
+      Text(widget.liveReadOnly ? ' / no media' : ' / 00:12:45',
+        style: const TextStyle(color: _muted, fontSize: 12)),
       const Spacer(),
       const Text('1.0×', style: TextStyle(color: _muted, fontSize: 11)),
       const SizedBox(width: 12),
@@ -963,16 +963,19 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
         const Text('WAVEFORM', style: TextStyle(
             fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: .8)),
         const SizedBox(width: 10),
-        const Text('Audio track: Auto', style:
-            TextStyle(fontSize: 10, color: _muted)),
+        Text(widget.liveReadOnly ? 'Audio not connected' : 'Audio track: Auto',
+            style: const TextStyle(fontSize: 10, color: _muted)),
         const Spacer(),
         const Text('–  00:30  +', style:
             TextStyle(color: _muted, fontSize: 10)),
       ]),
       const SizedBox(height: 7),
-      Expanded(child: SizedBox.expand(
-        child: CustomPaint(painter: _DemoWaveformPainter(
-          cueIndex: _selectedId, accent: _accent)))),
+      Expanded(child: widget.liveReadOnly
+          ? const Center(child: Text('Waveform integration pending',
+              style: TextStyle(color: _muted, fontSize: 11)))
+          : SizedBox.expand(
+              child: CustomPaint(painter: _DemoWaveformPainter(
+                cueIndex: _selectedId, accent: _accent)))),
     ]),
   );
 
