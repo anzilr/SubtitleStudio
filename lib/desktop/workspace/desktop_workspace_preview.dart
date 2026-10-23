@@ -535,6 +535,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
           }),
         ),
       ),
+      ),
     );
   }
 
@@ -579,7 +580,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
         style: const TextStyle(color: _muted, fontSize: 12),
       )),
       const Spacer(),
-      Text(widget.liveReadOnly ? 'LIVE · READ ONLY' : 'DEMO WORKSPACE',
+      Text(widget.onApplyCueText != null ? 'LIVE · TEXT EDIT' : (widget.liveReadOnly ? 'LIVE · READ ONLY' : 'DEMO WORKSPACE'),
         style: const TextStyle(
           color: _muted, letterSpacing: 1, fontSize: 10)),
       if (widget.onChooseProject != null)
@@ -633,7 +634,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
       const SizedBox(width: 7),
       const Icon(Icons.circle, size: 9, color: _accent),
       const SizedBox(width: 7),
-      Text(widget.liveReadOnly ? 'Read-only' : 'Preview',
+      Text(widget.onApplyCueText != null ? 'Text editing' : (widget.liveReadOnly ? 'Read-only' : 'Preview'),
           style: const TextStyle(fontSize: 12)),
     ]),
   );
@@ -1225,9 +1226,11 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
           decoration: const BoxDecoration(
             border: Border(top: BorderSide(color: _border)),
           ),
-          child: Text(widget.liveReadOnly
-              ? 'Read-only session · no changes are saved'
-              : 'Demo only · changes are not saved to files',
+          child: Text(widget.onApplyCueText != null
+              ? 'Apply updates the local project with checkpoint history'
+              : (widget.liveReadOnly
+                  ? 'Read-only session · no changes are saved'
+                  : 'Demo only · changes are not saved to files'),
             textAlign: TextAlign.center,
             style: const TextStyle(color: _muted, fontSize: 11)),
         ),
@@ -1250,11 +1253,17 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
               style: const TextStyle(fontSize: 13, height: 1.5)),
           ),
           const SizedBox(height: 17),
-          _fieldLabel('EDITED TEXT · DEMO ONLY'),
+          _fieldLabel(widget.onApplyCueText != null
+              ? 'EDITED TEXT · UNSAVED UNTIL APPLIED'
+              : 'EDITED TEXT · DEMO ONLY'),
           TextFormField(
-            key: ValueKey('desktop-edit-' + _selected.id.toString()),
-            initialValue: _selected.edited,
-            readOnly: widget.liveReadOnly,
+            key: widget.onApplyCueText == null
+                ? ValueKey('desktop-edit-' + _selected.id.toString())
+                : ValueKey('studio-edit-' + _selected.id.toString() +
+                    '-' + _draftRevision.toString()),
+            initialValue: _draftCueId == _selectedId && _draftText != null
+                ? _draftText : _selected.edited,
+            readOnly: widget.liveReadOnly && widget.onApplyCueText == null,
             minLines: 3, maxLines: 8,
             style: const TextStyle(fontSize: 13, height: 1.5),
             decoration: InputDecoration(
@@ -1262,9 +1271,36 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(7)),
             ),
-            onChanged: (value) =>
-                _replaceCue(_selected.copyWith(edited: value)),
+            onChanged: (value) {
+              if (widget.onApplyCueText != null) {
+                setState(() {
+                  _draftCueId = _selectedId;
+                  _draftText = value;
+                });
+              } else {
+                _replaceCue(_selected.copyWith(edited: value));
+              }
+            },
           ),
+          if (widget.onApplyCueText != null) ...[
+            const SizedBox(height: 12),
+            Row(children: [
+              Expanded(child: FilledButton.icon(
+                key: const ValueKey('studio-apply-cue'),
+                onPressed: _hasDirtyDraft && !_savingDraft
+                    ? () => unawaited(_applyDraft()) : null,
+                icon: const Icon(Icons.check, size: 16),
+                label: Text(_savingDraft ? 'Applying…' : 'Apply'),
+              )),
+              const SizedBox(width: 8),
+              OutlinedButton(
+                key: const ValueKey('studio-discard-cue'),
+                onPressed: _hasDirtyDraft && !_savingDraft
+                    ? _discardDraft : null,
+                child: const Text('Discard'),
+              ),
+            ]),
+          ],
           const SizedBox(height: 14),
           OutlinedButton.icon(
             onPressed: widget.liveReadOnly ? null : () => _replaceCue(
@@ -1375,9 +1411,11 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
     child: Row(children: [
       const Icon(Icons.info_outline, color: _accent, size: 13),
       const SizedBox(width: 8),
-      Expanded(child: Text(widget.liveReadOnly
-          ? 'Real session · read only · no database changes'
-          : 'Demo workspace · no files are modified',
+      Expanded(child: Text(widget.onApplyCueText != null
+          ? 'Real session · text edits require Apply · checkpoint-backed'
+          : (widget.liveReadOnly
+              ? 'Real session · read only · no database changes'
+              : 'Demo workspace · no files are modified'),
         style: const TextStyle(color: _muted, fontSize: 10))),
       Text(widget.encoding == null
           ? 'Desktop prototype  •  Windows / macOS / Linux'
