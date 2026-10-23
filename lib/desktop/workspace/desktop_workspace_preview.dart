@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'studio_dock_geometry.dart';
+import 'studio_dock_layout_preferences.dart';
 import '../../utils/msone_hotkey_manager.dart';
 
 /// Demo-only cue; this screen intentionally does not persist any user data.
@@ -89,6 +90,9 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   int _selectedId = 5;
   int _selectionAnchor = 5;
   final Set<int> _selectedIds = {5};
+  final StudioDockLayoutPreferences _layoutPreferences = StudioDockLayoutPreferences();
+  Timer? _layoutSaveTimer;
+  bool _layoutChangedSinceMount = false;
   final FocusNode _gridFocus = FocusNode(debugLabel: 'Studio Dock grid');
   final FocusNode _searchFocus = FocusNode(debugLabel: 'Studio Dock search');
   final TextEditingController _commandSearch = TextEditingController();
@@ -102,8 +106,8 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   double _videoShare = .43;
   double _waveformShare = .13;
   String _query = '';
-  double _sidebarWidth = 224;
-  double _inspectorWidth = 292;
+  double _sidebarWidth = 240;
+  double _inspectorWidth = 320;
 
   WorkspaceDemoCue get _selected =>
       _cues.firstWhere((cue) => cue.id == _selectedId);
@@ -129,6 +133,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
     // Desktop entrypoint initializes the application's existing hotkey manager.
     // Direct widget previews do not initialize native plugins.
     unawaited(_installManagedHotkeys());
+    unawaited(_restoreLayout());
   }
 
   Future<void> _installManagedHotkeys() async {
@@ -143,6 +148,8 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
 
   @override
   void dispose() {
+    _layoutSaveTimer?.cancel();
+    if (_layoutChangedSinceMount) unawaited(_persistLayout());
     for (final action in _managedActions) {
       unawaited(MSoneHotkeyManager.instance.unregisterCallback(action));
     }
@@ -150,6 +157,67 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
     _gridFocus.dispose();
     _searchFocus.dispose();
     super.dispose();
+  }
+
+
+  Future<void> _restoreLayout() async {
+    try {
+      final saved = await _layoutPreferences.load();
+      if (!mounted || _layoutChangedSinceMount) return;
+      setState(() {
+        _sidebarWidth = saved.explorerWidth;
+        _inspectorWidth = saved.inspectorWidth;
+        _videoShare = saved.videoShare;
+        _waveformShare = saved.waveformShare;
+        _explorerOpen = saved.explorerOpen;
+        _inspectorOpen = saved.inspectorOpen;
+      });
+    } catch (error) {
+      debugPrint('Studio Dock layout preferences unavailable: $error');
+    }
+  }
+
+  StudioDockLayoutSnapshot get _layoutSnapshot => StudioDockLayoutSnapshot(
+    explorerWidth: _sidebarWidth,
+    inspectorWidth: _inspectorWidth,
+    videoShare: _videoShare,
+    waveformShare: _waveformShare,
+    explorerOpen: _explorerOpen,
+    inspectorOpen: _inspectorOpen,
+  );
+
+  Future<void> _persistLayout() async {
+    final snapshot = _layoutSnapshot;
+    try {
+      await _layoutPreferences.save(snapshot);
+    } catch (error) {
+      debugPrint('Could not persist Studio Dock layout: $error');
+    }
+  }
+
+  void _queueLayoutSave({bool now = false}) {
+    _layoutChangedSinceMount = true;
+    _layoutSaveTimer?.cancel();
+    if (now) {
+      unawaited(_persistLayout());
+    } else {
+      _layoutSaveTimer = Timer(const Duration(milliseconds: 350),
+          () => unawaited(_persistLayout()));
+    }
+  }
+
+  void _resetLayout() {
+    setState(() {
+      _sidebarWidth = 240;
+      _inspectorWidth = 320;
+      _videoShare = .43;
+      _waveformShare = .13;
+      _explorerOpen = true;
+      _inspectorOpen = true;
+      _explorerOverlayOpen = false;
+      _inspectorOverlayOpen = false;
+    });
+    _queueLayoutSave(now: true);
   }
 
   bool get _isEditingText {
@@ -380,6 +448,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
             });
           } else {
             setState(() => _explorerOpen = !_explorerOpen);
+            _queueLayoutSave(now: true);
           }
         },
       ),
@@ -396,6 +465,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
             });
           } else {
             setState(() => _inspectorOpen = !_inspectorOpen);
+            _queueLayoutSave(now: true);
           }
         },
       ),
@@ -501,7 +571,11 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
       MouseRegion(
         cursor: SystemMouseCursors.resizeColumn,
         child: GestureDetector(
-          onHorizontalDragUpdate: (details) => onDelta(details.delta.dx),
+          onHorizontalDragUpdate: (details) {
+            onDelta(details.delta.dx);
+            _queueLayoutSave();
+          },
+          onHorizontalDragEnd: (_) => _queueLayoutSave(now: true),
           child: const SizedBox(width: 5,
               child: ColoredBox(color: _border)),
         ),
@@ -586,8 +660,15 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
     cursor: SystemMouseCursors.resizeRow,
     child: GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onVerticalDragUpdate: (details) => onDelta(details.delta.dy),
-      onDoubleTap: onReset,
+      onVerticalDragUpdate: (details) {
+        onDelta(details.delta.dy);
+        _queueLayoutSave();
+      },
+      onVerticalDragEnd: (_) => _queueLayoutSave(now: true),
+      onDoubleTap: () {
+        onReset();
+        _queueLayoutSave(now: true);
+      },
       child: const SizedBox(
         height: StudioDockBands.splitter,
         child: ColoredBox(color: _border),
@@ -821,6 +902,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
             MapEntry('Toggle playback preview',
                 () => _dispatchManagedAction(HotkeyAction.playPause)),
             MapEntry('Toggle review mark', _toggleMarkedSelection),
+            MapEntry('Reset workspace layout', _resetLayout),
             MapEntry('Show Inspector: Text', () => setState(() {
               _inspectorTab = 0;
               _inspectorOpen = true;
