@@ -427,9 +427,22 @@ layout safety; native Android visual acceptance is pending.
 [R8 report](CHECKPOINT91_R8_COMPACT_PORTRAIT_EDIT_LINE_2026-10-22.md).
 **Verification:** [Linux 764 Flutter tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39851877690).
 
-**Next:** R8 physical-device acceptance for portrait editing, followed by
-CP91 R9 compact action ergonomics if required; then CP92 cleanup and CP93
-refactor acceptance. Desktop workspace layouts remain isolated.
+**CP91 R9 (October 23, 2026):** The compact Edit Line action strip keeps
+Previous, Save, optional Play/Pause, Next, and an expandable Tools control
+reachable without shrinking all seven commands into one phone-width row.
+Dictionary, formatting and subtitle actions are shown in a second row
+when Tools is expanded. Frequent buttons use 48px minimum hit dimensions
+in narrow portrait; desktop/landscape retains the original full toolbar.
+Presentation-only state preserves handlers, controllers, media lifecycle,
+skins and project saves. Widget tests cover both visibility modes,
+wide-screen compatibility and absence of optional media actions.
+[R9 report](CHECKPOINT91_R9_COMPACT_EDIT_LINE_ACTIONS_2026-10-23.md).
+**Verification:** [Linux 766 Flutter tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39907251049).
+
+**Next:** R8/R9 physical-device acceptance for compact portrait editing;
+then CP92 cleanup/performance and CP93 refactor acceptance. Do not treat
+Linux widget tests as proof of native ergonomics. The desktop workspace
+remains isolated until CP93.
 
 ### CP91 — Outstanding roadmap UX needed on mobile
 - Deliver the Git-style **visual checkpoint history** with plain-language controls, accessible list alternative and protected refs; preserve `.msone` compatibility and multi-branch correctness.
