@@ -119,3 +119,5 @@ STUDIO DOCK DS1 2026-10-23: isolated desktop layout with 43/13/44 center panels,
 DS1 GEOMETRY R2 2026-10-23: initial quality gate 40011822272 passed analyzer and 577 Flutter tests, one failed floating-point inverted clamp bound at 380px preview height. Stabilize minimum/maximum clamp endpoints, run flutter pub get / flutter analyze / flutter test only. No platform builds.
 
 STUDIO DOCK DS2 R1 2026-10-23: reuse MSoneHotkeyManager for scoped preview actions, implement multi-select and grid navigation, context menu, command palette; Flutter pub get/analyze/test only. No platform builds in GitHub Actions.
+
+STUDIO DOCK DS2 R2 2026-10-23: persist layout dimensions and panel visibility using existing shared_preferences, clamp invalid values, expose Reset workspace layout, verify widget/round-trip regressions. Run flutter pub get, analyze, test only. NO platform builds in Actions.
