@@ -7,6 +7,7 @@ import 'package:subtitle_studio/screens/edit/repositories/editor_preferences_rep
 import 'package:subtitle_studio/screens/edit/repositories/video_repository.dart';
 import 'package:subtitle_studio/screens/edit/providers/subtitle_repository_provider.dart';
 import 'package:subtitle_studio/utils/msone_hotkey_manager.dart';
+import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
 
 import 'desktop_workspace_preview.dart';
 import 'studio_dock_session_loader.dart';
@@ -55,6 +56,7 @@ class _StudioDockReadOnlySessionViewState
     extends ConsumerState<StudioDockReadOnlySessionView> {
   late Future<StudioDockSessionSnapshot> _snapshot;
   Future<String?>? _videoPath;
+  bool _selectingVideo = false;
   StudioDockSessionSnapshot? _latestBaseline;
   final StudioDockPlaybackLink _playback = StudioDockPlaybackLink();
 
@@ -99,6 +101,37 @@ class _StudioDockReadOnlySessionViewState
       MSoneHotkeyManager.instance.resumeCallbacks();
     }
     super.dispose();
+  }
+
+  /// Add/change media from Studio Dock itself, never using classic Editor.
+  /// Cancel and failed persistence leave the current playback untouched.
+  Future<void> _chooseVideo() async {
+    if (_selectingVideo || !widget.allowNativePlayback) return;
+    setState(() => _selectingVideo = true);
+    try {
+      final path = await FilePickerSAF.pickFile(
+        context: context,
+        title: 'Select Studio Dock video',
+        allowedExtensions: const [
+          'mp4', 'mkv', 'mov', 'avi', 'webm', 'm4v',
+        ],
+      );
+      if (!mounted || path == null) return;
+      if (!await File(path).exists()) {
+        throw const FileSystemException('Selected video is unavailable.');
+      }
+      final repo = VideoRepository(EditorPreferencesRepository(ref.read(isarProvider)));
+      await repo.saveVideoPath(widget.collectionId, path);
+      if (!mounted) return;
+      setState(() => _videoPath = Future<String?>.value(path));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Could not attach this video. Check media access and retry.'),
+      ));
+    } finally {
+      if (mounted) setState(() => _selectingVideo = false);
+    }
   }
 
   Future<String?> _resolveVideoPath() async {
@@ -185,12 +218,13 @@ class _StudioDockReadOnlySessionViewState
         onChooseProject: widget.onChooseProject,
         onImportFile: widget.onImportFile,
         onNewProject: widget.onNewProject,
+        onChooseVideo: widget.allowNativePlayback ? _chooseVideo : null,
         onApplyCueText: widget.enableTextEditing ? _applyText : null,
         manageLiveHotkeys: !widget.suppressParentEditorHotkeys,
         videoSurface: validVideoPath == null || !widget.allowNativePlayback
             ? null
             : StudioDockVideoSurface(
-                key: ValueKey('studio-dock-player-${session.collectionId}'),
+                key: ValueKey('studio-dock-player-${session.collectionId}-$validVideoPath'),
                 collectionId: session.collectionId,
                 videoPath: validVideoPath,
                 subtitles: StudioDockMediaPlan.overlayCues(session),
@@ -199,7 +233,7 @@ class _StudioDockReadOnlySessionViewState
         waveformSurface: validVideoPath == null || !widget.allowNativePlayback
             ? null
             : StudioDockWaveformSurface(
-                key: ValueKey('studio-dock-waveform-${session.collectionId}'),
+                key: ValueKey('studio-dock-waveform-${session.collectionId}-$validVideoPath'),
                 videoPath: validVideoPath,
                 collectionId: session.collectionId,
                 playback: _playback,
