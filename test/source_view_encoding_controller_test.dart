@@ -175,6 +175,17 @@ void main() {
     expect(files.lastWrite, orderedEquals(original));
   });
 
+  test('Source View opens a zero-byte subtitle without inventing content',
+      () async {
+    final files = _MemorySourceFiles(Uint8List(0));
+    final session = await _open(files);
+    expect(session.first.isInitialized, isTrue);
+    expect(session.first.errorMessage, isNull);
+    expect(session.first.subtitleEntries, isEmpty);
+    expect(session.controller.rawSourceText, '');
+    expect(files.reads, 1);
+  });
+
   test('legacy bytes require explicit encoding instead of Latin-1 guessing',
       () async {
     final sourceText = '${_srtHeader}“Café”\r\n';

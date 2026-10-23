@@ -135,16 +135,29 @@ void main() {
     expect(await service.write(missing, changed), isNull);
   });
 
-  test('empty SAF response falls back only to a real local cached file',
+  test('empty SAF document is authoritative even with an older native cache',
       () async {
     final ops = _MemoryFileOperations()
       ..returnEmptyDocument = true
       ..local[local] = original;
     final service = SourceViewFileAccessImpl(operations: ops);
     expect(await service.read(SourceViewFileTarget.resolve(
+      filePath: local, safUri: uri)), isEmpty);
+    expect(await service.read(SourceViewFileTarget.resolve(
+      filePath: uri)), isEmpty);
+    expect(ops.local[local], original);
+    expect(ops.events, ['readDocument', 'readDocument']);
+  });
+
+  test('null SAF response falls back to cache, but direct URI fails closed',
+      () async {
+    final ops = _MemoryFileOperations()..local[local] = original;
+    final service = SourceViewFileAccessImpl(operations: ops);
+    expect(await service.read(SourceViewFileTarget.resolve(
       filePath: local, safUri: uri)), original);
     await expectLater(service.read(SourceViewFileTarget.resolve(
       filePath: uri)), throwsA(isA<FileSystemException>()));
+    expect(ops.events, ['readDocument', 'readNative', 'readDocument']);
   });
 
   test('non-Android adapter avoids Android SAF while permitting local IO',

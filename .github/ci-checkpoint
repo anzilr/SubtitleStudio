@@ -465,3 +465,8 @@ CP93 R2 October 23 2026: reset saved edit position when replacing a session
 with a legacy archive that has no lastEditedIndex. Test real Isar replacement
 clears previous project cursor, checkpoints and refs, keeps same IDs, and
 preserves imported empty subtitle. Flutter analyze/tests only in CI.
+
+CP93 R3 October 23 2026: treat zero-byte Android SAF document responses as
+successful Source View reads, with no fallback to stale local caches. Verify
+direct empty content URI, null/failed provider fallback and empty Source View
+controller state. Linux Flutter analyze/tests only; no native platform builds.

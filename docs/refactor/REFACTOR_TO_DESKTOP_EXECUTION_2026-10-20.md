@@ -592,6 +592,16 @@ archive, verifying the old cursor and history refs are cleared atomically.
 **Verification:** [Linux Flutter gate 39952361531](https://github.com/anzilr/SubtitleStudio/actions/runs/39952361531),
 **788 tests passed, zero analyzer issues**; native acceptance pending.
 
+**CP93 R3 (October 23, 2026):** Correct a real Source View file-access
+boundary case: a successful zero-byte Android SAF read is valid source data,
+not a provider failure. A direct empty `content://` document now opens;
+its empty content cannot be replaced by an old native cache. True provider
+failures (null/exception) still use the existing narrowly authorized native
+fallback. Add both adapter and Source View controller regression tests.
+[R3 report](CHECKPOINT93_R3_ZERO_BYTE_SAF_SOURCE_ACCEPTANCE_2026-10-23.md).
+**Verification:** Linux Flutter CI pending; Android/Windows native acceptance
+remains pending, with no platform builds in GitHub Actions.
+
 ### Production Desktop Workspace Integration / UI [AFTER CP93]
 - The presentation shell may be designed and previewed now on the isolated branch. After CP93, connect it to the shared Riverpod, Isar, project, checkpoint, encoding and file-access core without duplicating domain logic.
 - PC single-screen workflow: project navigator/history, video + waveform, cue editor/table, tools/sidebar; keyboard shortcuts, resizable panes and platform file dialogs.

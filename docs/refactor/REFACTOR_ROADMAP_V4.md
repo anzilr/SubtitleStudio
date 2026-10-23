@@ -26,6 +26,14 @@
 > [788-test/zero-issue Flutter gate](https://github.com/anzilr/SubtitleStudio/actions/runs/39952361531).
 > [R2 report](CHECKPOINT93_R2_REPLACEMENT_CURSOR_INTEGRITY_2026-10-23.md).
 
+> **CP93 R3 — October 23, 2026:** Source View now recognizes a successful
+> **zero-byte Android SAF read** as a valid empty document, without falling
+> through to a stale native cache or failing a direct `content://` source.
+> Null/error reads retain the existing strict grant and fallback behavior.
+> Adapter and controller tests added; Linux CI and physical Android/Windows
+> smoke acceptance are tracked separately.
+> [R3 report](CHECKPOINT93_R3_ZERO_BYTE_SAF_SOURCE_ACCEPTANCE_2026-10-23.md).
+
 > **PARALLEL DESKTOP WORK APPROVED — 2026-10-20:** User elected to **see and refine a desktop UI now while CP88–CP93 refactoring continues**. A separate [desktop preview branch](https://github.com/anzilr/SubtitleStudio/tree/feature/desktop-workspace-preview) contains a demo-data-only Flutter workspace shell and an independent Windows entrypoint; it does not open or modify projects. Continue CP88–CP93 here. Full desktop *data/media integration and production acceptance* remain gated on shared-core readiness/CP93. This updates and supersedes the earlier "only after CP93 begin PC workspace" instruction below without reopening deferred CP86 waveform work. [Current parallel execution plan](REFACTOR_TO_DESKTOP_EXECUTION_2026-10-20.md).
 
 

@@ -150,7 +150,10 @@ final class SourceViewFileAccessImpl implements SourceViewFileAccess {
     if (_operations.isAndroid && document != null) {
       try {
         final bytes = await _operations.readDocument(document);
-        if (bytes != null && bytes.isNotEmpty) return bytes;
+        // A successfully read zero-byte document is a valid empty subtitle
+        // source. Only null or a thrown platform error means the SAF read
+        // failed and permits trying an existing native cache instead.
+        if (bytes != null) return bytes;
       } catch (_) {
         // An existing native cached source can be used when the SAF
         // provider refuses access; direct content URI has no such fallback.
