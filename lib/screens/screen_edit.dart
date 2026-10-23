@@ -49,7 +49,6 @@ import 'package:subtitle_studio/screens/edit/models/subtitle_entry.dart';
 import 'package:subtitle_studio/screens/edit/widgets/source_view_pane.dart';
 import 'package:subtitle_studio/screens/edit/services/raw_srt_document.dart';
 import 'package:subtitle_studio/screens/edit/widgets/edit_main_menu.dart';
-import 'package:subtitle_studio/desktop/workspace/studio_dock_read_only_session_view.dart';
 import 'package:subtitle_studio/screens/edit/widgets/editor_floating_play_pause_button.dart';
 import 'package:subtitle_studio/screens/edit/widgets/edit_placeholders.dart';
 import 'package:subtitle_studio/screens/edit/widgets/subtitle_card.dart';
@@ -641,28 +640,6 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
                     onPressed: () => _showSelectionMenuModal(),
                   ),
                 ] else ...[
-                  // Explicit read-only Studio Dock entrypoint for native
-                  // desktop only. Android and iOS editing UX is unchanged.
-                  if (!kIsWeb &&
-                      (defaultTargetPlatform == TargetPlatform.windows ||
-                       defaultTargetPlatform == TargetPlatform.macOS ||
-                       defaultTargetPlatform == TargetPlatform.linux))
-                    IconButton(
-                      key: const ValueKey('open-studio-dock-readonly'),
-                      tooltip: 'Open Studio Dock (read-only preview)',
-                      icon: const Icon(Icons.view_quilt_outlined),
-                      onPressed: () {
-                        // The existing media widget stays mounted behind the
-                        // route. Pause it rather than creating another player.
-                        _videoPlayerKey.currentState?.pause();
-                        Navigator.of(context).push(MaterialPageRoute<void>(
-                          builder: (_) => StudioDockReadOnlySessionView(
-                            sessionId: widget.sessionId,
-                            collectionId: widget.subtitleCollectionId,
-                          ),
-                        ));
-                      },
-                    ),
                   const ThemeSwitcherButton(),
                   if (_isVideoLoaded && !_isSourceView) // Hide video toggle in source view
                     IconButton(
