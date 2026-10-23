@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'studio_dock_geometry.dart';
 
 /// Demo-only cue; this screen intentionally does not persist any user data.
 @immutable
@@ -87,6 +88,12 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   int _section = 0;
   bool _playing = false;
   bool _inspectorOpen = true;
+  bool _explorerOpen = true;
+  bool _explorerOverlayOpen = false;
+  bool _inspectorOverlayOpen = false;
+  int _inspectorTab = 0;
+  double _videoShare = .43;
+  double _waveformShare = .13;
   String _query = '';
   double _sidebarWidth = 224;
   double _inspectorWidth = 292;
@@ -126,47 +133,77 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
         autofocus: true,
         child: Scaffold(
           body: LayoutBuilder(builder: (context, bounds) {
-            final wide = bounds.maxWidth >= 1220;
-            final inspectorVisible = bounds.maxWidth >= 890 &&
-                _inspectorOpen;
-            return Column(
-              children: [
-                _topBar(),
-                Expanded(
-                  child: Row(
-                    children: [
-                      _navigationRail(),
-                      if (wide && _section == 0)
-                        SizedBox(
-                          width: _sidebarWidth,
-                          child: _projectSidebar(),
-                        ),
-                      if (wide && _section == 0)
-                        _dragHandle(
-                          onDelta: (dx) => setState(() => _sidebarWidth =
-                              (_sidebarWidth + dx).clamp(180, 320).toDouble()),
-                        ),
-                      Expanded(child: _section == 0
-                          ? _editingWorkspace()
-                          : _secondarySection()),
-                      if (inspectorVisible && _section == 0)
-                        _dragHandle(
-                          onDelta: (dx) => setState(() => _inspectorWidth =
-                              (_inspectorWidth - dx).clamp(240, 380).toDouble()),
-                        ),
-                      if (inspectorVisible && _section == 0)
-                        SizedBox(width: _inspectorWidth, child: _inspector()),
-                    ],
+            final wide = bounds.maxWidth >= 1600;
+            final explorerVisible = wide && _explorerOpen && _section == 0;
+            final inspectorVisible = bounds.maxWidth >= 1250 &&
+                _inspectorOpen && _section == 0;
+            final explorerOverlay = !wide && _explorerOverlayOpen &&
+                _section == 0;
+            final inspectorOverlay = bounds.maxWidth < 1250 &&
+                _inspectorOverlayOpen && _section == 0;
+            return Column(children: [
+              _menuBar(),
+              _topBar(),
+              Expanded(child: Stack(children: [
+                Row(children: [
+                  _navigationRail(),
+                  if (explorerVisible)
+                    SizedBox(width: _sidebarWidth, child: _projectSidebar()),
+                  if (explorerVisible)
+                    _dragHandle(onDelta: (dx) => setState(() =>
+                        _sidebarWidth = (_sidebarWidth + dx)
+                            .clamp(200.0, 340.0).toDouble())),
+                  Expanded(child: _section == 0
+                      ? _editingWorkspace() : _secondarySection()),
+                  if (inspectorVisible)
+                    _dragHandle(onDelta: (dx) => setState(() =>
+                        _inspectorWidth = (_inspectorWidth - dx)
+                            .clamp(280.0, 440.0).toDouble())),
+                  if (inspectorVisible)
+                    SizedBox(width: _inspectorWidth, child: _inspector()),
+                ]),
+                if (explorerOverlay)
+                  Positioned(
+                    top: 0, bottom: 0, left: 61,
+                    width: _sidebarWidth,
+                    child: Material(elevation: 12, child: _projectSidebar()),
                   ),
-                ),
-                _statusBar(),
-              ],
-            );
+                if (inspectorOverlay)
+                  Positioned(
+                    top: 0, bottom: 0, right: 0,
+                    width: _inspectorWidth,
+                    child: Material(elevation: 12, child: _inspector()),
+                  ),
+              ])),
+              _statusBar(),
+            ]);
           }),
         ),
       ),
     );
   }
+
+  Widget _menuBar() => Container(
+    height: 27,
+    padding: const EdgeInsets.symmetric(horizontal: 15),
+    decoration: const BoxDecoration(
+      border: Border(bottom: BorderSide(color: _border)),
+    ),
+    child: SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(children: [
+        for (final label in const [
+          'File', 'Edit', 'Subtitle', 'Timing', 'Tools', 'View', 'Help'
+        ])
+          Padding(
+            padding: const EdgeInsets.only(right: 23),
+            child: Text(label, style: const TextStyle(
+              fontSize: 11, color: _muted)),
+          ),
+      ]),
+    ),
+  );
+
 
   Widget _topBar() => Container(
     height: 55,
@@ -191,12 +228,35 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
           TextStyle(color: _muted, letterSpacing: 1, fontSize: 10)),
       const SizedBox(width: 14),
       IconButton(
+        key: const ValueKey('toggle-explorer'),
+        icon: const Icon(Icons.folder_open_outlined),
+        tooltip: 'Toggle project explorer',
+        onPressed: () {
+          if (MediaQuery.sizeOf(context).width < 1600) {
+            setState(() {
+              _explorerOverlayOpen = !_explorerOverlayOpen;
+              _inspectorOverlayOpen = false;
+            });
+          } else {
+            setState(() => _explorerOpen = !_explorerOpen);
+          }
+        },
+      ),
+      IconButton(
         key: const ValueKey('toggle-inspector'),
         icon: Icon(_inspectorOpen
             ? Icons.view_sidebar_outlined : Icons.view_sidebar),
         tooltip: 'Toggle inspector',
-        onPressed: () => setState(() =>
-            _inspectorOpen = !_inspectorOpen),
+        onPressed: () {
+          if (MediaQuery.sizeOf(context).width < 1250) {
+            setState(() {
+              _inspectorOverlayOpen = !_inspectorOverlayOpen;
+              _explorerOverlayOpen = false;
+            });
+          } else {
+            setState(() => _inspectorOpen = !_inspectorOpen);
+          }
+        },
       ),
       const SizedBox(width: 7),
       const Icon(Icons.circle, size: 9, color: _accent),
@@ -232,7 +292,11 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
         child: InkWell(
           key: ValueKey('rail-$index'),
           borderRadius: BorderRadius.circular(9),
-          onTap: () => setState(() => _section = index),
+          onTap: () => setState(() {
+            _section = index;
+            _explorerOverlayOpen = false;
+            _inspectorOverlayOpen = false;
+          }),
           child: SizedBox(width: 44, height: 43,
             child: Icon(icon, size: 21,
               color: _section == index ? _accent : _muted)),
