@@ -23,3 +23,5 @@ DS4 R3 FINAL 2026-10-24: compact 13 percent waveform, selected FFmpeg audio sele
 DS5 R1 2026-10-24: checkpoint-backed Studio Dock inspector start/end timing changes, exact cue conflict detection, canonical validation, draft Apply/Discard and tab-change guard. Flutter analyzer and Studio Dock tests only; NO native builds.
 
 DS5 R2a 2026-10-24: guarded Studio Dock cue insertion/deletion and first cue in empty project. Verify full-snapshot transactional conflict checks, history, cancel/draft retention, timing validation, renumbered selection and unsaved text guard. Flutter analyzer and Studio Dock tests ONLY, no native builds.
+
+DS5 R2b 2026-10-24: validate expanded waveform layout and fixed empty-cue integration test. Flutter analyze and focused tests only; no platform builds.
