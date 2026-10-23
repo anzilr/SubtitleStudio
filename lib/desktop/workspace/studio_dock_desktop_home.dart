@@ -3,28 +3,33 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/screens/home/repositories/session_repository.dart';
-import 'package:subtitle_studio/screens/screen_home.dart';
+import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
+import 'package:subtitle_studio/widgets/session_selection/session_project_import_repository.dart';
+
+import 'studio_dock_project_actions.dart';
 
 import 'studio_dock_read_only_session_view.dart';
 
-/// The default Windows/Linux/macOS entry screen. Unlike the original Home
-/// route, this opens the *real* Studio Dock for the most recently used session.
-///
-/// Uses real checkpoint-backed text edits and the existing native video player.
-/// Import/create still uses the existing Home flow until DS5.
+/// Exclusive native desktop shell for Windows, Linux and macOS.
+/// Projects, imports, text editing and media remain in Studio Dock; the
+/// classic mobile Home and Editor are not navigable from this host.
 class StudioDockDesktopHome extends ConsumerStatefulWidget {
   const StudioDockDesktopHome({
     super.key,
     this.loadSessions,
     this.sessionViewBuilder,
-    this.classicHomeBuilder,
+    this.initialFilePath,
+    this.pickFile,
   });
 
   /// Injectable boundaries for desktop-route tests. Production uses the
   /// existing Isar-backed SessionRepository and real Studio Dock view.
   final Future<StudioDockSessionCatalog> Function()? loadSessions;
   final Widget Function(Session, VoidCallback)? sessionViewBuilder;
-  final WidgetBuilder? classicHomeBuilder;
+  /// File-association source; accepted formats are checked by the importer.
+  final String? initialFilePath;
+  /// Testable desktop system picker; production uses the existing file picker.
+  final Future<String?> Function(BuildContext)? pickFile;
 
   @override
   ConsumerState<StudioDockDesktopHome> createState() =>
@@ -34,13 +39,19 @@ class StudioDockDesktopHome extends ConsumerStatefulWidget {
 class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
   late Future<StudioDockSessionCatalog> _sessionsFuture;
   int? _chosenSessionId;
-  bool _classicFlowActive = false;
+  bool _busy = false;
+  String? _error;
   int _reloadRevision = 0;
 
   @override
   void initState() {
     super.initState();
     _sessionsFuture = _loadSessions();
+    if (widget.initialFilePath != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _importFile(widget.initialFilePath);
+      });
+    }
   }
 
   Future<StudioDockSessionCatalog> _loadSessions() async {
@@ -59,24 +70,79 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
     });
   }
 
-  Future<void> _openClassicHome() async {
-    // The live read-only pane remains mounted behind the legacy route.
-    // This is the standalone desktop host: no parent Editor callbacks are
-    // suppressed. The legacy route may use the existing hotkeys normally.
-    // Unmount the entire Studio Dock (player AND hotkey registrations) before
-    // classic Home can push an Editor. The two surfaces never share ownership.
-    setState(() => _classicFlowActive = true);
-    await WidgetsBinding.instance.endOfFrame;
-    if (!mounted) return;
+  StudioDockProjectActions get _actions => StudioDockProjectActions(
+    subtitleImporter: ref.read(subtitleImportRepositoryProvider),
+    projectImporter: SessionProjectImportRepository(ref.read(isarProvider)),
+  );
+
+  Future<void> _importFile([String? initialPath]) async {
+    if (_busy) return;
+    final path = initialPath ?? await (widget.pickFile?.call(context) ??
+        FilePickerSAF.pickFile(
+          context: context,
+          title: 'Open subtitles or project',
+          allowedExtensions: const ['srt', 'vtt', 'ass', 'ssa', 'msone'],
+        ));
+    if (path == null || !mounted) return; // Cancellation makes no project.
+    setState(() { _busy = true; _error = null; });
     try {
-      await Navigator.of(context).push(MaterialPageRoute<void>(
-        builder: widget.classicHomeBuilder ?? (_) => const HomeScreen(),
-      ));
-    } finally {
+      final imported = await _actions.importFile(path);
+      if (!mounted) return;
+      _chosenSessionId = imported.id;
+      _refresh();
+    } catch (e) {
       if (mounted) {
-        setState(() => _classicFlowActive = false);
-        _refresh();
+        setState(() => _error = 'Unable to open project: $e');
       }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _createProject() async {
+    if (_busy) return;
+    final controller = TextEditingController();
+    final name = await showDialog<String>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: const Text('New Studio Dock project'),
+        content: SizedBox(
+          width: 420,
+          child: TextField(
+            key: const ValueKey('studio-dock-new-project-name'),
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: 'Project name',
+              hintText: 'Untitled subtitles',
+            ),
+            onSubmitted: (value) => Navigator.pop(dialog, value),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialog),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialog, controller.text),
+            child: const Text('Create'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (!mounted || name == null) return;
+    setState(() { _busy = true; _error = null; });
+    try {
+      final created = await _actions.createEmpty(name);
+      if (!mounted) return;
+      _chosenSessionId = created.id;
+      _refresh();
+    } catch (e) {
+      if (mounted) setState(() => _error = 'Could not create project: $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
   }
 
@@ -90,8 +156,7 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
           height: 390,
           child: Column(children: [
             const Text(
-              'Choose a subtitle session to view in Studio Dock. '
-              'Text editing is enabled. Video playback is available when a saved media file exists.',
+              'Open a project in the Studio Dock workspace.',
               style: TextStyle(fontSize: 12),
             ),
             const SizedBox(height: 12),
@@ -115,10 +180,17 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
           ]),
         ),
         actions: [
-          TextButton(
-            key: const ValueKey('studio-dock-classic-home'),
-            onPressed: () => Navigator.pop(dialogContext, -1),
-            child: const Text('Import / Create (classic)'),
+          TextButton.icon(
+            key: const ValueKey('studio-dock-import-project'),
+            icon: const Icon(Icons.file_open),
+            onPressed: () => Navigator.pop(dialogContext, -2),
+            label: const Text('Import file'),
+          ),
+          TextButton.icon(
+            key: const ValueKey('studio-dock-create-project'),
+            icon: const Icon(Icons.add),
+            onPressed: () => Navigator.pop(dialogContext, -3),
+            label: const Text('New project'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
@@ -128,8 +200,12 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
       ),
     );
     if (!mounted || selectedId == null) return;
-    if (selectedId == -1) {
-      await _openClassicHome();
+    if (selectedId == -2) {
+      await _importFile();
+      return;
+    }
+    if (selectedId == -3) {
+      await _createProject();
       return;
     }
     if (snapshot.sessions.any((session) => session.id == selectedId)) {
@@ -139,11 +215,6 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
 
   @override
   Widget build(BuildContext context) {
-    if (_classicFlowActive) {
-      return const Scaffold(
-        body: Center(child: Text('Studio Dock suspended for classic import')),
-      );
-    }
     return FutureBuilder<StudioDockSessionCatalog>(
       future: _sessionsFuture,
       builder: (context, state) {
@@ -163,8 +234,7 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
         if (snapshot.sessions.isEmpty) {
           return _landing(
             'Welcome to Studio Dock',
-            'No subtitle sessions are available yet. '
-            'Use the existing import workflow to add your first project.',
+            'Import SRT, VTT, ASS or .msone files, or create a new project.',
           );
         }
 
@@ -180,7 +250,8 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
         if (widget.sessionViewBuilder != null) {
           return widget.sessionViewBuilder!(active, choose);
         }
-        return StudioDockReadOnlySessionView(
+        return Stack(children: [
+          StudioDockReadOnlySessionView(
           key: ValueKey('studio-dock-active-session-$activeId-$_reloadRevision'),
           sessionId: active.id,
           collectionId: active.subtitleCollectionId,
@@ -188,7 +259,28 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
           enableTextEditing: true,
           allowNativePlayback: true,
           suppressParentEditorHotkeys: false,
-        );
+        ),
+          if (_busy)
+            const Positioned.fill(child: ColoredBox(
+              color: Color(0x88000000),
+              child: Center(child: CircularProgressIndicator()),
+            )),
+          if (_error != null)
+            Positioned(left: 24, right: 24, bottom: 32, child: Material(
+              color: Theme.of(context).colorScheme.errorContainer,
+              borderRadius: BorderRadius.circular(10),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(children: [
+                  Expanded(child: Text(_error!)),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => setState(() => _error = null),
+                  ),
+                ]),
+              ),
+            )),
+        ]);
       },
     );
   }
@@ -211,10 +303,21 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
             const SizedBox(height: 22),
             FilledButton.icon(
               key: const ValueKey('studio-dock-import-first'),
-              onPressed: _openClassicHome,
+              onPressed: _busy ? null : _importFile,
               icon: const Icon(Icons.folder_open),
-              label: const Text('Import / Create a project'),
+              label: const Text('Import subtitles or project'),
             ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              key: const ValueKey('studio-dock-create-first'),
+              onPressed: _busy ? null : _createProject,
+              icon: const Icon(Icons.add),
+              label: const Text('New project'),
+            ),
+            if (_busy) const CircularProgressIndicator(),
+            if (_error != null)
+              Padding(padding: const EdgeInsets.only(top: 12),
+                  child: Text(_error!, textAlign: TextAlign.center)),
             const SizedBox(height: 8),
             TextButton(
               onPressed: _refresh,
