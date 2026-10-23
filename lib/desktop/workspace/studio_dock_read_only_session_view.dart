@@ -14,6 +14,7 @@ import 'desktop_workspace_preview.dart';
 import 'studio_dock_session_loader.dart';
 import 'studio_dock_session_snapshot.dart';
 import 'studio_dock_text_edit_service.dart';
+import 'studio_dock_timing_edit_service.dart';
 import 'studio_dock_media_plan.dart';
 import 'studio_dock_video_surface.dart';
 import 'studio_dock_waveform_surface.dart';
@@ -73,6 +74,28 @@ class _StudioDockReadOnlySessionViewState
         baseline: baseline,
         cueNumber: cueNumber,
         editedText: editedText,
+      );
+      if (!mounted || updated == null) return false;
+      setState(() => _latestBaseline = updated);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> _applyTiming(int cueNumber, String start, String end) async {
+    final baseline = _latestBaseline;
+    if (baseline == null || !widget.enableTextEditing) return false;
+    final service = StudioDockTimingEditService(
+      ref.read(projectRepositoryProvider),
+      ref.read(subtitleRepositoryProvider),
+    );
+    try {
+      final updated = await service.apply(
+        baseline: baseline,
+        cueNumber: cueNumber,
+        start: start,
+        end: end,
       );
       if (!mounted || updated == null) return false;
       setState(() => _latestBaseline = updated);
@@ -221,6 +244,7 @@ class _StudioDockReadOnlySessionViewState
         onNewProject: widget.onNewProject,
         onChooseVideo: widget.allowNativePlayback ? _chooseVideo : null,
         onApplyCueText: widget.enableTextEditing ? _applyText : null,
+        onApplyCueTiming: widget.enableTextEditing ? _applyTiming : null,
         manageLiveHotkeys: !widget.suppressParentEditorHotkeys,
         videoSurface: validVideoPath == null || !widget.allowNativePlayback
             ? null

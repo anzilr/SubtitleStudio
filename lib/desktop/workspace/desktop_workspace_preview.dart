@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'studio_dock_geometry.dart';
 import 'studio_dock_layout_preferences.dart';
+import 'studio_dock_timing_edit_service.dart';
 import '../../utils/msone_hotkey_manager.dart';
 
 /// Demo-only cue; this screen intentionally does not persist any user data.
@@ -26,9 +27,12 @@ class WorkspaceDemoCue {
   final String edited;
   final bool marked;
 
-  WorkspaceDemoCue copyWith({String? edited, bool? marked}) =>
+  WorkspaceDemoCue copyWith({
+    String? start, String? end, String? edited, bool? marked,
+  }) =>
       WorkspaceDemoCue(
-        id: id, start: start, end: end, original: original,
+        id: id, start: start ?? this.start, end: end ?? this.end,
+        original: original,
         edited: edited ?? this.edited, marked: marked ?? this.marked,
       );
 }
@@ -47,6 +51,7 @@ class DesktopWorkspacePreview extends StatefulWidget {
     this.onImportFile,
     this.onNewProject,
     this.onApplyCueText,
+    this.onApplyCueTiming,
     this.videoSurface,
     this.waveformSurface,
     this.onChooseVideo,
@@ -64,6 +69,10 @@ class DesktopWorkspacePreview extends StatefulWidget {
   final VoidCallback? onNewProject;
   /// Non-null only when the production checkpoint-backed edit bridge is ready.
   final Future<bool> Function(int cueNumber, String editedText)? onApplyCueText;
+  /// Production timing changes use the same optimistic history boundary as
+  /// text edits. Null in demo or read-only previews.
+  final Future<bool> Function(int cueNumber, String start, String end)?
+      onApplyCueTiming;
   /// Optional existing native-player surface. Only the standalone desktop
   /// host may provide it; the classic Editor preview must leave it null.
   final Widget? videoSurface;
@@ -145,6 +154,9 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   String _query = '';
   int? _draftCueId;
   String? _draftText;
+  int? _draftTimingCueId;
+  String? _draftStart;
+  String? _draftEnd;
   int _draftRevision = 0;
   bool _savingDraft = false;
   double _sidebarWidth = 240;
@@ -321,28 +333,55 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
     });
   }
 
-  bool get _hasDirtyDraft => widget.onApplyCueText != null &&
+  bool get _hasDirtyTextDraft => widget.onApplyCueText != null &&
       _draftCueId == _selectedId &&
       _draftText != null && _draftText != _selected.edited;
+
+  bool get _hasDirtyTimingDraft => widget.onApplyCueTiming != null &&
+      _draftTimingCueId == _selectedId &&
+      (_draftStart != null && _draftStart != _selected.start ||
+       _draftEnd != null && _draftEnd != _selected.end);
+
+  bool get _hasDirtyDraft => _hasDirtyTextDraft || _hasDirtyTimingDraft;
+
+  String get _timingStart => _draftTimingCueId == _selectedId
+      ? _draftStart ?? _selected.start : _selected.start;
+  String get _timingEnd => _draftTimingCueId == _selectedId
+      ? _draftEnd ?? _selected.end : _selected.end;
+  String? get _timingError =>
+      StudioDockTimingEditService.validate(_timingStart, _timingEnd);
 
   void _discardDraft() {
     setState(() {
       _draftCueId = null;
       _draftText = null;
+      _draftTimingCueId = null;
+      _draftStart = null;
+      _draftEnd = null;
       _draftRevision++;
     });
   }
 
   Future<bool> _applyDraft() async {
-    final callback = widget.onApplyCueText;
-    if (callback == null || _savingDraft) return false;
+    if (_savingDraft) return false;
     if (!_hasDirtyDraft) return true;
+    // Changing inspector pages first confirms the previous draft, so these
+    // cannot represent two independently committed edits to one cue.
+    if (_hasDirtyTextDraft && _hasDirtyTimingDraft) return false;
     final cueId = _selectedId;
-    final text = _draftText!;
+    final timing = _hasDirtyTimingDraft;
+    final text = _draftText;
+    final start = _timingStart;
+    final end = _timingEnd;
+    if (timing && _timingError != null) return false;
     setState(() => _savingDraft = true);
     bool applied;
     try {
-      applied = await callback(cueId, text);
+      if (timing) {
+        applied = await widget.onApplyCueTiming?.call(cueId, start, end) ?? false;
+      } else {
+        applied = await widget.onApplyCueText?.call(cueId, text!) ?? false;
+      }
     } catch (_) {
       applied = false;
     }
@@ -351,9 +390,16 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
       _savingDraft = false;
       if (applied) {
         final i = _cues.indexWhere((cue) => cue.id == cueId);
-        if (i >= 0) _cues[i] = _cues[i].copyWith(edited: text);
+        if (i >= 0) {
+          _cues[i] = timing
+              ? _cues[i].copyWith(start: start, end: end)
+              : _cues[i].copyWith(edited: text);
+        }
         _draftCueId = null;
         _draftText = null;
+        _draftTimingCueId = null;
+        _draftStart = null;
+        _draftEnd = null;
         _draftRevision++;
       }
     });
@@ -397,6 +443,12 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
     }
     if (choice == 'apply') return _applyDraft();
     return false;
+  }
+
+  Future<void> _changeInspectorTab(int tab) async {
+    if (tab == _inspectorTab) return;
+    if (!await _confirmDraftBeforeLeaving() || !mounted) return;
+    setState(() => _inspectorTab = tab);
   }
 
   Future<void> _chooseProjectSafely() async {
@@ -1316,7 +1368,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
           for (var i = 0; i < tabs.length; i++)
             Expanded(child: TextButton(
               key: ValueKey('inspector-tab-' + tabs[i]),
-              onPressed: () => setState(() => _inspectorTab = i),
+              onPressed: () => unawaited(_changeInspectorTab(i)),
               style: TextButton.styleFrom(
                 padding: EdgeInsets.zero,
                 foregroundColor: _inspectorTab == i ? _accent : _muted,
@@ -1337,7 +1389,8 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
           decoration: const BoxDecoration(
             border: Border(top: BorderSide(color: _border)),
           ),
-          child: Text(widget.onApplyCueText != null
+          child: Text(widget.onApplyCueText != null ||
+                  widget.onApplyCueTiming != null
               ? 'Apply updates the local project with checkpoint history'
               : (widget.liveReadOnly
                   ? 'Read-only session · no changes are saved'
@@ -1401,7 +1454,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
             Row(children: [
               Expanded(child: FilledButton.icon(
                 key: const ValueKey('studio-apply-cue'),
-                onPressed: _hasDirtyDraft && !_savingDraft
+                onPressed: _hasDirtyTextDraft && !_savingDraft
                     ? () => unawaited(_applyDraft()) : null,
                 icon: const Icon(Icons.check, size: 16),
                 label: Text(_savingDraft ? 'Applying…' : 'Apply'),
@@ -1409,7 +1462,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
               const SizedBox(width: 8),
               OutlinedButton(
                 key: const ValueKey('studio-discard-cue'),
-                onPressed: _hasDirtyDraft && !_savingDraft
+                onPressed: _hasDirtyTextDraft && !_savingDraft
                     ? _discardDraft : null,
                 child: const Text('Discard'),
               ),
@@ -1426,16 +1479,77 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
       case 1:
         return [
           _fieldLabel('START TIMECODE'),
-          _readonlyField(_selected.start),
+          if (widget.onApplyCueTiming == null)
+            _readonlyField(_selected.start)
+          else
+            TextFormField(
+              key: ValueKey('studio-timing-start-$_selectedId-$_draftRevision'),
+              initialValue: _timingStart,
+              enabled: !_savingDraft,
+              keyboardType: TextInputType.datetime,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                isDense: true,
+                hintText: 'HH:mm:ss,SSS',
+              ),
+              onChanged: (value) => setState(() {
+                _draftTimingCueId = _selectedId;
+                _draftStart = value;
+              }),
+            ),
           const SizedBox(height: 13),
           _fieldLabel('END TIMECODE'),
-          _readonlyField(_selected.end),
+          if (widget.onApplyCueTiming == null)
+            _readonlyField(_selected.end)
+          else
+            TextFormField(
+              key: ValueKey('studio-timing-end-$_selectedId-$_draftRevision'),
+              initialValue: _timingEnd,
+              enabled: !_savingDraft,
+              keyboardType: TextInputType.datetime,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                isDense: true,
+                hintText: 'HH:mm:ss,SSS',
+              ),
+              onChanged: (value) => setState(() {
+                _draftTimingCueId = _selectedId;
+                _draftEnd = value;
+              }),
+            ),
           const SizedBox(height: 13),
           _fieldLabel('DURATION'),
-          _readonlyField(_cueDuration(_selected)),
+          _readonlyField(_cueDuration(_selected.copyWith(
+            start: _timingStart, end: _timingEnd))),
           const SizedBox(height: 16),
-          const Text('Time editing will use the shared editor timing '
-              'commands during production integration.',
+          if (widget.onApplyCueTiming != null) ...[
+            if (_timingError != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Text(_timingError!,
+                  key: const ValueKey('studio-timing-error'),
+                  style: TextStyle(color: Theme.of(context).colorScheme.error,
+                      fontSize: 12)),
+              ),
+            Row(children: [
+              Expanded(child: FilledButton.icon(
+                key: const ValueKey('studio-apply-timing'),
+                onPressed: _hasDirtyTimingDraft && !_savingDraft &&
+                        _timingError == null
+                    ? () => unawaited(_applyDraft()) : null,
+                icon: const Icon(Icons.check, size: 16),
+                label: Text(_savingDraft ? 'Applying…' : 'Apply timing'),
+              )),
+              const SizedBox(width: 8),
+              OutlinedButton(
+                key: const ValueKey('studio-discard-timing'),
+                onPressed: _hasDirtyTimingDraft && !_savingDraft
+                    ? _discardDraft : null,
+                child: const Text('Discard'),
+              ),
+            ]),
+          ] else
+            const Text('Timing is read-only in this preview.',
               style: TextStyle(fontSize: 11, color: _muted)),
         ];
       case 2:

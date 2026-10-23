@@ -9,6 +9,7 @@ void main() {
   Future<void> launch(
     WidgetTester tester, {
     required Future<bool> Function(int, String) apply,
+    Future<bool> Function(int, String, String)? applyTiming,
   }) async {
     tester.view.physicalSize = const Size(1680, 1000);
     tester.view.devicePixelRatio = 1;
@@ -18,6 +19,7 @@ void main() {
       home: DesktopWorkspacePreview(
         liveReadOnly: true,
         onApplyCueText: apply,
+        onApplyCueTiming: applyTiming,
         initialCues: const [
           WorkspaceDemoCue(
             id: 1, start: '00:00:01,000', end: '00:00:02,000',
@@ -135,6 +137,77 @@ void main() {
     expect(find.text('Conflicted draft'), findsWidgets);
     expect(find.byKey(const ValueKey('studio-discard-cue')), findsOneWidget);
     expect(find.textContaining('Could not apply this edit'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('timing draft validates, persists only on Apply, and updates grid',
+      (tester) async {
+    final changes = <String>[];
+    await launch(tester,
+      apply: (_, __) async => true,
+      applyTiming: (cue, start, end) async {
+        changes.add('$cue:$start->$end');
+        return true;
+      },
+    );
+    await tester.tap(find.byKey(const ValueKey('inspector-tab-Timing')));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const ValueKey('studio-timing-start-1-0')),
+      '00:00:03,000');
+    await tester.pump();
+    expect(find.byKey(const ValueKey('studio-timing-error')), findsOneWidget);
+    expect(tester.widget<FilledButton>(find.byKey(
+      const ValueKey('studio-apply-timing'))).onPressed, isNull);
+    expect(changes, isEmpty);
+
+    await tester.enterText(
+      find.byKey(const ValueKey('studio-timing-end-1-0')),
+      '00:00:04,000');
+    await tester.pump();
+    expect(find.byKey(const ValueKey('studio-timing-error')), findsNothing);
+    expect(changes, isEmpty);
+    await tester.tap(find.byKey(const ValueKey('studio-apply-timing')));
+    await tester.pumpAndSettle();
+    expect(changes, ['1:00:00:03,000->00:00:04,000']);
+    expect(find.text('00:00:04,000'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('leaving Timing with a draft requires Apply or Discard',
+      (tester) async {
+    final changes = <String>[];
+    await launch(tester,
+      apply: (_, __) async => true,
+      applyTiming: (cue, start, end) async {
+        changes.add('$cue:$start:$end');
+        return true;
+      },
+    );
+    await tester.tap(find.byKey(const ValueKey('inspector-tab-Timing')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('studio-timing-start-1-0')),
+      '00:00:01,250');
+    await tester.pump();
+
+    await tester.tap(find.byKey(const ValueKey('inspector-tab-Notes')));
+    await tester.pumpAndSettle();
+    expect(find.text('Unsaved subtitle edit'), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('studio-timing-start-1-0')),
+      findsOneWidget);
+    expect(changes, isEmpty);
+
+    await tester.tap(find.byKey(const ValueKey('inspector-tab-Notes')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.descendant(
+      of: find.byType(AlertDialog), matching: find.text('Apply')));
+    await tester.pumpAndSettle();
+    expect(changes, ['1:00:00:01,250:00:00:02,000']);
+    expect(find.text('REVIEW NOTES'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

@@ -19,3 +19,5 @@ DS4 R2 FINAL ANALYZE+TEST 2026-10-24: fixed SubtitleLine model import; added dir
 DS4 R3 2026-10-24: opt-in compact 13% waveform layout, selected mpv audio to verified FFmpeg stream, skip stale saved preference for auto, ignore stale async results, add compact/audio tests. Flutter analyze plus Studio Dock tests ONLY; no builds.
 
 DS4 R3 FINAL 2026-10-24: compact 13 percent waveform, selected FFmpeg audio selection and fail-closed unavailable streams, guard nonpersistent timing/add cue gestures in Dock, mobile unchanged. Flutter analyze and Studio Dock tests only; no builds.
+
+DS5 R1 2026-10-24: checkpoint-backed Studio Dock inspector start/end timing changes, exact cue conflict detection, canonical validation, draft Apply/Discard and tab-change guard. Flutter analyzer and Studio Dock tests only; NO native builds.

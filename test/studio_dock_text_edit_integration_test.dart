@@ -3,6 +3,7 @@ import 'package:subtitle_studio/app/repositories/project_repository.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_session_loader.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_text_edit_service.dart';
+import 'package:subtitle_studio/desktop/workspace/studio_dock_timing_edit_service.dart';
 import 'package:subtitle_studio/screens/edit/repositories/subtitle_repository.dart';
 import 'package:subtitle_studio/services/checkpoint_repository.dart';
 
@@ -12,6 +13,7 @@ void main() {
   late TestIsarHarness db;
   late StudioDockSessionLoader loader;
   late StudioDockTextEditService editor;
+  late StudioDockTimingEditService timing;
 
   setUp(() async {
     db = await TestIsarHarness.open();
@@ -20,6 +22,7 @@ void main() {
       db.isar, CheckpointRepository(db.isar));
     loader = StudioDockSessionLoader(projects, subtitles);
     editor = StudioDockTextEditService(projects, subtitles);
+    timing = StudioDockTimingEditService(projects, subtitles);
   });
   tearDown(() async => db.close());
 
@@ -144,5 +147,62 @@ void main() {
     expect(await editor.apply(
       baseline: baseline, cueNumber: 1, editedText: 'No'), isNull);
     expect(await db.isar.checkpoints.count(), 0);
+  });
+
+  test('Timing Apply uses one checkpoint and preserves all other cue fields',
+      () async {
+    final ids = await seed();
+    final before = await loader.load(
+      sessionId: ids.sessionId, collectionId: ids.collectionId);
+    final after = await timing.apply(
+      baseline: before, cueNumber: 1,
+      start: '00:00:01,250', end: '00:00:02,750');
+    expect(after, isNotNull);
+    expect(after!.cues.first.start, '00:00:01,250');
+    expect(after.cues.first.end, '00:00:02,750');
+    final stored = (await db.isar.subtitleCollections.get(ids.collectionId))!;
+    expect(stored.lines[0].original, 'Original\nretained');
+    expect(stored.lines[0].edited, isNull);
+    expect(stored.lines[0].comment, 'Existing note');
+    expect(stored.lines[0].marked, isTrue);
+    expect(stored.lines[1].startTime, '00:00:03,000');
+    final historyCount = await db.isar.checkpoints.count();
+    expect(historyCount, greaterThanOrEqualTo(2));
+
+    final unchanged = await timing.apply(
+      baseline: after, cueNumber: 1,
+      start: '00:00:01,250', end: '00:00:02,750');
+    expect(identical(unchanged, after), isTrue);
+    expect(await db.isar.checkpoints.count(), historyCount);
+  });
+
+  test('Invalid, stale and non-owned timing changes cannot write', () async {
+    final ids = await seed();
+    final before = await loader.load(
+      sessionId: ids.sessionId, collectionId: ids.collectionId);
+    for (final times in [
+      ('00:00:02,000', '00:00:01,000'),
+      ('00:00:01,000,000', '00:00:02,000'),
+      ('00:70:01,000', '00:00:02,000'),
+      ('00:00:01.000', '00:00:02,000'),
+    ]) {
+      expect(await timing.apply(
+        baseline: before, cueNumber: 1,
+        start: times.$1, end: times.$2), isNull);
+    }
+    expect(await db.isar.checkpoints.count(), 0);
+
+    final changed = await timing.apply(
+      baseline: before, cueNumber: 1,
+      start: '00:00:01,100', end: '00:00:02,100');
+    expect(changed, isNotNull);
+    expect(await timing.apply(
+      baseline: before, cueNumber: 1,
+      start: '00:00:01,500', end: '00:00:02,500'), isNull);
+    expect(await timing.apply(
+      baseline: changed!, cueNumber: 999,
+      start: '00:00:01,500', end: '00:00:02,500'), isNull);
+    final stored = (await db.isar.subtitleCollections.get(ids.collectionId))!;
+    expect(stored.lines.first.startTime, '00:00:01,100');
   });
 }
