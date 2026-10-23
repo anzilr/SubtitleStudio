@@ -491,6 +491,17 @@ frame-time benchmark. No video lifecycle or UI layout changes.
 [R1 report](CHECKPOINT92_R1_RESIZE_LOGGING_CLEANUP_2026-10-23.md).
 **Verification:** [Linux 769 Flutter tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39915868638).
 
+**CP92 R2 (October 23, 2026):** Redact raw file paths, original personal
+filenames, SAF locators and exception text from subtitle extraction debug
+traces, shared path normalization traces and extraction failure messaging.
+Keep extraction file operations,
+platform save flows and subtitle processing unchanged. Add a real temporary
+SRT copy/verify/read privacy regression, missing-file check and source-level
+guard against reintroducing path-bearing screen diagnostics. FFmpeg command
+and process-log privacy still needs a separate pass.
+[R2 report](CHECKPOINT92_R2_EXTRACTION_DIAGNOSTIC_PRIVACY_2026-10-23.md).
+**Verification:** [Linux 772 Flutter tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39918055526).
+
 ### CP93 — Core refactor acceptance and handoff
 - Flutter analysis and full unit/widget/Isar integration tests in GitHub Actions (dependency resolution + tests only; **no platform builds in CI**).
 - Native builds and smoke tests on Android and desktop operating systems on user/local machines. Preserve fast Back/touch behavior, media lifecycle, file/SAF grants and `.msone` roundtrip.
