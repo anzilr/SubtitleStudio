@@ -155,6 +155,7 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
           sessionId: active.id,
           collectionId: active.subtitleCollectionId,
           onChooseProject: () => _chooseProject(snapshot),
+          enableTextEditing: true,
         );
       },
     );
