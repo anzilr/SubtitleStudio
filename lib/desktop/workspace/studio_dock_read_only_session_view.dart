@@ -1,6 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/app/providers/core_providers.dart';
+import 'package:subtitle_studio/screens/edit/repositories/editor_preferences_repository.dart';
+import 'package:subtitle_studio/screens/edit/repositories/video_repository.dart';
 import 'package:subtitle_studio/screens/edit/providers/subtitle_repository_provider.dart';
 import 'package:subtitle_studio/utils/msone_hotkey_manager.dart';
 
@@ -8,6 +12,8 @@ import 'desktop_workspace_preview.dart';
 import 'studio_dock_session_loader.dart';
 import 'studio_dock_session_snapshot.dart';
 import 'studio_dock_text_edit_service.dart';
+import 'studio_dock_media_plan.dart';
+import 'studio_dock_video_surface.dart';
 
 /// Shared live-session Studio Dock host. In DS3 R2 it can optionally expose
 /// text-only editing through the existing atomic history transaction.
@@ -19,6 +25,7 @@ class StudioDockReadOnlySessionView extends ConsumerStatefulWidget {
     required this.collectionId,
     this.onChooseProject,
     this.enableTextEditing = false,
+    this.allowNativePlayback = false,
   });
 
   final int sessionId;
@@ -26,6 +33,9 @@ class StudioDockReadOnlySessionView extends ConsumerStatefulWidget {
   final VoidCallback? onChooseProject;
   /// Opt in to checkpoint-backed text edits; the old Editor preview stays read-only.
   final bool enableTextEditing;
+  /// Only true for the standalone native desktop Home. An Editor-hosted route
+  /// leaves this false, avoiding a second player behind the classic Editor.
+  final bool allowNativePlayback;
 
   @override
   ConsumerState<StudioDockReadOnlySessionView> createState() =>
@@ -35,6 +45,7 @@ class StudioDockReadOnlySessionView extends ConsumerStatefulWidget {
 class _StudioDockReadOnlySessionViewState
     extends ConsumerState<StudioDockReadOnlySessionView> {
   late Future<StudioDockSessionSnapshot> _snapshot;
+  Future<String?>? _videoPath;
   StudioDockSessionSnapshot? _latestBaseline;
 
   Future<bool> _applyText(int cueNumber, String editedText) async {
@@ -51,7 +62,7 @@ class _StudioDockReadOnlySessionViewState
         editedText: editedText,
       );
       if (!mounted || updated == null) return false;
-      _latestBaseline = updated;
+      setState(() => _latestBaseline = updated);
       return true;
     } catch (_) {
       return false;
@@ -66,12 +77,26 @@ class _StudioDockReadOnlySessionViewState
     // read-only route is visible, then restore them on disposal.
     MSoneHotkeyManager.instance.suspendCallbacks();
     _snapshot = _load();
+    _videoPath = widget.allowNativePlayback ? _resolveVideoPath() : null;
   }
 
   @override
   void dispose() {
     MSoneHotkeyManager.instance.resumeCallbacks();
     super.dispose();
+  }
+
+  Future<String?> _resolveVideoPath() async {
+    final repo = VideoRepository(EditorPreferencesRepository(ref.read(isarProvider)));
+    try {
+      return await StudioDockMediaPlan.resolveVideoPath(
+        collectionId: widget.collectionId,
+        getSavedPath: repo.getSavedVideoPath,
+        exists: (path) => File(path).exists(),
+      );
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<StudioDockSessionSnapshot> _load() {
@@ -92,6 +117,7 @@ class _StudioDockReadOnlySessionViewState
         widget.collectionId != oldWidget.collectionId) {
       _latestBaseline = null;
       _snapshot = _load();
+      _videoPath = widget.allowNativePlayback ? _resolveVideoPath() : null;
     }
   }
 
@@ -121,8 +147,9 @@ class _StudioDockReadOnlySessionViewState
           ),
         );
       }
-      final session = state.requireData;
-      _latestBaseline ??= session;
+      final loaded = state.requireData;
+      _latestBaseline ??= loaded;
+      final session = _latestBaseline!;
       final cues = [
         for (final line in session.cues)
           WorkspaceDemoCue(
@@ -134,7 +161,7 @@ class _StudioDockReadOnlySessionViewState
             marked: line.marked,
           ),
       ];
-      return DesktopWorkspacePreview(
+      Widget buildDock(String? validVideoPath) => DesktopWorkspacePreview(
         key: ValueKey('studio-dock-session-${session.sessionId}'),
         initialCues: cues,
         liveReadOnly: true,
@@ -142,6 +169,22 @@ class _StudioDockReadOnlySessionViewState
         encoding: session.encoding,
         onChooseProject: widget.onChooseProject,
         onApplyCueText: widget.enableTextEditing ? _applyText : null,
+        videoSurface: validVideoPath == null || !widget.allowNativePlayback
+            ? null
+            : StudioDockVideoSurface(
+                key: ValueKey('studio-dock-player-${session.collectionId}'),
+                collectionId: session.collectionId,
+                videoPath: validVideoPath,
+                subtitles: StudioDockMediaPlan.overlayCues(session),
+              ),
+      );
+      final mediaFuture = _videoPath;
+      if (mediaFuture == null) return buildDock(null);
+      return FutureBuilder<String?>(
+        future: mediaFuture,
+        builder: (context, video) =>
+            buildDock(video.connectionState == ConnectionState.done &&
+                    !video.hasError ? video.data : null),
       );
     },
   );
