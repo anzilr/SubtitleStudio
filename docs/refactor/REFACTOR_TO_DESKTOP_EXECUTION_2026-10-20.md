@@ -502,6 +502,16 @@ and process-log privacy still needs a separate pass.
 [R2 report](CHECKPOINT92_R2_EXTRACTION_DIAGNOSTIC_PRIVACY_2026-10-23.md).
 **Verification:** [Linux 772 Flutter tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39918055526).
 
+**CP92 R3 (October 23, 2026):** Replace Edit Line's misleading
+`AlertDialog`-inside-`showModalBottomSheet` confirmation with a true popup
+dialog when navigating away with unsaved edits. Keep the restored editing
+buttons and side-by-side Start/End Time layout. Explicit Cancel, Discard and
+Save choices preserve navigation semantics; in-flight save locks out
+duplicate requests and competing actions. Four widget regressions cover
+dialog presentation, cancel/discard, retry and pending saves.
+[R3 report](CHECKPOINT92_R3_EDIT_LINE_UNSAVED_POPUP_2026-10-23.md).
+**Verification:** [Linux 776 Flutter tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39919836452).
+
 ### CP93 — Core refactor acceptance and handoff
 - Flutter analysis and full unit/widget/Isar integration tests in GitHub Actions (dependency resolution + tests only; **no platform builds in CI**).
 - Native builds and smoke tests on Android and desktop operating systems on user/local machines. Preserve fast Back/touch behavior, media lifecycle, file/SAF grants and `.msone` roundtrip.
