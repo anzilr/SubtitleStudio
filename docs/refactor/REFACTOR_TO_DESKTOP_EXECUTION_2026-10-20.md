@@ -439,6 +439,21 @@ wide-screen compatibility and absence of optional media actions.
 [R9 report](CHECKPOINT91_R9_COMPACT_EDIT_LINE_ACTIONS_2026-10-23.md).
 **Verification:** [Linux 766 Flutter tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39907251049).
 
+**CP91 R9 R2 (October 23, 2026):** Android testing exposed a duplicate
+`VideoPlayerWidget` GlobalKey when the **Resize Player on Keyboard**
+arrangement was active. The Edit Line filter still identified its inline
+video using an exact 240px height, but R8 changed that height to 170–200px
+on narrow phones. The two layouts consequently mounted the same keyed
+video widget. Explicitly identified inline video and spacing slots now
+allow the resizable layout to exclude the extra widget irrespective of
+height. The new regression test covers 170/200/240px layouts, preserves
+unrelated boxes and exercises layout transitions. The subsequent
+`libmpv.so` SIGSEGV happened **after hot restart** and remains a distinct,
+unverified native lifecycle issue; this fix does not change media
+initialization or disposal.
+[R9 R2 report](CHECKPOINT91_R9_R2_VIDEO_GLOBALKEY_REGRESSION_2026-10-23.md).
+**Verification:** [Linux 768 Flutter tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39908801629).
+
 **Next:** R8/R9 physical-device acceptance for compact portrait editing;
 then CP92 cleanup/performance and CP93 refactor acceptance. Do not treat
 Linux widget tests as proof of native ergonomics. The desktop workspace
