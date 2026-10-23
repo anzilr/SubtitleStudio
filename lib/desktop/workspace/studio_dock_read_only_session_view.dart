@@ -16,10 +16,12 @@ class StudioDockReadOnlySessionView extends ConsumerStatefulWidget {
     super.key,
     required this.sessionId,
     required this.collectionId,
+    this.onChooseProject,
   });
 
   final int sessionId;
   final int collectionId;
+  final VoidCallback? onChooseProject;
 
   @override
   ConsumerState<StudioDockReadOnlySessionView> createState() =>
@@ -77,9 +79,17 @@ class _StudioDockReadOnlySessionViewState
       if (state.hasError) {
         return Scaffold(
           appBar: AppBar(title: const Text('Studio Dock')),
-          body: const Center(
-            child: Text('Could not load this subtitle session. '
-                'Return to the editor and try again.'),
+          body: Center(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              const Text('Could not load this subtitle session.'),
+              const SizedBox(height: 14),
+              if (widget.onChooseProject != null)
+                OutlinedButton.icon(
+                  onPressed: widget.onChooseProject,
+                  icon: const Icon(Icons.folder_open),
+                  label: const Text('Choose another project'),
+                ),
+            ]),
           ),
         );
       }
@@ -101,6 +111,7 @@ class _StudioDockReadOnlySessionViewState
         liveReadOnly: true,
         projectTitle: session.fileName,
         encoding: session.encoding,
+        onChooseProject: widget.onChooseProject,
       );
     },
   );
