@@ -155,7 +155,9 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
     }
     // Desktop entrypoint initializes the application's existing hotkey manager.
     // Direct widget previews do not initialize native plugins.
-    unawaited(_installManagedHotkeys());
+    // The live read-only viewer may be nested in an already-running Editor.
+    // Never override its registered MSoneHotkeyManager callbacks.
+    if (!widget.liveReadOnly) unawaited(_installManagedHotkeys());
     unawaited(_restoreLayout());
   }
 
@@ -173,8 +175,10 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   void dispose() {
     _layoutSaveTimer?.cancel();
     if (_layoutChangedSinceMount) unawaited(_persistLayout());
-    for (final action in _managedActions) {
-      unawaited(MSoneHotkeyManager.instance.unregisterCallback(action));
+    if (!widget.liveReadOnly) {
+      for (final action in _managedActions) {
+        unawaited(MSoneHotkeyManager.instance.unregisterCallback(action));
+      }
     }
     _commandSearch.dispose();
     _gridFocus.dispose();
