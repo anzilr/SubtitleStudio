@@ -538,6 +538,18 @@ source guards protect the native diagnostic boundary.
 **Verification:** [Linux 782 Flutter tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39944813390).
 Native media-provider acceptance remains separate.
 
+**CP92 R6 (October 23, 2026):** Add a deterministic, synthetic 1,000-cue
+performance baseline for four shared service boundaries: SRT parse and Isar
+import, Isar collection open, Editor direct-save encoding and existing native
+file write, and V2 checkpoint reconstruction plus transactional restore. The
+repeatable benchmark runs three independent imports/histories, validates
+saved/restored contents, and prints numeric median/maximum elapsed times
+without private media identifiers. Measurements are descriptive only, never
+a brittle CI pass/fail latency requirement. Core services and native behavior
+are unchanged; file pickers, media decoding and UI frames are not covered.
+[R6 report](CHECKPOINT92_R6_CORE_WORKFLOW_BASELINES_2026-10-23.md).
+**Verification:** Linux Flutter-only CI and recorded baselines pending.
+
 ### CP93 — Core refactor acceptance and handoff
 - Flutter analysis and full unit/widget/Isar integration tests in GitHub Actions (dependency resolution + tests only; **no platform builds in CI**).
 - Native builds and smoke tests on Android and desktop operating systems on user/local machines. Preserve fast Back/touch behavior, media lifecycle, file/SAF grants and `.msone` roundtrip.
