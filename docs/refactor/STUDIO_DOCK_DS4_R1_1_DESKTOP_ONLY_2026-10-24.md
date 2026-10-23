@@ -30,3 +30,10 @@ Branch: `feature/studio-dock-integration`
 - [DS4 R1 media ownership](STUDIO_DOCK_DS4_R1_MEDIA_OWNERSHIP_2026-10-24.md)
 
 Next: DS4 R2 waveform, followed by DS5 native file/export and editor feature-parity; maintain the **Studio Dock only** desktop constraint across all future work.
+
+## Automated verification (final source)
+- [Studio Dock Flutter quality run #40029860147](https://github.com/anzilr/SubtitleStudio/actions/runs/40029860147): **passed** — zero analyzer issues, **39 Studio Dock tests passed**.
+- [Full Flutter quality run #40029875543](https://github.com/anzilr/SubtitleStudio/actions/runs/40029875543): whole-repository analyzer passed; full regression status is tracked independently.
+- Fixed during verification: empty project's theme color, New Project dialog closing without disposing a live field controller, and dirty-draft protection before the new direct-toolbar Import/New actions. Added focused regressions covering this behavior.
+- Previous DS4 full gate #40028084316 completed successfully with 838 tests; the newer full gate must not be called complete until GitHub confirms.
+- Windows native acceptance is still required: file association startup; import and project creation; edited text persistence; playback and pane resizing. No native platform build was run in CI.
