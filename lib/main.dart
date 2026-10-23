@@ -263,39 +263,20 @@ class MainApp extends ConsumerWidget {
 
   /// Get the appropriate initial screen based on platform
   Widget _getInitialScreen() {
-    // Desktop launches directly into Studio Dock, not the legacy mobile
-    // Home/Editor composition. Keep command-line file imports on the legacy
-    // path until the shared desktop import flow is connected in DS5.
+    // Studio Dock is the only native desktop UI, including when the user
+    // opens an SRT/VTT/ASS/.msone from the operating system. Never route a
+    // desktop file association through the classic Home or Editor.
     if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.windows ||
         defaultTargetPlatform == TargetPlatform.macOS ||
         defaultTargetPlatform == TargetPlatform.linux)) {
-      return initialFile == null
-          ? const StudioDockDesktopHome()
-          : _buildHomeScreen();
+      return StudioDockDesktopHome(initialFilePath: initialFile);
     }
     
     // On mobile platforms, show splash screen
     return SplashTransitionWrapper(initialFile: initialFile);
   }
 
-  /// Build the home screen with initial file handling
-  Widget _buildHomeScreen() {
-    String? intentFilePath;
-    bool isMsoneFile = false;
-    
-    if (initialFile != null) {
-      intentFilePath = initialFile;
-      isMsoneFile = IntentHandler.isMsoneFile(initialFile!);
-    }
-    
-    return HomeScreen(
-      initialFilePath: intentFilePath,
-      initialFileName: intentFilePath != null 
-          ? IntentHandler.getFileName(intentFilePath) 
-          : null,
-      isProjectFile: isMsoneFile,
-    );
-  }
+
 }
 
 /// Splash screen wrapper that resolves startup file intents before navigation.
