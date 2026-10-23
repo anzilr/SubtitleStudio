@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:subtitle_studio/screens/edit/widgets/video_player_section.dart';
 import 'package:subtitle_studio/widgets/video_player_widget.dart';
@@ -26,13 +28,45 @@ class StudioDockVideoSurface extends StatefulWidget {
 
 class _StudioDockVideoSurfaceState extends State<StudioDockVideoSurface> {
   final _playerKey = GlobalKey<VideoPlayerWidgetState>();
+  int _audioRevision = 0;
 
   void _seek(Duration time) => _playerKey.currentState?.seekTo(time);
+
+  void _onAudioTrackChanged(String trackId) {
+    final revision = ++_audioRevision;
+    widget.playback.prepareAudio();
+    unawaited(_resolveSelectedTrack(trackId, revision));
+  }
+
+  Future<void> _resolveSelectedTrack(String trackId, int revision) async {
+    final player = _playerKey.currentState;
+    if (player == null) return;
+    try {
+      final selector = await player.resolveWaveformSelectedAudioStream();
+      if (!mounted || revision != _audioRevision) return;
+      // Non-auto tracks must resolve to an actual FFmpeg global stream index.
+      if (trackId != 'auto' && selector == null) {
+        widget.playback.updateAudioUnavailable(trackId,
+            'The selected audio track could not be resolved for waveform use.');
+      } else {
+        widget.playback.updateAudioReady(trackId, selector);
+      }
+    } catch (_) {
+      if (!mounted || revision != _audioRevision) return;
+      widget.playback.updateAudioUnavailable(trackId,
+          'The selected video audio track cannot be used for waveform decoding.');
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     widget.playback.attach(_seek);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _audioRevision != 0) return;
+      final state = _playerKey.currentState;
+      if (state != null) _onAudioTrackChanged(state.player.state.track.audio.id);
+    });
   }
 
   @override
@@ -46,6 +80,7 @@ class _StudioDockVideoSurfaceState extends State<StudioDockVideoSurface> {
 
   @override
   void dispose() {
+    _audioRevision++;
     widget.playback.detach();
     super.dispose();
   }
@@ -60,5 +95,6 @@ class _StudioDockVideoSurfaceState extends State<StudioDockVideoSurface> {
     subtitleVersion: 0,
     onPositionChanged: widget.playback.updatePosition,
     onPlayStateChanged: widget.playback.updatePlaying,
+    onAudioTrackChanged: _onAudioTrackChanged,
   );
 }
