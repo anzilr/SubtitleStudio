@@ -247,7 +247,9 @@ class WaveformController extends Notifier<WaveformState> {
 
       // Get selected audio track ID if available
       String? audioTrackId = event.audioTrackId;
-      if (audioTrackId == null && event.subtitleCollectionId != null) {
+      if (audioTrackId == null &&
+          event.useSavedAudioTrackPreference &&
+          event.subtitleCollectionId != null) {
         // Try to fetch from saved preferences
         audioTrackId = await _preferences.getSelectedAudioTrackId(
           event.subtitleCollectionId!,
