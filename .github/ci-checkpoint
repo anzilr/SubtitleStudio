@@ -509,3 +509,5 @@ DS4 R1 FULL GATE 2026-10-24: studio dock existing media player ownership and sha
 STUDIO DOCK ONLY 2026-10-24: native startup and file associations never enter classic Home/Editor. Reuse import/create repositories inside Dock, add toolbar New/Import with unsaved-draft guard; no platform builds; full flutter analyze/test only.
 
 DS4 R2 COMPLETE FLUTTER GATE 2026-10-24: integrate existing waveform with single native player and direct Attach Video; focused 42 tests clean; run complete flutter pub get/analyze/test only; no platform builds in GitHub Actions.
+
+DS4 R3 FULL SUITE 2026-10-24: compact production waveform controls and player-selected verified FFmpeg stream; 47 focused tests and analyzer clean. Run Flutter pub get/analyze/test only. NO platform builds.
