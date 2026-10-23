@@ -30,3 +30,10 @@ The isolated preview branch was 135 commits behind the core refactor branch. Do 
 5. Finish native Windows, Linux and macOS smoke tests.
 
 This checkpoint intentionally does **not** modify production Android navigation.
+
+## Native desktop route and keyboard safety (R1 completion)
+- Desktop-only AppBar action in the existing `EditScreen`: **Open Studio Dock (read-only preview)**. Not shown on Android, iOS, or web. Opening the view pauses the already-mounted media player; no second `VideoPlayerWidget` or `GlobalKey` is created.
+- Shared `MSoneHotkeyManager` now supports nest-safe callback suspension while a live read-only route is on top. The route suspends hotkey callback dispatch on entry and restores it on disposal, avoiding accidental edits in the underlying still-mounted Editor. Demo mode still uses the original manager for its preview shortcuts, while liveReadOnly mode registers none.
+- New widget regressions verify the real-data projection is read-only, playback and mutation controls are unavailable, and empty real sessions do not fabricate cues. Additional hotkey suppression test protects the route lifecycle.
+- The read-only session is a snapshot as loaded. Editing and automatic live reconciliation are **not** implemented yet. Reopen from the editor to refresh until DS3 R2 adds controlled synchronization.
+- Windows native acceptance still pending because Workspace Bridge is offline; Flutter analyzer/test results will be recorded below after the final gate.
