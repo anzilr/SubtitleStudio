@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - refactor/riverpod-architecture
+      - feature/studio-dock-integration
     paths:
       - .github/ci-checkpoint
 
