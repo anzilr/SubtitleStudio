@@ -48,6 +48,7 @@ class DesktopWorkspacePreview extends StatefulWidget {
     this.onNewProject,
     this.onApplyCueText,
     this.videoSurface,
+    this.waveformSurface,
     this.manageLiveHotkeys = false,
   });
 
@@ -65,6 +66,8 @@ class DesktopWorkspacePreview extends StatefulWidget {
   /// Optional existing native-player surface. Only the standalone desktop
   /// host may provide it; the classic Editor preview must leave it null.
   final Widget? videoSurface;
+  /// The real production waveform shares a seek/position link with video.
+  final Widget? waveformSurface;
   /// Standalone desktop is allowed to own shared application callbacks;
   /// an overlay on the classic Editor must not override its registrations.
   final bool manageLiveHotkeys;
@@ -1051,19 +1054,20 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
         const Text('WAVEFORM', style: TextStyle(
             fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: .8)),
         const SizedBox(width: 10),
-        Text(widget.liveReadOnly ? 'Audio not connected' : 'Audio track: Auto',
+        Text(widget.waveformSurface != null ? 'Synced with video' :
+            (widget.liveReadOnly ? 'Audio not connected' : 'Audio track: Auto'),
             style: const TextStyle(fontSize: 10, color: _muted)),
         const Spacer(),
         const Text('–  00:30  +', style:
             TextStyle(color: _muted, fontSize: 10)),
       ]),
       const SizedBox(height: 7),
-      Expanded(child: widget.liveReadOnly
+      Expanded(child: widget.waveformSurface ?? (widget.liveReadOnly
           ? const Center(child: Text('Waveform integration pending',
               style: TextStyle(color: _muted, fontSize: 11)))
           : SizedBox.expand(
               child: CustomPaint(painter: _DemoWaveformPainter(
-                cueIndex: _selectedId, accent: _accent)))),
+                cueIndex: _selectedId, accent: _accent))))),
     ]),
   );
 
