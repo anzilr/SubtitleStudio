@@ -93,12 +93,12 @@ void main() {
     for (final unsafeTrace in <String>[
       'Selected video path:',
       'Original filename:',
-      'Output directory: $',
+      r'Output directory: $',
       'Original SAF path:',
       'SAF URI:',
       'Original temp file path preserved:',
       'FFmpeg extracted to temp file:',
-      'Final output: $',
+      r'Final output: $',
       'Updated originalFileUri to:',
     ]) {
       expect(source, isNot(contains(unsafeTrace)), reason: unsafeTrace);

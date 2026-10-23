@@ -425,3 +425,6 @@ user-facing extraction error messages. Preserve internal extraction paths,
 SAF/iOS/desktop save logic, status counts and file bytes. Add real temporary
 SRT roundtrip and missing-file privacy regression, plus screen trace guard.
 Run Flutter pub get/analyze/test in Linux CI only; no native builds.
+
+CP92 R2 follow-up October 23 2026: escape literal dollar signs in
+privacy regression trace signatures; rerun full Flutter quality gate.
