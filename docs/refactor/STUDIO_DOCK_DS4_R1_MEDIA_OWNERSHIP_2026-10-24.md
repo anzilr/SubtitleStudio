@@ -29,3 +29,10 @@ DS4 R2: integrate existing waveform seek coordinator + widgets under one player 
 - Corrected focused gate [#40027784196](https://github.com/anzilr/SubtitleStudio/actions/runs/40027784196): **Flutter analysis passed; all 31 Studio Dock tests passed.**
 - Further source improvement afterward: standalone root owns its supported hotkeys, classic embedded viewer remains suppressed, and the entire native player/hotkey owner is unmounted before pushing the classic Home/Editor. A new widget test verifies handoff and restoration, with injectable session catalog and classic route. This must pass the next focused gate.
 - Full Flutter suite on current branch must also be re-run after the final source revision; CI is Flutter pub get/analyze/tests **only**.
+
+## DS4 R1 final focused quality gate
+
+- [Studio Dock Flutter quality run #40028075998](https://github.com/anzilr/SubtitleStudio/actions/runs/40028075998): **PASSED**, full-repository Flutter analyzer clean and **32 Studio Dock tests passed**.
+- The additional owner handoff test confirms the standalone media owner unmounts before entering classic Home/Editor and mounts again on return. The UI startup test uses injected catalog/view boundaries so it never tries to fetch IsarCore over Flutter's mocked HTTP client. Isar-backed repository mutation tests run separately using the actual test harness.
+- [Migration quality checks #40028084316](https://github.com/anzilr/SubtitleStudio/actions/runs/40028084316): full Flutter suite triggered for the same final implementation; record separately when finished. No platform builds.
+- Standalone Studio Dock owns cue navigation and Find hotkeys via the existing manager; the classic embedded route continues to suppress parent-editor actions. The classic import route now releases both desktop media and shortcut ownership while it is open.
