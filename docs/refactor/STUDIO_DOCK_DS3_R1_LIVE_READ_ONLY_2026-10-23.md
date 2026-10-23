@@ -45,3 +45,17 @@ This checkpoint intentionally does **not** modify production Android navigation.
 - Workflow included only flutter pub get, flutter analyze and flutter test; **no platform builds**.
 - Native Windows UI/hotkey/resize/file acceptance: **pending user/local host test**.
 - Next checkpoint: DS3 R2 transaction-safe actual cue editing with stale-edit detection, then DS4 shared player and waveform ownership. Do not present DS3 R1 as a full desktop editor.
+
+## DS3 R1.1 — Desktop startup routing correction (23 October 2026)
+
+A user ran `flutter run -d windows` on the integration branch, and the log confirmed `Launching lib\\main.dart`, followed by `HomeScreen initialized` and eight `RenderFlex overflowed by 12 pixels` messages. The log then entered the old Editor. The command had launched correctly; the defect was in the default desktop route, where `MainApp._getInitialScreen()` still returned the legacy `HomeScreen`.
+
+**Corrected behavior:**
+- Windows/macOS/Linux standard startup now returns `StudioDockDesktopHome` when no command-line file path is given. Mobile remains unchanged. Desktop file-association launches continue through the established import handling until DS5.
+- The desktop host loads real sessions through the existing `SessionRepository` and bootstrapped Isar. With sessions present, it opens the last-edited session directly in the real read-only Studio Dock. Empty installations display an explicit Studio Dock welcome/import screen.
+- A toolbar `Switch project` control presents a session picker, avoiding a detour through the old Home or Editor. The old Home remains an **explicit Import/Create (classic)** fallback only.
+- When classic Home opens on top of read-only Studio Dock, it temporarily restores native app hotkey callbacks and re-suppresses them when the classic route closes.
+- Startup and selection widget tests cover last-edited session, switching projects, empty install and no unexpected legacy landing.
+- The classic Home RenderFlex messages are independently visible in the supplied log. The new default bypasses that screen, but the underlying legacy Home overflow is not separately claimed fixed.
+
+**Still pending:** native Windows acceptance; actual edit transactions, video/waveform and native file picker wiring.
