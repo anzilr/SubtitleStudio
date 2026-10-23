@@ -170,6 +170,7 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
           onChooseProject: () => _chooseProject(snapshot),
           enableTextEditing: true,
           allowNativePlayback: !_classicFlowActive,
+          suppressParentEditorHotkeys: false,
         );
       },
     );
