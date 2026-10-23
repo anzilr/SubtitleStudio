@@ -1,0 +1,124 @@
+import 'dart:typed_data';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:subtitle_studio/features/waveform/models/waveform_sample.dart';
+import 'package:subtitle_studio/features/waveform/providers/waveform_controller.dart';
+import 'package:subtitle_studio/features/waveform/state/waveform_state.dart';
+import 'package:subtitle_studio/features/waveform/state/waveform_event.dart';
+import 'package:subtitle_studio/features/waveform/widgets/waveform_widget.dart';
+
+class _CompactReadyController extends WaveformController {
+  @override
+  WaveformState build() => WaveformReady(
+    buffer: WaveformBuffer(
+      rawData: WaveformData(
+        channels: 1, sampleRate: 100, totalSamples: 1200,
+        rawSamples: [Int16List(1200)],
+      ),
+      zoomLevels: [
+        ZoomLevel(samplesPerPixel: 1,
+          data: [List<WaveformSample>.filled(
+            1200, const WaveformSample(0, 0))]),
+        ZoomLevel(samplesPerPixel: 2,
+          data: [List<WaveformSample>.filled(
+            600, const WaveformSample(0, 0))]),
+      ],
+    ),
+    currentZoomIndex: 0,
+    viewportWidth: 490,
+  );
+}
+
+class _CompactLoadingController extends WaveformController {
+  @override
+  WaveformState build() => const WaveformLoading(
+    'source', progress: 0.3,
+    processedAudioTime: Duration(seconds: 5),
+  );
+}
+
+class _CompactErrorController extends WaveformController {
+  @override
+  WaveformState build() =>
+      const WaveformError('Selected audio metadata is unavailable.');
+}
+
+void main() {
+  testWidgets('compact waveform keeps zoom and playhead usable in 13% band',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        waveformControllerProvider.overrideWith(_CompactReadyController.new),
+      ],
+      child: const MaterialApp(
+        home: Scaffold(body: Center(
+          child: SizedBox(width: 500, height: 87,
+            child: WaveformWidget(
+              compact: true, height: 87, subtitles: [],
+            ),
+          ),
+        )),
+      ),
+    ));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('waveform-compact-zoom-in')),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey('waveform-compact-zoom-out')),
+        findsOneWidget);
+    expect(find.byTooltip('Waveform Options'), findsNothing,
+        reason: 'Full toolbar must not consume compact waveform height');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('compact loading status fits a 65px waveform band',
+      (tester) async {
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        waveformControllerProvider.overrideWith(_CompactLoadingController.new),
+      ],
+      child: const MaterialApp(
+        home: Scaffold(body: SizedBox(
+          width: 480, height: 65,
+          child: WaveformWidget(compact: true, height: 65, subtitles: []),
+        )),
+      ),
+    ));
+    await tester.pump();
+    expect(find.text('Generating waveform…'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('compact waveform error is readable in short band',
+      (tester) async {
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        waveformControllerProvider.overrideWith(_CompactErrorController.new),
+      ],
+      child: const MaterialApp(
+        home: Scaffold(body: SizedBox(
+          width: 480, height: 65,
+          child: WaveformWidget(compact: true, height: 65, subtitles: []),
+        )),
+      ),
+    ));
+    await tester.pump();
+    expect(find.textContaining('Waveform unavailable'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  test('auto track selection does not reuse saved FFmpeg track preference', () {
+    const legacy = LoadAudioFile('video.mkv', subtitleCollectionId: 7);
+    const selected = LoadAudioFile('video.mkv',
+        subtitleCollectionId: 7, useSavedAudioTrackPreference: false);
+    expect(legacy.useSavedAudioTrackPreference, true);
+    expect(selected.useSavedAudioTrackPreference, false);
+    expect(selected.audioTrackId, isNull);
+    expect(legacy, isNot(selected));
+  });
+}
