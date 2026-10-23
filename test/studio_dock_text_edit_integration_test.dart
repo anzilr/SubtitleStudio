@@ -4,6 +4,7 @@ import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_session_loader.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_text_edit_service.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_timing_edit_service.dart';
+import 'package:subtitle_studio/desktop/workspace/studio_dock_cue_structure_service.dart';
 import 'package:subtitle_studio/screens/edit/repositories/subtitle_repository.dart';
 import 'package:subtitle_studio/services/checkpoint_repository.dart';
 
@@ -14,6 +15,7 @@ void main() {
   late StudioDockSessionLoader loader;
   late StudioDockTextEditService editor;
   late StudioDockTimingEditService timing;
+  late StudioDockCueStructureService structure;
 
   setUp(() async {
     db = await TestIsarHarness.open();
@@ -23,6 +25,7 @@ void main() {
     loader = StudioDockSessionLoader(projects, subtitles);
     editor = StudioDockTextEditService(projects, subtitles);
     timing = StudioDockTimingEditService(projects, subtitles);
+    structure = StudioDockCueStructureService(projects, subtitles);
   });
   tearDown(() async => db.close());
 
@@ -204,5 +207,115 @@ void main() {
       start: '00:00:01,500', end: '00:00:02,500'), isNull);
     final stored = (await db.isar.subtitleCollections.get(ids.collectionId))!;
     expect(stored.lines.first.startTime, '00:00:01,100');
+  });
+
+  test('Insert reindexes by time and preserves existing cue metadata',
+      () async {
+    final ids = await seed();
+    final before = await loader.load(
+      sessionId: ids.sessionId, collectionId: ids.collectionId);
+    final result = await structure.insert(
+      baseline: before,
+      afterCueNumber: 1,
+      start: '00:00:02,200', end: '00:00:02,800',
+      original: 'Inserted source', edited: 'Inserted edit');
+    expect(result, isNotNull);
+    expect(result!.selectedCueNumber, 2);
+    expect(result.snapshot.cues.map((c) => c.original).toList(), [
+      'Original\nretained', 'Inserted source', '',
+    ]);
+    expect(result.snapshot.cues.map((c) => c.index).toList(), [1, 2, 3]);
+    final stored = (await db.isar.subtitleCollections.get(ids.collectionId))!;
+    expect(stored.lines[0].comment, 'Existing note');
+    expect(stored.lines[0].marked, isTrue);
+    expect(stored.lines[0].edited, isNull);
+    expect(stored.lines[1].edited, 'Inserted edit');
+    expect(stored.lines[2].original, isEmpty);
+    expect(await db.isar.checkpoints.count(), greaterThanOrEqualTo(2));
+
+    final deleted = await structure.delete(
+      baseline: result.snapshot, cueNumber: 2);
+    expect(deleted, isNotNull);
+    expect(deleted!.snapshot.cues.length, 2);
+    expect(deleted.selectedCueNumber, 2);
+    expect(deleted.snapshot.cues[1].original, isEmpty);
+    expect(deleted.snapshot.cues.map((c) => c.index), [1, 2]);
+  });
+
+  test('Stale structural commands cannot shift or delete a newer cue',
+      () async {
+    final ids = await seed();
+    final baseline = await loader.load(
+      sessionId: ids.sessionId, collectionId: ids.collectionId);
+    final updated = await editor.apply(
+      baseline: baseline, cueNumber: 1, editedText: 'Newer text');
+    expect(updated, isNotNull);
+
+    expect(await structure.delete(
+      baseline: baseline, cueNumber: 1), isNull);
+    expect(await structure.insert(
+      baseline: baseline, afterCueNumber: 1,
+      start: '00:00:02,200', end: '00:00:02,800',
+      original: 'Wrong placement', edited: ''), isNull);
+    expect(await structure.delete(
+      baseline: updated!, cueNumber: 99), isNull);
+    expect(await structure.insert(
+      baseline: updated, afterCueNumber: 99,
+      start: '00:00:02,200', end: '00:00:02,800',
+      original: 'Wrong anchor', edited: ''), isNull);
+    final stored = (await db.isar.subtitleCollections.get(ids.collectionId))!;
+    expect(stored.lines.length, 2);
+    expect(stored.lines.first.edited, 'Newer text');
+  });
+
+  test('Empty project can insert and delete its only cue with history',
+      () async {
+    final ids = await seed();
+    await db.isar.writeTxn(() async {
+      final collection =
+          (await db.isar.subtitleCollections.get(ids.collectionId))!;
+      collection.lines.clear();
+      await db.isar.subtitleCollections.put(collection);
+    });
+    final empty = await loader.load(
+      sessionId: ids.sessionId, collectionId: ids.collectionId);
+    expect(empty.cues, isEmpty);
+    final added = await structure.insert(
+      baseline: empty, afterCueNumber: null,
+      start: '00:00:00,000', end: '00:00:02,000',
+      original: '', edited: '');
+    expect(added, isNotNull);
+    expect(added!.selectedCueNumber, 1);
+    expect(added.snapshot.cues.single.original, isEmpty);
+    expect(added.snapshot.cues.single.storedEdited, isNull);
+
+    final deleted = await structure.delete(
+      baseline: added.snapshot, cueNumber: 1);
+    expect(deleted, isNotNull);
+    expect(deleted!.snapshot.cues, isEmpty);
+    expect(deleted.selectedCueNumber, -1);
+    expect(await db.isar.checkpoints.count(), greaterThanOrEqualTo(3));
+  });
+
+  test('Structural edits reject invalid times and foreign collection owner',
+      () async {
+    final ids = await seed();
+    final baseline = await loader.load(
+      sessionId: ids.sessionId, collectionId: ids.collectionId);
+    expect(await structure.insert(
+      baseline: baseline, afterCueNumber: 1,
+      start: '00:00:04,000', end: '00:00:02,000',
+      original: 'Invalid', edited: ''), isNull);
+
+    await db.isar.writeTxn(() async {
+      await db.isar.sessions.delete(ids.sessionId);
+    });
+    expect(await structure.delete(
+      baseline: baseline, cueNumber: 1), isNull);
+    expect(await structure.insert(
+      baseline: baseline, afterCueNumber: 1,
+      start: '00:00:02,200', end: '00:00:02,800',
+      original: 'Foreign', edited: ''), isNull);
+    expect(await db.isar.checkpoints.count(), 0);
   });
 }

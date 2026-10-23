@@ -3,9 +3,11 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:subtitle_studio/utils/time_input_formatter.dart';
 import 'studio_dock_geometry.dart';
 import 'studio_dock_layout_preferences.dart';
 import 'studio_dock_timing_edit_service.dart';
+import 'studio_dock_insert_cue_dialog.dart';
 import '../../utils/msone_hotkey_manager.dart';
 
 /// Demo-only cue; this screen intentionally does not persist any user data.
@@ -37,6 +39,18 @@ class WorkspaceDemoCue {
       );
 }
 
+/// Complete refreshed cue list after a structural history transaction.
+/// Insertion/deletion can renumber every later cue; never patch just one row.
+class WorkspaceCueUpdate {
+  const WorkspaceCueUpdate({
+    required this.cues,
+    required this.selectedCueId,
+  });
+
+  final List<WorkspaceDemoCue> cues;
+  final int selectedCueId;
+}
+
 /// Desktop-first, data-isolated workspace design. Domain logic is intentionally
 /// absent: shared Editor, Isar, checkpoints, media and file-access providers
 /// remain authoritative in the refactoring branch.
@@ -52,6 +66,8 @@ class DesktopWorkspacePreview extends StatefulWidget {
     this.onNewProject,
     this.onApplyCueText,
     this.onApplyCueTiming,
+    this.onInsertCue,
+    this.onDeleteCue,
     this.videoSurface,
     this.waveformSurface,
     this.onChooseVideo,
@@ -73,6 +89,9 @@ class DesktopWorkspacePreview extends StatefulWidget {
   /// text edits. Null in demo or read-only previews.
   final Future<bool> Function(int cueNumber, String start, String end)?
       onApplyCueTiming;
+  final Future<WorkspaceCueUpdate?> Function(
+      int? afterCueNumber, StudioDockNewCueDraft draft)? onInsertCue;
+  final Future<WorkspaceCueUpdate?> Function(int cueNumber)? onDeleteCue;
   /// Optional existing native-player surface. Only the standalone desktop
   /// host may provide it; the classic Editor preview must leave it null.
   final Widget? videoSurface;
@@ -142,6 +161,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   final FocusNode _gridFocus = FocusNode(debugLabel: 'Studio Dock grid');
   final FocusNode _searchFocus = FocusNode(debugLabel: 'Studio Dock search');
   final TextEditingController _commandSearch = TextEditingController();
+  final TextEditingController _tableSearch = TextEditingController();
   int _section = 0;
   bool _playing = false;
   bool _inspectorOpen = true;
@@ -159,6 +179,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   String? _draftEnd;
   int _draftRevision = 0;
   bool _savingDraft = false;
+  bool _changingStructure = false;
   double _sidebarWidth = 240;
   double _inspectorWidth = 320;
 
@@ -230,6 +251,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
       }
     }
     _commandSearch.dispose();
+    _tableSearch.dispose();
     _gridFocus.dispose();
     _searchFocus.dispose();
     super.dispose();
@@ -413,7 +435,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   }
 
   Future<bool> _confirmDraftBeforeLeaving() async {
-    if (_savingDraft) return false;
+    if (_savingDraft || _changingStructure) return false;
     if (!_hasDirtyDraft) return true;
     final choice = await showDialog<String>(
       context: context,
@@ -471,6 +493,109 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   Future<void> _newProjectSafely() async {
     if (await _confirmDraftBeforeLeaving() && mounted) {
       widget.onNewProject?.call();
+    }
+  }
+
+  void _acceptStructure(WorkspaceCueUpdate update) {
+    setState(() {
+      _cues..clear()..addAll(update.cues);
+      _selectedId = update.selectedCueId;
+      _selectionAnchor = _selectedId;
+      _selectedIds
+        ..clear()
+        ..addAll(_selectedId > 0 ? [_selectedId] : <int>[]);
+      _query = '';
+      _tableSearch.clear();
+      _draftCueId = null;
+      _draftText = null;
+      _draftTimingCueId = null;
+      _draftStart = null;
+      _draftEnd = null;
+      _draftRevision++;
+    });
+  }
+
+  String _formatCueTime(int millis) {
+    final hours = millis ~/ 3600000;
+    final minutes = (millis ~/ 60000) % 60;
+    final seconds = (millis ~/ 1000) % 60;
+    final fraction = millis % 1000;
+    return '${hours.toString().padLeft(2, '0')}:'
+        '${minutes.toString().padLeft(2, '0')}:'
+        '${seconds.toString().padLeft(2, '0')},'
+        '${fraction.toString().padLeft(3, '0')}';
+  }
+
+  Future<void> _addCueSafely() async {
+    if (widget.onInsertCue == null || _changingStructure ||
+        !await _confirmDraftBeforeLeaving() || !mounted) return;
+    // The initial two-second span is a convenience, not a write: the user
+    // confirms both times in the dialog before creating a checkpoint.
+    const latestStart = 86397999; // 23:59:57,999: leave room for 2s.
+    final requested = _cues.isEmpty ? 0 :
+        TimeValidator.timeStringToMilliseconds(_selected.end);
+    final start = requested.clamp(0, latestStart).toInt();
+    setState(() => _changingStructure = true);
+    try {
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => StudioDockInsertCueDialog(
+          initialStart: _formatCueTime(start),
+          initialEnd: _formatCueTime(start + 2000),
+          onSubmit: (draft) async {
+            final update = await widget.onInsertCue?.call(
+              _cues.isEmpty ? null : _selectedId, draft);
+            if (!mounted || update == null) return false;
+            _acceptStructure(update);
+            return true;
+          },
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _changingStructure = false);
+    }
+  }
+
+  Future<void> _deleteCueSafely() async {
+    if (widget.onDeleteCue == null || _cues.isEmpty ||
+        _changingStructure || !await _confirmDraftBeforeLeaving() ||
+        !mounted) return;
+    final cueNumber = _selectedId;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: Text('Delete subtitle cue #$cueNumber?'),
+        content: const Text('This removes the selected cue from the project. '
+            'The change will be recorded in checkpoint history.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialog, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            key: const ValueKey('studio-confirm-delete'),
+            onPressed: () => Navigator.pop(dialog, true),
+            child: const Text('Delete cue'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _changingStructure = true);
+    try {
+      final update = await widget.onDeleteCue?.call(cueNumber);
+      if (!mounted) return;
+      if (update != null) {
+        _acceptStructure(update);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Could not delete this cue. The project may have '
+              'changed elsewhere. No line was removed.'),
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _changingStructure = false);
     }
   }
 
@@ -566,6 +691,14 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           title: Text(widget.projectTitle ?? 'Studio Dock'),
           actions: [
+            if (widget.onInsertCue != null)
+              IconButton(
+                key: const ValueKey('studio-empty-insert-cue'),
+                icon: const Icon(Icons.add_circle_outline),
+                tooltip: 'Insert first subtitle cue',
+                onPressed: _changingStructure ? null :
+                    () => unawaited(_addCueSafely()),
+              ),
             if (widget.onChooseProject != null)
               IconButton(
                 key: const ValueKey('studio-dock-switch-project'),
@@ -582,9 +715,20 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
             const SizedBox(height: 12),
             const Text('This project has no subtitle cues yet.'),
             const SizedBox(height: 8),
-            const Text('Add-cue editing is planned for a future checkpoint.',
+            Text(widget.onInsertCue != null
+                ? 'Insert the first cue or import a subtitle file.'
+                : 'Cue insertion is unavailable in this preview.',
                 style: TextStyle(color: _muted)),
             const SizedBox(height: 18),
+            if (widget.onInsertCue != null)
+              FilledButton.icon(
+                key: const ValueKey('studio-empty-create-cue'),
+                onPressed: _changingStructure ? null :
+                    () => unawaited(_addCueSafely()),
+                icon: const Icon(Icons.add),
+                label: const Text('Insert first cue'),
+              ),
+            if (widget.onInsertCue != null) const SizedBox(height: 10),
             if (widget.onChooseProject != null)
               OutlinedButton.icon(
                 onPressed: widget.onChooseProject,
@@ -596,7 +740,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
       );
     }
     return PopScope(
-      canPop: !_hasDirtyDraft && !_savingDraft,
+      canPop: !_hasDirtyDraft && !_savingDraft && !_changingStructure,
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop && !_savingDraft) {
           unawaited(_confirmDraftBeforeLeaving().then((allowed) {
@@ -727,6 +871,22 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
           icon: const Icon(Icons.video_file_outlined),
           tooltip: 'Attach or change video',
           onPressed: () => unawaited(_chooseVideoSafely()),
+        ),
+      if (widget.onInsertCue != null)
+        IconButton(
+          key: const ValueKey('studio-dock-insert-cue'),
+          icon: const Icon(Icons.add_comment_outlined),
+          tooltip: 'Insert subtitle cue',
+          onPressed: _changingStructure ? null :
+              () => unawaited(_addCueSafely()),
+        ),
+      if (widget.onDeleteCue != null)
+        IconButton(
+          key: const ValueKey('studio-dock-delete-cue'),
+          icon: const Icon(Icons.delete_outline),
+          tooltip: 'Delete selected subtitle cue',
+          onPressed: _changingStructure || _cues.isEmpty ? null :
+              () => unawaited(_deleteCueSafely()),
         ),
       if (widget.onImportFile != null)
         IconButton(
@@ -1146,6 +1306,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
       padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 4),
       child: TextField(
         key: const ValueKey('desktop-cue-search'),
+        controller: _tableSearch,
         focusNode: _searchFocus,
         decoration: InputDecoration(
           isDense: true,

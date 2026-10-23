@@ -518,6 +518,107 @@ class SubtitleRepository {
     }
   }
 
+  /// Desktop-safe structural mutation: the entire displayed collection must
+  /// still match inside the atomic history transaction before indices shift.
+  /// Legacy positional commands retain their existing contracts.
+  bool _sameDisplayedLines(
+    List<SubtitleLine> current,
+    List<SubtitleLine> expected,
+  ) {
+    if (current.length != expected.length) return false;
+    for (var i = 0; i < current.length; i++) {
+      if (!CheckpointStateReducer.samePersistedLine(current[i], expected[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /// Returns the newly inserted 1-based cue number after timeline sorting,
+  /// or null if the displayed snapshot is stale or the mutation fails.
+  Future<int?> addLineFromSnapshotWithHistory({
+    required int collectionId,
+    required int sessionId,
+    required List<SubtitleLine> expectedLines,
+    required SubtitleLine line,
+    required int insertIndex,
+  }) async {
+    final expected = CheckpointStateReducer.copyLines(expectedLines);
+    if (insertIndex < 0 || insertIndex > expected.length) return null;
+    int? insertedNumber;
+    try {
+      await _historyTransaction.commit(
+        sessionId: sessionId,
+        subtitleCollectionId: collectionId,
+        operationType: 'add',
+        description: 'Added line at position ${insertIndex + 1}',
+        buildMutation: (currentLines) {
+          if (!_sameDisplayedLines(currentLines, expected)) {
+            throw StateError('Subtitle collection changed since preview.');
+          }
+          final nextLines = CheckpointStateReducer.copyLines(currentLines);
+          final added = CheckpointStateReducer.copyLine(line)
+            ..index = insertIndex + 1;
+          nextLines.insert(insertIndex, added);
+          final sorted = sortAndReindexSubtitleLines(nextLines);
+          insertedNumber = sorted.indexOf(added) + 1;
+          return CheckpointMutationPlan(
+            nextLines: sorted,
+            deltas: [SubtitleLineDelta()
+              ..changeType = 'add'
+              ..lineIndex = insertIndex
+              ..beforeState = null
+              ..afterState = CheckpointStateReducer.copyLine(added)],
+            forceSnapshot: true,
+          );
+        },
+      );
+      return insertedNumber;
+    } catch (error) {
+      logError('SubtitleRepository: Guarded insert rejected: $error');
+      return null;
+    }
+  }
+
+  Future<bool> deleteLineFromSnapshotWithHistory({
+    required int collectionId,
+    required int sessionId,
+    required List<SubtitleLine> expectedLines,
+    required int index,
+  }) async {
+    final expected = CheckpointStateReducer.copyLines(expectedLines);
+    if (index < 0 || index >= expected.length) return false;
+    try {
+      await _historyTransaction.commit(
+        sessionId: sessionId,
+        subtitleCollectionId: collectionId,
+        operationType: 'delete',
+        description: 'Deleted line ${index + 1}',
+        buildMutation: (currentLines) {
+          if (!_sameDisplayedLines(currentLines, expected)) {
+            throw StateError('Subtitle collection changed since preview.');
+          }
+          final deleted = currentLines[index];
+          final nextLines = CheckpointStateReducer.copyLines(currentLines)
+            ..removeAt(index);
+          return CheckpointMutationPlan(
+            nextLines: sortAndReindexSubtitleLines(nextLines),
+            deltas: [SubtitleLineDelta()
+              ..changeType = 'delete'
+              ..lineIndex = index
+              ..beforeState = CheckpointStateReducer.copyLine(deleted)
+              ..afterState = null],
+            forceSnapshot: true,
+          );
+        },
+      );
+      return true;
+    } catch (error) {
+      logError('SubtitleRepository: Guarded delete rejected: $error');
+      return false;
+    }
+  }
+
   Future<bool> addLineWithHistory({
     required int collectionId,
     required SubtitleLine line,

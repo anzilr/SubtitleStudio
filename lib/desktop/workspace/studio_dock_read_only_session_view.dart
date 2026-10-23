@@ -15,6 +15,8 @@ import 'studio_dock_session_loader.dart';
 import 'studio_dock_session_snapshot.dart';
 import 'studio_dock_text_edit_service.dart';
 import 'studio_dock_timing_edit_service.dart';
+import 'studio_dock_cue_structure_service.dart';
+import 'studio_dock_insert_cue_dialog.dart';
 import 'studio_dock_media_plan.dart';
 import 'studio_dock_video_surface.dart';
 import 'studio_dock_waveform_surface.dart';
@@ -102,6 +104,64 @@ class _StudioDockReadOnlySessionViewState
       return true;
     } catch (_) {
       return false;
+    }
+  }
+
+  StudioDockCueStructureService get _structure => StudioDockCueStructureService(
+    ref.read(projectRepositoryProvider),
+    ref.read(subtitleRepositoryProvider),
+  );
+
+  WorkspaceCueUpdate _toWorkspaceUpdate(StudioDockStructureChange change) =>
+      WorkspaceCueUpdate(
+        cues: [
+          for (final cue in change.snapshot.cues)
+            WorkspaceDemoCue(
+              id: cue.index,
+              start: cue.start,
+              end: cue.end,
+              original: cue.original,
+              edited: cue.edited,
+              marked: cue.marked,
+            ),
+        ],
+        selectedCueId: change.selectedCueNumber,
+      );
+
+  Future<WorkspaceCueUpdate?> _insertCue(
+    int? afterCueNumber,
+    StudioDockNewCueDraft draft,
+  ) async {
+    final baseline = _latestBaseline;
+    if (baseline == null || !widget.enableTextEditing) return null;
+    try {
+      final change = await _structure.insert(
+        baseline: baseline,
+        afterCueNumber: afterCueNumber,
+        start: draft.start,
+        end: draft.end,
+        original: draft.original,
+        edited: draft.edited,
+      );
+      if (!mounted || change == null) return null;
+      setState(() => _latestBaseline = change.snapshot);
+      return _toWorkspaceUpdate(change);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<WorkspaceCueUpdate?> _deleteCue(int cueNumber) async {
+    final baseline = _latestBaseline;
+    if (baseline == null || !widget.enableTextEditing) return null;
+    try {
+      final change = await _structure.delete(
+        baseline: baseline, cueNumber: cueNumber);
+      if (!mounted || change == null) return null;
+      setState(() => _latestBaseline = change.snapshot);
+      return _toWorkspaceUpdate(change);
+    } catch (_) {
+      return null;
     }
   }
 
@@ -245,6 +305,8 @@ class _StudioDockReadOnlySessionViewState
         onChooseVideo: widget.allowNativePlayback ? _chooseVideo : null,
         onApplyCueText: widget.enableTextEditing ? _applyText : null,
         onApplyCueTiming: widget.enableTextEditing ? _applyTiming : null,
+        onInsertCue: widget.enableTextEditing ? _insertCue : null,
+        onDeleteCue: widget.enableTextEditing ? _deleteCue : null,
         manageLiveHotkeys: !widget.suppressParentEditorHotkeys,
         videoSurface: validVideoPath == null || !widget.allowNativePlayback
             ? null
