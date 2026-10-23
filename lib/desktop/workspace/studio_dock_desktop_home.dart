@@ -4,6 +4,7 @@ import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/screens/home/repositories/session_repository.dart';
 import 'package:subtitle_studio/screens/screen_home.dart';
+import 'package:subtitle_studio/utils/msone_hotkey_manager.dart';
 
 import 'studio_dock_read_only_session_view.dart';
 
@@ -42,10 +43,19 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
     setState(() => _sessionsFuture = _loadSessions());
   }
 
-  Future<void> _openClassicHome() async {
-    await Navigator.of(context).push(MaterialPageRoute<void>(
-      builder: (_) => const HomeScreen(),
-    ));
+  Future<void> _openClassicHome({bool fromReadOnly = false}) async {
+    // The live read-only pane remains mounted behind the legacy route.
+    // Release its suppression while the legacy Home is the active route;
+    // otherwise Home's shared MSoneHotkeyManager actions would be blocked.
+    final manager = MSoneHotkeyManager.instance;
+    if (fromReadOnly) manager.resumeCallbacks();
+    try {
+      await Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => const HomeScreen(),
+      ));
+    } finally {
+      if (mounted && fromReadOnly) manager.suspendCallbacks();
+    }
     _refresh();
   }
 
@@ -98,7 +108,7 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
     );
     if (!mounted || selectedId == null) return;
     if (selectedId == -1) {
-      await _openClassicHome();
+      await _openClassicHome(fromReadOnly: true);
       return;
     }
     if (snapshot.sessions.any((session) => session.id == selectedId)) {
