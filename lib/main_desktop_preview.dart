@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:subtitle_studio/desktop/workspace/desktop_workspace_preview.dart';
+import 'package:subtitle_studio/utils/msone_hotkey_manager.dart';
 
 /// Independently launchable desktop *layout preview*.
 /// Intentionally bypasses production Isar and media startup while CP88–CP93
 /// finish; this entrypoint cannot modify real subtitle or project files.
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Only the standalone preview process initializes the application's existing
+  // hotkey manager. Tests that mount the preview directly do not use plugins.
+  await MSoneHotkeyManager.initialize();
   runApp(const DesktopWorkspacePreviewApp());
 }
 
