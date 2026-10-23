@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'studio_dock_geometry.dart';
+import '../../utils/msone_hotkey_manager.dart';
 
 /// Demo-only cue; this screen intentionally does not persist any user data.
 @immutable
@@ -85,6 +87,10 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
       edited: 'Then let us not waste another minute.'),
   ];
   int _selectedId = 5;
+  int _selectionAnchor = 5;
+  final Set<int> _selectedIds = {5};
+  final FocusNode _gridFocus = FocusNode(debugLabel: 'Studio Dock grid');
+  final FocusNode _searchFocus = FocusNode(debugLabel: 'Studio Dock search');
   int _section = 0;
   bool _playing = false;
   bool _inspectorOpen = true;
@@ -107,6 +113,129 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
         cue.start.contains(q) || cue.id.toString() == q;
   }).toList(growable: false);
 
+
+  static const _managedActions = <HotkeyAction>[
+    HotkeyAction.nextLine,
+    HotkeyAction.previousLine,
+    HotkeyAction.playPause,
+    HotkeyAction.findReplace,
+    HotkeyAction.markLine,
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    // Desktop entrypoint initializes the application's existing hotkey manager.
+    // Direct widget previews do not initialize native plugins.
+    unawaited(_installManagedHotkeys());
+  }
+
+  Future<void> _installManagedHotkeys() async {
+    final manager = MSoneHotkeyManager.instance;
+    for (final action in _managedActions) {
+      if (!mounted) return;
+      await manager.registerCallback(action, () {
+        if (mounted && !_isEditingText) _dispatchManagedAction(action);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final action in _managedActions) {
+      unawaited(MSoneHotkeyManager.instance.unregisterCallback(action));
+    }
+    _gridFocus.dispose();
+    _searchFocus.dispose();
+    super.dispose();
+  }
+
+  bool get _isEditingText {
+    final c = FocusManager.instance.primaryFocus?.context;
+    return c != null &&
+        c.findAncestorWidgetOfExactType<EditableText>() != null;
+  }
+
+  void _dispatchManagedAction(HotkeyAction action) {
+    switch (action) {
+      case HotkeyAction.nextLine:
+        _selectRelative(1);
+      case HotkeyAction.previousLine:
+        _selectRelative(-1);
+      case HotkeyAction.playPause:
+        setState(() => _playing = !_playing);
+      case HotkeyAction.findReplace:
+        _searchFocus.requestFocus();
+      case HotkeyAction.markLine:
+        _toggleMarkedSelection();
+      default:
+        break;
+    }
+  }
+
+  void _toggleMarkedSelection() {
+    if (_selectedIds.isEmpty) return;
+    setState(() {
+      for (var i = 0; i < _cues.length; i++) {
+        final cue = _cues[i];
+        if (_selectedIds.contains(cue.id)) {
+          _cues[i] = cue.copyWith(marked: !cue.marked);
+        }
+      }
+    });
+  }
+
+  void _selectCue(int id, {bool range = false, bool toggle = false}) {
+    final visibleIds = _visible.map((cue) => cue.id).toList();
+    if (!visibleIds.contains(id)) return;
+    setState(() {
+      if (range) {
+        final from = visibleIds.indexOf(_selectionAnchor);
+        final to = visibleIds.indexOf(id);
+        if (from < 0) {
+          _selectedIds..clear()..add(id);
+        } else {
+          _selectedIds
+            ..clear()
+            ..addAll(visibleIds.sublist(math.min(from, to),
+                math.max(from, to) + 1));
+        }
+      } else if (toggle) {
+        if (!_selectedIds.remove(id)) _selectedIds.add(id);
+        _selectionAnchor = id;
+      } else {
+        _selectedIds..clear()..add(id);
+        _selectionAnchor = id;
+      }
+      _selectedId = id;
+    });
+  }
+
+  void _selectFromPointer(int id) {
+    final keyboard = HardwareKeyboard.instance;
+    _selectCue(id,
+        range: keyboard.isShiftPressed,
+        toggle: keyboard.isControlPressed || keyboard.isMetaPressed);
+    _gridFocus.requestFocus();
+  }
+
+  KeyEventResult _handleGridKey(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent || _isEditingText || _visible.isEmpty) {
+      return KeyEventResult.ignored;
+    }
+    final change = switch (event.logicalKey) {
+      LogicalKeyboardKey.arrowDown => 1,
+      LogicalKeyboardKey.arrowUp => -1,
+      _ => 0,
+    };
+    if (change == 0) return KeyEventResult.ignored;
+    final ids = _visible.map((cue) => cue.id).toList();
+    final current = ids.indexOf(_selectedId);
+    final target = ids[(current + change).clamp(0, ids.length - 1)];
+    _selectCue(target, range: HardwareKeyboard.instance.isShiftPressed);
+    return KeyEventResult.handled;
+  }
+
   void _replaceCue(WorkspaceDemoCue updated) {
     final i = _cues.indexWhere((cue) => cue.id == updated.id);
     if (i < 0) return;
@@ -117,7 +246,8 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
     if (_visible.isEmpty) return;
     final index = _visible.indexWhere((cue) => cue.id == _selectedId);
     final target = (index + change).clamp(0, _visible.length - 1).toInt();
-    setState(() => _selectedId = _visible[target].id);
+    _selectCue(_visible[target].id);
+    _gridFocus.requestFocus();
   }
 
   @override
@@ -522,7 +652,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
         icon: Icon(_playing ? Icons.pause_circle_filled_rounded
             : Icons.play_circle_fill_rounded, color: _accent, size: 25),
         tooltip: 'Toggle simulated playback',
-        onPressed: () => setState(() => _playing = !_playing)),
+        onPressed: () => _dispatchManagedAction(HotkeyAction.playPause)),
       IconButton(icon: const Icon(Icons.skip_next_rounded, size: 19),
         tooltip: 'Next cue', onPressed: () => _selectRelative(1)),
       const SizedBox(width: 14),
@@ -567,6 +697,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
       padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 4),
       child: TextField(
         key: const ValueKey('desktop-cue-search'),
+        focusNode: _searchFocus,
         decoration: InputDecoration(
           isDense: true,
           hintText: 'Find subtitle, timecode or line number…',
@@ -593,7 +724,10 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
               padding: const EdgeInsets.symmetric(horizontal: 13),
               child: _gridCells(null),
             ),
-            Expanded(child: _visible.isEmpty
+            Expanded(child: Focus(
+              focusNode: _gridFocus,
+              onKeyEvent: _handleGridKey,
+              child: _visible.isEmpty
               ? const Center(child: Text('No matching subtitle lines',
                   style: TextStyle(color: _muted)))
               : ListView.builder(
@@ -601,7 +735,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
                   itemExtent: 40,
                   itemBuilder: (context, i) {
                     final cue = _visible[i];
-                    final selected = cue.id == _selectedId;
+                    final selected = _selectedIds.contains(cue.id);
                     return Material(
                       color: selected ? _accent.withValues(alpha: .14)
                           : i.isOdd
@@ -609,7 +743,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
                               : Colors.transparent,
                       child: InkWell(
                         key: ValueKey('desktop-cue-' + cue.id.toString()),
-                        onTap: () => setState(() => _selectedId = cue.id),
+                        onTap: () => _selectFromPointer(cue.id),
                         child: Container(
                           decoration: const BoxDecoration(border: Border(
                             bottom: BorderSide(color: _border, width: .4),
@@ -620,7 +754,8 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
                       ),
                     );
                   },
-                )),
+                ),
+            )),
           ]),
         ),
       );
