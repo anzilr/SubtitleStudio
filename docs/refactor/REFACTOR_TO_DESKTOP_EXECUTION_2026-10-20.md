@@ -646,6 +646,15 @@ playback engine and deferred CP86 experimental pipeline are unchanged.
 **801 tests passed, zero analyzer issues**. Android visual and native
 loading-speed acceptance pending.
 
+**CP93 R6 (October 23, 2026):** Restore the startup film-strip background
+after the user replaced the original JPEG with the optimized WebP asset. Both
+the Flutter manifest and splash widget now select `assets/msone_bg.webp`;
+remove duplicate image preloading and bound the splash first-frame wait before
+the minimum visible interval. Preserve existing branding/animation and add a
+decodable-asset regression test. [R6 report](CHECKPOINT93_R6_SPLASH_WEBP_STARTUP_2026-10-23.md).
+**Verification:** Flutter analysis, regression suite and native Android cold
+launch still required.
+
 ### Production Desktop Workspace Integration / UI [AFTER CP93]
 - The presentation shell may be designed and previewed now on the isolated branch. After CP93, connect it to the shared Riverpod, Isar, project, checkpoint, encoding and file-access core without duplicating domain logic.
 - PC single-screen workflow: project navigator/history, video + waveform, cue editor/table, tools/sidebar; keyboard shortcuts, resizable panes and platform file dialogs.

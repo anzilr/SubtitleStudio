@@ -313,6 +313,21 @@ class SplashTransitionWrapper extends StatefulWidget {
 
 /// State class for SplashTransitionWrapper with file intent handling
 class _SplashTransitionWrapperState extends State<SplashTransitionWrapper> {
+  final Completer<void> _backgroundReady = Completer<void>();
+
+  void _onBackgroundReady() {
+    if (!_backgroundReady.isCompleted) _backgroundReady.complete();
+  }
+
+  Future<void> _waitForSplashBackground() async {
+    await _backgroundReady.future.timeout(
+      const Duration(milliseconds: 1800),
+      onTimeout: () {},
+    );
+    if (!mounted || _navigatedToSourceView) return;
+    await Future<void>.delayed(const Duration(milliseconds: 1000));
+  }
+
   /// File path from intent data (when app opened via file association)
   String? _intentFilePath;
   /// Additional data for intent file processing
@@ -329,13 +344,12 @@ class _SplashTransitionWrapperState extends State<SplashTransitionWrapper> {
   }
 
   Future<void> _initializeAndNavigate() async {
-    final minimumSplash = Future<void>.delayed(
-      const Duration(milliseconds: 1200),
-    );
-
+    // Start intent resolution immediately, but give the splash background a
+    // chance to render before measuring how long it remains visible. A timeout
+    // keeps startup bounded if image decoding never reports a frame.
     await Future.wait<void>([
       _checkForIntentData(),
-      minimumSplash,
+      _waitForSplashBackground(),
     ]);
 
     if (!mounted || _navigatedToSourceView) return;
@@ -414,6 +428,6 @@ class _SplashTransitionWrapperState extends State<SplashTransitionWrapper> {
 
   @override
   Widget build(BuildContext context) {
-    return const SvgSplashScreen();
+    return SvgSplashScreen(onBackgroundReady: _onBackgroundReady);
   }
 }

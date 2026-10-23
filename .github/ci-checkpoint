@@ -479,3 +479,9 @@ mapping. Flutter analyze/tests only; profile gesture acceptance on phone.
 CP93 R5 October 23 2026: waveform clock/playhead synchrony, editable time
 zero/end padding, FFmpeg extraction-time waveform loader and eager-path
 callback wiring. Flutter analysis and tests only; no platform builds in CI.
+
+CP93 R6 October 23 2026: restore the user-replaced 1200x2100 WebP splash
+background by fixing pubspec/widget asset references; remove duplicate image
+preload, wait for the first rendered background frame with a bounded startup
+timeout, and verify bundled WebP decoding in Flutter tests. Run Flutter pub get,
+analysis and full tests on Linux only; no platform builds in Actions.

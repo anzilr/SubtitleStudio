@@ -67,6 +67,6 @@ flutter:
   assets:
     - assets/movie_off.svg
     - assets/msone.svg
-    - assets/msone_bg.jpg
+    - assets/msone_bg.webp
     - lib/utils/normalization.sed
     - assets/magnet-solid.svg
