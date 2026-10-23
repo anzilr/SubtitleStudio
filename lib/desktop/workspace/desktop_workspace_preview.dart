@@ -49,6 +49,7 @@ class DesktopWorkspacePreview extends StatefulWidget {
     this.onApplyCueText,
     this.videoSurface,
     this.waveformSurface,
+    this.onChooseVideo,
     this.manageLiveHotkeys = false,
   });
 
@@ -68,6 +69,8 @@ class DesktopWorkspacePreview extends StatefulWidget {
   final Widget? videoSurface;
   /// The real production waveform shares a seek/position link with video.
   final Widget? waveformSurface;
+  /// Select/change media with the existing native picker and video repository.
+  final VoidCallback? onChooseVideo;
   /// Standalone desktop is allowed to own shared application callbacks;
   /// an overlay on the classic Editor must not override its registrations.
   final bool manageLiveHotkeys;
@@ -407,6 +410,12 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
     }
   }
 
+  Future<void> _chooseVideoSafely() async {
+    if (await _confirmDraftBeforeLeaving() && mounted) {
+      widget.onChooseVideo?.call();
+    }
+  }
+
   Future<void> _newProjectSafely() async {
     if (await _confirmDraftBeforeLeaving() && mounted) {
       widget.onNewProject?.call();
@@ -660,6 +669,13 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
       Text(widget.onApplyCueText != null ? 'LIVE · TEXT EDIT' : (widget.liveReadOnly ? 'LIVE · READ ONLY' : 'DEMO WORKSPACE'),
         style: const TextStyle(
           color: _muted, letterSpacing: 1, fontSize: 10)),
+      if (widget.onChooseVideo != null)
+        IconButton(
+          key: const ValueKey('studio-dock-toolbar-video'),
+          icon: const Icon(Icons.video_file_outlined),
+          tooltip: 'Attach or change video',
+          onPressed: () => unawaited(_chooseVideoSafely()),
+        ),
       if (widget.onImportFile != null)
         IconButton(
           key: const ValueKey('studio-dock-toolbar-import'),
