@@ -87,6 +87,19 @@ class MSoneHotkeyManager {
   final Map<HotkeyAction, HotkeyCallback> _callbacks = {};
   final Map<HotkeyAction, HotKey> _registeredHotkeys = {};
   bool _isInitialized = false;
+  int _callbackSuppressionDepth = 0;
+
+  /// Temporarily suppress application hotkey callbacks while an independent
+  /// read-only desktop route is on top of the editor. This does not unregister
+  /// anything, so the underlying editor keeps its shortcut bindings.
+  /// Balanced calls support nested read-only desktop routes.
+  void suspendCallbacks() => _callbackSuppressionDepth++;
+
+  void resumeCallbacks() {
+    if (_callbackSuppressionDepth > 0) _callbackSuppressionDepth--;
+  }
+
+  bool get callbacksSuspended => _callbackSuppressionDepth > 0;
 
   /// Initialize the hotkey manager (call once at app startup)
   static Future<void> initialize() async {
@@ -533,6 +546,7 @@ class MSoneHotkeyManager {
       await hotKeyManager.register(
         hotkey,
         keyDownHandler: (_) {
+          if (callbacksSuspended) return;
           debugPrint('DEBUG: Hotkey pressed for action: $action');
           final callback = _callbacks[action];
           if (callback != null) {
