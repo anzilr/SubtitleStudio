@@ -1,0 +1,1005 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:subtitle_studio/app/providers/core_providers.dart';
+import 'package:subtitle_studio/screens/edit_line/edit_line_state.dart';
+import 'package:subtitle_studio/screens/edit_line/repositories/edit_line_repository.dart';
+import 'package:subtitle_studio/screens/edit_line/repositories/edit_line_preferences_repository.dart';
+import 'package:subtitle_studio/screens/edit_line/services/edit_line_draft_save_service.dart';
+import 'package:subtitle_studio/screens/edit_line/services/edit_line_selection_projection.dart';
+import 'package:subtitle_studio/screens/edit_line/services/edit_line_navigation_guard.dart';
+import 'package:subtitle_studio/screens/edit/services/editor_resize_preference_coordinator.dart';
+import 'package:subtitle_studio/utils/logging_helpers.dart';
+import 'package:subtitle_studio/widgets/video_player_widget.dart';
+import 'package:subtitle_studio/utils/subtitle_parser.dart';
+import 'package:subtitle_studio/database/models/models.dart';
+
+/// Screen-scoped inputs required by [EditLineController].
+///
+/// The wrapper overrides this provider for each edit-line screen, giving every
+/// screen its own isolated Riverpod controller without global mutable state.
+class EditLineConfiguration {
+  final int subtitleCollectionId;
+  final int lineIndex;
+  final int sessionId;
+  final bool isNewSubtitle;
+  final bool isEditMode;
+  final String? videoPath;
+  final bool isVideoLoaded;
+  final List<SimpleSubtitleLine>? secondarySubtitles;
+
+  const EditLineConfiguration({
+    required this.subtitleCollectionId,
+    required this.lineIndex,
+    required this.sessionId,
+    this.isNewSubtitle = false,
+    this.isEditMode = false,
+    this.videoPath,
+    this.isVideoLoaded = false,
+    this.secondarySubtitles,
+  });
+}
+
+final editLineConfigurationProvider = Provider<EditLineConfiguration>((ref) {
+  throw StateError(
+    'editLineConfigurationProvider must be overridden for each edit-line screen.',
+  );
+});
+
+final editLinePreferencesRepositoryProvider =
+    Provider<EditLinePreferencesRepository>((ref) {
+  return EditLinePreferencesRepository(ref.watch(isarProvider));
+});
+
+final editLineRepositoryProvider = Provider<EditLineRepository>((ref) {
+  return EditLineRepository(
+    ref.watch(isarProvider),
+    ref.watch(editLinePreferencesRepositoryProvider),
+  );
+});
+
+final editLineControllerProvider =
+    NotifierProvider<EditLineController, EditLineState>(
+  EditLineController.new,
+  dependencies: [editLineConfigurationProvider],
+);
+
+/// Riverpod controller for single-subtitle-line editing.
+///
+/// This is a behavior-preserving migration of the former EditLineCubit. Data
+/// and persistence logic are intentionally unchanged in this step.
+class EditLineController extends Notifier<EditLineState> {
+  EditLineRepository get _repository => ref.read(editLineRepositoryProvider);
+  EditLineConfiguration get _configuration =>
+      ref.read(editLineConfigurationProvider);
+
+  int get _subtitleCollectionId => _configuration.subtitleCollectionId;
+  int get _initialLineIndex => _configuration.lineIndex;
+
+  StreamSubscription<String>? _originalTextSubscription;
+  StreamSubscription<String>? _editedTextSubscription;
+
+  final _originalTextController = StreamController<String>.broadcast();
+  final _editedTextController = StreamController<String>.broadcast();
+
+  Timer? _originalTextDebounce;
+  Timer? _editedTextDebounce;
+  Timer? _repeatPlaybackTimer;
+
+  String _initialOriginalText = '';
+  String _initialEditedText = '';
+  String _initialStartTime = '';
+  String _initialEndTime = '';
+
+  bool _disposed = false;
+  // Reuse the route-tested generation guard for controller-level loads.
+  // The widget retains its own instance for user-facing navigation.
+  final EditLineNavigationGuard _navigationGuard = EditLineNavigationGuard();
+  bool _textStreamsInitialized = false;
+  EditorResizePreferenceCoordinator? _resizePreferences;
+
+  @override
+  EditLineState build() {
+    final config = ref.watch(editLineConfigurationProvider);
+
+    if (!_textStreamsInitialized) {
+      _initializeTextStreams();
+      _textStreamsInitialized = true;
+    }
+
+    ref.onDispose(() {
+      final pendingPreferences = _resizePreferences;
+      if (pendingPreferences != null) {
+        unawaited(pendingPreferences.flushAndDispose());
+      }
+      _disposeResources();
+    });
+
+    var initialState = EditLineState.initial(
+      sessionId: config.sessionId,
+      isNewSubtitle: config.isNewSubtitle,
+      isEditMode: config.isEditMode,
+    );
+
+    if (config.videoPath != null && config.isVideoLoaded) {
+      initialState = initialState.copyWith(
+        videoPath: config.videoPath,
+        isVideoLoaded: true,
+        isVideoVisible: true,
+      );
+    }
+
+    final secondarySubtitles = config.secondarySubtitles;
+    if (secondarySubtitles != null && secondarySubtitles.isNotEmpty) {
+      initialState = initialState.copyWith(
+        secondarySubtitles: secondarySubtitles,
+        showSecondarySubtitles: true,
+      );
+    }
+
+    logInfo(
+      'EditLineController: Initialized for collection '
+      '${config.subtitleCollectionId}, line ${config.lineIndex}, '
+      'session ${config.sessionId}',
+      context: 'EditLineController',
+    );
+
+    return initialState;
+  }
+
+  void _setState(EditLineState nextState) {
+    if (!_disposed) {
+      state = nextState;
+    }
+  }
+
+  /// Initialize the edit line screen
+  /// 
+  /// Loads:
+  /// 1. Subtitle line data
+  /// 2. Subtitle collection metadata
+  /// 3. Preferences (all at once for performance)
+  /// 4. Generate subtitles for video player
+  /// 5. Generate secondary subtitles if configured
+  Future<void> initialize() async {
+    try {
+      await logInfo(
+        'EditLineController: Starting initialization',
+        context: 'EditLineController.initialize',
+      );
+
+      _setState(state.copyWith(isLoading: true, clearErrorMessage: true));
+
+      // Load subtitle collection
+      final collection = await _repository.fetchSubtitleCollection(
+        _subtitleCollectionId,
+      );
+
+      if (collection == null) {
+        throw Exception('Subtitle collection not found: $_subtitleCollectionId');
+      }
+
+      // Load subtitle line
+      SubtitleLine? line;
+      if (!state.isNewSubtitle) {
+        line = await _repository.fetchSubtitleLine(
+          _subtitleCollectionId,
+          _initialLineIndex,
+        );
+
+        if (line == null) {
+          throw Exception('Subtitle line not found at index $_initialLineIndex');
+        }
+      }
+
+      // Load all preferences in parallel
+      final preferences = await _repository.loadAllPreferences(
+        _subtitleCollectionId,
+      );
+
+      // Generate subtitles for video player
+      final subtitles = await _repository.generateSubtitles(
+        _subtitleCollectionId,
+      );
+
+      // Generate secondary subtitles if configured
+      List<Subtitle> secondarySubtitlesForPlayer = [];
+      if (state.secondarySubtitles.isNotEmpty) {
+        secondarySubtitlesForPlayer = _repository.generateSecondarySubtitles(
+          state.secondarySubtitles,
+        );
+      }
+
+      // Store initial values for unsaved changes detection
+      if (line != null) {
+        _initialOriginalText = line.original;
+        _initialEditedText = line.edited ?? '';
+        _initialStartTime = line.startTime;
+        _initialEndTime = line.endTime;
+      }
+
+      await logInfo(
+        'EditLineController: Initialization complete for line ${line?.index ?? "new"}',
+        context: 'EditLineController.initialize',
+      );
+
+      _setState(EditLineState(
+        // Core data
+        subtitleLine: line,
+        subtitleCollection: collection,
+        isNewSubtitle: state.isNewSubtitle,
+        sessionId: state.sessionId,
+        
+        // Text field state
+        originalText: line?.original ?? '',
+        editedText: line?.edited ?? '',
+        isEditingEnabled: state.isEditMode || state.isNewSubtitle,
+        showOriginalTextField: preferences.showOriginalTextField,
+        showOriginalLine: preferences.showOriginalLine,
+        
+        // Time field state
+        startTime: line?.startTime ?? '00:00:00,000',
+        endTime: line?.endTime ?? '00:00:05,000',
+        isTimeVisible: state.isTimeVisible,
+        
+        // Character counting state
+        maxLineLength: preferences.maxLineLength,
+        
+        // Video player state
+        videoPath: preferences.videoPath ?? state.videoPath,
+        isVideoLoaded: (preferences.videoPath ?? state.videoPath) != null,
+        isVideoVisible: (preferences.videoPath ?? state.videoPath) != null,
+        subtitles: subtitles,
+        
+        // Secondary subtitles
+        secondarySubtitles: state.secondarySubtitles,
+        secondarySubtitlesForPlayer: secondarySubtitlesForPlayer,
+        showSecondarySubtitles: state.showSecondarySubtitles,
+        
+        // UI state
+        resizeRatio: preferences.resizeRatio,
+        mobileVideoResizeRatio: preferences.mobileVideoResizeRatio,
+        layoutPreference: preferences.layoutPreference,
+        colorHistory: preferences.colorHistory,
+        isEditMode: state.isEditMode,
+        
+        // Preferences
+        preferences: preferences,
+        
+        // Loading & error state
+        isLoading: false,
+        isInitialized: true,
+      ));
+
+      // Trigger initial character count
+      _updateCharacterCounts();
+    } catch (e, stackTrace) {
+      await logError(
+        'EditLineController: Error during initialization',
+        error: e,
+        stackTrace: stackTrace,
+        context: 'EditLineController.initialize',
+      );
+
+      _setState(state.copyWith(
+        isLoading: false,
+        errorMessage: 'Could not open this subtitle line. Please try again.',
+      ));
+    }
+  }
+
+  /// Set up text change streams for debounced character counting
+  /// 
+  /// This replaces the TextEditingController listeners and timers
+  /// with proper stream-based reactive programming using built-in Dart streams
+  void _initializeTextStreams() {
+    // Original text stream listener
+    _originalTextSubscription = _originalTextController.stream.listen((text) {
+      _updateCharacterCounts();
+    });
+
+    // Edited text stream listener
+    _editedTextSubscription = _editedTextController.stream.listen((text) {
+      _updateCharacterCounts();
+    });
+  }
+
+  /// Update original text (called from widget's TextEditingController)
+  void updateOriginalText(String text) {
+    if (_disposed) return;
+    if (text != state.originalText) {
+      // A user edit that arrives during an Isar reload wins over that reload.
+      _navigationGuard.beginLoad();
+      _setState(state.copyWith(
+        originalText: text,
+        hasUnsavedChanges: _checkUnsavedChanges(originalText: text),
+        isLoading: false,
+      ));
+      
+      // Debounce stream updates
+      _originalTextDebounce?.cancel();
+      _originalTextDebounce = Timer(const Duration(milliseconds: 100), () {
+        _originalTextController.add(text);
+      });
+    }
+  }
+
+  /// Update edited text (called from widget's TextEditingController)
+  void updateEditedText(String text) {
+    if (_disposed) return;
+    if (text != state.editedText) {
+      _navigationGuard.beginLoad();
+      _setState(state.copyWith(
+        editedText: text,
+        hasUnsavedChanges: _checkUnsavedChanges(editedText: text),
+        isLoading: false,
+      ));
+      
+      // Debounce stream updates
+      _editedTextDebounce?.cancel();
+      _editedTextDebounce = Timer(const Duration(milliseconds: 100), () {
+        _editedTextController.add(text);
+      });
+    }
+  }
+
+  /// Update character counts with optimized computation
+  /// 
+  /// This runs in response to debounced text changes,
+  /// preventing excessive calculations and state updates
+  Future<void> _updateCharacterCounts() async {
+    if (_disposed) return;
+
+    try {
+      await logPerformance(
+        'Character count calculation',
+        () async {
+          final counts = _computeCharacterCounts(
+            state.originalText,
+            state.editedText,
+            state.maxLineLength,
+          );
+
+          if (!_disposed) {
+            _setState(state.copyWith(
+              originalCharCount: counts['originalCount'],
+              editedCharCount: counts['editedCount'],
+              originalHasLongLine: counts['originalHasLongLine'] == 1,
+              editedHasLongLine: counts['editedHasLongLine'] == 1,
+            ));
+          }
+        },
+        context: 'EditLineController',
+      );
+    } catch (e, stackTrace) {
+      await logError(
+        'Error calculating character counts',
+        error: e,
+        stackTrace: stackTrace,
+        context: 'EditLineController._updateCharacterCounts',
+      );
+    }
+  }
+
+  /// Compute character counts (same logic as original, but without setState)
+  Map<String, int> _computeCharacterCounts(
+    String originalText,
+    String editedText,
+    int maxLineLength,
+  ) {
+    // Fast normalize and strip tags
+    String normalizeAndStripTags(String text) {
+      if (text.isEmpty) return '';
+
+      // Replace <br> with newlines (case-insensitive)
+      String s = text.replaceAllMapped(
+        RegExp(r'<br>', caseSensitive: false),
+        (_) => '\n',
+      );
+
+      // Remove HTML tags
+      s = s.replaceAll(RegExp(r'<[^>]*>'), '');
+
+      // Remove subtitle tags
+      s = s.replaceAll(RegExp(r'\{[^}]*\}'), '');
+
+      return s;
+    }
+
+    // Fast long line check
+    bool hasLongLine(String text) {
+      final normalized = normalizeAndStripTags(text);
+      if (normalized.isEmpty) return false;
+
+      int lineStart = 0;
+      for (int i = 0; i < normalized.length; i++) {
+        if (normalized[i] == '\n') {
+          if ((i - lineStart) > maxLineLength) return true;
+          lineStart = i + 1;
+        }
+      }
+      // Check last line
+      return (normalized.length - lineStart) > maxLineLength;
+    }
+
+    final strippedOriginal = normalizeAndStripTags(originalText);
+    final strippedEdited = normalizeAndStripTags(editedText);
+
+    return {
+      'originalCount': strippedOriginal.length,
+      'editedCount': strippedEdited.length,
+      'originalHasLongLine': hasLongLine(originalText) ? 1 : 0,
+      'editedHasLongLine': hasLongLine(editedText) ? 1 : 0,
+    };
+  }
+
+  /// Update start time
+  Future<void> updateStartTime(String time) async {
+    if (_disposed) return;
+    if (time != state.startTime) _navigationGuard.beginLoad();
+    _setState(state.copyWith(
+      startTime: time,
+      hasUnsavedChanges: _checkUnsavedChanges(startTime: time),
+      isLoading: false,
+    ));
+
+    // Validate time
+    await _validateTimes();
+  }
+
+  /// Update end time
+  Future<void> updateEndTime(String time) async {
+    if (_disposed) return;
+    if (time != state.endTime) _navigationGuard.beginLoad();
+    _setState(state.copyWith(
+      endTime: time,
+      hasUnsavedChanges: _checkUnsavedChanges(endTime: time),
+      isLoading: false,
+    ));
+
+    // Validate time
+    await _validateTimes();
+  }
+
+  /// Validate time fields
+  Future<void> _validateTimes() async {
+    try {
+      // Validate start time format
+      final startError = TimeValidator.validateTimeString(state.startTime);
+      
+      // Validate end time format
+      final endError = TimeValidator.validateTimeString(state.endTime);
+      
+      // Validate time order (start must be < end)
+      final orderError = TimeValidator.validateTimeOrder(
+        state.startTime,
+        state.endTime,
+      );
+
+      _setState(state.copyWith(
+        startTimeError: startError,
+        endTimeError: endError,
+        timeOrderError: orderError,
+        clearStartTimeError: startError == null,
+        clearEndTimeError: endError == null,
+        clearTimeOrderError: orderError == null,
+      ));
+    } catch (e, stackTrace) {
+      await logError(
+        'Error validating times',
+        error: e,
+        stackTrace: stackTrace,
+        context: 'EditLineController._validateTimes',
+      );
+    }
+  }
+
+  /// Check if there are unsaved changes
+  bool _checkUnsavedChanges({
+    String? originalText,
+    String? editedText,
+    String? startTime,
+    String? endTime,
+  }) {
+    final currentOriginal = originalText ?? state.originalText;
+    final currentEdited = editedText ?? state.editedText;
+    final currentStart = startTime ?? state.startTime;
+    final currentEnd = endTime ?? state.endTime;
+
+    return currentOriginal != _initialOriginalText ||
+        currentEdited != _initialEditedText ||
+        currentStart != _initialStartTime ||
+        currentEnd != _initialEndTime;
+  }
+
+  Future<SubtitleCollection?> loadSubtitleCollection() {
+    return _repository.fetchSubtitleCollection(_subtitleCollectionId);
+  }
+
+  Future<List<SubtitleLine>> getMarkedSubtitleLines() {
+    return _repository.getMarkedSubtitleLines(_subtitleCollectionId);
+  }
+
+  Future<bool> setLineMarked(int zeroBasedIndex, bool marked) {
+    return _repository.markSubtitleLine(
+      _subtitleCollectionId,
+      zeroBasedIndex,
+      marked,
+      sessionId: state.sessionId,
+    );
+  }
+
+  Future<bool> updateLineComment(int zeroBasedIndex, String? comment) {
+    return _repository.updateSubtitleLineComment(
+      _subtitleCollectionId,
+      zeroBasedIndex,
+      comment,
+      sessionId: state.sessionId,
+    );
+  }
+
+  Future<bool> updateLineResolved(int zeroBasedIndex, bool resolved) {
+    return _repository.updateSubtitleLineResolved(
+      _subtitleCollectionId,
+      zeroBasedIndex,
+      resolved,
+      sessionId: state.sessionId,
+    );
+  }
+
+  Future<bool> saveCompleteLine(
+    SubtitleLine line, {
+    SubtitleLine? beforeLine,
+  }) {
+    return _repository.saveSubtitleLineChanges(
+      collectionId: _subtitleCollectionId,
+      updatedLine: line,
+      sessionId: state.sessionId,
+      beforeLine: beforeLine,
+    );
+  }
+
+  /// Publish a detached, committed or reloaded cue snapshot to Riverpod.
+  /// This is the sole handoff from the legacy widget's selection to the
+  /// controller; the presentation layer keeps its existing text controllers.
+  void synchronizeLoadedCue({
+    required SubtitleCollection collection,
+    required SubtitleLine line,
+    required String visibleEditedText,
+  }) {
+    if (_disposed) return;
+    _navigationGuard.beginLoad();
+    _publishSelectedCue(EditLineSelectionProjection.apply(
+      current: state,
+      collection: collection,
+      selectedLine: line,
+      orderedLines: collection.lines,
+      displayedEditedText: visibleEditedText,
+    ));
+  }
+
+  void _publishSelectedCue(EditLineState selectedState) {
+    if (_disposed) return;
+    _initialOriginalText = selectedState.originalText;
+    _initialEditedText = selectedState.editedText;
+    _initialStartTime = selectedState.startTime;
+    _initialEndTime = selectedState.endTime;
+    _setState(selectedState);
+    unawaited(_updateCharacterCounts());
+  }
+
+  /// Commit the draft and publish the exact post-transaction selection.
+  /// Failed saves leave Riverpod's prior snapshot and baseline unchanged.
+  Future<EditLineDraftSaveResult> saveDraftLine({
+    required SubtitleLine currentLine,
+    required String originalText,
+    required String editedText,
+    required String startTime,
+    required String endTime,
+    required String initialOriginalText,
+    required String initialStartTime,
+    required String initialEndTime,
+    required bool isEditMode,
+    required bool insertLine,
+    required int insertIndex,
+  }) async {
+    final repository = _repository;
+    final collectionId = _subtitleCollectionId;
+    final sessionId = state.sessionId;
+    final saver = EditLineDraftSaveService(
+      saveExisting: (line, {beforeLine}) =>
+          repository.saveSubtitleLineChangesResolved(
+        collectionId: collectionId,
+        updatedLine: line,
+        beforeLine: beforeLine,
+        sessionId: sessionId,
+      ),
+      insertNew: (line, index) => repository.addSubtitleLineWithHistoryResolved(
+        collectionId: collectionId,
+        line: line,
+        insertIndex: index,
+        sessionId: sessionId,
+      ),
+      updateLastEditedIndex: (index) =>
+          repository.updateLastEditedIndex(sessionId, index),
+      onIndexUpdateError: (error, _) => logWarning(
+        'Edit Line last-edited index update failed (${error.runtimeType})',
+      ),
+    );
+    final result = await saver.save(
+      currentLine: currentLine,
+      originalText: originalText,
+      editedText: editedText,
+      startTime: startTime,
+      endTime: endTime,
+      initialOriginalText: initialOriginalText,
+      initialStartTime: initialStartTime,
+      initialEndTime: initialEndTime,
+      isEditMode: isEditMode,
+      insertLine: insertLine,
+      insertIndex: insertIndex,
+    );
+
+    final collection = state.subtitleCollection;
+    if (result.saved && !_disposed && collection != null &&
+        result.savedLine != null && result.persistedLines != null) {
+      _navigationGuard.beginLoad();
+      _publishSelectedCue(EditLineSelectionProjection.apply(
+        current: state,
+        collection: collection,
+        selectedLine: result.savedLine!,
+        orderedLines: result.persistedLines!,
+        displayedEditedText: editedText,
+      ).copyWith(isNewSubtitle: false));
+    }
+    return result;
+  }
+
+  Future<bool> addLine(SubtitleLine line, int insertIndex) {
+    return _repository.addSubtitleLineWithHistory(
+      collectionId: _subtitleCollectionId,
+      line: line,
+      insertIndex: insertIndex,
+      sessionId: state.sessionId,
+    );
+  }
+
+  Future<bool> saveCollection(SubtitleCollection collection) {
+    return _repository.updateSubtitleCollection(collection);
+  }
+
+  Future<bool> updateSubtitleSaveLocation({
+    required String filePath,
+    required String originalFileUri,
+  }) {
+    return _repository.updateSubtitleSaveLocation(
+      collectionId: _subtitleCollectionId,
+      sessionId: state.sessionId,
+      filePath: filePath,
+      originalFileUri: originalFileUri,
+    );
+  }
+
+  Future<void> updateLastEditedIndex(int index) {
+    return _repository.updateLastEditedIndex(state.sessionId, index);
+  }
+
+  /// Direct controller Save uses the same transactional draft path as the
+  /// Edit Line widget. The old boolean-only write could leave Riverpod on
+  /// an obsolete cue after timestamp sorting and silently lose blank edits.
+  Future<bool> saveSubtitle() async {
+    if (_disposed || state.isLoading) return false;
+    final collection = state.subtitleCollection;
+    if (collection == null) return false;
+    final current = state.subtitleLine ??
+        (state.isNewSubtitle
+            ? (SubtitleLine()
+              ..index = collection.lines.length + 1
+              ..startTime = state.startTime
+              ..endTime = state.endTime
+              ..original = state.originalText
+              ..edited = state.editedText.replaceAll('\n', '<br>'))
+            : null);
+    if (current == null) return false;
+
+    final startError = TimeValidator.validateTimeString(state.startTime);
+    final endError = TimeValidator.validateTimeString(state.endTime);
+    final orderError = startError == null && endError == null
+        ? TimeValidator.validateTimeOrder(state.startTime, state.endTime)
+        : null;
+    if (startError != null || endError != null || orderError != null) {
+      _setState(state.copyWith(
+        startTimeError: startError,
+        endTimeError: endError,
+        timeOrderError: orderError,
+        clearStartTimeError: startError == null,
+        clearEndTimeError: endError == null,
+        clearTimeOrderError: orderError == null,
+      ));
+      return false;
+    }
+
+    // No new checkpoint is needed when the current cue has not changed.
+    if (!state.hasUnsavedChanges && !state.isNewSubtitle) return true;
+
+    try {
+      final inserting = current.index > collection.lines.length;
+      final result = await saveDraftLine(
+        currentLine: current,
+        originalText: state.originalText,
+        editedText: state.editedText,
+        startTime: state.startTime,
+        endTime: state.endTime,
+        initialOriginalText: _initialOriginalText,
+        initialStartTime: _initialStartTime,
+        initialEndTime: _initialEndTime,
+        isEditMode: state.isEditMode,
+        insertLine: inserting,
+        insertIndex: collection.lines.length,
+      );
+      return result.saved;
+    } catch (error, stackTrace) {
+      await logError(
+        'Edit Line controller save failed',
+        error: error,
+        stackTrace: stackTrace,
+        context: 'EditLineController.saveSubtitle',
+      );
+      return false;
+    }
+  }
+
+  Future<void> navigateNext() async {
+    final currentIndex = state.subtitleLine?.index;
+    if (currentIndex == null) return;
+    await navigateToLine(currentIndex + 1);
+  }
+
+  Future<void> navigatePrevious() async {
+    final currentIndex = state.subtitleLine?.index;
+    if (currentIndex == null) return;
+    await navigateToLine(currentIndex - 1);
+  }
+
+  /// Controller consumers must not discard a draft or install stale rows.
+  /// Refresh the entire collection; a row-only reload cannot account for
+  /// reordering done by another checkpoint operation.
+  Future<void> navigateToLine(int lineIndex) async {
+    if (_disposed) return;
+    if (state.hasUnsavedChanges) {
+      _setState(state.copyWith(
+        errorMessage: 'Save or discard changes before navigating.',
+      ));
+      return;
+    }
+
+    final request = _navigationGuard.beginLoad();
+    if (request == null) return;
+    _setState(state.copyWith(isLoading: true, clearErrorMessage: true));
+    try {
+      final collection =
+          await _repository.fetchSubtitleCollection(_subtitleCollectionId);
+      if (_disposed || !_navigationGuard.isCurrent(request)) return;
+      if (collection == null ||
+          lineIndex < 1 ||
+          lineIndex > collection.lines.length) {
+        _setState(state.copyWith(
+          isLoading: false,
+          errorMessage: 'Subtitle line not found at index $lineIndex',
+        ));
+        return;
+      }
+
+      final line = collection.lines[lineIndex - 1];
+      _publishSelectedCue(EditLineSelectionProjection.apply(
+        current: state,
+        collection: collection,
+        selectedLine: line,
+        orderedLines: collection.lines,
+      ));
+    } catch (error, stackTrace) {
+      if (_disposed || !_navigationGuard.isCurrent(request)) return;
+      await logError(
+        'Edit Line controller navigation failed',
+        error: error,
+        stackTrace: stackTrace,
+        context: 'EditLineController.navigateToLine',
+      );
+      if (_disposed || !_navigationGuard.isCurrent(request)) return;
+      _setState(state.copyWith(
+        isLoading: false,
+        errorMessage: 'Failed to navigate to line $lineIndex',
+      ));
+    }
+  }
+
+  /// Clear error message
+  void clearError() {
+    _setState(state.copyWith(clearErrorMessage: true));
+  }
+
+  /// Load the current Edit-Line preference snapshot through the injected
+  /// repository. UI compatibility helpers may use this while local widget
+  /// state is gradually removed.
+  Future<EditLinePreferences> loadPreferencesSnapshot() async {
+    return _repository.loadAllPreferences(_subtitleCollectionId);
+  }
+
+  Future<void> savePreference(String key, dynamic value) {
+    return _repository.savePreference(key, value);
+  }
+
+  EditorResizePreferenceCoordinator get _resizePreferenceCoordinator {
+    // Capture repository writers while this provider is active. The pending
+    // futures must not read Riverpod ref after the Edit Line route closes.
+    final existing = _resizePreferences;
+    if (existing != null) return existing;
+    final repository = _repository;
+    return _resizePreferences = EditorResizePreferenceCoordinator(
+      saveDesktop: (ratio) => repository.savePreference('resizeRatio', ratio),
+      saveMobile: (ratio) =>
+          repository.savePreference('mobileVideoResizeRatio', ratio),
+      onSaveError: (error, _) => logWarning(
+        'Edit Line resize preference save failed (${error.runtimeType})',
+      ),
+    );
+  }
+
+  /// Keep drag values in Riverpod state immediately; flush any pending
+  /// preference write on the route-scoped provider's disposal.
+  void scheduleResizeRatio(double ratio) {
+    if (_disposed) return;
+    _setState(state.copyWith(resizeRatio: ratio));
+    _resizePreferenceCoordinator.scheduleDesktop(ratio);
+  }
+
+  void scheduleMobileVideoResizeRatio(double ratio) {
+    if (_disposed) return;
+    _setState(state.copyWith(mobileVideoResizeRatio: ratio));
+    _resizePreferenceCoordinator.scheduleMobile(ratio);
+  }
+
+  Future<void> saveColorHistory(List<Color> colors) {
+    return _repository.saveColorHistory(colors);
+  }
+
+  Future<void> saveVideoPath(String path) {
+    return _repository.saveVideoPath(_subtitleCollectionId, path);
+  }
+
+  Future<void> removeVideoPath() {
+    return _repository.removeVideoPath(_subtitleCollectionId);
+  }
+
+  /// Reload all preferences
+  Future<void> reloadPreferences() async {
+    try {
+      await logInfo(
+        'EditLineController: Reloading preferences',
+        context: 'EditLineController.reloadPreferences',
+      );
+
+      final preferences = await _repository.loadAllPreferences(
+        _subtitleCollectionId,
+      );
+
+      _setState(state.copyWith(
+        preferences: preferences,
+        maxLineLength: preferences.maxLineLength,
+        showOriginalTextField: preferences.showOriginalTextField,
+        showOriginalLine: preferences.showOriginalLine,
+        resizeRatio: preferences.resizeRatio,
+        mobileVideoResizeRatio: preferences.mobileVideoResizeRatio,
+        layoutPreference: preferences.layoutPreference,
+        colorHistory: preferences.colorHistory,
+      ));
+
+      // Recalculate character counts with new max line length
+      _updateCharacterCounts();
+    } catch (e, stackTrace) {
+      await logError(
+        'EditLineController: Error reloading preferences',
+        error: e,
+        stackTrace: stackTrace,
+        context: 'EditLineController.reloadPreferences',
+      );
+    }
+  }
+
+  void _disposeResources() {
+    if (_disposed) return;
+    _disposed = true;
+    _navigationGuard.dispose();
+
+    logInfo(
+      'EditLineController: Disposing resources',
+      context: 'EditLineController.dispose',
+    );
+
+    _originalTextDebounce?.cancel();
+    _editedTextDebounce?.cancel();
+    _repeatPlaybackTimer?.cancel();
+
+    final originalSubscription = _originalTextSubscription;
+    if (originalSubscription != null) {
+      unawaited(originalSubscription.cancel());
+    }
+
+    final editedSubscription = _editedTextSubscription;
+    if (editedSubscription != null) {
+      unawaited(editedSubscription.cancel());
+    }
+
+    if (!_originalTextController.isClosed) {
+      unawaited(_originalTextController.close());
+    }
+    if (!_editedTextController.isClosed) {
+      unawaited(_editedTextController.close());
+    }
+  }
+}
+
+/// Time validator utility
+class TimeValidator {
+  /// Validate time string format (HH:mm:ss,SSS)
+  static String? validateTimeString(String time) {
+    if (time.isEmpty) return 'Time cannot be empty';
+
+    final regex = RegExp(r'^\d{2}:\d{2}:\d{2},\d{3}$');
+    if (!regex.hasMatch(time)) {
+      return 'Invalid time format (expected HH:mm:ss,SSS)';
+    }
+
+    // Parse and validate ranges
+    try {
+      final parts = time.split(',');
+      final hms = parts[0].split(':');
+      final hours = int.parse(hms[0]);
+      final minutes = int.parse(hms[1]);
+      final seconds = int.parse(hms[2]);
+      final milliseconds = int.parse(parts[1]);
+
+      if (hours > 23) return 'Hours must be 0-23';
+      if (minutes > 59) return 'Minutes must be 0-59';
+      if (seconds > 59) return 'Seconds must be 0-59';
+      if (milliseconds > 999) return 'Milliseconds must be 0-999';
+
+      return null; // Valid
+    } catch (e) {
+      return 'Invalid time values';
+    }
+  }
+
+  /// Validate that start time is before end time
+  static String? validateTimeOrder(String startTime, String endTime) {
+    try {
+      final start = _parseTime(startTime);
+      final end = _parseTime(endTime);
+
+      if (start >= end) {
+        return 'Start time must be before end time';
+      }
+
+      return null; // Valid
+    } catch (e) {
+      return 'Cannot compare times';
+    }
+  }
+
+  /// Parse time string to Duration for comparison
+  static Duration _parseTime(String time) {
+    final parts = time.split(',');
+    final hms = parts[0].split(':');
+    final hours = int.parse(hms[0]);
+    final minutes = int.parse(hms[1]);
+    final seconds = int.parse(hms[2]);
+    final milliseconds = int.parse(parts[1]);
+
+    return Duration(
+      hours: hours,
+      minutes: minutes,
+      seconds: seconds,
+      milliseconds: milliseconds,
+    );
+  }
+}

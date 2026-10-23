@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
+import 'package:subtitle_studio/core/file_access/studio_picked_file_reference.dart';
 
 /// SAF (Storage Access Framework) File Handler for Android
 /// 
@@ -79,25 +80,6 @@ class SafFileHandler {
       }
       rethrow;
     }
-  }
-
-  /// Open a file using SAF ACTION_OPEN_DOCUMENT (URI only, no content reading)
-  /// 
-  /// This launches the system file picker and allows the user to select a file.
-  /// Returns a [SafFileInfo] object containing only the URI and display path.
-  /// 
-  /// **Note**: This method is now identical to [openFile]. Both methods use URI-only
-  /// mode to prevent OutOfMemoryError. Kept for backwards compatibility.
-  /// 
-  /// [mimeTypes] - List of MIME types to filter (e.g., ['video/*'])
-  /// [initialFileName] - Optional suggested filename for the picker
-  @Deprecated('Use openFile() instead - both methods now use URI-only mode')
-  static Future<SafFileInfo?> openFileUriOnly({
-    List<String>? mimeTypes,
-    String? initialFileName,
-  }) async {
-    // Delegate to openFile which now uses URI-only mode by default
-    return openFile(mimeTypes: mimeTypes, initialFileName: initialFileName);
   }
 
   /// Create a new document using SAF ACTION_CREATE_DOCUMENT
@@ -449,6 +431,15 @@ class SafFileInfo {
     required this.displayPath,
     this.content,
   });
+
+  /// Validate URI-only selections without reading large video data. Android
+  /// documents retain their actual grant URI; desktop keeps its native path.
+  StudioPickedFileReference pickedReference({required bool isFromSaf}) =>
+      StudioPickedFileReference.fromPicker(
+        accessLocator: uri,
+        displayPath: displayPath,
+        isFromSaf: isFromSaf,
+      );
   
   /// Get the file content as a UTF-8 string
   String get contentAsString {
@@ -479,5 +470,6 @@ class SafFileInfo {
   }
   
   @override
-  String toString() => 'SafFileInfo(uri: $uri, displayPath: $displayPath, size: ${content?.length ?? 0} bytes)';
+  String toString() =>
+      'SafFileInfo(size: ${content?.length ?? 0} bytes, hasContent: ${content != null})';
 }

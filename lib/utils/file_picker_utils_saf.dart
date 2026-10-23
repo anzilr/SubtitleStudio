@@ -6,7 +6,8 @@ import 'package:subtitle_studio/utils/platform_file_handler.dart';
 import 'package:subtitle_studio/utils/saf_file_handler.dart';
 import 'package:subtitle_studio/utils/saf_path_converter.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
-import 'package:subtitle_studio/database/models/preferences_model.dart';
+import 'package:subtitle_studio/services/file_picker_preferences_repository.dart';
+import 'package:subtitle_studio/core/file_access/studio_picked_file_reference.dart';
 
 /// Platform-specific file picker utilities using SAF on Android
 /// 
@@ -16,12 +17,34 @@ import 'package:subtitle_studio/database/models/preferences_model.dart';
 /// - iOS: Uses file_picker for native iOS file access
 class FilePickerSAF {
   static String? _lastUsedDirectory;
+  static FilePickerPreferencesRepository? _preferencesRepository;
 
-  // Add this initialization method
+  /// Inject persistence after Isar initialization.
+  ///
+  /// The picker API stays static during the file-access refactor, while its
+  /// database dependency is explicit and replaceable.
+  static void configurePreferences(
+    FilePickerPreferencesRepository repository,
+  ) {
+    _preferencesRepository = repository;
+    _lastUsedDirectory = null;
+  }
+
+  @visibleForTesting
+  static void resetPreferencesForTesting() {
+    _preferencesRepository = null;
+    _lastUsedDirectory = null;
+  }
+
   static Future<void> _initLastUsedDirectory() async {
     if (_lastUsedDirectory == null) {
-      _lastUsedDirectory = await PreferencesModel.getLastUsedDirectory();
+      _lastUsedDirectory =
+          await _preferencesRepository?.getLastUsedDirectory();
     }
+  }
+
+  static Future<void> _persistLastUsedDirectory() async {
+    await _preferencesRepository?.setLastUsedDirectory(_lastUsedDirectory);
   }
   
   /// Pick a single file with platform-specific implementation
@@ -130,7 +153,7 @@ class FilePickerSAF {
   /// [allowedExtensions] - List of allowed file extensions (e.g., ['.srt', '.vtt'])
   /// 
   /// Returns a Map with 'displayPath' and 'safUri' keys, or null if cancelled
-  static Future<Map<String, String?>?> pickFileWithInfo({
+  static Future<Map<String, dynamic>?> pickFileWithInfo({
     required BuildContext context,
     required String title,
     List<String>? allowedExtensions,
@@ -142,22 +165,18 @@ class FilePickerSAF {
         final fileInfo = await PlatformFileHandler.readFile(mimeTypes: mimeTypes);
         
         if (fileInfo != null) {
-          // Fix the display path using proper SAF URI conversion
-          final correctedPath = SafPathConverter.normalizePath(fileInfo.safUri ?? fileInfo.path);
-          
+          // Preserve displayPath for legacy callers; use accessLocator for
+          // file access/persistence instead of the synthetic SAF path.
+          final selection = fileInfo.pickedReference;
           if (kDebugMode) {
-            print('FilePickerSAF pickFileWithInfo: originalPath=${fileInfo.path}, correctedPath=$correctedPath, safUri=${fileInfo.safUri}');
+            debugPrint('FilePickerSAF: Android document selected');
           }
-          return {
-            'displayPath': correctedPath, // Use corrected path
-            'safUri': fileInfo.safUri,
-            'content': fileInfo.contentAsString, // Include the content to avoid double reading
-          };
+          return selection.toLegacyPickerInfo(fileInfo.content);
         }
         return null;
       } catch (e) {
         if (context.mounted) {
-          SnackbarHelper.showError(context, 'Error selecting file: $e');
+          SnackbarHelper.showError(context, 'Unable to select file');
         }
         return null;
       }
@@ -171,15 +190,13 @@ class FilePickerSAF {
         // Read content for desktop
         try {
           final file = File(path);
-          final content = await file.readAsString();
-          return {
-            'displayPath': path,
-            'safUri': null, // No SAF URI on desktop
-            'content': content,
-          };
+          final bytes = await file.readAsBytes();
+          final selection = StudioPickedFileReference.fromPicker(
+            accessLocator: path, displayPath: path, isFromSaf: false);
+          return selection.toLegacyPickerInfo(bytes);
         } catch (e) {
           if (context.mounted) {
-            SnackbarHelper.showError(context, 'Error reading file: $e');
+            SnackbarHelper.showError(context, 'Unable to read selected file');
           }
           return null;
         }
@@ -205,7 +222,7 @@ class FilePickerSAF {
         final correctedPath = SafPathConverter.normalizePath(fileInfo.safUri ?? fileInfo.path);
         
         if (kDebugMode) {
-          print('FilePickerSAF Android: originalPath=${fileInfo.path}, correctedPath=$correctedPath, safUri=${fileInfo.safUri}');
+          debugPrint('FilePickerSAF: legacy Android document selected');
         }
         return correctedPath;
       }
@@ -215,7 +232,7 @@ class FilePickerSAF {
       if (context.mounted) {
         SnackbarHelper.showError(
           context,
-          'Error selecting file: $e',
+          'Unable to select file',
         );
       }
       return null;
@@ -231,8 +248,8 @@ class FilePickerSAF {
       // Convert file extensions to MIME types for SAF
       final mimeTypes = _extensionsToMimeTypes(allowedExtensions);
       
-      // Use the new URI-only method to avoid reading large file content
-      final fileInfo = await SafFileHandler.openFileUriOnly(
+      // openFile uses Android's URI-only picker without loading file bytes.
+      final fileInfo = await SafFileHandler.openFile(
         mimeTypes: mimeTypes,
       );
       
@@ -241,7 +258,7 @@ class FilePickerSAF {
       if (context.mounted) {
         SnackbarHelper.showError(
           context,
-          'Error selecting file: $e',
+          'Unable to select file',
         );
       }
       return null;
@@ -267,13 +284,12 @@ class FilePickerSAF {
       if (result != null && result.files.single.path != null) {
         final filePath = result.files.single.path!;
         _lastUsedDirectory = File(filePath).parent.path;
-        // Save to shared preferences
-        await PreferencesModel.setLastUsedDirectory(_lastUsedDirectory);
+        await _persistLastUsedDirectory();
         return filePath;
       }
       return null;
     } catch (e) {
-      debugPrint('Error picking file on desktop: $e');
+      debugPrint('FilePickerSAF: desktop selection failed (${e.runtimeType})');
       return null;
     }
   }
@@ -291,11 +307,10 @@ class FilePickerSAF {
       );
 
       _lastUsedDirectory = selectedDirectory;
-      // Save to shared preferences
-      await PreferencesModel.setLastUsedDirectory(_lastUsedDirectory);
-          return selectedDirectory;
+      await _persistLastUsedDirectory();
+      return selectedDirectory;
     } catch (e) {
-      debugPrint('Error picking folder on desktop: $e');
+      debugPrint('FilePickerSAF: folder selection failed (${e.runtimeType})');
       return null;
     }
   }
@@ -371,7 +386,7 @@ class FilePickerConvenience {
 
   /// Pick a subtitle file with both display path and SAF URI information
   /// Returns a Map with 'displayPath' and 'safUri' keys, or null if cancelled
-  static Future<Map<String, String?>?> pickSubtitleFileWithInfo({
+  static Future<Map<String, dynamic>?> pickSubtitleFileWithInfo({
     required BuildContext context,
   }) async {
     return FilePickerSAF.pickFileWithInfo(
@@ -401,11 +416,20 @@ class FilePickerConvenience {
     final fileInfo = await FilePickerSAF.pickFileUriOnly(
       context: context,
       title: 'Select Video File',
-      allowedExtensions: ['.mp4', '.mkv', '.avi', '.mov', '.m4v', '.webm'],
+      allowedExtensions: ['.mp4', '.mkv', '.avi', '.mov', '.m4v', '.webm', '.wmv', '.flv'],
       pickText: 'Select Video',
     );
     
-    return fileInfo?.uri; // Return URI instead of display path for video files
+    if (fileInfo == null) return null;
+    try {
+      return fileInfo.pickedReference(isFromSaf: Platform.isAndroid)
+          .accessLocator;
+    } on FormatException {
+      if (context.mounted) {
+        SnackbarHelper.showError(context, 'Unable to access selected video');
+      }
+      return null;
+    }
   }
   
   /// Pick a video file with both URI and display name information
@@ -416,21 +440,34 @@ class FilePickerConvenience {
     final fileInfo = await FilePickerSAF.pickFileUriOnly(
       context: context,
       title: 'Select Video File',
-      allowedExtensions: ['.mp4', '.mkv', '.avi', '.mov', '.m4v', '.webm'],
+      allowedExtensions: ['.mp4', '.mkv', '.avi', '.mov', '.m4v', '.webm', '.wmv', '.flv'],
       pickText: 'Select Video',
     );
     
     if (fileInfo != null) {
+      late final String locator;
+      try {
+        locator = fileInfo.pickedReference(isFromSaf: Platform.isAndroid)
+            .accessLocator;
+      } on FormatException {
+        if (context.mounted) {
+          SnackbarHelper.showError(context, 'Unable to access selected video');
+        }
+        return null;
+      }
       // Fix the display path using proper SAF URI conversion
-      final correctedPath = SafPathConverter.normalizePath(fileInfo.uri);
+      final correctedPath = Platform.isAndroid
+          ? SafPathConverter.normalizePath(locator)
+          : fileInfo.displayPath;
       
       if (kDebugMode) {
-        print('FilePickerConvenience pickVideoFileWithInfo: originalPath=${fileInfo.displayPath}, correctedPath=$correctedPath, uri=${fileInfo.uri}');
+          debugPrint('FilePickerConvenience: video selected');
       }
       
       return {
-        'uri': fileInfo.uri,
-        'displayPath': correctedPath, // Use corrected path
+        'uri': locator,
+        'accessLocator': locator, // True storage URI, not displayPath.
+        'displayPath': correctedPath, // Presentation-only legacy hint
         'displayName': fileInfo.fileName, // This extracts just the filename
       };
     }
@@ -452,7 +489,8 @@ class FilePickerConvenience {
   /// Save a file using platform-appropriate method
   static Future<String?> saveFile({
     required BuildContext context,
-    required String content,
+    String? content,
+    Uint8List? bytes,
     required String fileName,
     String mimeType = 'text/plain',
     String? existingFilePath,
@@ -462,6 +500,7 @@ class FilePickerConvenience {
       try {
         final fileInfo = await PlatformFileHandler.saveNewFile(
           content: content,
+          bytes: bytes,
           fileName: fileName,
           mimeType: mimeType,
         );

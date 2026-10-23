@@ -1,15 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:subtitle_studio/features/waveform/widgets/waveform_control_colors.dart';
 import 'package:subtitle_studio/features/waveform/models/waveform_sample.dart';
+import 'package:subtitle_studio/features/waveform/services/waveform_tile_source.dart';
 import 'package:subtitle_studio/database/models/models.dart';
+
+/// Default paints the existing fully composed waveform. Split mode is only
+/// enabled by experimental callers: scenery draws background+waveform while
+/// overlays draw subtitles, handles, playhead and channel centerlines.
+enum WaveformPaintLayer { combined, scenery, overlays }
 
 /// Custom painter for rendering waveform visualization
 class WaveformPainter extends CustomPainter {
   final ZoomLevel zoomLevel;
+  final WaveformPaintLayer renderLayer;
+  /// Optional tile source; legacy eager rendering remains the default.
+  final WaveformTileSource? tileSource;
   final double scrollOffset; // in pixels
   final Duration playbackPosition;
   final List<SubtitleLine> subtitles;
   final Color waveformColor;
   final Color subtitleColor;
+  final Color addLineColor;
   final Color playbackColor;
   final double channelHeight;
   final double channelSpacing;
@@ -38,13 +49,16 @@ class WaveformPainter extends CustomPainter {
 
   WaveformPainter({
     required this.zoomLevel,
+    this.tileSource,
+    this.renderLayer = WaveformPaintLayer.combined,
     required this.scrollOffset,
     required this.playbackPosition,
     required this.subtitles,
     required this.sampleRate,
     required this.samplesPerPixel,
     this.waveformColor = const Color(0xFF00BCD4),
-    this.subtitleColor = const Color(0xFFFF9800), // Orange color
+    this.subtitleColor = WaveformControlColors.subtitleOverlay,
+    this.addLineColor = WaveformControlColors.addLine,
     this.playbackColor = const Color(0xFFFF5252),
     this.channelHeight = 60.0,
     this.channelSpacing = 10.0,
@@ -64,13 +78,51 @@ class WaveformPainter extends CustomPainter {
     this.highlightedSubtitleIndex,
   });
 
+  /// Clone the same drawing inputs for independent scenery/overlay layers.
+  /// Both layers always share the same zoom, scroll and subtitle coordinates.
+  WaveformPainter forLayer(WaveformPaintLayer layer) => WaveformPainter(
+    zoomLevel: zoomLevel,
+    tileSource: tileSource,
+    renderLayer: layer,
+    scrollOffset: scrollOffset,
+    playbackPosition: playbackPosition,
+    subtitles: subtitles,
+    sampleRate: sampleRate,
+    samplesPerPixel: samplesPerPixel,
+    waveformColor: waveformColor,
+    subtitleColor: subtitleColor,
+    addLineColor: addLineColor,
+    playbackColor: playbackColor,
+    channelHeight: channelHeight,
+    channelSpacing: channelSpacing,
+    verticalZoom: verticalZoom,
+    backgroundColor: backgroundColor,
+    showSubtitlesOnly: showSubtitlesOnly,
+    showWaveformOnly: showWaveformOnly,
+    subtitleHighlightColor: subtitleHighlightColor,
+    showPlaybackIndicator: showPlaybackIndicator,
+    isEditMode: isEditMode,
+    editingSubtitleIndex: editingSubtitleIndex,
+    tempStartTime: tempStartTime,
+    tempEndTime: tempEndTime,
+    isAddLineMode: isAddLineMode,
+    addLineStartTime: addLineStartTime,
+    addLineEndTime: addLineEndTime,
+    highlightedSubtitleIndex: highlightedSubtitleIndex,
+  );
+
   @override
   void paint(Canvas canvas, Size size) {
-    // Draw background
-    final backgroundPaint = Paint()
-      ..color = backgroundColor ?? Colors.black12
-      ..style = PaintingStyle.fill;
-    canvas.drawRect(Offset.zero & size, backgroundPaint);
+    assert(showSubtitlesOnly || tileSource != null ||
+        !zoomLevel.isMetadataOnly,
+        'Metadata-only zoom levels require a WaveformTileSource.');
+    // Overlay pass is transparent: scenery underneath must be preserved.
+    if (renderLayer != WaveformPaintLayer.overlays) {
+      final backgroundPaint = Paint()
+        ..color = backgroundColor ?? Colors.black12
+        ..style = PaintingStyle.fill;
+      canvas.drawRect(Offset.zero & size, backgroundPaint);
+    }
 
     // Calculate dynamic channel height based on available space
     final channels = zoomLevel.channels;
@@ -78,8 +130,25 @@ class WaveformPainter extends CustomPainter {
     final availableHeight = size.height - totalSpacing;
     final dynamicChannelHeight = availableHeight / channels;
 
+    // Visible-range tiles use the same coordinate system, colors and
+    // overlays as eager ZoomLevel data.
+    final List<WaveformViewportTile>? tiles;
+    if (renderLayer != WaveformPaintLayer.overlays &&
+        !showSubtitlesOnly && tileSource != null && size.width > 0) {
+      final firstPixel = scrollOffset.floor().clamp(0, zoomLevel.pixelCount);
+      final lastPixel = (scrollOffset + size.width).ceil()
+          .clamp(firstPixel, zoomLevel.pixelCount);
+      tiles = tileSource!.visibleTiles(
+        firstPixel: firstPixel,
+        visiblePixels: (lastPixel - firstPixel).clamp(0, 8192),
+        samplesPerPixel: samplesPerPixel,
+      );
+    } else {
+      tiles = null;
+    }
+
     // Draw waveform for each channel (only if not subtitle-only mode)
-    if (!showSubtitlesOnly) {
+    if (renderLayer != WaveformPaintLayer.overlays && !showSubtitlesOnly) {
       for (var ch = 0; ch < channels; ch++) {
         final yOffset = ch * (dynamicChannelHeight + channelSpacing) + channelSpacing;
         _drawChannel(
@@ -88,33 +157,35 @@ class WaveformPainter extends CustomPainter {
           ch,
           yOffset,
           dynamicChannelHeight,
+          tiles,
         );
       }
     }
 
     // Draw subtitle boxes (only if not waveform-only mode)
-    if (!showWaveformOnly) {
+    if (renderLayer != WaveformPaintLayer.scenery && !showWaveformOnly) {
       _drawSubtitles(canvas, size);
     }
 
     // Draw add line mode overlay (if active)
-    if (isAddLineMode && addLineStartTime != null && addLineEndTime != null) {
+    if (renderLayer != WaveformPaintLayer.scenery &&
+        isAddLineMode && addLineStartTime != null && addLineEndTime != null) {
       _drawAddLineOverlay(canvas, size);
     }
 
     // Draw playback position (only if flag is enabled)
-    if (showPlaybackIndicator) {
+    if (renderLayer != WaveformPaintLayer.scenery && showPlaybackIndicator) {
       _drawPlaybackPosition(canvas, size);
     }
 
     // Draw center line for each channel (only if showing waveform)
-    if (!showSubtitlesOnly) {
+    if (renderLayer != WaveformPaintLayer.scenery && !showSubtitlesOnly) {
       for (var ch = 0; ch < channels; ch++) {
         final yCenter = ch * (dynamicChannelHeight + channelSpacing) +
             channelSpacing +
             dynamicChannelHeight / 2;
         final centerLinePaint = Paint()
-          ..color = Colors.white24
+          ..color = waveformColor.withValues(alpha: 0.24)
           ..strokeWidth = 1.0
           ..style = PaintingStyle.stroke;
         canvas.drawLine(
@@ -127,24 +198,37 @@ class WaveformPainter extends CustomPainter {
   }
 
   /// Draw waveform for a single channel
-  void _drawChannel(Canvas canvas, Size size, int channel, double yOffset, double dynamicChannelHeight) {
-    final channelData = zoomLevel.getChannelData(channel);
-    if (channelData == null) return;
+  void _drawChannel(Canvas canvas, Size size, int channel, double yOffset,
+      double dynamicChannelHeight, List<WaveformViewportTile>? tiles) {
+    final channelData = tiles == null ? zoomLevel.getChannelData(channel) : null;
+    if (tiles == null && channelData == null) return;
+    final tileWidth = tileSource?.tileWidth ?? 256;
+    final firstTileIndex = tiles == null || tiles.isEmpty
+        ? 0 : tiles.first.firstPixel ~/ tileWidth;
+    WaveformSample sampleAt(int pixel) {
+      if (tiles == null) return channelData![pixel];
+      final tile = tiles[pixel ~/ tileWidth - firstTileIndex];
+      return tile.channels[channel][pixel - tile.firstPixel];
+    }
 
     final centerY = yOffset + dynamicChannelHeight / 2;
     // Apply vertical zoom to amplitude
     final amplitude = dynamicChannelHeight / 2 * 0.98 * verticalZoom;
 
     // Calculate visible range
-    final startPixel = scrollOffset.floor();
-    final endPixel = (scrollOffset + size.width).ceil();
+    final startPixel = scrollOffset.floor().clamp(0, zoomLevel.pixelCount);
+    final endPixel = tiles == null
+        ? (scrollOffset + size.width).ceil()
+        : (scrollOffset + size.width).ceil()
+            .clamp(startPixel, zoomLevel.pixelCount)
+            .clamp(startPixel, startPixel + 8192);
 
     // Fill waveform area for better visibility (draw first, behind the stroke)
     final fillPath = Path();
     bool firstFillPoint = true;
 
-    for (var pixel = startPixel; pixel < endPixel && pixel < channelData.length; pixel++) {
-      final sample = channelData[pixel];
+    for (var pixel = startPixel; pixel < endPixel && pixel < (channelData?.length ?? zoomLevel.pixelCount); pixel++) {
+      final sample = sampleAt(pixel);
       final x = pixel - scrollOffset;
       final yMax = centerY - (sample.max * amplitude);
 
@@ -161,7 +245,7 @@ class WaveformPainter extends CustomPainter {
       fillPath.close();
 
       final fillPaint = Paint()
-        ..color = waveformColor.withOpacity(0.5)
+        ..color = waveformColor.withValues(alpha: 0.5)
         ..style = PaintingStyle.fill;
       canvas.drawPath(fillPath, fillPaint);
     }
@@ -176,8 +260,8 @@ class WaveformPainter extends CustomPainter {
     final path = Path();
     bool isFirstPoint = true;
 
-    for (var pixel = startPixel; pixel < endPixel && pixel < channelData.length; pixel++) {
-      final sample = channelData[pixel];
+    for (var pixel = startPixel; pixel < endPixel && pixel < (channelData?.length ?? zoomLevel.pixelCount); pixel++) {
+      final sample = sampleAt(pixel);
       final x = pixel - scrollOffset;
 
       // Draw from min to max for this pixel
@@ -200,7 +284,7 @@ class WaveformPainter extends CustomPainter {
   /// Draw subtitle overlays
   void _drawSubtitles(Canvas canvas, Size size) {
     final subtitlePaint = Paint()
-      ..color = subtitleColor.withOpacity(0.15)
+      ..color = subtitleColor.withValues(alpha: 0.15)
       ..style = PaintingStyle.fill;
 
     final subtitleBorderPaint = Paint()
@@ -210,21 +294,21 @@ class WaveformPainter extends CustomPainter {
     
     // Highlighted subtitle paint (same as list)
     final highlightedSubtitlePaint = Paint()
-      ..color = const Color.fromARGB(200, 244, 163, 97).withOpacity(0.3)
+      ..color = subtitleHighlightColor ?? subtitleColor.withValues(alpha: 0.3)
       ..style = PaintingStyle.fill;
     
     final highlightedSubtitleBorderPaint = Paint()
-      ..color = const Color.fromARGB(200, 244, 163, 97)
+      ..color = subtitleHighlightColor ?? subtitleColor
       ..strokeWidth = 1.0 // Reduced from 3.0 to 1.0 for thinner border
       ..style = PaintingStyle.stroke;
     
     // Highlighted edit mode paint - dark colors
     final editHighlightPaint = Paint()
-      ..color = const Color(0xFF2E7D32).withOpacity(0.3) // Dark green
+      ..color = subtitleColor.withValues(alpha: 0.3) // Subtitle edit selection
       ..style = PaintingStyle.fill;
     
     final editBorderPaint = Paint()
-      ..color = const Color(0xFF2E7D32) // Dark green
+      ..color = subtitleColor // Subtitle edit border
       ..strokeWidth = 1.0 // Reduced from 3.0 to 1.0 for thinner border
       ..style = PaintingStyle.stroke;
 
@@ -330,7 +414,7 @@ class WaveformPainter extends CustomPainter {
   /// Draw draggable bars at start and end of selected subtitle
   void _drawDraggableBars(Canvas canvas, Size size, double left, double right) {
     const barWidth = 1.0; // Reduced from 8.0 to 3.0 for less waveform coverage
-    const barColor = Colors.amber;
+    final barColor = subtitleColor;
     const handleSize = 16.0;
     
     final barPaint = Paint()
@@ -338,7 +422,7 @@ class WaveformPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
     
     final handlePaint = Paint()
-      ..color = barColor.withOpacity(0.9)
+      ..color = barColor.withValues(alpha: 0.9)
       ..style = PaintingStyle.fill;
     
     // Get the current times being edited
@@ -480,18 +564,18 @@ class WaveformPainter extends CustomPainter {
     
     if (width <= 0) return;
     
-    // Draw selection overlay with teal tint (matching edit mode design)
+    // New-line selection is teal, separate from the orange edit handles.
     const heightRatio = 0.6;
     final boxHeight = size.height * heightRatio;
     final topOffset = (size.height - boxHeight) / 2;
     final rect = Rect.fromLTWH(left, topOffset, width, boxHeight);
     
     final overlayPaint = Paint()
-      ..color = const Color(0xFF00695C).withOpacity(0.3) // Dark teal
+      ..color = addLineColor.withValues(alpha: 0.3)
       ..style = PaintingStyle.fill;
     
     final borderPaint = Paint()
-      ..color = const Color(0xFF00695C) // Dark teal
+      ..color = addLineColor
       ..strokeWidth = 1.0 // Reduced from 3.0 to 1.0 for thinner border
       ..style = PaintingStyle.stroke;
     
@@ -558,7 +642,7 @@ class WaveformPainter extends CustomPainter {
   /// Draw draggable bars at start and end of add line overlay
   void _drawAddLineBars(Canvas canvas, Size size, double left, double right) {
     const barWidth = 1.0; // Reduced from 8.0 to 3.0 for less waveform coverage
-    final barColor = const Color(0xFF00695C); // Dark teal
+    final barColor = addLineColor;
     const handleSize = 16.0;
     
     final barPaint = Paint()
@@ -566,7 +650,7 @@ class WaveformPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
     
     final handlePaint = Paint()
-      ..color = barColor.withOpacity(0.9)
+      ..color = barColor.withValues(alpha: 0.9)
       ..style = PaintingStyle.fill;
     
     // Draw start bar
@@ -804,38 +888,10 @@ class WaveformPainter extends CustomPainter {
     );
   }
 
-  /// Draw playback position indicator (smart positioning)
+  /// Draw the actual playback cursor in waveform coordinates.
   void _drawPlaybackPosition(Canvas canvas, Size size) {
-    // Calculate pixels per second from sample rate and samples per pixel
-    final pixelsPerSec = sampleRate / samplesPerPixel;
-    
-    // Calculate indicator position based on playback and scroll
-    final playbackPixel = (playbackPosition.inMilliseconds / 1000.0) * pixelsPerSec;
-    final centerPosition = size.width / 2;
-    final totalWidth = zoomLevel.pixelCount.toDouble();
-    
-    double indicatorX;
-    
-    // Smart positioning:
-    // - Before center: moves from left (0 to center)
-    // - Middle: stays at center
-    // - At end: moves from center to right edge when scrolling stops
-    
-    if (playbackPixel <= centerPosition) {
-      // Beginning phase: indicator moves from left
-      indicatorX = playbackPixel - scrollOffset;
-    } else if (playbackPixel >= totalWidth - centerPosition) {
-      // End phase: waveform stops scrolling, indicator moves from center to right
-      // Calculate position relative to visible portion
-      final visibleStart = scrollOffset;
-      indicatorX = playbackPixel - visibleStart;
-    } else {
-      // Middle phase: indicator stays centered
-      indicatorX = centerPosition;
-    }
-    
-    // Clamp to viewport bounds
-    indicatorX = indicatorX.clamp(0.0, size.width);
+    final indicatorX = (_timeToPixel(playbackPosition) - scrollOffset)
+        .clamp(0.0, size.width);
 
     final playbackPaint = Paint()
       ..color = playbackColor
@@ -896,7 +952,40 @@ class WaveformPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant WaveformPainter oldDelegate) {
-    return oldDelegate.scrollOffset != scrollOffset ||
+    if (oldDelegate.renderLayer != renderLayer) return true;
+    final sceneryChanged =
+        oldDelegate.scrollOffset != scrollOffset ||
+        oldDelegate.tileSource != tileSource ||
+        oldDelegate.zoomLevel != zoomLevel ||
+        oldDelegate.samplesPerPixel != samplesPerPixel ||
+        oldDelegate.verticalZoom != verticalZoom ||
+        oldDelegate.waveformColor != waveformColor ||
+        oldDelegate.backgroundColor != backgroundColor ||
+        oldDelegate.channelHeight != channelHeight ||
+        oldDelegate.channelSpacing != channelSpacing ||
+        oldDelegate.showSubtitlesOnly != showSubtitlesOnly;
+    if (renderLayer == WaveformPaintLayer.scenery) return sceneryChanged;
+    if (renderLayer == WaveformPaintLayer.overlays) {
+      return oldDelegate.scrollOffset != scrollOffset ||
+          oldDelegate.zoomLevel != zoomLevel ||
+          oldDelegate.playbackPosition != playbackPosition ||
+          oldDelegate.subtitles != subtitles ||
+          oldDelegate.isEditMode != isEditMode ||
+          oldDelegate.editingSubtitleIndex != editingSubtitleIndex ||
+          oldDelegate.tempStartTime != tempStartTime ||
+          oldDelegate.tempEndTime != tempEndTime ||
+          oldDelegate.isAddLineMode != isAddLineMode ||
+          oldDelegate.addLineStartTime != addLineStartTime ||
+          oldDelegate.addLineEndTime != addLineEndTime ||
+          oldDelegate.highlightedSubtitleIndex != highlightedSubtitleIndex ||
+          oldDelegate.subtitleColor != subtitleColor ||
+          oldDelegate.addLineColor != addLineColor ||
+          oldDelegate.subtitleHighlightColor != subtitleHighlightColor ||
+          oldDelegate.playbackColor != playbackColor;
+    }
+    return sceneryChanged ||
+        oldDelegate.scrollOffset != scrollOffset ||
+        oldDelegate.tileSource != tileSource ||
         oldDelegate.playbackPosition != playbackPosition ||
         oldDelegate.zoomLevel != zoomLevel ||
         oldDelegate.subtitles != subtitles ||
@@ -908,6 +997,10 @@ class WaveformPainter extends CustomPainter {
         oldDelegate.tempEndTime != tempEndTime ||
         oldDelegate.isAddLineMode != isAddLineMode ||
         oldDelegate.addLineStartTime != addLineStartTime ||
-        oldDelegate.addLineEndTime != addLineEndTime;
+        oldDelegate.addLineEndTime != addLineEndTime ||
+        oldDelegate.subtitleColor != subtitleColor ||
+        oldDelegate.addLineColor != addLineColor ||
+        oldDelegate.subtitleHighlightColor != subtitleHighlightColor ||
+        oldDelegate.playbackColor != playbackColor;
   }
 }

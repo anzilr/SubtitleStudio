@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:subtitle_studio/app/providers/core_providers.dart';
+import 'package:subtitle_studio/models/subtitle_import_result.dart';
 import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
 import 'package:flutter/foundation.dart';
 import 'package:subtitle_studio/utils/platform_check.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/utils/app_logger.dart';
-import 'package:subtitle_studio/database/database_helper.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/utils/platform_file_handler.dart';
 import 'dart:io';
 
-class CreateSubtitleSheet extends StatefulWidget {
-  final Function(Map<String, dynamic>?) onSubtitleCreated;
+class CreateSubtitleSheet extends ConsumerStatefulWidget {
+  final Function(SubtitleImportResult?) onSubtitleCreated;
 
   const CreateSubtitleSheet({
     super.key,
@@ -19,10 +20,10 @@ class CreateSubtitleSheet extends StatefulWidget {
   });
 
   @override
-  State<CreateSubtitleSheet> createState() => _CreateSubtitleSheetState();
+  ConsumerState<CreateSubtitleSheet> createState() => _CreateSubtitleSheetState();
 }
 
-class _CreateSubtitleSheetState extends State<CreateSubtitleSheet> {
+class _CreateSubtitleSheetState extends ConsumerState<CreateSubtitleSheet> {
   final TextEditingController _fileNameController = TextEditingController();
   String? _selectedSrtPath;
   String? _selectedProjectPath;
@@ -237,15 +238,16 @@ class _CreateSubtitleSheetState extends State<CreateSubtitleSheet> {
       final emptySubtitleLines = <SubtitleLine>[];
       
       // Store the subtitle data with editMode set to true for new subtitles
-      final subtitleData = await storeSubtitleData(
-        emptySubtitleLines,
-        fileName,
-        _encoding,
-        srtFilePath, // Use SRT file path for filePath parameter
-        editMode: true, // Set to true for new subtitles
-        originalFileUri: srtFileUri, // Store SRT file URI for originalFileUri parameter
-        projectFilePath: projectFileUri, // Store project file URI in session
-      );
+      final subtitleData =
+          await ref.read(subtitleImportRepositoryProvider).storeSubtitleData(
+                lines: emptySubtitleLines,
+                fileName: fileName,
+                encoding: _encoding,
+                filePath: srtFilePath,
+                editMode: true,
+                originalFileUri: srtFileUri,
+                projectFilePath: projectFileUri,
+              );
 
       await AppLogger.instance.info('Subtitle file created successfully. SRT URI: $srtFileUri, SRT Path: $srtFilePath, Project: $projectFileUri', context: 'CreateSubtitleSheet._createSubtitle');
       
@@ -342,7 +344,7 @@ class _CreateSubtitleSheetState extends State<CreateSubtitleSheet> {
               // File name input
               Container(
                 decoration: BoxDecoration(
-                  color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                  color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: borderColor,
@@ -377,7 +379,7 @@ class _CreateSubtitleSheetState extends State<CreateSubtitleSheet> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                      color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: borderColor,
@@ -389,12 +391,12 @@ class _CreateSubtitleSheetState extends State<CreateSubtitleSheet> {
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Colors.green,
+                            color: Theme.of(context).colorScheme.primary,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.subtitles_outlined,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                             size: 20,
                           ),
                         ),
@@ -428,7 +430,7 @@ class _CreateSubtitleSheetState extends State<CreateSubtitleSheet> {
                         ),
                         Icon(
                           _selectedSrtPath != null ? Icons.check_circle : Icons.chevron_right_rounded,
-                          color: _selectedSrtPath != null ? Colors.green : mutedColor,
+                          color: _selectedSrtPath != null ? Theme.of(context).colorScheme.primary : mutedColor,
                           size: 24,
                         ),
                       ],
@@ -448,7 +450,7 @@ class _CreateSubtitleSheetState extends State<CreateSubtitleSheet> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                      color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: borderColor,
@@ -460,12 +462,12 @@ class _CreateSubtitleSheetState extends State<CreateSubtitleSheet> {
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Colors.orange,
+                            color: Theme.of(context).colorScheme.tertiary,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.folder_special_outlined,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                             size: 20,
                           ),
                         ),
@@ -499,7 +501,7 @@ class _CreateSubtitleSheetState extends State<CreateSubtitleSheet> {
                         ),
                         Icon(
                           _selectedProjectPath != null ? Icons.check_circle : Icons.chevron_right_rounded,
-                          color: _selectedProjectPath != null ? Colors.orange : mutedColor,
+                          color: _selectedProjectPath != null ? Theme.of(context).colorScheme.tertiary : mutedColor,
                           size: 24,
                         ),
                       ],
@@ -512,7 +514,7 @@ class _CreateSubtitleSheetState extends State<CreateSubtitleSheet> {
               // Encoding dropdown
               Container(
                 decoration: BoxDecoration(
-                  color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                  color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: borderColor,
@@ -520,7 +522,7 @@ class _CreateSubtitleSheetState extends State<CreateSubtitleSheet> {
                   ),
                 ),
                 child: DropdownButtonFormField<String>(
-                  value: _encoding,
+                  initialValue: _encoding,
                   decoration: InputDecoration(
                     labelText: 'File Encoding',
                     prefixIcon: Icon(
@@ -557,25 +559,25 @@ class _CreateSubtitleSheetState extends State<CreateSubtitleSheet> {
                   onPressed: _isLoading ? null : _createSubtitle,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,
-                    foregroundColor: Colors.white,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                   child: _isLoading
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.onPrimary),
                           ),
                         )
-                      : const Row(
+                      : Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.add, size: 20, color: Colors.white),
+                            Icon(Icons.add, size: 20, color: Theme.of(context).colorScheme.onPrimary),
                             SizedBox(width: 8),
                             Text(
                               'Create Subtitle',

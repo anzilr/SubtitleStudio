@@ -1,0 +1,487 @@
+SubtitleStudio THEME AUDIT FINAL PASS — October 16, 2026
+User requests audit UI hardcoded color overrides, theme-respecting cleanup,
+then pause theme work and return to technical roadmap. Scope: UI accents,
+surfaces, text, action/warning/success/error states; preserve user-authored
+subtitle colors, video overlay luminance/contrast, palette definitions, and
+non-theme diagnostic/status encodings. First batch: dictionary search,
+comment dialog, two banner settings sheets, split confirmation, buttons
+grid, search/replace and checkpoint sheet. Replace hardcoded violet/blue/
+orange/green/red with live Material ColorScheme semantic roles.
+Analyze and full regression; further batches and audit exception inventory
+will follow before freeze gate.
+
+Second theme audit batch: multiple utility dialogs, comment/dictionary, search-replace, feedback/logging, history and import/export, sync etc. First CI analyzer found widget-const and contextual builder access, fixed. Run analyzer/tests before final media-overlay and large-surface pass.
+
+Batch 3: expanded UI semantic pass through utility sheets, import/export, subtitle effects, navigation, dictionaries. Previous analyzer errors were from dynamic Theme.of(context) under const wrappers and helper context not passed; fixes applied. Re-gate now.
+
+Media and waveform theme pass: video progress/hover/track settings adopt primary accents while white/black overlays directly on video remain deliberate contrast. Waveform empty/loading/errors, message bars, timeline highlights and edit/add-cue paints follow active semantic palette. Editor empty states and Home session badges theme-aware. Run full analyze and test before UI freeze.
+
+Theme audit pre-freeze: issue-responsive pass completed through project status, common loaders, welcome visuals, Home session badges, screenshot/dictionary, toolbar and waveform. Extra palette-driven foreground fixes in badge icons. Re-run analyzer + full regression now. Exceptions: actual video footage overlays, user-authored subtitle color tags, palette definitions, skin preview swatches and media artwork.
+
+Final static guard included: test/studio_ui_color_freeze_test.dart checks 31 migrated UI surfaces against reintroduction of nonsemantic fixed brand accents. Run analyzer + all Flutter tests and use failed paths to close final remaining exceptions. No release/production branch writes. Skin work to be paused after gate; next technical stream is CP86 native waveform qualification.
+
+FINAL THEME FREEZE RETEST 2026-10-16T15:50:00.000Z:
+Last guard failure in CI 38930415626 was a lingering Colors.orange
+in fullscreen repeat-control icon; changed that to live colorScheme.primary.
+Verify analyzer, all widget/unit tests and theme-freeze source guard.
+Theme scope ends here unless CI or device reproduces a specific defect.
+
+THEME FREEZE R2: CI 38933686514 exposed a single analyzer const expression in subtitle extraction progress widget. Removed const and corrected Select Subtitle Track primary-button icon to onPrimary. Rerun analyzer + all Flutter tests + fixed accent guard.
+
+CP86 R1 — 2026-10-16: waveform native qualification hardening (Windows verified global stream debug logging; SAF URI fail-closed input; no legacy SAF cache reuse; cancelled peak-cache staging regression). Appearance work remains frozen. Analyze and run full Flutter tests; native Android/Windows measurements remain a separate gate.
+
+CP86 R2 2026-10-16: optimized low-rate compact PCM FFmpeg extraction and Android versioned SAF cache reuse. Verify V1/V2 cache format compatibility, Flutter analyzer/tests; Android Kotlin and speed must be qualified on device.
+
+CP86 R3 2026-10-16: restore original role-coded waveform controllers, correct dictionary white-on-white Search buttons, and use Material for checkbox ListTile in dictionary headers. Full analyzer/tests gate required.
+
+CP86 R3 import-contrast follow-up: Import Subtitle raised primary action previously forced white download icon; use onPrimary for Carbon Zero Dark/Classic. Re-run complete analyze/test before accepting this reported issue.
+
+CP86 R4 2026-10-16: retain blue waveform, separate orange subtitle overlays/edit handles and teal add-line overlays/handles; update painter layered color invalidation. Analyze/test gate. Native libmpv SIGSEGV on hot restart remains an independent blocker.
+
+CP87 R0 2026-10-16: selected Olam language tabs (EN-ML / ML-EN / ML-ML) use dark high-contrast selection in achromatic Dark/Classic palettes; 12 built-in combinations checked. Appearance freeze maintained.
+
+CP87 R1 2026-10-16: typed file locator identities introduced for native path/Android SAF/file URI/remote/opaque sources; wrapped VideoRepository saved-video identity and classified waveform cache, revision queries and secondary subtitle reads. Existing persisted paths/cache hashes unchanged. CP86 native mpv crash remains a separate blocker.
+
+CP87 R2: optional missing secondary does not prevent primary editor loading, extracted embedded tracks persisted atomically in app support, user files never automatically deleted.
+
+CP87 R3 contrast audit: Video Settings badges, Load Secondary Subtitle cards, Save File As, Project Settings marked lines, Subtitle Tracks, Import Subtitle, and AI explanation selected toggle use theme-matched glyph colors. Preserves intentional white media-overlay icons.
+
+CP87 R3B further popups: Import Project, merge/split confirmation, Locate SRT, session selection, subtitle effects, banner-progress colors use paired theme onColors, including light-primary Carbon Zero Dark/Classic.
+
+CP87 R4 MSone screen lifecycle: asynchronous file pick and submit callbacks guarded after navigation, network submit has 45s timeout, success dialog closes correct navigator contexts, system back PopScope breadcrumbs. Root cause of prior unlogged freeze not yet verified.
+
+CP87 R4B Isar integration: lost legacy code_cache reference is safely cleared while primary editor can continue; non-ephemeral missing user-picked path retained for re-pick; durable secondary file parses. Owned secondary cleanup now requires app support root (plus strictly private Android cache location).
+
+CP87 R4 consolidated regression gate 2026-10-16: native Android session recovery, persistent embedded secondary, high-contrast popup icons, MSone route lifecycle checks and Isar integration tests. Flutter analyze/tests. Native acceptance pending.
+
+CP87 R4C source replacement order: all three secondary-selection flows now save new preference before deleting previously managed extracted subtitles; avoiding stale preference on failed write/route interruption.
+
+CP87 R5: fix submission modal transition using two-stage choice-result navigation (parent context only); add Android Back widget regressions. Fix two checkbox ListTiles in extraction options with Material instead of opaque decorated Container, per real CPH2381 assertion. Native mpv hot restart SIGSEGV remains vendor/plugin-level blocker.
+
+CP87 R5 final code gate 2026-10-17: route sheet-result navigation tests, Material-backed processing CheckboxListTiles, disposal breadcrumbs, and log-confirmed Android native hot-restart libmpv SIGSEGV as an independent unresolved blocker.
+
+CP92 R5 2026-10-23: waveform FFmpeg diagnostic privacy, safe UI failure boundary and regression tests. Run Flutter dependency resolution, analyzer and full tests only. No native application builds.
+
+CP92 R6 2026-10-23: measure synthetic import, open, direct save and checkpoint restore service baselines. Flutter analysis and full tests only; no native builds or hard timing thresholds.
+
+CP92 R6 gate follow-up 2026-10-23: remove analyzer unused-import warning and rerun full Flutter quality gate with the verified 1,000-cue synthetic baseline; no native builds.
+
+CP87 R5R2 controls: fix decorated panel containing Karaoke effect RadioListTiles (zero contentPadding), its color picker ListTiles and both Banner recommended-position checkbox tiles via local Material ancestors; Carbon Zero Dark/Classic widget-level regression tests.
+
+CP87 R6: add route-return frame diagnostics and Flutter back widget regression, script for clean Android process (never clear database), UTF16-safe Logcat capture; document independent native libmpv hot-restart SIGSEGV.
+
+CP87 R7 2026-10-17: prioritize user-observed MSone Back UI freeze BEFORE operator hot restart; clean stale root cue-scroll loading overlay on editor return and track first 5 post-return pointer events. Add route-return overlay blocking regression. Native SIGSEGV after manual restart remains independent.
+
+CP87 R7 test correction: route pop widget hit test must await animation settling; initial test tap was at negative x while editor was still translating onscreen, not a regression in loader cleanup.
+
+CP87 R8: user device log confirms staleLoader=false, page-to-home Back succeeds, 3 home sessions load, but touch handlers not invoked; phase route handoff until popup/sheet/form TransitionRoute.completed to guarantee modal barriers removed, plus debug-only root pointer and navigator diagnostics. Add true popup-menu-to-sheet/form/home widget regression.
+
+CP87 R8 final gated batch: captured popup/sheet/form .completed and root pointer instrumentation, full real popup-menu→sheet→form→Editor→Home tap regression with asserts that popup/choice/form overlay entries are actually unmounted at each handoff. Existing UI appearance remains frozen. Native libmpv hot restart separate issue.
+
+CP87 R9: October 18 Logcat (pid 20660) confirms root Flutter hit tests 12, editor 0, Home unresponsive; R8 all modal routes completed and loader false. 10-17 SIGSEGV is old persistent crash-buffer record, not new Oct 18 crash. Add render hit-test target/creator introspection on 12 touches, editor+home input probes, and contract test. No speculative native/overlay removal.
+
+CP87 R9 CI fix: WidgetTester.tapAt does not support warnIfMissed. Remove unsupported test argument, run complete analyzer and Flutter tests for render hit-test diagnostics. Recheck app actual editor/home taps across route navigation.
+
+CP87 R9 final diagnostic gate: Flutter renderer hitTestInView (first 12 root taps), editor/home root pointer input counts, matching UP/CANCEL, tester hitTest regression, safe opt-in Logcat Fresh capture, document Oct18 timestamp separated from Oct17 buffered SIGSEGV. Do not mark freeze fixed.
+
+CP87 R9 test fixture correction: restore debugPrint in synchronous try/finally before TestWidgetsFlutterBinding._verifyInvariants (addTearDown restoration was too late). Rerun full analyzer and 537 tests.
+
+CP87 R11 October 20: 24 root down events (including UP) but 0 Editor and 0 Home handlers; repeated hit-test path has RenderBlockSemantics / RenderIgnorePointer barrier inside Navigator _RenderTheater. Trace first hit widget ancestry and active/popped Navigator routes to identify owner, add DialogRoute regression. Analyzer + flutter test only; DO NOT build any platform.
+
+CP87 R12 October 20: live R11 shows Home and Editor only, top hits a page ModalBarrier, root DOWN+UP complete but Editor/Home handlers zero; no stale MSone route shown. Instrument Editor and MSone submission page-route barrier ownership, per-entry Navigator opacity/mounted state, and first Home hit tests after Editor Back. Flutter analyzer + full tests only; no platform builds. Follow-up physical CPH2381 test required.
+
+CP87 R13 October 20: after MSone route completed, selectively balance stale Navigator gesture ONLY when resumed Editor is current and animation settled. Log gestureInProgress in route probes. Widget regression simulates unbalanced gesture; verify Editor and Home taps work. Flutter pub get, analyze, full flutter tests only; no platform builds. Android physical validation pending.
+
+CP86 R5 October 20: instrument waveform acquisition with FFmpeg decode versus peak reduction timing, authenticated compact cache-read timing, and requested-epoch safety; add stage formatting tests. Run flutter pub get, flutter analyze, flutter test only. No Android, Windows, Web or other platform builds in Actions. Physical-device native performance verification remains pending.
+
+CP86 R6 October 20: reuse fixed-size 24 KiB waveform peak writer buffer for V1/V2 instead of 2-byte ByteData allocation per sample; preserve checksums, V1 average/min/max, V2 reduced signed samples and atomic staged cache. Test 60,001-sample golden V2 binary payload/checksum across flush boundaries; re-verify R5 FFmpeg-vs-peak measurements. Flutter analyze and test only; NO platform builds in GitHub Actions.
+
+CP86 R7 October 20: source evidence cold 137089 ms FFmpeg 134990 ms peak 1881 ms; warm 1953 ms. Add native FFmpegKit statistics processing-time callbacks with 2-second media tick throttle, cancellation/track epoch filtering, loading-pane timestamp, unit regression and docs. Verify flutter pub get / analyze / test only. NO Android, Windows or other platform builds in GitHub Actions.
+
+CP86 R7 completion guard: FFmpegKit per-session progress closes immediately on completion, preventing late native statistics from replacing WaveformReady with WaveformLoading. Additional regression tests; Flutter analyze and full tests only, no platform builds.
+
+CP86 R7 analyzer correction: update PendingAudioProcessor test override to carry onDecodedAudioTime, explicitly test stale media-time callbacks after clear/supersession. Full Flutter analyze + test only; no platform builds.
+
+CP88 R1 2026-10-20: user reprioritized core refactoring, waveform experiment frozen separate; typed StudioFileIdentity-backed Source View local/SAF read and save decisions with lossless source path preservation, no File(contentUri) fallback, grant validation, targeted tests, roadmap-to-desktop phase gates. Run flutter pub get/analyze/test ONLY. No Android/Windows/Web/iOS/macOS/Linux platform builds in GitHub Actions.
+
+CP88 R1 document identity hardening: reject mismatched content:// filePath and saved SAF URI so stale grants cannot redirect writes to another document, retain native-cache + SAF behavior and explicit same-URI grants. Flutter analysis and complete tests ONLY; no platform builds.
+
+CP88 R2 2026-10-20: extract injectable platform-neutral SourceViewFileAccess and SourceViewDeviceFileOperations. Move SAF MethodChannel/native File read/write and Save As creation out of Riverpod controller; preserve typed source/grant policy, cached fallback only for native paths, reject direct content URI leakage, ensure revoked permissions fail safely. New fake-backed tests. Run flutter pub get, flutter analyze and flutter test ONLY; no platform builds in CI.
+
+CP88 R2 quality rerun 2026-10-20: adapter fake-backed tests use Dart FileSystemException type matcher, and remove unnecessary typed-data/gestures imports. Verify clean flutter analyze and all flutter tests, no platform builds. Initial run 39481454982 failed on test matcher only; this run supersedes it.
+
+CP88 R2 final gate 2026-10-20: all six Source View storage tests passed; Save As invalid-document test now uses a genuinely asynchronous Future<bool> validation contract (prior run 39481786195: 558 pass 1 fail). Reverify full Flutter analyzer and test suite ONLY, absolutely no platform builds in CI.
+
+CP88 R3 2026-10-20: injectable SourceViewSafGrantRepository removes SharedPreferences operations from SourceViewController, retains the exact legacy saf_uri_<filePath> key, prioritizes explicit validated URI, prunes malformed/mismatched persisted grants, and preserves direct-content URI identity. New fake-backed unit regressions. Run flutter pub get, flutter analyze and flutter test ONLY; NO platform builds in GitHub Actions.
+
+CP88 R3 final gate: confirm actual SharedPreferences mock round-trip for legacy saf_uri_<filePath> keys, malformed and mismatched persisted URI cleanup, provider override and explicit URI precedence. Full flutter pub get, flutter analyze, flutter test; NO Android/iOS/desktop/Web platform builds.
+
+CP88 R4 2026-10-20: new injected SecondarySubtitleDocumentReader for native paths, converted file:// URIs, Android SAF content documents, opaque provider document signatures and fail-closed remote/opaque locators. VideoRepository secondary parsing delegates to typed reader. Revoke/permission tests and privacy log cleanup. Run flutter pub get, flutter analyze and flutter test ONLY. NEVER build platform artifacts in CI.
+
+CP88 R4 final quality gate 2026-10-20: typed SecondarySubtitleDocumentReader, native/file URI/Android SAF routing, opaque-ID format signatures, fail-closed revoked grants, VideoRepository privacy log cleanup, Isar-backed secondary reconnect integration regressions. Run flutter pub get, flutter analyze, flutter test only. Never build Android/Windows/iOS/Linux/macOS/Web platform artifacts in GitHub Actions.
+
+CP88 R5 2026-10-21: ProjectDocumentUpdateService uses StudioFileIdentity to route existing project writes; native-only existing paths, decoded file URIs, Android SAF-only document URIs, reject remote/opaque URIs and absent project originals. Tests with fake platform writer and real temp .msone; run Flutter pub get, analyze, tests ONLY, never platform builds in GitHub Actions.
+
+CP88 R5 final lint cleanup 2026-10-21: await platform file-URI update inside the try block; remove analyzer unawaited_return_in_try_block warning. Flutter pub get/analyze/test ONLY; no platform builds in GitHub Actions.
+
+CP88 R6 2026-10-21: typed StudioPickedFileReference preserves canonical SAF content URI vs presentation-only normalized path, adds accessLocator to legacy picker maps, validates malformed grants and remote impostors, redacts path-bearing picker/handler logs. Run flutter pub get, flutter analyze, flutter test ONLY. Never platform builds in GitHub Actions.
+
+CP88 R7 October 21 2026: canonical SAF content URI for Home Source View route, typed SubtitleImportFileReader for raw subtitle preview/import, direct-document and revoked-grant safety, preserve legacy displayPath and originalFileUri metadata; full Flutter analyze/test only, absolutely NO platform builds in GitHub Actions.
+
+CP88 R7 final quality recheck: ensure unsupported Android-only subtitle import reader emits a failed Future (async API contract), not synchronous throw; include direct SAF, revoked grant, source identity, desktop file URI regression. Only flutter pub get, flutter analyze and flutter test in Actions; NEVER platform builds.
+
+CP88 R7 analyzer lint closure October 21: exercise fake isWindows mode with percent-escaped Windows file:// URI, verify storage reader's native path conversion, no unused-element test parameters. Gate with flutter pub get/analyze/test ONLY. Never platform builds.
+
+CP88 R8 October 21 2026: Project Settings fallback video picker must use URI-only Android SAF and persist validated locator, never load full MKV or save a synthetic display path; secondary subtitle selection likewise persists PlatformFileInfo.pickedReference.accessLocator; video extraction forbids fallback from URI to display hint. Add picker identity regressions and privacy-safe logs. Run flutter pub get, flutter analyze and flutter test ONLY. NEVER platform builds in GitHub Actions.
+
+CP88 R8 compatibility follow-up: retain WMV and FLV filters that were available in the legacy Project Settings video replacement picker after migrating it to the shared URI-only video API. Recheck analyzer and complete Flutter tests only; never platform builds in Actions.
+
+CP88 R9 cross-platform quality gate October 21 2026: Source View file:// read/write URI decoding for native Windows/POSIX with persisted locator unchanged; injectable secondary subtitle Windows conversion; fake iOS Save As document policy and sandbox file URI tests; genuine host temp file URI tests. Linux full Flutter tests, Windows/macOS focused Flutter file/encoding tests; iOS simulated adapter tests. Flutter pub get/analyze/test ONLY across all runners, absolutely no native platform app builds in Actions.
+
+CP89 R1 October 21 2026: Source View shares strict subtitle text codec with
+import/export; preserve Unicode BOM and raw newlines on Save/Save As, never
+silently guess Latin-1, provide explicit legacy encoding choice, and reject
+unrepresentable edits before writing. Full Linux Flutter analyze/test gate;
+Windows/macOS focused host gate requested separately via
+.github/ci-cross-platform-checkpoint for platform-sensitive edits only.
+No native builds in Actions.
+
+CP89 R1 analyzer follow-up: use braced Dart string interpolation for the
+new Source View encoding test fixtures (otherwise adjacent Latin letters
+join identifier names). Re-run full Linux analyzer/tests, no native builds.
+
+CP89 R2 October 21 2026: SRT compilation treats null edits as original but
+explicitly empty edits as blank cues; desktop export shares strict extended
+encoder and validates bytes before touching destination or creating folders.
+Exercise edited/force-original cues, host file preservation and Isar import/edit
+charset roundtrip. Run Flutter pub get, analyze and full tests ONLY. No native
+Android, iOS, macOS, Windows, Linux or Web app builds in GitHub Actions.
+
+CP89 R3 October 21 2026: preserve empty subtitle cues and internal blank text
+lines in shared SRT parser, actual import/Isar pipeline, Source View open and
+Editor raw-source Save. Optional hearing-impaired cleanup preserves originally
+empty captions. Regression tests cover CRLF, EOF whitespace, short millisecond
+timestamp support and raw cue validation. Full Linux Flutter analyzer/tests,
+no platform app builds in Actions.
+
+CP89 R3 cleanup regression retest: remove *generated* leading/trailing newlines
+left by deleted sound-effect annotations, but preserve explicitly blank edge
+lines from the original cue. Retest complete Linux Flutter analyzer/tests;
+never build any platform application in Actions.
+
+CP90 R1 October 21 2026: extract Edit Line direct-file and Save As operations
+into injectable save service, encode strict bytes before file I/O, prevent
+SAF grant failure redirecting to legacy display hints, preserve intentionally
+empty edits on manual save and navigation autosave. Full Flutter analyze/test
+on Linux; dedicated Windows/macOS host adapter suite via separate checkpoint
+marker. No platform builds in any GitHub Actions job.
+CP90 R2 October 21 2026: main Editor direct Save now delegates to the
+injectable encoded-byte writer, preserving selected charset, original SAF
+document URI, macOS bookmark scope and Save As fallback. New regressions for
+strict encoding and revoked document/bookmark. Full Flutter analyzer/test
+on Linux only; no platform application builds in GitHub Actions.
+CP90 R3 October 21 2026: Save As exporter delegates output name, strict
+encoded byte preparation, and desktop file writes to EditorExportService.
+Use live Editor/Source View lines rather than the Isar collection snapshot;
+reject filename path traversal, missing/revoked folder, implicit overwrite and
+rename collisions. Run Flutter analyzer/full tests on Linux; no app builds.
+CP90 R4 October 21 2026: secondary subtitle projection now uses explicit
+source provenance instead of first-cue text matching. Preserve blank original
+cues and refresh original-text overlays even while hidden; keep external
+overlays unchanged. Run full Flutter analyzer/tests on Linux, no platform app
+builds or unnecessary Windows/macOS file-host matrix.
+CP90 R5 October 21 2026: move Editor desktop/mobile resize preference
+debounce timers into a controller-owned coordinator; reflect UI changes
+immediately and flush pending writes on route disposal without accessing a
+disposed Riverpod ref. Test timer coalescing, independent ratios, write
+ordering, and failure recovery. Linux analyzer/full Flutter suite only;
+no app builds or file-sensitive Windows/macOS matrix.
+CP90 R6 October 21 2026: migrate Edit Line desktop/mobile resize ratios to
+the shared controller-owned preference coordinator; capture repository writers
+while the Riverpod provider is active and flush pending drag values on route
+disposal. Preserve mobile no-rebuild dragging and Editor-specific resize keys;
+verify persisted ratios with Isar integration tests. Linux analyzer/full
+Flutter suite only; no application builds in GitHub Actions.
+CP90 R6 verification follow-up: remove obsolete typed-data import and unused
+test fake constructor parameter flagged by the R6 analyzer. Re-run full Linux
+Flutter analysis and tests to confirm a zero-diagnostic final checkpoint.
+CP90 R7 October 21 2026: consolidate Edit Line manual Save and navigation
+autosave into a detached draft commit service, preserving blank edits, cue
+metadata, and checkpoint before-state. Honor repository rejection, avoid
+mutating the UI/preview on failure, and treat post-commit last-index updates
+as noncritical. Verify with pure service tests and Isar checkpoint integration
+plus full Linux Flutter analysis/tests; no application builds in CI.
+
+CP90 R8 October 22 2026: Edit Line save returns exact post-sort selected
+cue and full ordered Isar/checkpoint rows; no cached-row patch or identity
+guessing for equal-text/time subtitles. Next/previous navigation resolves
+adjacent cue after autosave. Regression tests cover sorting, blank edits,
+identity collisions and inserted cue position. Linux Flutter analyze/full
+tests ONLY; no native builds or unrelated Windows/macOS host matrix.
+
+CP90 R9 October 22 2026: Edit Line async navigation lifecycle guard:
+serialize Next/Previous/Jump so concurrent taps cannot save a half-loaded cue,
+ignore stale out-of-order collection reloads, invalidate pending seeks and
+callbacks on route disposal, guard missing or out-of-range cue requests,
+and require validation/autosave for Jump. Focused lifecycle/debounce tests.
+Only Linux flutter pub get/analyze/test; no app builds in GitHub Actions.
+
+CP90 R10 October 22 2026: Edit Line async video readiness contract.
+Invalidate older seeks when cue/video selection changes; reject late player
+readiness callbacks after unload, replacement or route disposal; guard
+file-picker completion after route disposal. Serialize video preference path
+writes so Unload cannot race behind an older delayed Save. Regression tests
+for stale seek, picker epochs, teardown and ordered/failing writes. Linux
+Flutter pub get/analyze/test ONLY; never native platform builds in Actions.
+
+CP90 R11 October 22 2026: Edit Line desktop shortcut lifecycle.
+Avoid registration after Back while async Home cleanup completes. Route-owned
+registration and teardown are ordered, dispose invalidates callbacks, shared
+Editor shortcuts remain intact. Six pure lifecycle tests. Only flutter pub get,
+flutter analyze and flutter test; no native builds or cross-platform jobs.
+
+CP90 R10/R11 verification repair October 22 2026: visibility button now
+uses lifecycle-safe _seekVideoToSubtitle and invalidates pending seek on hide.
+R10 initial analyzer reported missing seekToken/videoPath in layout. Verify
+R10 and R11 together with Flutter analyze and full Flutter tests only.
+
+CP90 R12 October 22 2026: explicit detached projection from committed Isar
+cue order and selected line into Riverpod EditLineState, including full
+collection metadata and edited text display. Synchronize loaded cue/new
+unsaved line, reset persistence baseline after successful save, never mutate
+previous provider state's embedded subtitle lines. Six pure projection tests.
+Run flutter pub get/analyze/test on Linux ONLY; no native platform builds
+or Windows/macOS test matrix.
+
+CP90 R12 final UI handoff October 22 2026: after save Edit Line
+adopts the controller's detached committed collection/selection instead of
+modifying an old cached Riverpod state collection. Final full Flutter
+analyze/test gate; no native builds or host matrix.
+
+CP90 R13 October 22 2026: consolidate the controller's direct save API
+onto the transactional EditLineDraftSaveService and committed selection
+projection. Handle new unsaved cues without null assertions; keep intentional
+blank text and cue metadata; reject invalid timestamps; avoid no-op history
+entries. Direct controller navigation refuses unsaved drafts, reloads full
+Isar ordering, and ignores stale async results after newer selection. Six
+Isar/Riverpod integration tests. CI ONLY flutter pub get, flutter analyze,
+flutter test on Linux; no native builds or Windows/macOS matrix.
+
+CP90 R13 final analyzer cleanup October 22 2026: remove unused Isar
+import from controller integration tests after 713 tests passed on initial
+full suite; require zero analyzer diagnostics on final flutter analyze and
+flutter test gate. No native builds, no host matrix.
+
+CP90 R14 October 22 2026: final controller navigation lifecycle audit.
+Reuse the route-tested EditLineNavigationGuard for the controller (remove
+duplicate manual epoch). Invalidate any pending Isar navigation on source,
+translation or timing edits; unblock loading when typed changes win;
+invalidate pending loads after committed saves or external route selection,
+and release the guard on provider disposal. Five Isar/Riverpod race tests.
+CI only flutter pub get, flutter analyze and flutter test on Linux;
+NO native builds or multi-host Flutter matrix.
+
+CP91 R1 October 22 2026: visual Git-style history lane layout from
+validated checkpoint parent links and current HEAD; draw theme-aware rails
+beside the existing accessible history cards and preserved branch/bookmark
+checkout menus. Five pure graph-lane tests plus a widget integration check.
+Only flutter pub get, flutter analyze, flutter test on Linux. NO platform
+builds or Windows/macOS matrix; run once for this batched checkpoint.
+
+CP91 R1 final verification October 22 2026: correct fork test sibling
+order. Equal-depth/equal-time nodes sort by checkpoint ID ascending in
+graph validation, then render newest first; expected row IDs must be
+[4,3,2,1] rather than [3,4,2,1]. Initial CI had 722 passing and one
+assertion failure, clean analyzer. Final Flutter-only analyze/tests gate,
+no native builds or cross-platform host matrix.
+
+CP91 R2 October 22 2026: improve checkpoint history terminology and
+accessible legend. Preserve persisted Git refs, HEAD/tip guards, and all
+checkout semantics; presentation now labels current version, starting
+point, branch point, restoring version, switching named branch, and
+disconnected editing outside a named branch with clear confirmations.
+Six pure labels/confirmation tests and three widget regressions (plus
+updated R1 wording expectations). Run flutter pub get, flutter analyze
+and flutter test on Linux only; no native builds and no platform matrix.
+
+CP91 R2 final gate October 22 2026: initial Linux analyzer clean,
+730 tests passed, two UI test expectations outdated/overbroad. Correct
+old Check out commit finder to Restore this version and target the exact
+branch confirmation text rather than every chip containing current branch.
+Run full Flutter analyze/tests once for final acceptance. No native
+application builds or multiplatform host testing.
+
+CP91 R3 October 22 2026: replace raw automatic Edit History operation
+descriptions in both graph and classic sheet with shared plain-language
+subtitle-focused titles. Map edits, adds, deletes, splits, merges, review
+marks/comments/resolution, first project version and external changes,
+while retaining exact user-defined save-point names and unknown legacy
+descriptions. Classic SNAPSHOT/MANUAL labels become Saved version/Save
+point; classic restore confirmations and snapshot buttons use clearer copy.
+No history schema/ref mutation. Run only Linux Flutter analyze and tests
+in one batch; NO platform builds or multi-platform CI matrix.
+
+CP91 R4 October 22 2026: remove internal refs/heads/main and current branch
+text from Edit History UI. Protected main path is presented as Main edits;
+selected path has In use chip, header says Editing: Main edits or named
+alternate editing path. Detached state says Editing from version N ·
+Separate path. Replace branch-oriented menus, confirmations, and legend
+with editing-path wording, while preserving Git refs, default branch
+protections, bookmark behavior and HEAD/tip guarded transactions.
+Pure display tests and widget tests assert no raw main/current branch.
+Only Flutter pub get/analyze/test on Linux, no app builds/host matrix.
+
+CP91 R5 October 22 2026: add compact, scrollable editing path and bookmark
+management, including a protected Main edits row and named reference actions.
+Add the in-panel version map/list toggle for users who prefer an accessible
+text-first history layout without decorative graph lanes. Preserve all
+backend refs, Isar/.msone data, branch/head guards, and restore confirmations.
+Widget regressions cover list/map switching, protected reference actions,
+renaming a named path from manager and a narrow 320px layout. Run Linux
+Flutter pub get/analyze/full tests only. No platform builds or host matrix.
+
+CP91 R6 October 22 2026: per-user Edit History refinements. Replace visible
+Restore this version with Restore this point, Start another editing path
+with Branch from this point, Save Version with Save History, and Main edits
+with Main path across graph and classic history controls. Use distinct
+theme-aware branch highlight colors in chips, cards and graph tracks.
+Tapping a branch filters to that branch's tip and shared ancestors,
+excluding other branches' exclusive commits without changing HEAD or data.
+Cap graph rail space at 80px so many branches cannot progressively squeeze
+the cards; show a many-path hint and allow focus on a single lane.
+Cover branch ancestry, colors, safe actions and narrow many-branch UI.
+Run one Linux Flutter pub get/analyze/full test batch only. No app builds.
+
+CP91 R6 final CI correction: first run #39839861321 passed Flutter analyze
+and 755 tests; one 320px many-branch widget test tapped a chip outside the
+horizontal viewport. Scroll it into view in the test, and omit the redundant
+disabled HEAD chip from the compact selector so the active branch is visible
+earlier on real phones. Preserve all graph and reference data. Repeat only
+Flutter dependency resolution, analysis and full tests; no native builds.
+
+CP91 R7 October 22 2026: Edit History branch discoverability follow-up.
+Rename saved versions to saved points and Separate path to Separate branch.
+After Branch from this point succeeds, focus the newly created branch's
+history without changing editor HEAD. Keep a visible View branch selector
+with every named branch even when the horizontal chips are offscreen, plus
+an explicit guarded Switch to this branch action for editing. Add widget
+tests for new branch creation, selection, narrow screens with many branches,
+and language consistency. Flutter analyze and tests only; no app builds.
+
+CP91 R7 R2 October 22 2026: investigate user report that Branch from this
+point silently closes without adding a branch, including after restoring a
+point. Share portable history-ref validation rules between the Isar store
+and the naming dialog; invalid inputs (such as spaces) now stay in the
+dialog with an explicit correction. Show an in-panel success or failure
+message after a durable branch mutation; no error is hidden behind the
+bottom sheet. Add widget tests for invalid names and rejected persistence,
+plus an actual Isar integration test creating a branch after detached
+restore. Flutter pub get/analyze/tests only; no platform builds.
+
+CP91 R8 October 22 2026: compact portrait Edit Line pilot. Use screen-size
+presentation metrics for smaller video, asymmetric Original/Edited cue heights,
+tighter padding and vertical whitespace on <=430px portrait phones; keep
+tablet, desktop and landscape base heights. Stack Start/End Time fields when
+available width is under 380px, retaining existing controllers, edit actions,
+Riverpod state, media lifecycle, skins and project format. Add widget tests
+for portrait metrics and narrow/wide time layouts. Run Flutter pub get,
+Flutter analyze and full flutter test on Linux only. No platform builds.
+
+CP91 R9 October 22 2026: compact portrait Edit Line action ergonomics.
+On narrow portrait screens, keep Previous, Save, Play/Pause (if loaded),
+Next and an expandable Tools toggle in a single easy-to-reach row.
+Dictionary, Formatting and Subtitle Actions move to a second row only while
+Tools is expanded. Ensure 48px minimum target dimensions for frequent actions
+in compact mode; retain the original full toolbar order and sizing on wider
+screens. Do not alter action callbacks, Riverpod controllers, media lifecycle,
+skins, timeline or persistence. Add compact/expanded/wide widget regressions.
+Flutter pub get, analyze and complete tests on Linux only; NO platform builds.
+
+CP91 R9 R2 October 23 2026: Android device repro of duplicate
+VideoPlayerWidget GlobalKey after CP91 R8 compact portrait resized inline
+video from fixed 240px to 170-200px. _buildContentWithoutVideo only removed
+the exact 240px SizedBox, allowing inline and vertical split players with the
+same GlobalKey to mount simultaneously. Replace height-based filtering with
+explicit inline-player and inline-spacing slot keys. Regression tests prove
+all 170/200/240 height cases, preserve unrelated 240px and 1px widgets,
+and transition fixed/resizable arrangements with one GlobalKey. Native
+libmpv SIGSEGV after manual hot restart is tracked independently, not
+claimed resolved here. Flutter pub get/analyze/full tests ONLY; no builds.
+
+CP91 R9 R3 October 23 2026: restore user-preferred original Edit Line
+single-row editing actions (Previous, Dictionary, Formatting, Subtitle
+Actions, Save, Play/Pause, Next) with all tools visible at narrow widths;
+restore side-by-side Start/End Time controls and original time-section
+spacing. Keep compact text/video sizing and CP91 R9 R2 video GlobalKey
+slot fix unchanged. Tests cover 320px and wide action rows, controls
+without video, and side-by-side timestamps across widths. Flutter pub get,
+analyze and full tests only. Do NOT build any platform in CI.
+
+CP92 R1 October 23 2026: eliminate mobile video-divider per-frame
+logInfo calls and redundant desktop/ratio-loading layout traces in Edit
+Line. Retain the existing onRatioChanged callbacks, Riverpod controllers,
+debounced preference writes, and video GlobalKey layout. Remove obsolete
+_lastLoggedRatio state. Add a 1000-update desktop/mobile ratio regression
+that verifies final persisted values after provider disposal. Full Linux
+Flutter pub get, analyze and test only; no platform builds in CI.
+
+CP92 R2 October 23 2026: redact personal media paths, SAF URIs and raw
+filesystem exception text from subtitle extraction debug diagnostics and
+user-facing extraction error messages. Preserve internal extraction paths,
+SAF/iOS/desktop save logic, status counts and file bytes. Add real temporary
+SRT roundtrip and missing-file privacy regression, plus screen trace guard.
+Run Flutter pub get/analyze/test in Linux CI only; no native builds.
+
+CP92 R2 follow-up October 23 2026: escape literal dollar signs in
+privacy regression trace signatures; rerun full Flutter quality gate.
+
+CP92 R2 FFmpeg-helper audit follow-up: suppress personal path and SAF
+parameter interpolation in shared URI/path normalization diagnostics,
+without changing normalization or extraction operations.
+
+CP92 R3 October 23 2026: replace the Edit Line unsaved changes bottom sheet
+with a modal AlertDialog; retain Save, Discard and Cancel semantics, prevent
+duplicate save requests and system dismissal mid-save. Add dialog widget tests.
+Run only Flutter dependency resolution, analysis and tests; no platform builds.
+
+CP92 R4 October 23 2026: redact FFmpeg/FFprobe helper command, raw native
+session/process output, media path and SAF locator diagnostics on mobile and
+desktop while preserving file access, output naming, extraction behavior and
+numeric error codes. Add focused privacy regressions and run Flutter pub get,
+analysis and the complete Flutter test suite on Linux; no native builds.
+
+CP92 R7 October 23 2026: remove unused SubtitleImportResult legacy map
+converters and deprecated Dart SAF openFileUriOnly forwarding alias while
+keeping the native Android URI-only picker and persisted project formats.
+Run full Flutter analysis and tests on Linux, without platform builds.
+
+CP93 R1 October 23 2026: add synthetic .msone project portability and
+legacy import integration acceptance against real Isar. Preserve blank cues,
+encoding preferences, detached HEAD and named refs across codec/ID remap.
+Run full Flutter analyze and tests in Linux CI; native device smoke remains
+separate and pending, without any platform build in GitHub Actions.
+
+CP93 R2 October 23 2026: reset saved edit position when replacing a session
+with a legacy archive that has no lastEditedIndex. Test real Isar replacement
+clears previous project cursor, checkpoints and refs, keeps same IDs, and
+preserves imported empty subtitle. Flutter analyze/tests only in CI.
+
+CP93 R3 October 23 2026: treat zero-byte Android SAF document responses as
+successful Source View reads, with no fallback to stale local caches. Verify
+direct empty content URI, null/failed provider fallback and empty Source View
+controller state. Linux Flutter analyze/tests only; no native platform builds.
+
+CP93 R4 October 23 2026: stabilize paused waveform scrubbing: visual updates
+without decoder seek flood, one precise release seek, playing-mode throttled
+preview, coalesced wheel idle, stale-native-position guard and clamped time
+mapping. Flutter analyze/tests only; profile gesture acceptance on phone.
+
+CP93 R5 October 23 2026: waveform clock/playhead synchrony, editable time
+zero/end padding, FFmpeg extraction-time waveform loader and eager-path
+callback wiring. Flutter analysis and tests only; no platform builds in CI.
+
+CP93 R6 October 23 2026: restore the user-replaced 1200x2100 WebP splash
+background by fixing pubspec/widget asset references; remove duplicate image
+preload, wait for the first rendered background frame with a bounded startup
+timeout, and verify bundled WebP decoding in Flutter tests. Run Flutter pub get,
+analysis and full tests on Linux only; no platform builds in Actions.

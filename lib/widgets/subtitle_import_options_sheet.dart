@@ -1,15 +1,23 @@
 import 'dart:io';
+import 'package:subtitle_studio/services/subtitle_encoding_decoder.dart';
+import 'package:subtitle_studio/services/subtitle_text_codec.dart';
+import 'package:subtitle_studio/services/subtitle_extended_encoding_service.dart';
+import 'package:subtitle_studio/widgets/subtitle_encoding_picker.dart';
+import 'package:subtitle_studio/services/subtitle_encoding_preview.dart';
+import 'package:subtitle_studio/core/file_access/subtitle_import_file_reader.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/utils/load_srt_file.dart';
 import 'package:subtitle_studio/utils/subtitle_processor.dart';
 import 'package:subtitle_studio/utils/intent_handler.dart';
 import 'package:subtitle_studio/utils/saf_path_converter.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
-import 'package:subtitle_studio/utils/project_manager.dart';
+import 'package:subtitle_studio/utils/project_save_flow.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 
-class SubtitleImportOptionsSheet extends StatefulWidget {
+class SubtitleImportOptionsSheet extends ConsumerStatefulWidget {
   final Function(Session) onSubtitleImported;
   final String? initialFilePath;
   final String? initialFileName;
@@ -24,31 +32,126 @@ class SubtitleImportOptionsSheet extends StatefulWidget {
   });
 
   @override
-  State<SubtitleImportOptionsSheet> createState() => _SubtitleImportOptionsSheetState();
+  ConsumerState<SubtitleImportOptionsSheet> createState() => _SubtitleImportOptionsSheetState();
 }
 
-class _SubtitleImportOptionsSheetState extends State<SubtitleImportOptionsSheet> {
+class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptionsSheet> {
   bool _removeHearingImpairedLines = false;
   bool _mergeOverlappingSubtitles = false;
   String? _selectedProjectPath;  // Store selected project directory path
   bool _isLoading = false;
   String? _selectedFilePath;
   String _fileName = '';
-  String? _safUri; // Store SAF URI for Android file operations
-  String? _fileContent; // Store the content that was already read to avoid double reading
+  String? _safUri; // Retained for existing import/database metadata
+  String? _accessLocator; // Actual source URI/path, never an SAF display hint
+  Uint8List? _fileBytes; // Raw SAF / desktop / iOS bytes
+  String _encodingChoice = 'Auto';
+  List<String> _availableEncodings = SubtitleTextCodec.supportedEncodings;
+  bool _previewLoading = false;
 
   @override
   void initState() {
     super.initState();
+    _loadEncodings();
     // Initialize with pre-filled data if provided
     if (widget.initialFilePath != null) {
       _selectedFilePath = widget.initialFilePath;
+      _accessLocator = widget.originalSafUri ?? widget.initialFilePath;
       // Extract proper filename for display
       _fileName = widget.initialFileName ?? IntentHandler.getFileName(widget.initialFilePath!);
       // If we have an original SAF URI from intent, use it
       if (widget.originalSafUri != null) {
         _safUri = widget.originalSafUri;
       }
+    }
+  }
+
+  Future<void> _loadEncodings() async {
+    final choices = await SubtitleExtendedEncodingService.standard
+        .availableEncodings();
+    if (mounted) setState(() => _availableEncodings = choices);
+  }
+
+  Future<void> _chooseEncoding() async {
+    final choice = await SubtitleEncodingPicker.show(
+      context: context,
+      title: 'Source subtitle encoding',
+      options: ['Auto', ..._availableEncodings],
+      selected: _encodingChoice,
+    );
+    if (!mounted || choice == null) return;
+    setState(() => _encodingChoice = choice);
+  }
+
+  /// Reuse identical raw-byte source for preview and final import.
+  Future<Uint8List> _readSourceBytes() async {
+    if (_fileBytes != null) return _fileBytes!;
+    final filePath = _selectedFilePath;
+    if (filePath == null) {
+      throw const FormatException('Select a subtitle file first.');
+    }
+    final selected = SubtitleImportFileReference.resolve(
+      filePath: filePath, safUri: _safUri, accessLocator: _accessLocator,
+    );
+    return const SubtitleImportFileReader().read(selected);
+  }
+
+  Future<void> _showEncodingPreview() async {
+    if (_previewLoading || _isLoading || _selectedFilePath == null) return;
+    final originalPath = _selectedFilePath;
+    final selected = _encodingChoice;
+    setState(() => _previewLoading = true);
+    try {
+      final bytes = await _readSourceBytes();
+      final preview = await const SubtitleEncodingPreview().generate(
+        bytes, selectedEncoding: selected == 'Auto' ? null : selected);
+      if (!mounted || originalPath != _selectedFilePath ||
+          selected != _encodingChoice) return;
+      await showDialog<void>(
+        context: context,
+        builder: (dialog) => AlertDialog(
+          title: Text('Preview — ' + preview.encoding),
+          content: SizedBox(
+            width: 520,
+            height: 330,
+            child: Column(children: [
+              if (preview.truncated)
+                const Text('Showing the first 500 characters only.'),
+              const SizedBox(height: 6),
+              Expanded(child: SingleChildScrollView(
+                child: SelectableText(
+                  preview.text,
+                  key: const ValueKey('subtitle-encoding-preview-text'),
+                ),
+              )),
+            ]),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialog).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (dialog) => AlertDialog(
+          title: const Text('Cannot preview this encoding'),
+          content: Text('$error\nTry another source encoding. '
+              'No subtitles have been imported.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialog).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _previewLoading = false);
     }
   }
 
@@ -59,12 +162,16 @@ class _SubtitleImportOptionsSheetState extends State<SubtitleImportOptionsSheet>
     
     try {
       final subtitleData = await pickSRT(context);
-      if (subtitleData != null && mounted) {
+      if (!mounted) return;
+
+      if (subtitleData != null) {
         setState(() {
           _selectedFilePath = subtitleData['filePath'];
           _fileName = subtitleData['fileName'] ?? '';
-          _safUri = subtitleData['safUri']; // Store SAF URI separately
-          _fileContent = subtitleData['content']; // Store the content that was already read
+          _safUri = subtitleData['safUri'];
+          _accessLocator = subtitleData['accessLocator'];
+          _fileBytes = subtitleData['bytes'] as Uint8List?;
+          _encodingChoice = 'Auto';
           _isLoading = false;
         });
       } else {
@@ -132,20 +239,26 @@ class _SubtitleImportOptionsSheetState extends State<SubtitleImportOptionsSheet>
 
     try {
       String subtitleContent;
+      String selectedEncoding = 'UTF-8';
       String displayPath = _selectedFilePath!;
-      String? contentUri = _safUri; // Use stored SAF URI
+      final source = SubtitleImportFileReference.resolve(
+        filePath: _selectedFilePath!,
+        safUri: _safUri,
+        accessLocator: _accessLocator,
+      );
+      String? contentUri = source.safUri; // Persist actual content URI
       
       // For SAF URIs, create a better display path for the database
-      if (_safUri != null && IntentHandler.isContentUri(_safUri!)) {
+      if (contentUri != null) {
         // Use SafPathConverter for correct SAF URI to path conversion
-        final safDisplayPath = SafPathConverter.normalizePath(_safUri!);
+        final safDisplayPath = SafPathConverter.normalizePath(contentUri);
         
         if (kDebugMode) {
-          print('SubtitleImportOptionsSheet: originalPath=$displayPath, correctedPath=$safDisplayPath, safUri=$_safUri');
+          debugPrint('SubtitleImportOptionsSheet: SAF source selected');
         }
         
         // Only use the SAF display path if it looks valid and includes filename
-        if (safDisplayPath != _safUri && safDisplayPath.contains('/') && 
+        if (safDisplayPath != contentUri && safDisplayPath.contains('/') && 
             (safDisplayPath.toLowerCase().endsWith('.srt') || 
              safDisplayPath.toLowerCase().endsWith('.vtt') ||
              safDisplayPath.toLowerCase().endsWith('.ass') ||
@@ -172,8 +285,14 @@ class _SubtitleImportOptionsSheetState extends State<SubtitleImportOptionsSheet>
           displayPath = _selectedFilePath!;
           if (_fileName.isNotEmpty && !displayPath.toLowerCase().endsWith(_fileName.toLowerCase())) {
             // If the selected path doesn't end with filename, construct it
-            final dir = File(displayPath).parent.path;
-            displayPath = '$dir${Platform.pathSeparator}$_fileName';
+            // Do not construct a native path from an opaque Android
+            // document URI. Keep the presentation hint independent.
+            if (!displayPath.startsWith('content://')) {
+              final dir = File(displayPath).parent.path;
+              displayPath = '$dir${Platform.pathSeparator}$_fileName';
+            } else {
+              displayPath = _fileName;
+            }
           }
         }
       }
@@ -195,29 +314,15 @@ class _SubtitleImportOptionsSheetState extends State<SubtitleImportOptionsSheet>
         }
       }
       
-      if (_fileContent != null) {
-        // Use the content that was already read during file selection
-        subtitleContent = _fileContent!;
-        if (mounted) {
-          SnackbarHelper.showInfo(context, 'Processing selected file...', duration: const Duration(seconds: 2));
-        }
-      } else if (_safUri != null) {
-        // Fallback: File was selected using SAF but content wasn't stored, read from SAF URI
-        if (mounted) {
-          SnackbarHelper.showInfo(context, 'Processing file from external storage...', duration: const Duration(seconds: 2));
-        }
-        
-        // Read content directly from SAF URI
-        subtitleContent = await IntentHandler.readContentFromUri(_safUri!);
-        
-        if (subtitleContent.isEmpty) {
-          throw Exception('Failed to read file content from external storage. The file may be empty or inaccessible.');
-        }
-      } else {
-        // Read content from regular file path
-        final file = File(_selectedFilePath!);
-        subtitleContent = await file.readAsString();
-      }
+      // The same byte reader and decoder drive preview and import.
+      final Uint8List rawBytes = await _readSourceBytes();
+      final decoded = await SubtitleEncodingDecoder.decodeBytesExtended(
+        rawBytes,
+        selectedEncoding: _encodingChoice == 'Auto'
+            ? null : _encodingChoice,
+      );
+      subtitleContent = decoded.content;
+      selectedEncoding = decoded.encoding;
 
       // Process and import subtitle content with selected options
       final subtitleData = await processAndImportSubtitleContent(
@@ -228,45 +333,36 @@ class _SubtitleImportOptionsSheetState extends State<SubtitleImportOptionsSheet>
         removeHearingImpairedLines: _removeHearingImpairedLines,
         mergeOverlappingSubtitles: _mergeOverlappingSubtitles,
         contentUri: contentUri, // Store SAF URI for future access
+        encoding: selectedEncoding,
+        repository: ref.read(subtitleImportRepositoryProvider),
       );
 
-      if (subtitleData != null && mounted) {
+      if (mounted) {
         // Handle project saving based on user preference
         if (_selectedProjectPath != null) {
           // Manual project saving - prompt user to select directory
-          final session = subtitleData['session'] as Session?;
-          final subtitleCollection = subtitleData['subtitleCollection'] as SubtitleCollection?;
-          
-          if (session != null && subtitleCollection != null) {
-            final projectPath = await ProjectManager.saveProject(
-              context: context,
-              session: session,
-              subtitleCollection: subtitleCollection,
-              forceNewLocation: true,
-            );
-            
-            if (projectPath != null) {
-              await ProjectManager.updateSessionProjectPath(
-                sessionId: session.id,
-                projectFilePath: projectPath,
-              );
-            }
+          final session = subtitleData.session;
+          final subtitleCollection = subtitleData.subtitleCollection;
+
+          final projectPath = await ProjectSaveFlow.save(
+            context: context,
+            coordinator: ref.read(projectSaveCoordinatorProvider),
+            session: session,
+            subtitleCollection: subtitleCollection,
+            forceNewLocation: true,
+          );
+
+          if (projectPath != null) {
+            await ref.read(projectRepositoryProvider).updateSessionProjectPath(
+                  sessionId: session.id,
+                  projectFilePath: projectPath,
+                );
           }
         }
         // If _selectedProjectPath is null, skip project saving entirely
         // The subtitle data is already imported and ready to use
 
-        // Create session for navigation (fallback if not in subtitleData)
-        Session session;
-        if (subtitleData['session'] != null) {
-          session = subtitleData['session'] as Session;
-        } else {
-          session = Session(
-            subtitleCollectionId: subtitleData['subtitleCollectionId'],
-            fileName: subtitleData['fileName'] ?? '',
-            lastEditedIndex: subtitleData['lastEditedIndex'],
-          );
-        }
+        final session = subtitleData.session;
 
         Navigator.pop(context);
         widget.onSubtitleImported(session);
@@ -360,7 +456,7 @@ class _SubtitleImportOptionsSheetState extends State<SubtitleImportOptionsSheet>
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                      color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: borderColor,
@@ -372,12 +468,12 @@ class _SubtitleImportOptionsSheetState extends State<SubtitleImportOptionsSheet>
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: _selectedFilePath != null ? Colors.green : primaryColor,
+                            color: _selectedFilePath != null ? Theme.of(context).colorScheme.primary : primaryColor,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Icon(
                             _selectedFilePath != null ? Icons.check : Icons.file_open,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                             size: 20,
                           ),
                         ),
@@ -426,8 +522,36 @@ class _SubtitleImportOptionsSheetState extends State<SubtitleImportOptionsSheet>
                   ),
                 ),
               ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  OutlinedButton.icon(
+                    key: const ValueKey('source-encoding-picker'),
+                    onPressed: _isLoading ? null : _chooseEncoding,
+                    icon: Icon(Icons.manage_search),
+                    label: Text('Source encoding: ' + _encodingChoice),
+                  ),
+                  OutlinedButton.icon(
+                    key: const ValueKey('source-encoding-preview'),
+                    onPressed: _isLoading || _previewLoading ||
+                            _selectedFilePath == null
+                        ? null : _showEncodingPreview,
+                    icon: Icon(Icons.preview_outlined),
+                    label: Text(_previewLoading ? 'Loading preview...' : 'Preview'),
+                  ),
+                ],
+              ),
+              const Padding(
+                padding: EdgeInsets.only(top: 4),
+                child: Text(
+                  'Auto uses a Unicode BOM or strict UTF-8. '
+                  'Choose a legacy charset explicitly.',
+                ),
+              ),
               const SizedBox(height: 24),
-              
+
               // Set Project Directory Action Card
               Material(
                 color: Colors.transparent,
@@ -438,7 +562,7 @@ class _SubtitleImportOptionsSheetState extends State<SubtitleImportOptionsSheet>
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                      color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: borderColor,
@@ -450,12 +574,14 @@ class _SubtitleImportOptionsSheetState extends State<SubtitleImportOptionsSheet>
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: _selectedProjectPath != null ? Colors.orange : primaryColor,
+                            color: _selectedProjectPath != null ? Theme.of(context).colorScheme.tertiary : primaryColor,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Icon(
                             _selectedProjectPath != null ? Icons.check : Icons.folder_open,
-                            color: Colors.white,
+                            color: _selectedProjectPath != null
+                                ? Theme.of(context).colorScheme.onTertiary
+                                : Theme.of(context).colorScheme.onPrimary,
                             size: 20,
                           ),
                         ),
@@ -511,7 +637,7 @@ class _SubtitleImportOptionsSheetState extends State<SubtitleImportOptionsSheet>
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                  color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: borderColor,
@@ -555,9 +681,9 @@ class _SubtitleImportOptionsSheetState extends State<SubtitleImportOptionsSheet>
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: _removeHearingImpairedLines
-                                    ? const Icon(
+                                    ? Icon(
                                         Icons.check,
-                                        color: Colors.white,
+                                        color: Theme.of(context).colorScheme.onPrimary,
                                         size: 16,
                                       )
                                     : null,
@@ -616,9 +742,9 @@ class _SubtitleImportOptionsSheetState extends State<SubtitleImportOptionsSheet>
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: _mergeOverlappingSubtitles
-                                    ? const Icon(
+                                    ? Icon(
                                         Icons.check,
-                                        color: Colors.white,
+                                        color: Theme.of(context).colorScheme.onPrimary,
                                         size: 16,
                                       )
                                     : null,
@@ -662,25 +788,25 @@ class _SubtitleImportOptionsSheetState extends State<SubtitleImportOptionsSheet>
                   onPressed: _isLoading ? null : _processAndImport,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,
-                    foregroundColor: Colors.white,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                   child: _isLoading
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.onPrimary),
                           ),
                         )
                       : Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.download, size: 20, color: Colors.white),
+                            Icon(Icons.download, size: 20, color: Theme.of(context).colorScheme.onPrimary),
                             const SizedBox(width: 8),
                             Text(
                               _selectedProjectPath != null ? "Import & Save Project" : "Import Subtitle",

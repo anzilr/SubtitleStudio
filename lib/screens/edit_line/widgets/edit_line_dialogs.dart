@@ -1,0 +1,399 @@
+import 'package:flutter/material.dart';
+import 'package:subtitle_studio/themes/studio_design_tokens.dart';
+
+Future<bool> showUnsavedChangesDialog({
+  required BuildContext context,
+  required VoidCallback onLeaveWithoutSaving,
+  required Future<bool> Function() onSave,
+  required VoidCallback onSavedAndLeave,
+}) async {
+  return await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) {
+          final tokens = StudioDesignTokens.of(dialogContext);
+          final primaryColor = tokens.primaryAction;
+          final mutedColor = tokens.mutedText;
+          var isSaving = false;
+
+          return StatefulBuilder(
+            builder: (context, setDialogState) => PopScope(
+              canPop: !isSaving,
+              child: AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(StudioRadius.card),
+              ),
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: tokens.caution.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.warning_amber_rounded,
+                      color: tokens.caution,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Unsaved Changes',
+                      style: Theme.of(dialogContext)
+                          .textTheme
+                          .titleLarge
+                          ?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: isSaving
+                        ? null
+                        : () => Navigator.of(dialogContext).pop(false),
+                    tooltip: 'Close (ESC)',
+                  ),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'You have unsaved changes in this subtitle line.',
+                    style: Theme.of(dialogContext).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'What would you like to do?',
+                    style: Theme.of(dialogContext)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(color: mutedColor),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isSaving
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: isSaving
+                      ? null
+                      : () {
+                          Navigator.of(dialogContext).pop(false);
+                          onLeaveWithoutSaving();
+                        },
+                  style: TextButton.styleFrom(
+                    foregroundColor: tokens.dangerText,
+                  ),
+                  child: const Text('Leave Without Saving'),
+                ),
+                ElevatedButton(
+                  onPressed: isSaving
+                      ? null
+                      : () async {
+                          setDialogState(() => isSaving = true);
+                          var leaving = false;
+                          try {
+                            final saved = await onSave();
+                            if (saved && dialogContext.mounted) {
+                              leaving = true;
+                              Navigator.of(dialogContext).pop(false);
+                              onSavedAndLeave();
+                            }
+                          } finally {
+                            if (!leaving && dialogContext.mounted) {
+                              setDialogState(() => isSaving = false);
+                            }
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryColor,
+                    foregroundColor: tokens.onPrimaryAction,
+                  ),
+                  child: Text(isSaving ? 'Saving...' : 'Save & Leave'),
+                ),
+              ],
+              ),
+            ),
+          );
+        },
+      ) ??
+      false;
+}
+
+Future<void> showOriginalLineWarningSheet({
+  required BuildContext context,
+  required bool enableShowOriginal,
+  required VoidCallback onContinue,
+}) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isDismissible: false,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(StudioRadius.sheet)),
+    ),
+    builder: (sheetContext) {
+      final tokens = StudioDesignTokens.of(sheetContext);
+      final primaryColor = tokens.primaryAction;
+      final onSurfaceColor = tokens.onSurface;
+      final mutedColor = tokens.mutedText;
+      final borderColor = tokens.outline;
+
+      return Container(
+        decoration: BoxDecoration(
+          color: tokens.surface,
+          borderRadius:
+              const BorderRadius.vertical(top: Radius.circular(StudioRadius.sheet)),
+        ),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color:
+                              tokens.caution.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          Icons.warning_amber_rounded,
+                          color: tokens.caution,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment:
+                              CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Important Notice',
+                              style: Theme.of(sheetContext)
+                                  .textTheme
+                                  .titleLarge
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Please review these important changes',
+                              style: Theme.of(sheetContext)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(color: mutedColor),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: tokens.fieldSurface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: borderColor,
+                      width: 1,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (enableShowOriginal) ...[
+                        Text(
+                          'When "Show Original Line" is enabled:',
+                          style: Theme.of(sheetContext)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                        const SizedBox(height: 12),
+                        const _BulletPoint(
+                          'Original text will be copied to the edited field when it\'s empty',
+                        ),
+                        const SizedBox(height: 8),
+                        const _BulletPoint(
+                          'Auto-save with navigation will be DISABLED to prevent accidental saving of original text as edited',
+                        ),
+                        const SizedBox(height: 8),
+                        const _BulletPoint(
+                          'You can manually enable auto-save later at your own risk',
+                        ),
+                      ] else ...[
+                        Text(
+                          'When "Show Original Line" is disabled:',
+                          style: Theme.of(sheetContext)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                        const SizedBox(height: 12),
+                        const _BulletPoint(
+                          'Original text will no longer be automatically copied to edited field',
+                        ),
+                        const SizedBox(height: 8),
+                        const _BulletPoint(
+                          'Auto-save with navigation will be ENABLED automatically',
+                        ),
+                      ],
+                      const SizedBox(height: 16),
+                      Text(
+                        'Do you want to continue?',
+                        style: Theme.of(sheetContext)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: 50,
+                        child: OutlinedButton(
+                          onPressed: () =>
+                              Navigator.of(sheetContext).pop(),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: onSurfaceColor,
+                            side: BorderSide(
+                              color: onSurfaceColor.withValues(
+                                alpha: 0.3,
+                              ),
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Row(
+                            mainAxisAlignment:
+                                MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.close, size: 20),
+                              SizedBox(width: 8),
+                              Text(
+                                'Cancel',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: SizedBox(
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.of(sheetContext).pop();
+                            onContinue();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primaryColor,
+                            foregroundColor: tokens.onPrimaryAction,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment:
+                                MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.check,
+                                size: 20,
+                                color: tokens.onPrimaryAction,
+                              ),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Continue',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
+
+class _BulletPoint extends StatelessWidget {
+  final String text;
+
+  const _BulletPoint(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          margin: const EdgeInsets.only(top: 6),
+          width: 4,
+          height: 4,
+          decoration: BoxDecoration(
+            color: onSurfaceColor.withValues(alpha: 0.6),
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: onSurfaceColor.withValues(alpha: 0.8),
+                ),
+          ),
+        ),
+      ],
+    );
+  }
+}

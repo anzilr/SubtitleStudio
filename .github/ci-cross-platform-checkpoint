@@ -1,0 +1,32 @@
+CP89 R1 2026-10-21: file opening/Source View save and Save As encoding
+behavior changed; run targeted Flutter tests and analysis on native Windows
+and macOS hosts. iOS document cases are simulated; no platform builds in CI.
+CP89 R1 fixture interpolation fix; rerun targeted Windows/macOS analyzer and
+encoding tests after the Linux analyzer reported three undefined identifiers.
+
+CP89 R2 October 21 2026: desktop SRT save and shared encoding export changed.
+Run focused Windows/macOS host Flutter analyzer and file/encoding tests, plus
+iOS simulated adapter coverage. No platform application builds in Actions.
+
+CP89 R3 October 21 2026: import/open/save SRT blank cues and blank text lines
+on all supported hosts. Targeted Windows/macOS Flutter analyzer and parser,
+file-access and encoding tests; iOS simulated adapters. Never platform builds.
+
+CP89 R3 cleanup regression retest: source-blank preservation must coexist with
+hearing-impaired annotation removal. Focused Windows/macOS Flutter tests and
+analyzer only. No app builds.
+
+CP90 R1 October 21 2026: Edit Line direct-save/Save As ownership extracted,
+original document locator and encoded-byte output enforced; verify host Flutter
+tests and analysis on Windows/macOS with simulated Android/iOS permission paths.
+No platform application builds in Actions.
+
+CP90 R2 October 21 2026: main Editor direct-file Save uses strict selected
+encoding, original document identity, native macOS security-scoped bookmarks
+and existing-file-only writes. Host Flutter analysis and targeted file/encoding
+tests on Windows and macOS; simulated Android/iOS provider behavior. No builds.
+
+CP90 R3 October 21 2026: Save As path handling, filename validation, encoded
+bytes, source-view refresh and desktop overwrite safety changed. Test export
+service and prior file/encoding regressions on Windows/macOS Flutter hosts,
+with simulated Android/iOS paths; no platform application builds in Actions.

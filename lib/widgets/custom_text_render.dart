@@ -2,10 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:html/parser.dart' as html_parser;
 import 'package:html/dom.dart' as dom;
-import 'package:provider/provider.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
-
-import '../themes/theme_provider.dart';
 
 class CustomHtmlText extends StatefulWidget {
   final String htmlContent;
@@ -150,7 +147,7 @@ class _CustomHtmlTextState extends State<CustomHtmlText> {
     // Use defaultStyle if provided; otherwise fallback to theme-based default.
     TextStyle baseStyle = widget.defaultStyle ??
         TextStyle(
-          color: Provider.of<ThemeProvider>(context, listen: false).themeMode == ThemeMode.light
+          color: Theme.of(context).brightness == Brightness.light
               ? Colors.black
               : Colors.white,
           fontSize: 15,

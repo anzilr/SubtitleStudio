@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:subtitle_studio/themes/studio_design_tokens.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:flutter/services.dart';
 import 'package:subtitle_studio/database/models/models.dart';
-import 'package:subtitle_studio/database/models/preferences_model.dart';
 import 'package:subtitle_studio/utils/time_parser.dart';
 import 'package:subtitle_studio/utils/responsive_layout.dart';
 import 'package:subtitle_studio/widgets/comment_dialog.dart';
+import 'package:subtitle_studio/widgets/marked_lines_filter.dart';
 
 class _HoverableButton extends StatefulWidget {
   final VoidCallback onTap;
@@ -49,7 +52,7 @@ class _HoverableButtonState extends State<_HoverableButton> {
   }
 }
 
-class MarkedLinesSheet extends StatefulWidget {
+class MarkedLinesSheet extends ConsumerStatefulWidget {
   final List<SubtitleLine> markedLines;
   final List<SubtitleLine>? allLinesWithComments; // All lines that have comments (marked or unmarked)
   final Function(int) onLineSelected;
@@ -72,12 +75,13 @@ class MarkedLinesSheet extends StatefulWidget {
   });
 
   @override
-  MarkedLinesSheetState createState() => MarkedLinesSheetState();
+  ConsumerState<MarkedLinesSheet> createState() => MarkedLinesSheetState();
 }
 
-class MarkedLinesSheetState extends State<MarkedLinesSheet> {
+class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
   late List<SubtitleLine> _currentMarkedLines;
-  bool _showAllComments = false; // Toggle to show all lines with comments
+  bool _showAllComments = false; // Toggle to include unmarked comment lines
+  bool _commentFilterTouched = false; // Prevent async saved preference overwriting a tap.
   String _resolvedFilter = 'all'; // Filter: 'all', 'resolved', 'unresolved'
   int? _editingLineIndex; // Track which line is being edited
   final Map<int, TextEditingController> _textControllers = {}; // Controllers for each line
@@ -92,23 +96,20 @@ class MarkedLinesSheetState extends State<MarkedLinesSheet> {
     super.initState();
     _currentMarkedLines = List.from(widget.markedLines);
     
-    // Load preference and then trigger scroll if needed
+    // Load the preference first, then scroll when the first frame containing
+    // the filtered cards has actually been laid out. No fixed timing delay is
+    // required; _scrollToLineByDatabaseIndex schedules its own post-frame
+    // scroll after updating the highlight.
     _loadShowAllCommentsPreference().then((_) {
-      // If initial highlight index is provided, scroll to it after preference is loaded
-      if (widget.initialHighlightLineIndex != null && mounted) {
-        print('DEBUG: initState - will scroll to index ${widget.initialHighlightLineIndex}');
-        // Wait for the widget to build at least once before trying to scroll
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          print('DEBUG: initState postFrameCallback - now triggering scroll after 500ms delay');
-          // Increase delay to 500ms to ensure DraggableScrollableSheet finishes building
-          Future.delayed(const Duration(milliseconds: 500), () {
-            if (mounted) {
-              print('DEBUG: About to call _scrollToLineByDatabaseIndex');
-              _scrollToLineByDatabaseIndex(widget.initialHighlightLineIndex!);
-            }
-          });
-        });
-      }
+      if (!mounted || widget.initialHighlightLineIndex == null) return;
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _scrollToLineByDatabaseIndex(
+            widget.initialHighlightLineIndex!,
+          );
+        }
+      });
     });
     
     // Request focus for keyboard navigation
@@ -139,92 +140,38 @@ class MarkedLinesSheetState extends State<MarkedLinesSheet> {
   }
 
   Future<void> _loadShowAllCommentsPreference() async {
-    final showAllComments = await PreferencesModel.getShowAllComments();
-    if (mounted) {
+    final showAllComments = await ref
+        .read(appPreferencesRepositoryProvider)
+        .getShowAllComments();
+    if (mounted && !_commentFilterTouched) {
       setState(() {
         _showAllComments = showAllComments;
       });
     }
   }
 
-  /// Get count of resolved comments from all available lines
-  int get _resolvedCount {
-    List<SubtitleLine> allLines;
-    if (_showAllComments && widget.allLinesWithComments != null) {
-      final Set<int> seenIndices = {};
-      final List<SubtitleLine> mergedLines = [];
-      for (final line in _currentMarkedLines) {
-        mergedLines.add(line);
-        seenIndices.add(line.index);
-      }
-      for (final line in widget.allLinesWithComments!) {
-        if (!seenIndices.contains(line.index)) {
-          mergedLines.add(line);
-        }
-      }
-      allLines = mergedLines;
-    } else {
-      allLines = _currentMarkedLines;
-    }
-    return allLines.where((line) => line.resolved).length;
-  }
+  /// Use one predicate for the list and its counts, so unchecking the
+  /// comment option never leaves comment-only (unmarked) cues displayed.
+  List<SubtitleLine> get _allVisibleLines =>
+      MarkedLinesFilter.apply(
+        markedLines: _currentMarkedLines,
+        allLinesWithComments: widget.allLinesWithComments,
+        includeUnmarkedComments: _showAllComments,
+      );
 
-  /// Get total count of all available lines
-  int get _totalCount {
-    if (_showAllComments && widget.allLinesWithComments != null) {
-      final Set<int> seenIndices = {};
-      int count = 0;
-      for (final line in _currentMarkedLines) {
-        seenIndices.add(line.index);
-        count++;
-      }
-      for (final line in widget.allLinesWithComments!) {
-        if (!seenIndices.contains(line.index)) {
-          count++;
-        }
-      }
-      return count;
-    }
-    return _currentMarkedLines.length;
-  }
+  int get _resolvedCount =>
+      _allVisibleLines.where((line) => line.resolved).length;
+
+  int get _totalCount => _allVisibleLines.length;
 
   List<SubtitleLine> get _displayedLines {
-    List<SubtitleLine> lines;
-    
-    if (_showAllComments && widget.allLinesWithComments != null) {
-      // Merge marked lines and lines with comments
-      final Set<int> seenIndices = {};
-      final List<SubtitleLine> mergedLines = [];
-      
-      // Add all marked lines first
-      for (final line in _currentMarkedLines) {
-        mergedLines.add(line);
-        seenIndices.add(line.index);
-      }
-      
-      // Add lines with comments that aren't already marked
-      for (final line in widget.allLinesWithComments!) {
-        if (!seenIndices.contains(line.index)) {
-          mergedLines.add(line);
-          seenIndices.add(line.index);
-        }
-      }
-      
-      // Sort by index to maintain proper order
-      mergedLines.sort((a, b) => a.index.compareTo(b.index));
-      
-      lines = mergedLines;
-    } else {
-      lines = _currentMarkedLines;
-    }
-    
-    // Apply resolved filter
+    final lines = _allVisibleLines;
     if (_resolvedFilter == 'resolved') {
       return lines.where((line) => line.resolved).toList();
-    } else if (_resolvedFilter == 'unresolved') {
+    }
+    if (_resolvedFilter == 'unresolved') {
       return lines.where((line) => !line.resolved).toList();
     }
-    
     return lines;
   }
 
@@ -247,7 +194,7 @@ class MarkedLinesSheetState extends State<MarkedLinesSheet> {
         child: Container(
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(StudioRadius.sheet)),
           ),
           child: Column(
         children: [
@@ -283,15 +230,20 @@ class MarkedLinesSheetState extends State<MarkedLinesSheet> {
                             children: [
                               Icon(
                                 Icons.check_circle,
-                                color: Colors.green,
+                                color: Theme.of(context).colorScheme.primary,
                                 size: 14,
                               ),
                               const SizedBox(width: 4),
-                              Text(
-                                '$_resolvedCount resolved of $_totalCount total',
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: Colors.green,
-                                  fontWeight: FontWeight.w600,
+                              Expanded(
+                                child: Text(
+                                  '$_resolvedCount resolved of $_totalCount total',
+                                  softWrap: true,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Theme.of(context).colorScheme.primary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
                             ],
@@ -303,7 +255,7 @@ class MarkedLinesSheetState extends State<MarkedLinesSheet> {
                       margin: const EdgeInsets.only(right: 8),
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.red.withValues(alpha: 0.1),
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Row(
@@ -311,14 +263,14 @@ class MarkedLinesSheetState extends State<MarkedLinesSheet> {
                         children: [
                           Icon(
                             _showAllComments ? Icons.comment : Icons.bookmark_added,
-                            color: Colors.red,
+                            color: Theme.of(context).colorScheme.error,
                             size: 16,
                           ),
                           const SizedBox(width: 4),
                           Text(
                             '${_displayedLines.length}',
-                            style: const TextStyle(
-                              color: Colors.red,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.primary,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -346,9 +298,12 @@ class MarkedLinesSheetState extends State<MarkedLinesSheet> {
                             final newValue = value ?? false;
                             setState(() {
                               _showAllComments = newValue;
+                              _commentFilterTouched = true;
                             });
                             // Save the preference
-                            await PreferencesModel.setShowAllComments(newValue);
+                            await ref
+        .read(appPreferencesRepositoryProvider)
+        .setShowAllComments(newValue);
                           },
                           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
@@ -371,25 +326,13 @@ class MarkedLinesSheetState extends State<MarkedLinesSheet> {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
                     children: [
-                      Icon(
-                        Icons.filter_list,
-                        size: 20,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Show:',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
                       // Radio buttons for filter
-                      Wrap(
-                        spacing: 8,
-                        children: [
+                      Expanded(
+                        child: Wrap(
+                          alignment: WrapAlignment.start,
+                          spacing: 8,
+                          runSpacing: 4,
+                          children: [
                           _buildFilterChip(
                             context,
                             label: 'All',
@@ -401,16 +344,17 @@ class MarkedLinesSheetState extends State<MarkedLinesSheet> {
                             label: 'Resolved',
                             value: 'resolved',
                             icon: Icons.check_circle,
-                            color: Colors.green,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                           _buildFilterChip(
                             context,
                             label: 'Unresolved',
                             value: 'unresolved',
                             icon: Icons.radio_button_unchecked,
-                            color: Colors.orange,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
-                        ],
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -497,13 +441,13 @@ class MarkedLinesSheetState extends State<MarkedLinesSheet> {
           Icon(
             _showAllComments ? Icons.comment_outlined : Icons.bookmark_border,
             size: 64,
-            color: Colors.grey.withValues(alpha: 0.5),
+            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
           ),
           const SizedBox(height: 24),
           Text(
             _showAllComments ? 'No lines with comments' : 'No marked lines',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              color: Colors.grey.withValues(alpha: 0.7),
+              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
             ),
           ),
           const SizedBox(height: 12),
@@ -512,7 +456,7 @@ class MarkedLinesSheetState extends State<MarkedLinesSheet> {
                 ? 'Add comments to subtitle lines to see them here'
                 : 'Long press on a subtitle line and select "Mark Line" to bookmark it',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.grey.withValues(alpha: 0.5),
+              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
             ),
             textAlign: TextAlign.center,
           ),
@@ -522,7 +466,6 @@ class MarkedLinesSheetState extends State<MarkedLinesSheet> {
   }
 
   Widget _buildMarkedLinesList(BuildContext context) {
-    print('DEBUG: _buildMarkedLinesList called, _displayedLines.length: ${_displayedLines.length}');
     
     // Ensure we have enough keys for all items
     // CRITICAL: Only add NEW keys if we don't have enough, don't recreate existing ones
@@ -531,17 +474,13 @@ class MarkedLinesSheetState extends State<MarkedLinesSheet> {
       final keysToAdd = keysNeeded - _cardKeys.length;
       for (int i = 0; i < keysToAdd; i++) {
         _cardKeys.add(GlobalKey());
-        print('DEBUG: Added NEW GlobalKey, _cardKeys.length now: ${_cardKeys.length}');
       }
     }
     // Remove excess keys if list shortened
     else if (_cardKeys.length > keysNeeded) {
-      print('DEBUG: Removing ${_cardKeys.length - keysNeeded} excess keys');
       _cardKeys.removeRange(keysNeeded, _cardKeys.length);
     }
     
-    print('DEBUG: Final _cardKeys.length: ${_cardKeys.length}');
-    print('DEBUG: Keys hash codes: ${_cardKeys.map((k) => k.hashCode).toList()}');
     
     return ListView.separated(
       controller: _scrollController,
@@ -595,15 +534,13 @@ class MarkedLinesSheetState extends State<MarkedLinesSheet> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
-                          color: line.marked 
-                              ? Colors.red.withValues(alpha: 0.1)
-                              : Colors.blue.withValues(alpha: 0.1),
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.10),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
                           '#${line.index}',
                           style: TextStyle(
-                            color: line.marked ? Colors.red : Colors.blue,
+                            color: Theme.of(context).colorScheme.primary,
                             fontWeight: FontWeight.bold,
                             fontSize: 13,
                           ),
@@ -612,20 +549,37 @@ class MarkedLinesSheetState extends State<MarkedLinesSheet> {
                       const SizedBox(width: 8),
                       Icon(
                         line.marked ? Icons.bookmark_added : Icons.comment,
-                        color: line.marked ? Colors.red : Colors.blue,
+                        color: line.marked ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.primary,
                         size: 18,
                       ),
-                      const Spacer(),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).dividerColor.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          '$formattedStart → $formattedEnd',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.6),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.centerRight,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).dividerColor.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  formattedStart,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                                Text(
+                                  formattedEnd,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -645,13 +599,13 @@ class MarkedLinesSheetState extends State<MarkedLinesSheet> {
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: line.resolved 
-                            ? Colors.green.withValues(alpha: 0.1)
-                            : Colors.blue.withValues(alpha: 0.1),
+                            ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
+                            : Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                           color: line.resolved 
-                              ? Colors.green.withValues(alpha: 0.2)
-                              : Colors.blue.withValues(alpha: 0.2),
+                              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.2)
+                              : Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
                         ),
                       ),
                       child: Column(
@@ -661,14 +615,14 @@ class MarkedLinesSheetState extends State<MarkedLinesSheet> {
                             children: [
                               Icon(
                                 line.resolved ? Icons.check_circle : Icons.comment,
-                                color: line.resolved ? Colors.green : Colors.blue,
+                                color: line.resolved ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.primary,
                                 size: 16,
                               ),
                               const SizedBox(width: 4),
                               Text(
                                 line.resolved ? 'Resolved Comment' : 'Comment',
                                 style: TextStyle(
-                                  color: line.resolved ? Colors.green : Colors.blue,
+                                  color: line.resolved ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.primary,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 12,
                                 ),
@@ -681,13 +635,13 @@ class MarkedLinesSheetState extends State<MarkedLinesSheet> {
                                     _buildHoverableButton(
                                       onTap: () => _showCommentDialog(context, line),
                                       icon: Icons.edit,
-                                      color: line.resolved ? Colors.green : Colors.blue,
+                                      color: line.resolved ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.primary,
                                     ),
                                     const SizedBox(width: 16),
                                     _buildHoverableButton(
                                       onTap: () => _showDeleteConfirmation(context, line),
                                       icon: Icons.delete,
-                                      color: Colors.red,
+                                      color: Theme.of(context).colorScheme.error,
                                     ),
                                   ],
                                 ),
@@ -697,7 +651,7 @@ class MarkedLinesSheetState extends State<MarkedLinesSheet> {
                           Text(
                             line.comment!,
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: line.resolved ? Colors.green.shade700 : Colors.blue.shade700,
+                              color: line.resolved ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurfaceVariant,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -720,7 +674,7 @@ class MarkedLinesSheetState extends State<MarkedLinesSheet> {
                                 child: Text(
                                   'Resolved',
                                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: line.resolved ? Colors.green.shade600 : Colors.grey.shade600,
+                                    color: line.resolved ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurfaceVariant,
                                   ),
                                 ),
                               ),
@@ -737,10 +691,10 @@ class MarkedLinesSheetState extends State<MarkedLinesSheet> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.grey.withValues(alpha: 0.1),
+                          color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: Colors.grey.withValues(alpha: 0.3),
+                            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
                             style: BorderStyle.solid,
                           ),
                         ),
@@ -748,14 +702,14 @@ class MarkedLinesSheetState extends State<MarkedLinesSheet> {
                           children: [
                             Icon(
                               Icons.add_comment_outlined,
-                              color: Colors.grey.shade600,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
                               size: 16,
                             ),
                             const SizedBox(width: 8),
                             Text(
                               'Add comment',
                               style: TextStyle(
-                                color: Colors.grey.shade600,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
                                 fontSize: 12,
                               ),
                             ),
@@ -790,7 +744,7 @@ class MarkedLinesSheetState extends State<MarkedLinesSheet> {
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: isEditing 
-              ? Colors.blue 
+              ? Theme.of(context).colorScheme.primary 
               : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
           width: isEditing ? 2 : 1,
         ),
@@ -842,13 +796,13 @@ class MarkedLinesSheetState extends State<MarkedLinesSheet> {
               Icon(
                 hasEditedText ? Icons.edit : Icons.text_fields,
                 size: 14,
-                color: hasEditedText ? Colors.blue : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                color: hasEditedText ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
               const SizedBox(width: 4),
               Text(
                 hasEditedText ? 'Edited' : 'Text',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: hasEditedText ? Colors.blue : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  color: hasEditedText ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -866,12 +820,12 @@ class MarkedLinesSheetState extends State<MarkedLinesSheet> {
                           SnackBar(
                             content: Row(
                               children: [
-                                Icon(Icons.check_circle, color: Colors.white, size: 16),
+                                Icon(Icons.check_circle, color: Theme.of(context).colorScheme.onPrimary, size: 16),
                                 const SizedBox(width: 8),
                                 Text('Text copied'),
                               ],
                             ),
-                            backgroundColor: Colors.green,
+                            backgroundColor: Theme.of(context).colorScheme.primary,
                             duration: const Duration(seconds: 2),
                             behavior: SnackBarBehavior.floating,
                           ),
@@ -886,14 +840,14 @@ class MarkedLinesSheetState extends State<MarkedLinesSheet> {
                         children: [
                           Icon(
                             Icons.copy,
-                            color: Colors.green,
+                            color: Theme.of(context).colorScheme.primary,
                             size: 12,
                           ),
                           const SizedBox(width: 3),
                           Text(
                             'Copy',
                             style: TextStyle(
-                              color: Colors.green,
+                              color: Theme.of(context).colorScheme.primary,
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
                             ),
@@ -926,14 +880,14 @@ class MarkedLinesSheetState extends State<MarkedLinesSheet> {
                           children: [
                             Icon(
                               Icons.close,
-                              color: Colors.red,
+                              color: Theme.of(context).colorScheme.error,
                               size: 14,
                             ),
                             const SizedBox(width: 4),
                             Text(
                               'Cancel',
                               style: TextStyle(
-                                color: Colors.red,
+                                color: Theme.of(context).colorScheme.error,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -953,7 +907,7 @@ class MarkedLinesSheetState extends State<MarkedLinesSheet> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.green.withValues(alpha: 0.1),
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Row(
@@ -961,14 +915,14 @@ class MarkedLinesSheetState extends State<MarkedLinesSheet> {
                           children: [
                             Icon(
                               Icons.check,
-                              color: Colors.green,
+                              color: Theme.of(context).colorScheme.primary,
                               size: 14,
                             ),
                             const SizedBox(width: 4),
                             Text(
                               'Save',
                               style: TextStyle(
-                                color: Colors.green,
+                                color: Theme.of(context).colorScheme.primary,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -997,14 +951,14 @@ class MarkedLinesSheetState extends State<MarkedLinesSheet> {
                           children: [
                             Icon(
                               Icons.edit,
-                              color: Colors.blue,
+                              color: Theme.of(context).colorScheme.primary,
                               size: 14,
                             ),
                             const SizedBox(width: 4),
                             Text(
                               'Edit',
                               style: TextStyle(
-                                color: Colors.blue,
+                                color: Theme.of(context).colorScheme.primary,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -1024,7 +978,7 @@ class MarkedLinesSheetState extends State<MarkedLinesSheet> {
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: hasEditedText 
-                  ? Colors.blue.withValues(alpha: 0.05)
+                  ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.05)
                   : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(6),
             ),
@@ -1347,7 +1301,7 @@ class MarkedLinesSheetState extends State<MarkedLinesSheet> {
                 },
                 child: const Text('Delete'),
                 style: TextButton.styleFrom(
-                  foregroundColor: Colors.red,
+                  foregroundColor: Theme.of(context).colorScheme.error,
                 ),
               ),
             ],

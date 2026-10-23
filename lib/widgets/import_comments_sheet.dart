@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:subtitle_studio/app/providers/core_providers.dart';
+import 'package:subtitle_studio/features/import_comments/project_comment_import.dart';
+import 'package:subtitle_studio/services/project_document_codec.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
 import 'package:subtitle_studio/utils/platform_file_handler.dart';
-import 'package:subtitle_studio/database/models/models.dart';
-import 'package:subtitle_studio/main.dart';
 import 'dart:convert';
 import 'dart:io';
 
-class ImportCommentsSheet extends StatefulWidget {
+class ImportCommentsSheet extends ConsumerStatefulWidget {
   final int subtitleCollectionId;
   final Function? onCommentsImported;
 
@@ -18,13 +20,14 @@ class ImportCommentsSheet extends StatefulWidget {
   });
 
   @override
-  ImportCommentsSheetState createState() => ImportCommentsSheetState();
+  ConsumerState<ImportCommentsSheet> createState() => ImportCommentsSheetState();
 }
 
-class ImportCommentsSheetState extends State<ImportCommentsSheet> {
+class ImportCommentsSheetState extends ConsumerState<ImportCommentsSheet> {
   bool _isLoading = false;
   String? _selectedFileName;
-  Map<String, dynamic>? _projectData;
+  ProjectDocument? _projectDocument;
+  ProjectCommentImportPlan? _importPlan;
   int _totalCommentsCount = 0;
 
   @override
@@ -119,7 +122,7 @@ class ImportCommentsSheetState extends State<ImportCommentsSheet> {
                         decoration: BoxDecoration(
                           color: isDark 
                               ? onSurfaceColor.withValues(alpha: 0.05) 
-                              : Colors.grey.shade50,
+                              : Theme.of(context).colorScheme.surfaceContainerLow,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                             color: onSurfaceColor.withValues(alpha: 0.12),
@@ -131,12 +134,12 @@ class ImportCommentsSheetState extends State<ImportCommentsSheet> {
                             Container(
                               padding: const EdgeInsets.all(4),
                               decoration: BoxDecoration(
-                                color: Colors.orange.withValues(alpha: 0.1),
+                                color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(6),
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.folder_open,
-                                color: Colors.orange,
+                                color: Theme.of(context).colorScheme.tertiary,
                                 size: 20,
                               ),
                             ),
@@ -176,16 +179,16 @@ class ImportCommentsSheetState extends State<ImportCommentsSheet> {
                   ),
 
                   // Comments Info (shown when file is selected)
-                  if (_projectData != null) ...[
+                  if (_projectDocument != null) ...[
                     const SizedBox(height: 20),
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.green.withValues(alpha: 0.05),
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: Colors.green.withValues(alpha: 0.2),
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
                           width: 1,
                         ),
                       ),
@@ -197,12 +200,12 @@ class ImportCommentsSheetState extends State<ImportCommentsSheet> {
                               Container(
                                 padding: const EdgeInsets.all(4),
                                 decoration: BoxDecoration(
-                                  color: Colors.green.withValues(alpha: 0.1),
+                                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
-                                child: const Icon(
+                                child: Icon(
                                   Icons.check_circle_outline,
-                                  color: Colors.green,
+                                  color: Theme.of(context).colorScheme.primary,
                                   size: 16,
                                 ),
                               ),
@@ -211,7 +214,7 @@ class ImportCommentsSheetState extends State<ImportCommentsSheet> {
                                 'Project File Loaded',
                                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
                                   fontWeight: FontWeight.w600,
-                                  color: Colors.green,
+                                  color: Theme.of(context).colorScheme.primary,
                                 ),
                               ),
                             ],
@@ -234,7 +237,7 @@ class ImportCommentsSheetState extends State<ImportCommentsSheet> {
                             Text(
                               'This project file does not contain any comments to import.',
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Colors.orange,
+                                color: Theme.of(context).colorScheme.tertiary,
                               ),
                             ),
                           ],
@@ -288,24 +291,24 @@ class ImportCommentsSheetState extends State<ImportCommentsSheet> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: ElevatedButton(
-                            onPressed: (_projectData != null && _totalCommentsCount > 0 && !_isLoading) 
+                            onPressed: (_projectDocument != null && _totalCommentsCount > 0 && !_isLoading) 
                                 ? _importComments 
                                 : null,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: primaryColor,
-                              foregroundColor: Colors.white,
+                              foregroundColor: Theme.of(context).colorScheme.onPrimary,
                               elevation: 0,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
                             ),
                             child: _isLoading
-                                ? const SizedBox(
+                                ? SizedBox(
                                     height: 20,
                                     width: 20,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                      valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.onPrimary),
                                     ),
                                   )
                                 : const Text(
@@ -383,43 +386,18 @@ class ImportCommentsSheetState extends State<ImportCommentsSheet> {
       }
 
       if (fileContent != null && fileName != null) {
-        // Parse the project file content
         try {
-          final projectData = jsonDecode(fileContent);
-          print('DEBUG: File selection - Project data keys: ${projectData.keys.toList()}');
-          
-          if (projectData['subtitleCollection'] != null) {
-            final subtitleCollection = projectData['subtitleCollection'] as Map<String, dynamic>;
-            print('DEBUG: File selection - Subtitle collection keys: ${subtitleCollection.keys.toList()}');
-            
-            if (subtitleCollection['lines'] != null) {
-              final lines = subtitleCollection['lines'] as List<dynamic>;
-              print('DEBUG: File selection - Total lines in project: ${lines.length}');
-              
-              // Debug: Check first comment with Unicode characters
-              for (final line in lines.take(5)) {
-                final comment = line['comment'] as String?;
-                if (comment != null && comment.trim().isNotEmpty) {
-                  print('DEBUG: Sample comment: $comment (length: ${comment.length})');
-                  // Check if comment contains Unicode characters
-                  final hasUnicode = comment.runes.any((rune) => rune > 127);
-                  print('DEBUG: Comment has Unicode: $hasUnicode');
-                  break;
-                }
-              }
-            }
-          }
-          
-          final commentsCount = _countCommentsInProject(projectData);
-          print('DEBUG: File selection - Comments count: $commentsCount');
+          final document = ProjectDocumentCodec.decode(fileContent);
+          final plan = ProjectCommentImportPlan.fromDocument(document);
 
           setState(() {
             _selectedFileName = fileName;
-            _projectData = projectData;
-            _totalCommentsCount = commentsCount;
+            _projectDocument = document;
+            _importPlan = plan;
+            _totalCommentsCount = plan.count;
             _isLoading = false;
           });
-        } catch (parseError) {
+        } catch (_) {
           setState(() {
             _isLoading = false;
           });
@@ -442,111 +420,39 @@ class ImportCommentsSheetState extends State<ImportCommentsSheet> {
     }
   }
 
-  int _countCommentsInProject(Map<String, dynamic> projectData) {
-    try {
-      final subtitleCollection = projectData['subtitleCollection'] as Map<String, dynamic>?;
-      if (subtitleCollection == null) return 0;
-
-      final lines = subtitleCollection['lines'] as List<dynamic>?;
-      if (lines == null) return 0;
-
-      int count = 0;
-      for (final line in lines) {
-        final comment = line['comment'] as String?;
-        final index = line['index'] as int?;
-        
-        // Count lines that have both an index and a non-empty comment
-        if (index != null && comment != null && comment.trim().isNotEmpty) {
-          count++;
-        }
-      }
-      return count;
-    } catch (e) {
-      print('Error counting comments: $e');
-      return 0;
-    }
-  }
-
   Future<void> _importComments() async {
-    if (_projectData == null) return;
+    final plan = _importPlan;
+    if (_projectDocument == null || plan == null) return;
 
     try {
       setState(() {
         _isLoading = true;
       });
 
-      // Get current subtitle collection
-      final currentCollection = await isar.subtitleCollections.get(widget.subtitleCollectionId);
-      if (currentCollection == null) {
-        throw Exception('Current subtitle collection not found');
-      }
+      final importedCount = await ref
+          .read(projectCommentRepositoryProvider)
+          .importComments(
+            subtitleCollectionId: widget.subtitleCollectionId,
+            plan: plan,
+          );
 
-      // Extract comments from project data
-      final subtitleCollection = _projectData!['subtitleCollection'] as Map<String, dynamic>;
-      final importLines = subtitleCollection['lines'] as List<dynamic>;
-
-      // Create a simple map by index for direct line-to-line matching
-      final commentByIndex = <int, String>{};
-      final markByIndex = <int, bool>{};
-      final resolvedByIndex = <int, bool>{};
-
-      for (final line in importLines) {
-        final comment = line['comment'] as String?;
-        final index = line['index'] as int?;
-        final marked = line['marked'] as bool? ?? false;
-        final resolved = line['resolved'] as bool? ?? false;
-
-        if (index != null && comment != null && comment.trim().isNotEmpty) {
-          // Ensure Unicode characters are preserved by not performing any text transformations
-          commentByIndex[index] = comment; // Keep original comment as-is
-          markByIndex[index] = marked;
-          resolvedByIndex[index] = resolved;
-        }
-      }
-
-      // Update current collection lines by matching index
-      int importedCount = 0;
-      await isar.writeTxn(() async {
-        for (final currentLine in currentCollection.lines) {
-          final comment = commentByIndex[currentLine.index];
-          final marked = markByIndex[currentLine.index];
-          final resolved = resolvedByIndex[currentLine.index];
-          
-          if (comment != null) {
-            // Debug: Check Unicode preservation before database save
-            final hasUnicode = comment.runes.any((rune) => rune > 127);
-            if (hasUnicode) {
-              print('DEBUG: Importing Unicode comment for line ${currentLine.index}: $comment');
-            }
-            
-            // Assign comment directly without any modifications to preserve Unicode
-            currentLine.comment = comment;
-            // Use the original mark status from the source file
-            currentLine.marked = marked ?? false;
-            // Import resolved status
-            currentLine.resolved = resolved ?? false;
-            importedCount++;
-          }
-        }
-        await isar.subtitleCollections.put(currentCollection);
-      });
-
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
       });
 
-      if (mounted) {
-        Navigator.of(context).pop();
-        SnackbarHelper.showSuccess(context, 'Imported $importedCount comments and updated mark status successfully');
-        widget.onCommentsImported?.call();
-      }
+      Navigator.of(context).pop();
+      SnackbarHelper.showSuccess(
+        context,
+        'Imported $importedCount comments and updated mark status successfully',
+      );
+      widget.onCommentsImported?.call();
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
       });
-      if (mounted) {
-        SnackbarHelper.showError(context, 'Failed to import comments: $e');
-      }
+      SnackbarHelper.showError(context, 'Failed to import comments: $e');
     }
   }
 

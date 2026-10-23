@@ -5,49 +5,144 @@ import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:subtitle_studio/features/waveform/models/waveform_sample.dart';
 import 'package:subtitle_studio/features/waveform/services/zoom_buffer_generator.dart';
+import 'package:subtitle_studio/features/waveform/services/waveform_cache_identity.dart';
+import 'package:subtitle_studio/features/waveform/services/waveform_processing_metrics.dart';
+import 'package:subtitle_studio/features/waveform/services/waveform_acquisition_timings.dart';
+import 'package:subtitle_studio/features/waveform/services/waveform_decode_progress.dart';
+import 'package:subtitle_studio/features/waveform/services/waveform_peak_cache.dart';
+import 'package:subtitle_studio/features/waveform/services/waveform_source_revision.dart';
+import 'package:subtitle_studio/core/file_access/studio_file_identity.dart';
+import 'package:subtitle_studio/features/waveform/services/waveform_cache_coordinator.dart';
+import 'package:subtitle_studio/features/waveform/services/waveform_peak_cache_janitor.dart';
+import 'package:subtitle_studio/features/waveform/services/waveform_ffmpeg_plan.dart';
+import 'package:subtitle_studio/features/waveform/services/waveform_saf_input.dart';
 import 'package:subtitle_studio/utils/ffmpeg_helper.dart';
 import 'package:ffmpeg_kit_flutter_new_min_gpl/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new_min_gpl/ffmpeg_kit_config.dart';
-import 'package:subtitle_studio/database/models/preferences_model.dart';
+import 'package:subtitle_studio/features/waveform/repositories/waveform_preferences_repository.dart';
+
+/// A user-visible waveform failure with a deliberately path-free message.
+/// Do not attach native FFmpeg logs, commands or filesystem exceptions here.
+class WaveformProcessingFailure implements Exception {
+  final String message;
+  const WaveformProcessingFailure(this.message);
+
+  @override
+  String toString() => message;
+}
 
 /// Service for processing audio files into waveform data
 class AudioProcessor {
+  final WaveformPreferencesRepository _preferences;
+  /// Android defaults to bounded peak/tile processing to avoid loading
+  /// hundreds of megabytes of PCM into the Flutter process. Other platforms
+  /// retain the existing eager path; explicit overrides remain available.
+  final bool useTiledZoom;
+  WaveformProcessingMetrics? lastProcessingMetrics;
+  WaveformAcquisitionTimings? _acquisitionTimings;
+  int _requestEpoch = 0;
+  static int _nextTemporaryId = 0;
+  Process? _activeDesktopProcess;
+  int? _activeNativeSessionId;
+
+  /// Cancel only this instance's FFmpeg work, not unrelated media sessions.
+  void cancelActive() {
+    _requestEpoch++;
+    _activeDesktopProcess?.kill();
+    final sessionId = _activeNativeSessionId;
+    if (sessionId != null) {
+      unawaited(FFmpegKit.cancel(sessionId));
+    }
+    _activeNativeSessionId = null;
+  }
+
+  AudioProcessor(
+    this._preferences, {
+    bool? useTiledZoom,
+  }) : useTiledZoom = useTiledZoom ??
+           (Platform.isAndroid ||
+               const bool.fromEnvironment(
+                 'MS_ONE_TILED_WAVEFORM', defaultValue: false));
+
   /// Process audio file and generate waveform with zoom levels
   /// If subtitleCollectionId is provided, will check for cached data and save new data
   /// If audioTrackId is provided, will extract that specific audio track
   Future<WaveformBuffer> processAudioFile(
     String audioFilePath, {
     Function(double)? onProgress,
+    void Function(Duration)? onDecodedAudioTime,
     int? subtitleCollectionId,
     String? audioTrackId,
   }) async {
+    cancelActive();
+    final epoch = _requestEpoch;
+    lastProcessingMetrics = null;
+    _acquisitionTimings = null;
+    final stopwatch = Stopwatch()..start();
     try {
       if (kDebugMode) {
-        print('AudioProcessor: Starting audio processing for: $audioFilePath');
+        print('AudioProcessor: Starting audio processing');
       }
 
       WaveformData waveformData;
 
+      // The experimental renderer uses a compact, source-scoped peak cache.
+      // PCM extraction still writes a temporary raw file, but it is reduced
+      // in bounded chunks and deleted without ever loading full PCM bytes.
+      if (useTiledZoom) {
+        waveformData = await _loadOrBuildPeakData(
+          audioFilePath,
+          subtitleCollectionId: subtitleCollectionId,
+          audioTrackId: audioTrackId,
+          onProgress: onProgress,
+          onDecodedAudioTime: onDecodedAudioTime,
+        );
+      } else if (subtitleCollectionId != null) {
       // Check for cached waveform data if subtitle collection ID is provided
-      if (subtitleCollectionId != null) {
-        final cache = await PreferencesModel.getWaveformCache(subtitleCollectionId);
+        final temporaryDirectory = await getTemporaryDirectory();
+        final expectedPath = await WaveformCacheIdentity.pcmPath(
+          temporaryDirectory: temporaryDirectory.path,
+          subtitleCollectionId: subtitleCollectionId,
+          sourcePath: audioFilePath,
+          audioTrackId: audioTrackId,
+        );
+        final cache = await _preferences.getWaveformCache(
+          subtitleCollectionId,
+        );
         if (cache != null) {
-          final pcmPath = cache['pcmPath'] as String;
+          final pcmPath = cache.pcmPath;
           final pcmFile = File(pcmPath);
           
-          if (await pcmFile.exists()) {
+          final existingBytes = await pcmFile.exists()
+              ? await pcmFile.length() : -1;
+          if (WaveformCacheIdentity.metadataValid(
+            actualPath: pcmPath,
+            expectedPath: expectedPath,
+            byteLength: existingBytes,
+            totalSamples: cache.totalSamples,
+            channels: cache.channels,
+            sampleRate: cache.sampleRate,
+          )) {
             if (kDebugMode) {
-              print('AudioProcessor: Loading from cached PCM file: $pcmPath');
+              print('AudioProcessor: Loading cached PCM data');
             }
             
             // Load from cached PCM
             onProgress?.call(0.1);
+            final cacheWatch = Stopwatch()..start();
             waveformData = await _loadFromCachedPCM(
               pcmPath,
-              cache['sampleRate'] as int,
-              cache['totalSamples'] as int,
-              cache['channels'] as int,
+              cache.sampleRate,
+              cache.totalSamples,
+              cache.channels,
             );
+            if (epoch == _requestEpoch) {
+              _acquisitionTimings = WaveformAcquisitionTimings(
+                mode: WaveformAcquisitionMode.eagerPcmCache,
+                cacheLoad: cacheWatch.elapsed,
+                pcmBytes: existingBytes,
+              );
+            }
             onProgress?.call(0.2);
             
             if (kDebugMode) {
@@ -58,14 +153,22 @@ class AudioProcessor {
               print('AudioProcessor: Cached PCM file not found, will regenerate');
             }
             // Cache is invalid, clear it
-            await PreferencesModel.clearWaveformCache(subtitleCollectionId);
+            await _preferences.clearWaveformCache(subtitleCollectionId);
             
             // Extract and cache new PCM
-            waveformData = await _extractAndCachePCM(audioFilePath, subtitleCollectionId, onProgress, audioTrackId);
+            waveformData = await _extractAndCachePCM(
+              audioFilePath, subtitleCollectionId, onProgress, audioTrackId,
+              expectedPath,
+              onDecodedAudioTime: onDecodedAudioTime,
+            );
           }
         } else {
           // No cache exists, extract and save
-          waveformData = await _extractAndCachePCM(audioFilePath, subtitleCollectionId, onProgress, audioTrackId);
+          waveformData = await _extractAndCachePCM(
+              audioFilePath, subtitleCollectionId, onProgress, audioTrackId,
+              expectedPath,
+              onDecodedAudioTime: onDecodedAudioTime,
+            );
         }
       } else {
         // No subtitle collection ID provided, process without caching
@@ -74,18 +177,32 @@ class AudioProcessor {
         }
         
         onProgress?.call(0.05);
-        waveformData = await _extractAudioToPCM(audioFilePath, audioTrackId: audioTrackId);
+        waveformData = await _extractAudioToPCM(
+          audioFilePath,
+          audioTrackId: audioTrackId,
+          onDecodedAudioTime: onDecodedAudioTime,
+        );
         onProgress?.call(0.15);
       }
 
+      if (epoch != _requestEpoch) {
+        throw StateError('Waveform load was cancelled.');
+      }
+      final sourceMicroseconds = stopwatch.elapsedMicroseconds;
       // Step 2: Downsample (20% of total work)
       if (kDebugMode) print('AudioProcessor: Step 2 - Downsampling...');
-      final processedData = await _downsampleAudioAsync(waveformData);
+      final processedData = useTiledZoom
+          ? waveformData // Already reduced in bounded PCM chunks.
+          : await _downsampleAudioAsync(waveformData);
       if (kDebugMode) print('AudioProcessor: Downsampling complete');
       onProgress?.call(0.35);
 
+      final downsampleMicroseconds = stopwatch.elapsedMicroseconds;
       // Step 3: Generate zoom levels (60% of total work)
-      if (kDebugMode) print('AudioProcessor: Step 3 - Generating zoom levels...');
+      if (kDebugMode) {
+        print('AudioProcessor: Step 3 - ' +
+            (useTiledZoom ? 'Generating zoom metadata...' : 'Generating zoom levels...'));
+      }
       final zoomLevels = await _generateZoomLevelsInIsolate(
         processedData, 
         (zoomProgress) {
@@ -99,6 +216,7 @@ class AudioProcessor {
       if (kDebugMode) print('AudioProcessor: Zoom levels complete');
       onProgress?.call(0.95);
 
+      final zoomMicroseconds = stopwatch.elapsedMicroseconds;
       // Step 4: Create buffer (5% of total work)
       if (kDebugMode) print('AudioProcessor: Step 4 - Creating buffer...');
       final buffer = WaveformBuffer(
@@ -107,15 +225,190 @@ class AudioProcessor {
         defaultZoomIndex: zoomLevels.length ~/ 2,
       );
 
-      if (kDebugMode) print('AudioProcessor: Processing complete!');
+      stopwatch.stop();
+      final metrics = WaveformProcessingMetrics(
+        sourceAcquisition: Duration(microseconds: sourceMicroseconds),
+        downsampling: Duration(
+            microseconds: downsampleMicroseconds - sourceMicroseconds),
+        zoomGeneration: Duration(
+            microseconds: zoomMicroseconds - downsampleMicroseconds),
+        total: stopwatch.elapsed,
+        decodedSamples: waveformData.totalSamples * waveformData.channels,
+        displaySamples: processedData.totalSamples * processedData.channels,
+        zoomPixels: zoomLevels.fold<int>(0,
+            (count, level) => count + level.materializedPixels),
+        acquisitionDetails: _acquisitionTimings,
+      );
+      if (epoch != _requestEpoch) {
+        throw StateError('Waveform load was cancelled.');
+      }
+      lastProcessingMetrics = metrics;
+      if (kDebugMode) {
+        print('AudioProcessor: Processing complete: ' + metrics.toString());
+      }
+      if (epoch != _requestEpoch) {
+        throw StateError('Waveform load was cancelled.');
+      }
       onProgress?.call(1.0);
       return buffer;
-    } catch (e) {
+    } catch (error) {
       if (kDebugMode) {
-        print('AudioProcessor: Error processing audio: $e');
+        print('AudioProcessor: Audio processing failed');
       }
-      rethrow;
+      if (epoch != _requestEpoch) {
+        throw StateError('Waveform load was cancelled.');
+      }
+      if (error is WaveformProcessingFailure) rethrow;
+      // WaveformSafInput produces this fixed, path-free message when an
+      // Android document grant is no longer available. Retain the recovery
+      // advice but never surface arbitrary filesystem exception details.
+      if (error is FileSystemException &&
+          error.path == null &&
+          error.message == WaveformSafInput.documentAccessMessage) {
+        throw WaveformProcessingFailure(error.message);
+      }
+      throw const WaveformProcessingFailure(
+        'Unable to load waveform audio. Check media access and try again.',
+      );
     }
+  }
+
+
+  /// Compact peak cache is intentionally independent of the legacy PCM
+  /// Isar metadata; no schema migration or media-cache reinterpretation.
+  Future<WaveformData> _loadOrBuildPeakData(
+    String sourcePath, {
+    required int? subtitleCollectionId,
+    required String? audioTrackId,
+    required Function(double)? onProgress,
+    required void Function(Duration)? onDecodedAudioTime,
+  }) async {
+    final requestEpoch = _requestEpoch;
+    void checkActive() {
+      if (requestEpoch != _requestEpoch) {
+        throw StateError('Waveform peak request was cancelled.');
+      }
+    }
+
+    final temp = await getTemporaryDirectory();
+    checkActive();
+    final isSaf = StudioFileIdentity.fromLocator(sourcePath).isAndroidDocument;
+    final revision = isSaf
+        ? await WaveformSourceRevision.forSafUri(sourcePath)
+        : null;
+    checkActive();
+    final key = await WaveformCacheIdentity.pcmPath(
+      temporaryDirectory: temp.path,
+      subtitleCollectionId: subtitleCollectionId ?? 0,
+      sourcePath: sourcePath,
+      audioTrackId: audioTrackId,
+      sourceRevision: revision,
+    );
+    checkActive();
+    final cachePath = key.replaceFirst(RegExp(r'\.raw$'), '.pk1');
+    final cacheFile = File(cachePath);
+    final persistent = !isSaf || revision != null;
+
+    // Coordinate even across distinct AudioProcessor instances in this
+    // isolate; jobs for different audio files are not needlessly serialized.
+    return WaveformCacheCoordinator.shared.runExclusive(cachePath, () async {
+      try {
+        checkActive(); // The request may have been superseded while queued.
+        // Expired caches and abandoned staging files are pruned without
+        // touching this destination or unrelated media/legacy PCM files.
+        await const WaveformPeakCacheJanitor().clean(
+          temp,
+          protectedPaths: {cachePath},
+        );
+        checkActive();
+        if (!persistent && await cacheFile.exists()) {
+          // SAF documents have no reliable source revision; never reuse a
+          // previous request's compact output, including interrupted builds.
+          await cacheFile.delete();
+        }
+        if (persistent && await cacheFile.exists()) {
+          try {
+            onProgress?.call(0.1);
+            final cacheWatch = Stopwatch()..start();
+            final cached = await WaveformPeakCache.load(cacheFile);
+            checkActive();
+            final cacheBytes = await cacheFile.length();
+            checkActive();
+            _acquisitionTimings = WaveformAcquisitionTimings(
+              mode: WaveformAcquisitionMode.compactPeakCache,
+              cacheLoad: cacheWatch.elapsed,
+              pcmBytes: cacheBytes,
+            );
+            onProgress?.call(0.2);
+            return cached;
+          } on FileSystemException {
+            // Regenerate if the recorded cache is no longer accessible.
+          } on FormatException {
+            // Reject truncated/corrupted or mismatched peak caches.
+          }
+          checkActive();
+          if (await cacheFile.exists()) await cacheFile.delete();
+        }
+
+        // Existing projects may have a very large legacy PCM cache (the
+        // reported Android device held ~660 MB). Reduce that file *as a stream*
+        // instead of readAsBytes(), and avoid decoding the same movie again.
+        if (!isSaf && subtitleCollectionId != null) {
+          final legacy = await _preferences.getWaveformCache(subtitleCollectionId);
+          checkActive();
+          if (legacy != null &&
+              legacy.pcmPath == key &&
+              legacy.channels == 1 &&
+              legacy.sampleRate == WaveformPeakCache.inputRate &&
+              legacy.totalSamples > 0) {
+            final pcm = File(legacy.pcmPath);
+            if (await pcm.exists() &&
+                await pcm.length() == legacy.totalSamples * 2) {
+              checkActive();
+              onProgress?.call(0.1);
+              final reductionWatch = Stopwatch()..start();
+              final reduced = await WaveformPeakCache.build(
+                pcmFile: pcm,
+                cacheFile: cacheFile,
+                isCancelled: () => requestEpoch != _requestEpoch,
+              );
+              checkActive();
+              _acquisitionTimings = WaveformAcquisitionTimings(
+                mode: WaveformAcquisitionMode.legacyPcmConverted,
+                peakReduction: reductionWatch.elapsed,
+                pcmBytes: legacy.totalSamples * 2,
+              );
+              onProgress?.call(0.2);
+              return reduced;
+            }
+          }
+        }
+
+        checkActive();
+        final output = await _extractAudioToPCM(
+          sourcePath,
+          audioTrackId: audioTrackId,
+          reduceToPeaks: true,
+          peakCachePath: cachePath,
+          onDecodedAudioTime: onDecodedAudioTime,
+        );
+        checkActive();
+        onProgress?.call(0.2);
+        // SAF content can change without exposing a version; do not retain
+        // this cache beyond the single successful decode.
+        return output;
+      } finally {
+        if (!persistent) {
+          // Unversioned SAF decoding must never leave a reusable cache.
+          // Keep this inside the source-scoped lock to avoid racing a new job.
+          try {
+            if (await cacheFile.exists()) await cacheFile.delete();
+          } on FileSystemException {
+            // An inaccessible transient cache is not a valid future hit.
+          }
+        }
+      }
+    });
   }
 
   /// Extract audio and cache the PCM file for future use
@@ -124,6 +417,8 @@ class AudioProcessor {
     int subtitleCollectionId,
     Function(double)? onProgress,
     String? audioTrackId,
+    String cacheOutputPath,
+    {void Function(Duration)? onDecodedAudioTime}
   ) async {
     if (Platform.isWindows || Platform.isLinux) {
       await _checkFFmpegAvailability();
@@ -136,6 +431,8 @@ class AudioProcessor {
       audioFilePath, 
       cacheForCollection: subtitleCollectionId,
       audioTrackId: audioTrackId,
+      cacheOutputPath: cacheOutputPath,
+      onDecodedAudioTime: onDecodedAudioTime,
     );
     
     onProgress?.call(0.15);
@@ -151,10 +448,12 @@ class AudioProcessor {
   ) async {
     final file = File(pcmPath);
     final bytes = await file.readAsBytes();
-    
-    // Convert bytes to Int16List
-    final buffer = bytes.buffer;
-    final samples = Int16List.view(buffer);
+    if (channels != 1 || sampleRate != 44100 ||
+        bytes.isEmpty || bytes.length.isOdd ||
+        bytes.length != totalSamples * 2) {
+      throw const FormatException('Invalid cached PCM format/length.');
+    }
+    final samples = _decodePcm16Le(bytes);
     
     if (kDebugMode) {
       print('AudioProcessor: Loaded ${samples.length} samples from cache');
@@ -168,30 +467,18 @@ class AudioProcessor {
     );
   }
 
-  /// Generate zoom levels in a background isolate
+  /// Prepare zoom data on the UI isolate (native extraction is separate).
+  /// Experimental tiled mode creates metadata only: no full-track
+  /// WaveformSample buffers or extra square-root scaling pass.
   Future<List<ZoomLevel>> _generateZoomLevelsInIsolate(
     WaveformData data,
     Function(double)? onProgress,
   ) async {
-    // For now, run on main isolate to avoid complexity
-    // Can be moved to isolate later if performance is an issue
-    final zoomGenerator = ZoomBufferGenerator();
-    
-    // Generate zoom levels with progress reporting (0.0 to 0.9 of this step)
-    final zoomLevels = await zoomGenerator.generateZoomLevels(
+    return ZoomBufferGenerator(_preferences).prepareZoomLevels(
       data,
-      onProgress: (levelProgress) {
-        // This step represents 90% of zoom generation work
-        onProgress?.call(levelProgress * 0.9);
-      },
+      tiled: useTiledZoom,
+      onProgress: onProgress,
     );
-    
-    // Apply square root scaling to make quieter parts more visible (0.9 to 1.0 of this step)
-    onProgress?.call(0.95);
-    final scaledLevels = zoomGenerator.applyScaling(zoomLevels);
-    onProgress?.call(1.0);
-    
-    return scaledLevels;
   }
 
   /// Downsample audio asynchronously
@@ -200,25 +487,14 @@ class AudioProcessor {
     return _downsampleAudio(data);
   }
 
-  /// Convert SAF URI to FFmpeg-compatible parameter for reading (Android only)
-  Future<String> _getSafReadableParameter(String filePath) async {
-    if (Platform.isAndroid && filePath.startsWith('content://')) {
-      try {
-        final safParameter = await FFmpegKitConfig.getSafParameterForRead(filePath);
-        if (safParameter != null) {
-          if (kDebugMode) {
-            print('AudioProcessor: Converted SAF URI to FFmpeg parameter: $safParameter');
-          }
-          return safParameter;
-        }
-      } catch (e) {
-        if (kDebugMode) {
-          print('AudioProcessor: Error converting SAF URI: $e, using original path');
-        }
-      }
-    }
-    return filePath;
-  }
+  /// Use FFmpegKit's Android document grant; never pass an unresolved
+  /// content URI to FFmpeg as if it were an ordinary filesystem path.
+  Future<String> _getSafReadableParameter(String filePath) =>
+      WaveformSafInput.resolve(
+        filePath,
+        android: Platform.isAndroid,
+        safParameterForRead: FFmpegKitConfig.getSafParameterForRead,
+      );
 
   /// Check if FFmpeg is available on the system
   Future<void> _checkFFmpegAvailability() async {
@@ -231,14 +507,13 @@ class AudioProcessor {
       if (kDebugMode) {
         print('AudioProcessor: FFmpeg is available');
       }
-    } catch (e) {
-      throw Exception(
+    } catch (_) {
+      throw const WaveformProcessingFailure(
         'FFmpeg is not available on this system. '
         'Please install FFmpeg and ensure it is in your PATH.\n\n'
         'Installation instructions:\n'
         '• Windows: Download from ffmpeg.org or use: winget install ffmpeg\n'
-        '• Linux: sudo apt install ffmpeg (Ubuntu/Debian)\n\n'
-        'Error: $e'
+        '• Linux: sudo apt install ffmpeg (Ubuntu/Debian)'
       );
     }
   }
@@ -250,16 +525,25 @@ class AudioProcessor {
     String audioFilePath, {
     int? cacheForCollection,
     String? audioTrackId,
+    String? cacheOutputPath,
+    bool reduceToPeaks = false,
+    String? peakCachePath,
+    void Function(Duration)? onDecodedAudioTime,
   }) async {
+    String? generatedOutputPath;
+    var ffmpegDuration = Duration.zero;
     try {
+      final extractionEpoch = _requestEpoch;
       // Get temporary directory
       final tempDir = await getTemporaryDirectory();
-      final outputPath = cacheForCollection != null
-          ? '${tempDir.path}/waveform_audio_$cacheForCollection.raw' // Persistent name for caching
-          : '${tempDir.path}/waveform_audio_${DateTime.now().millisecondsSinceEpoch}.raw'; // Temporary name
+      final outputPath = cacheOutputPath ??
+          (tempDir.path + Platform.pathSeparator + 'waveform_temp_' +
+              DateTime.now().microsecondsSinceEpoch.toString() + '_' +
+              (++_nextTemporaryId).toString() + '.raw');
+      generatedOutputPath = outputPath;
 
       if (kDebugMode) {
-        print('AudioProcessor: Extracting audio to PCM: $outputPath');
+        print('AudioProcessor: Extracting audio to PCM');
         if (cacheForCollection != null) {
           print('AudioProcessor: Will cache for collection ID: $cacheForCollection');
         }
@@ -281,141 +565,109 @@ class AudioProcessor {
 
       // Execute FFmpeg command based on platform
       if (Platform.isWindows || Platform.isLinux) {
-        // Desktop platforms: Use system FFmpeg via Process.run
-        bool useTrackSelection = audioTrackId != null && 
-                                 audioTrackId != 'auto' && 
-                                 audioTrackId.isNotEmpty;
-        int? trackIndex;
-        
-        if (useTrackSelection) {
-          final parsedId = int.tryParse(audioTrackId);
-          if (parsedId != null) {
-            // Media kit may use 1-based indexing, FFmpeg uses 0-based
-            // Try subtracting 1 if the ID seems to be 1-based (>= 1)
-            trackIndex = parsedId >= 1 ? parsedId - 1 : parsedId;
-            useTrackSelection = trackIndex >= 0;
-            
-            if (kDebugMode) {
-              print('AudioProcessor: Media kit track ID "$audioTrackId" -> FFmpeg index $trackIndex');
-            }
-          } else {
-            useTrackSelection = false;
-          }
+        final plan = WaveformFfmpegPlan(
+          inputPath: normalizedPath,
+          outputPath: outputPath,
+          selectedTrackId: audioTrackId,
+          pcmSampleRate: reduceToPeaks ? WaveformPeakCache.outputRate : 44100,
+        );
+        final args = plan.arguments();
+        if (kDebugMode) {
+          print('AudioProcessor: Audio stream map: ' +
+              plan.selectedStreamMap);
         }
-        
-        final args = [
-          '-y',
-          '-i', normalizedPath,
-        ];
-        
-        // Add audio track selection if specified
-        if (useTrackSelection && trackIndex != null) {
-          args.addAll(['-map', '0:a:$trackIndex']);
-          if (kDebugMode) {
-            print('AudioProcessor: Attempting to select audio track index $trackIndex');
-          }
-        }
-        
-        args.addAll([
-          '-ac', '1', // Mono output
-          '-ar', '44100',
-          '-f', 's16le',
-          '-acodec', 'pcm_s16le',
-          outputPath,
-        ]);
-        
-        var result = await Process.run('ffmpeg', args);
 
-        // If track selection failed, retry without it
-        if (result.exitCode != 0 && useTrackSelection) {
-          if (kDebugMode) {
-            print('AudioProcessor: Track selection failed, retrying with default audio track');
-          }
-          
-          // Rebuild args without track selection
-          final retryArgs = [
-            '-y',
-            '-i', normalizedPath,
-            '-ac', '1',
-            '-ar', '44100',
-            '-f', 's16le',
-            '-acodec', 'pcm_s16le',
-            outputPath,
-          ];
-          
-          result = await Process.run('ffmpeg', retryArgs);
+        final ffmpegWatch = Stopwatch()..start();
+        final process = await Process.start('ffmpeg', args);
+        _activeDesktopProcess = process;
+        if (extractionEpoch != _requestEpoch) {
+          process.kill();
         }
-        
-        if (result.exitCode != 0) {
-          throw Exception('FFmpeg failed with exit code ${result.exitCode}: ${result.stderr}');
+        final stdoutDone = process.stdout.drain<void>();
+        // Drain both streams concurrently so FFmpeg cannot block on a full
+        // pipe. Native stderr can contain absolute paths and media metadata.
+        final stderrDone = process.stderr.drain<void>();
+        final exitCode = await process.exitCode;
+        await stdoutDone;
+        await stderrDone;
+        if (identical(_activeDesktopProcess, process)) {
+          _activeDesktopProcess = null;
         }
+        if (extractionEpoch != _requestEpoch) {
+          throw StateError('Waveform extraction was cancelled.');
+        }
+        if (exitCode != 0) {
+          throw WaveformProcessingFailure(
+            'FFmpeg audio extraction failed (exit code $exitCode). '
+            'Check the selected audio track and file access.',
+          );
+        }
+        ffmpegDuration = ffmpegWatch.elapsed;
       } else if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
         // Mobile/macOS platforms: Use FFmpegKit
         final inputPath = await _getSafReadableParameter(normalizedPath);
         
-        bool useTrackSelection = audioTrackId != null && 
-                                 audioTrackId != 'auto' && 
-                                 audioTrackId.isNotEmpty;
-        int? trackIndex;
-        
-        if (useTrackSelection) {
-          final parsedId = int.tryParse(audioTrackId);
-          if (parsedId != null) {
-            // Media kit may use 1-based indexing, FFmpeg uses 0-based
-            // Try subtracting 1 if the ID seems to be 1-based (>= 1)
-            trackIndex = parsedId >= 1 ? parsedId - 1 : parsedId;
-            useTrackSelection = trackIndex >= 0;
-            
-            if (kDebugMode) {
-              print('AudioProcessor: Media kit track ID "$audioTrackId" -> FFmpeg index $trackIndex');
-            }
-          } else {
-            useTrackSelection = false;
-          }
-        }
-        
-        // Build command with optional audio track selection
-        String command = '-y -i "$inputPath"';
-        
-        if (useTrackSelection && trackIndex != null) {
-          command += ' -map 0:a:$trackIndex';
-          if (kDebugMode) {
-            print('AudioProcessor: Attempting to select audio track index $trackIndex');
-          }
-        }
-        
-        command += ' -ac 1 -ar 44100 -f s16le -acodec pcm_s16le "$outputPath"';
-        
+        final plan = WaveformFfmpegPlan(
+          inputPath: inputPath,
+          outputPath: outputPath,
+          selectedTrackId: audioTrackId,
+          pcmSampleRate: reduceToPeaks ? WaveformPeakCache.outputRate : 44100,
+        );
+        final command = plan.ffmpegKitCommand();
+
         if (kDebugMode) {
-          print('AudioProcessor: FFmpegKit command: $command');
+          print('AudioProcessor: Starting native FFmpegKit extraction');
         }
         
-        var session = await FFmpegKit.execute(command);
-        var returnCode = await session.getReturnCode();
-        
-        // If track selection failed, retry without it (use default audio track)
-        if ((returnCode == null || !returnCode.isValueSuccess()) && useTrackSelection) {
-          if (kDebugMode) {
-            print('AudioProcessor: Track selection failed, retrying with default audio track');
-          }
-          
-          // Retry without track selection
-          command = '-y -i "$inputPath" -ac 1 -ar 44100 -f s16le -acodec pcm_s16le "$outputPath"';
-          session = await FFmpegKit.execute(command);
-          returnCode = await session.getReturnCode();
+        final ffmpegWatch = Stopwatch()..start();
+        final completed = Completer<void>();
+        final decodedProgress = WaveformDecodeProgress();
+        final session = await FFmpegKit.executeAsync(
+          command,
+          (_) {
+            decodedProgress.close();
+            if (!completed.isCompleted) completed.complete();
+          },
+          null,
+          (statistics) {
+            // Session-local native FFmpeg progress. Never display an
+            // outgoing track's late callback over the newly selected track.
+            if (extractionEpoch != _requestEpoch) return;
+            final accepted = decodedProgress.accept(statistics.getTime());
+            if (accepted != null) onDecodedAudioTime?.call(accepted);
+          },
+        );
+        _activeNativeSessionId = session.getSessionId();
+        if (extractionEpoch != _requestEpoch) {
+          await FFmpegKit.cancel(session.getSessionId());
         }
-        
+        await completed.future;
+        if (_activeNativeSessionId == session.getSessionId()) {
+          _activeNativeSessionId = null;
+        }
+        if (extractionEpoch != _requestEpoch) {
+          throw StateError('Waveform extraction was cancelled.');
+        }
+        final returnCode = await session.getReturnCode();
+
+        // No implicit retry: wrong-language track would corrupt the cache.
         if (returnCode == null || !returnCode.isValueSuccess()) {
-          final logs = await session.getLogs();
-          final logMessages = logs.map((log) => log.getMessage()).join('\n');
-          throw Exception('FFmpegKit failed with code ${returnCode?.getValue()}: $logMessages');
+          throw WaveformProcessingFailure(
+            'FFmpegKit audio extraction failed '
+            '(return code ${returnCode?.getValue() ?? 'unknown'}). '
+            'Check the selected audio track and file access.',
+          );
         }
+        ffmpegDuration = ffmpegWatch.elapsed;
       } else {
         throw UnsupportedError(
           'Waveform generation is not supported on ${Platform.operatingSystem}.'
         );
       }
 
+      if (extractionEpoch != _requestEpoch) {
+        throw StateError('Waveform extraction was cancelled.');
+      }
       if (kDebugMode) {
         print('AudioProcessor: FFmpeg extraction successful');
       }
@@ -423,17 +675,44 @@ class AudioProcessor {
       // Read raw PCM data
       final file = File(outputPath);
       if (!await file.exists()) {
-        throw Exception('FFmpeg failed to create output file');
+        throw const WaveformProcessingFailure(
+          'FFmpeg did not create waveform audio output.',
+        );
       }
 
+      if (reduceToPeaks) {
+        try {
+          if (peakCachePath == null) {
+            throw ArgumentError('Missing compact peak cache path.');
+          }
+          final pcmBytes = await file.length();
+          final reductionWatch = Stopwatch()..start();
+          final reduced = await WaveformPeakCache.build(
+            pcmFile: file, cacheFile: File(peakCachePath),
+            inputAlreadyReduced: true,
+            isCancelled: () => extractionEpoch != _requestEpoch);
+          if (extractionEpoch == _requestEpoch) {
+            _acquisitionTimings = WaveformAcquisitionTimings(
+              mode: WaveformAcquisitionMode.ffmpegCompactBuild,
+              ffmpeg: ffmpegDuration,
+              peakReduction: reductionWatch.elapsed,
+              pcmBytes: pcmBytes,
+            );
+          }
+          return reduced;
+        } finally {
+          if (await file.exists()) await file.delete();
+        }
+      }
       final bytes = await file.readAsBytes();
       if (kDebugMode) {
         print('AudioProcessor: Read ${bytes.length} bytes of PCM data');
       }
 
-      // Convert bytes to Int16List
-      final buffer = bytes.buffer;
-      final samples = Int16List.view(buffer);
+      if (bytes.isEmpty || bytes.length.isOdd) {
+        throw const FormatException('Truncated or empty PCM extraction.');
+      }
+      final samples = _decodePcm16Le(bytes);
 
       // Use mono (1 channel)
       const channels = 1;
@@ -442,7 +721,7 @@ class AudioProcessor {
 
       // Save cache information if requested
       if (cacheForCollection != null) {
-        await PreferencesModel.saveWaveformCache(
+        await _preferences.saveWaveformCache(
           subtitleCollectionId: cacheForCollection,
           pcmPath: outputPath,
           sampleRate: sampleRate,
@@ -458,6 +737,13 @@ class AudioProcessor {
         await file.delete();
       }
 
+      if (extractionEpoch == _requestEpoch) {
+        _acquisitionTimings = WaveformAcquisitionTimings(
+          mode: WaveformAcquisitionMode.eagerFfmpeg,
+          ffmpeg: ffmpegDuration,
+          pcmBytes: bytes.length,
+        );
+      }
       if (kDebugMode) {
         print('AudioProcessor: Successfully extracted ${samples.length} samples (mono)');
       }
@@ -468,12 +754,36 @@ class AudioProcessor {
         totalSamples: channelSamples[0].length,
         rawSamples: channelSamples,
       );
-    } catch (e) {
+    } catch (_) {
+      // Never preserve a half-written temp PCM file on failed extraction,
+      // rejected track selection, cache corruption or user cancellation.
+      if (generatedOutputPath != null &&
+          (reduceToPeaks || cacheOutputPath == null)) {
+        final output = File(generatedOutputPath);
+        if (await output.exists()) await output.delete();
+      }
       if (kDebugMode) {
-        print('AudioProcessor: Error extracting audio: $e');
+        print('AudioProcessor: Audio extraction failed');
       }
       rethrow;
     }
+  }
+
+  /// Decode FFmpeg's little-endian signed 16-bit PCM on any host.
+  static Int16List _decodePcm16Le(Uint8List bytes) {
+    if (bytes.length.isOdd) {
+      throw const FormatException('Odd number of PCM bytes.');
+    }
+    if (Endian.host == Endian.little) {
+      return Int16List.view(
+          bytes.buffer, bytes.offsetInBytes, bytes.lengthInBytes ~/ 2);
+    }
+    final view = ByteData.sublistView(bytes);
+    final samples = Int16List(bytes.lengthInBytes ~/ 2);
+    for (var i = 0; i < samples.length; i++) {
+      samples[i] = view.getInt16(i * 2, Endian.little);
+    }
+    return samples;
   }
 
   /// Downsample audio to reduce data size (~3000 samples/sec max)
@@ -538,6 +848,6 @@ class AudioProcessor {
 
   /// Cleanup resources
   void dispose() {
-    // Cleanup if needed
+    cancelActive();
   }
 }

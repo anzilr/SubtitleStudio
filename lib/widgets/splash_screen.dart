@@ -5,7 +5,10 @@ import 'dart:ui'; // Import for BackdropFilter
 import 'package:subtitle_studio/utils/app_info.dart'; // Add this import
 
 class SvgSplashScreen extends StatefulWidget {
-  const SvgSplashScreen({super.key});
+  const SvgSplashScreen({super.key, this.onBackgroundReady});
+
+  /// Called after the background has rendered, or if loading fails.
+  final VoidCallback? onBackgroundReady;
 
   @override
   State<SvgSplashScreen> createState() => _SvgSplashScreenState();
@@ -15,7 +18,7 @@ class _SvgSplashScreenState extends State<SvgSplashScreen>
     with TickerProviderStateMixin {
   late AnimationController _controller;
   double _opacity = 0.0;
-  bool _areImagesPreloaded = false;
+  bool _backgroundReadyNotified = false;
 
   @override
   void initState() {
@@ -35,24 +38,12 @@ class _SvgSplashScreenState extends State<SvgSplashScreen>
     });
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_areImagesPreloaded) {
-      // Start preloading but don't wait for it to complete
-      _preloadImages();
-      _areImagesPreloaded = true;
-    }
-  }
-
-  Future<void> _preloadImages() async {
-    // Preload background image in background without blocking UI
-    try {
-      precacheImage(const AssetImage('assets/msone_bg.jpg'), context);
-    } catch (e) {
-      // Handle potential image loading errors gracefully
-      debugPrint('Error preloading background image: $e');
-    }
+  void _notifyBackgroundReady() {
+    if (_backgroundReadyNotified) return;
+    _backgroundReadyNotified = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.onBackgroundReady?.call();
+    });
   }
 
   @override
@@ -72,7 +63,7 @@ class _SvgSplashScreenState extends State<SvgSplashScreen>
           height: 5,
           width: width,
           decoration: BoxDecoration(
-            color: isActive ? const Color(0xFF2196F3) : const Color(0xFFFFFFFF), // Use const colors
+            color: isActive ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurfaceVariant, // Use const colors
             borderRadius: BorderRadius.circular(8),
           ),
         );
@@ -90,24 +81,25 @@ class _SvgSplashScreenState extends State<SvgSplashScreen>
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Background image with immediate loading and caching
+          // The bundled WebP is already display-sized. Decode it once and
+          // notify the route after the first frame has actually been painted.
           Positioned.fill(
             child: Image.asset(
-              'assets/msone_bg.jpg',
+              'assets/msone_bg.webp',
               fit: BoxFit.cover,
-              cacheWidth: (MediaQuery.of(context).size.width * MediaQuery.of(context).devicePixelRatio).round(),
-              cacheHeight: (MediaQuery.of(context).size.height * MediaQuery.of(context).devicePixelRatio).round(),
               frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-                // Show image immediately when available, with smooth fade-in
-                return AnimatedOpacity(
-                  opacity: frame == null ? 0.0 : 1.0,
-                  duration: const Duration(milliseconds: 0), // Even faster fade-in
-                  child: child,
-                );
+                if (wasSynchronouslyLoaded || frame != null) {
+                  _notifyBackgroundReady();
+                }
+                return child;
               },
               errorBuilder: (context, error, stackTrace) {
-                // Fallback to solid background if image fails
-                return Container(color: Colors.black);
+                // Do not hold startup indefinitely when an asset is invalid.
+                debugPrint(
+                  'Splash background unavailable: ${error.runtimeType}',
+                );
+                _notifyBackgroundReady();
+                return const ColoredBox(color: Colors.black);
               },
             ),
           ),

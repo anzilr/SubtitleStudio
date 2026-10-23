@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/widgets/video_player_widget.dart'; // For Subtitle
 import 'package:subtitle_studio/utils/subtitle_parser.dart'; // For SimpleSubtitleLine
-import '../screen_edit.dart'; // For SubtitleEntry
+import 'package:subtitle_studio/screens/edit/models/subtitle_entry.dart';
+import 'package:subtitle_studio/screens/edit/services/editor_secondary_subtitle_service.dart';
 
 /// Immutable state model for the EditScreen
 /// 
@@ -32,6 +33,7 @@ class EditState extends Equatable {
   final List<Subtitle> secondarySubtitles;
   final List<SimpleSubtitleLine> originalSecondarySubtitles;
   final bool showSecondarySubtitles;
+  final EditorSecondarySubtitleSource secondarySubtitleSource;
   
   // UI state - highlighting and navigation
   final int? highlightedIndex;
@@ -76,6 +78,7 @@ class EditState extends Equatable {
     this.secondarySubtitles = const [],
     this.originalSecondarySubtitles = const [],
     this.showSecondarySubtitles = true,
+    this.secondarySubtitleSource = EditorSecondarySubtitleSource.none,
     this.highlightedIndex,
     this.expandedCards = const {},
     this.isSelectionMode = false,
@@ -111,19 +114,24 @@ class EditState extends Equatable {
     bool? isLoading,
     bool? isInitialized,
     String? errorMessage,
+    bool clearErrorMessage = false,
     String? selectedVideoPath,
+    bool clearSelectedVideoPath = false,
     bool? isVideoVisible,
     bool? isVideoLoaded,
     Duration? lastVideoPosition,
     List<Subtitle>? secondarySubtitles,
     List<SimpleSubtitleLine>? originalSecondarySubtitles,
     bool? showSecondarySubtitles,
+    EditorSecondarySubtitleSource? secondarySubtitleSource,
     int? highlightedIndex,
+    bool clearHighlightedIndex = false,
     Map<int, bool>? expandedCards,
     bool? isSelectionMode,
     Set<int>? selectedIndices,
     bool? isRangeSelectionActive,
     int? rangeStartIndex,
+    bool clearRangeStartIndex = false,
     bool? floatingControlsEnabled,
     bool? isMsoneEnabled,
     double? resizeRatio,
@@ -142,21 +150,32 @@ class EditState extends Equatable {
       fileName: fileName ?? this.fileName,
       isLoading: isLoading ?? this.isLoading,
       isInitialized: isInitialized ?? this.isInitialized,
-      errorMessage: errorMessage,
-      selectedVideoPath: selectedVideoPath ?? this.selectedVideoPath,
+      errorMessage:
+          clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
+      selectedVideoPath: clearSelectedVideoPath
+          ? null
+          : (selectedVideoPath ?? this.selectedVideoPath),
       isVideoVisible: isVideoVisible ?? this.isVideoVisible,
       isVideoLoaded: isVideoLoaded ?? this.isVideoLoaded,
       lastVideoPosition: lastVideoPosition ?? this.lastVideoPosition,
       secondarySubtitles: secondarySubtitles ?? this.secondarySubtitles,
       originalSecondarySubtitles: originalSecondarySubtitles ?? this.originalSecondarySubtitles,
       showSecondarySubtitles: showSecondarySubtitles ?? this.showSecondarySubtitles,
-      highlightedIndex: highlightedIndex,
+      secondarySubtitleSource:
+          secondarySubtitleSource ?? this.secondarySubtitleSource,
+      highlightedIndex: clearHighlightedIndex
+          ? null
+          : (highlightedIndex ?? this.highlightedIndex),
       expandedCards: expandedCards ?? this.expandedCards,
       isSelectionMode: isSelectionMode ?? this.isSelectionMode,
       selectedIndices: selectedIndices ?? this.selectedIndices,
-      isRangeSelectionActive: isRangeSelectionActive ?? this.isRangeSelectionActive,
-      rangeStartIndex: rangeStartIndex,
-      floatingControlsEnabled: floatingControlsEnabled ?? this.floatingControlsEnabled,
+      isRangeSelectionActive:
+          isRangeSelectionActive ?? this.isRangeSelectionActive,
+      rangeStartIndex: clearRangeStartIndex
+          ? null
+          : (rangeStartIndex ?? this.rangeStartIndex),
+      floatingControlsEnabled:
+          floatingControlsEnabled ?? this.floatingControlsEnabled,
       isMsoneEnabled: isMsoneEnabled ?? this.isMsoneEnabled,
       resizeRatio: resizeRatio ?? this.resizeRatio,
       isResizeRatioLoaded: isResizeRatioLoaded ?? this.isResizeRatioLoaded,
@@ -171,7 +190,7 @@ class EditState extends Equatable {
 
   /// Clear error message
   EditState clearError() {
-    return copyWith(errorMessage: null);
+    return copyWith(clearErrorMessage: true);
   }
 
   /// Toggle selection for an index
@@ -194,7 +213,7 @@ class EditState extends Equatable {
       selectedIndices: {},
       isSelectionMode: false,
       isRangeSelectionActive: false,
-      rangeStartIndex: null,
+      clearRangeStartIndex: true,
     );
   }
 
@@ -221,6 +240,7 @@ class EditState extends Equatable {
         secondarySubtitles,
         originalSecondarySubtitles,
         showSecondarySubtitles,
+        secondarySubtitleSource,
         highlightedIndex,
         expandedCards,
         isSelectionMode,

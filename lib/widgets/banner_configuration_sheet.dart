@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:subtitle_studio/screens/edit/providers/subtitle_repository_provider.dart';
 import 'package:subtitle_studio/operations/subtitle_banner_operations.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
@@ -193,6 +195,10 @@ class _BannerConfigurationSheetState extends State<BannerConfigurationSheet> {
       }
 
       final success = await SubtitleBannerOperations.insertBanners(
+        subtitleRepository: ProviderScope.containerOf(
+          context,
+          listen: false,
+        ).read(subtitleRepositoryProvider),
         subtitleCollectionId: widget.subtitleCollectionId,
         sessionId: widget.sessionId,
         currentSubtitleLines: widget.subtitleLines,
@@ -326,21 +332,21 @@ class _BannerConfigurationSheetState extends State<BannerConfigurationSheet> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.orange.withValues(alpha: 0.1),
+                          color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                          border: Border.all(color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.3)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
                               children: [
-                                Icon(Icons.warning, color: Colors.orange, size: 20),
+                                Icon(Icons.warning, color: Theme.of(context).colorScheme.tertiary, size: 20),
                                 const SizedBox(width: 8),
                                 Text(
                                   'Potential Issues:',
                                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                    color: Colors.orange,
+                                    color: Theme.of(context).colorScheme.tertiary,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -351,7 +357,7 @@ class _BannerConfigurationSheetState extends State<BannerConfigurationSheet> {
                                 padding: const EdgeInsets.only(bottom: 4),
                                 child: Text('• $warning', 
                                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                             color: Colors.orange.shade700,
+                                             color: Theme.of(context).colorScheme.tertiary,
                                            )),
                               ),
                             )),
@@ -359,7 +365,7 @@ class _BannerConfigurationSheetState extends State<BannerConfigurationSheet> {
                             Text(
                               'Use the recommended positions or edit the time codes manually to fix these issues.',
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Colors.blue.shade600,
+                                color: Theme.of(context).colorScheme.primary,
                                 fontStyle: FontStyle.italic,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -375,21 +381,21 @@ class _BannerConfigurationSheetState extends State<BannerConfigurationSheet> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.blue.withValues(alpha: 0.1),
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+                          border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
                               children: [
-                                Icon(Icons.lightbulb, color: Colors.blue, size: 20),
+                                Icon(Icons.lightbulb, color: Theme.of(context).colorScheme.primary, size: 20),
                                 const SizedBox(width: 8),
                                 Text(
                                   'Recommended Positions (No Overlaps):',
                                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                    color: Colors.blue,
+                                    color: Theme.of(context).colorScheme.primary,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -397,17 +403,19 @@ class _BannerConfigurationSheetState extends State<BannerConfigurationSheet> {
                             ),
                             const SizedBox(height: 8),
                             Text('• Beginning: ${_formatDuration(_recommendedPositions!.beginningPosition)}', 
-                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.blue.shade700)),
+                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.primary)),
                             Text('• Middle: ${_formatDuration(_recommendedPositions!.middlePosition)}', 
-                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.blue.shade700)),
+                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.primary)),
                             Text('• End: ${_formatDuration(_recommendedPositions!.endPosition)}', 
-                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.blue.shade700)),
+                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.primary)),
                             const SizedBox(height: 12),
-                            CheckboxListTile(
+                            Material(
+                              type: MaterialType.transparency,
+                              child: CheckboxListTile(
                               title: Text(
                                 'Use recommended positions',
                                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: Colors.blue.shade700,
+                                  color: Theme.of(context).colorScheme.primary,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
@@ -432,6 +440,7 @@ class _BannerConfigurationSheetState extends State<BannerConfigurationSheet> {
                               controlAffinity: ListTileControlAffinity.leading,
                               contentPadding: EdgeInsets.zero,
                               dense: true,
+                              ),
                             ),
                           ],
                         ),
@@ -557,26 +566,26 @@ class _BannerConfigurationSheetState extends State<BannerConfigurationSheet> {
                         onPressed: _isProcessing ? null : _insertBanners,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primaryColor,
-                          foregroundColor: Colors.white,
+                          foregroundColor: Theme.of(context).colorScheme.onPrimary,
                           elevation: 0,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
                         child: _isProcessing
-                            ? const SizedBox(
+                            ? SizedBox(
                                 width: 20,
                                 height: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.onPrimary),
                                 ),
                               )
                             : Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.add_circle_outline, size: 20, color: Colors.white),
+                                  Icon(Icons.add_circle_outline, size: 20, color: Theme.of(context).colorScheme.onPrimary),
                                   const SizedBox(width: 8),
                                   Flexible(
                                     child: Text(
@@ -629,7 +638,7 @@ class _BannerConfigurationSheetState extends State<BannerConfigurationSheet> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+        color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: borderColor,
@@ -650,7 +659,7 @@ class _BannerConfigurationSheetState extends State<BannerConfigurationSheet> {
                 ),
                 child: Icon(
                   icon,
-                  color: Colors.white,
+                  color: isEnabled ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface,
                   size: 20,
                 ),
               ),
@@ -700,7 +709,7 @@ class _BannerConfigurationSheetState extends State<BannerConfigurationSheet> {
               const SizedBox(height: 8),
               Container(
                 decoration: BoxDecoration(
-                  color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                  color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: borderColor,
@@ -744,7 +753,7 @@ class _BannerConfigurationSheetState extends State<BannerConfigurationSheet> {
             const SizedBox(height: 8),
             Container(
               decoration: BoxDecoration(
-                color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: borderColor,

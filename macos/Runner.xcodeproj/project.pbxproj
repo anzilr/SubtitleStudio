@@ -416,7 +416,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "$SRCROOT/Scripts/copy_dependencies.sh\n";
+			shellScript = "/bin/bash \"$SRCROOT/Scripts/copy_dependencies.sh\"\n";
 		};
 		F5682C5B8C1162521CB6C1E5 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;

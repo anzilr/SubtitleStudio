@@ -10,7 +10,9 @@ Future<Map?> pickSRT(BuildContext context) async {
   if (fileInfo != null) {
     final displayPath = fileInfo['displayPath']!;
     final safUri = fileInfo['safUri'];
-    final content = fileInfo['content']; // Get the already-read content
+    final accessLocator = fileInfo['accessLocator'];
+    final content = fileInfo['content'];
+    final bytes = fileInfo['bytes']; // Keep raw bytes for lossless decoding
     
     // Extract filename from the best available source
     String fileName;
@@ -33,8 +35,10 @@ Future<Map?> pickSRT(BuildContext context) async {
     return {
       'filePath': displayPath,
       'fileName': fileName,
-      'safUri': safUri, // Include SAF URI for proper file operations
-      'content': content, // Include the already-read content to avoid double reading
+      'safUri': safUri, // Existing originalFileUri metadata
+      'accessLocator': accessLocator, // Actual file source, not displayPath
+      'content': content,
+      'bytes': bytes,
     };
   }
   return null;

@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:subtitle_studio/utils/project_manager.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:subtitle_studio/app/providers/core_providers.dart';
+import 'package:subtitle_studio/app/repositories/project_repository.dart';
 import 'package:subtitle_studio/database/models/models.dart';
+import 'package:subtitle_studio/services/project_save_coordinator.dart';
+import 'package:subtitle_studio/utils/project_save_flow.dart';
 
 /// Auto Project Saver Mixin
 /// 
@@ -8,6 +12,14 @@ import 'package:subtitle_studio/database/models/models.dart';
 /// that create or import subtitle data. It should be used on widgets that
 /// handle subtitle import/creation workflows.
 mixin AutoProjectSaver<T extends StatefulWidget> on State<T> {
+  ProjectRepository get _projectRepository =>
+      ProviderScope.containerOf(context, listen: false)
+          .read(projectRepositoryProvider);
+
+  ProjectSaveCoordinator get _projectSaveCoordinator =>
+      ProviderScope.containerOf(context, listen: false)
+          .read(projectSaveCoordinatorProvider);
+
   
   /// Auto-save project after subtitle data is created
   /// This should be called after successfully importing/creating subtitle data
@@ -18,16 +30,19 @@ mixin AutoProjectSaver<T extends StatefulWidget> on State<T> {
     bool showSnackbar = true,
   }) async {
     try {
-      final projectPath = await ProjectManager.autoSaveProject(
+      final projectPath = await ProjectSaveFlow.save(
         context: context,
+        coordinator: _projectSaveCoordinator,
         session: session,
         subtitleCollection: subtitleCollection,
         suggestedFileName: suggestedFileName,
+        forceNewLocation: true,
+        showSuccessMessage: false,
       );
 
       if (projectPath != null) {
         // Update the session with the project file path
-        await ProjectManager.updateSessionProjectPath(
+        await _projectRepository.updateSessionProjectPath(
           sessionId: session.id,
           projectFilePath: projectPath,
         );
@@ -80,15 +95,16 @@ mixin AutoProjectSaver<T extends StatefulWidget> on State<T> {
     );
     
     if (shouldSave == true && mounted) {
-      final projectPath = await ProjectManager.saveProject(
+      final projectPath = await ProjectSaveFlow.save(
         context: context,
+        coordinator: _projectSaveCoordinator,
         session: session,
         subtitleCollection: subtitleCollection,
         forceNewLocation: true,
       );
       
       if (projectPath != null) {
-        await ProjectManager.updateSessionProjectPath(
+        await _projectRepository.updateSessionProjectPath(
           sessionId: session.id,
           projectFilePath: projectPath,
         );
@@ -120,18 +136,25 @@ class ProjectCreationHelper {
       }
       
       if (autoSave) {
-        final projectPath = await ProjectManager.autoSaveProject(
+        final projectPath = await ProjectSaveFlow.save(
           context: context,
+          coordinator: ProviderScope.containerOf(
+            context,
+            listen: false,
+          ).read(projectSaveCoordinatorProvider),
           session: session,
           subtitleCollection: subtitleCollection,
           suggestedFileName: suggestedFileName,
+          forceNewLocation: true,
         );
         
         if (projectPath != null) {
-          await ProjectManager.updateSessionProjectPath(
-            sessionId: session.id,
-            projectFilePath: projectPath,
-          );
+          await ProviderScope.containerOf(context, listen: false)
+              .read(projectRepositoryProvider)
+              .updateSessionProjectPath(
+                sessionId: session.id,
+                projectFilePath: projectPath,
+              );
         }
       }
     } catch (e) {

@@ -25,19 +25,21 @@
 import 'dart:io';
 import 'dart:convert'; // For utf8 and latin1 encoding/decoding
 import 'package:flutter/material.dart';
+import 'package:subtitle_studio/widgets/dictionary_search_action.dart';
+import 'package:subtitle_studio/widgets/dictionary_language_tab_colors.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart'; // For Clipboard
 import 'package:dio/dio.dart';
 import 'package:archive/archive.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:subtitle_studio/database/models/models.dart';
-import 'package:subtitle_studio/database/models/preferences_model.dart';
-import 'package:subtitle_studio/database/database_helper.dart';
+import 'package:subtitle_studio/app/providers/core_providers.dart';
+import 'package:subtitle_studio/widgets/olam/olam_dictionary_repository.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/utils/logging_helpers.dart';
-import 'package:subtitle_studio/main.dart'; // For isar global instance
 
 /// Dictionary widget for Olam offline dictionary lookup
-class OlamDictionaryWidget extends StatefulWidget {
+class OlamDictionaryWidget extends ConsumerStatefulWidget {
   /// Callback when user selects a translation
   final Function(String) onSelectTranslation;
   
@@ -51,10 +53,10 @@ class OlamDictionaryWidget extends StatefulWidget {
   });
 
   @override
-  State<OlamDictionaryWidget> createState() => _OlamDictionaryWidgetState();
+  ConsumerState<OlamDictionaryWidget> createState() => _OlamDictionaryWidgetState();
 }
 
-class _OlamDictionaryWidgetState extends State<OlamDictionaryWidget>
+class _OlamDictionaryWidgetState extends ConsumerState<OlamDictionaryWidget>
     with TickerProviderStateMixin {
   // Controllers
   late TextEditingController _searchController;
@@ -134,7 +136,7 @@ class _OlamDictionaryWidgetState extends State<OlamDictionaryWidget>
   /// Check how many entries are in the database
   Future<void> _checkDatabaseCount() async {
     try {
-      final count = await isar.dictionaryEntrys.count();
+      final count = await ref.read(olamDictionaryRepositoryProvider).countEntries();
       setState(() {
         _databaseEntryCount = count;
       });
@@ -154,53 +156,35 @@ class _OlamDictionaryWidgetState extends State<OlamDictionaryWidget>
 
   /// Test if database operations work
   Future<void> _testDatabaseFunctionality() async {
+    if (_databaseEntryCount > 0) {
+      logInfo('Database already contains data, skipping test');
+      return;
+    }
+
     try {
-      // Only test if database is empty to avoid clearing existing data
-      if (_databaseEntryCount > 0) {
-        logInfo('Database already contains data, skipping test');
-        return;
-      }
-      
-      // Test inserting a single entry
-      final testEntry = DictionaryEntry(
-        word: 'test',
-        meaning: 'പരീക്ഷ',
-        partOfSpeech: 'n',
-        dictionaryType: 'EN-ML',
+      final writable = await ref
+          .read(olamDictionaryRepositoryProvider)
+          .probeWritable();
+
+      logInfo(
+        writable
+            ? 'Dictionary database write probe completed'
+            : 'Dictionary database write probe failed',
       );
-      
-      await isar.writeTxn(() async {
-        await isar.dictionaryEntrys.put(testEntry);
-      });
-      
-      final countAfterTest = await isar.dictionaryEntrys.count();
-      logInfo('Database count after test insert: $countAfterTest');
-      
-      // Only clean up the specific test entry, not all data
-      if (countAfterTest == 1) {
-        await isar.writeTxn(() async {
-          await isar.dictionaryEntrys.delete(testEntry.id);
-        });
-        logInfo('Cleaned up test entry');
-      } else {
-        logInfo('Not clearing database - contains actual data');
-      }
-      
-      logInfo('Database test completed');
     } catch (e) {
-      logError('Database test failed: $e');
+      logError('Dictionary database test failed: $e');
     }
   }
 
   /// Verify database integrity and Unicode handling
   Future<void> _verifyDatabaseIntegrity() async {
     try {
-      final count = await isar.dictionaryEntrys.count();
+      final count = await ref.read(olamDictionaryRepositoryProvider).countEntries();
       logInfo('Total entries in database: $count');
       
       if (count > 0) {
         // Use the search functions to get sample entries
-        final sampleEntries = await searchDictionaryByWord('', 'EN-ML');
+        final sampleEntries = await ref.read(olamDictionaryRepositoryProvider).searchByWord('', 'EN-ML');
         final limitedSample = sampleEntries.take(5).toList();
         
         logInfo('Sample entries for Unicode verification:');
@@ -222,8 +206,8 @@ class _OlamDictionaryWidgetState extends State<OlamDictionaryWidget>
         }
         
         // Count entries by type
-        final enmlEntries = await searchDictionaryByWord('', 'EN-ML');
-        final mlmlEntries = await searchDictionaryByWord('', 'ML-ML');
+        final enmlEntries = await ref.read(olamDictionaryRepositoryProvider).searchByWord('', 'EN-ML');
+        final mlmlEntries = await ref.read(olamDictionaryRepositoryProvider).searchByWord('', 'ML-ML');
         logInfo('EN-ML entries: ${enmlEntries.length}');
         logInfo('ML-ML entries: ${mlmlEntries.length}');
       }
@@ -235,7 +219,7 @@ class _OlamDictionaryWidgetState extends State<OlamDictionaryWidget>
   /// Load last update date from shared preferences
   Future<void> _loadLastUpdateDate() async {
     try {
-      final lastUpdate = await PreferencesModel.getOlamLastUpdateDate();
+      final lastUpdate = await ref.read(appPreferencesRepositoryProvider).getOlamLastUpdateDate();
       
       String displayDate = 'Never';
       if (lastUpdate != null) {
@@ -261,8 +245,8 @@ class _OlamDictionaryWidgetState extends State<OlamDictionaryWidget>
   /// Load search filter preferences
   Future<void> _loadSearchFilters() async {
     try {
-      final wholeWordSearch = await PreferencesModel.getOlamWholeWordSearch();
-      final caseSensitiveSearch = await PreferencesModel.getOlamCaseSensitiveSearch();
+      final wholeWordSearch = await ref.read(appPreferencesRepositoryProvider).getOlamWholeWordSearch();
+      final caseSensitiveSearch = await ref.read(appPreferencesRepositoryProvider).getOlamCaseSensitiveSearch();
       
       setState(() {
         _wholeWordSearch = wholeWordSearch;
@@ -303,7 +287,7 @@ class _OlamDictionaryWidgetState extends State<OlamDictionaryWidget>
   Future<void> _saveLastUpdateDate() async {
     try {
       final now = DateTime.now();
-      await PreferencesModel.setOlamLastUpdateDate(now.toIso8601String());
+      await ref.read(appPreferencesRepositoryProvider).setOlamLastUpdateDate(now.toIso8601String());
       
       // Format date for display (e.g., "Dec 25, 2024")
       final monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -346,21 +330,21 @@ class _OlamDictionaryWidgetState extends State<OlamDictionaryWidget>
       switch (_selectedTab) {
         case 'EN-ML':
           // Search English word, return Malayalam meaning
-          results = await searchDictionaryByWord(query, 'EN-ML', 
+          results = await ref.read(olamDictionaryRepositoryProvider).searchByWord(query, 'EN-ML', 
                                                 wholeWord: _wholeWordSearch, 
                                                 caseSensitive: _caseSensitiveSearch);
           break;
           
         case 'ML-EN':
           // Search Malayalam meaning, return English word
-          results = await searchDictionaryByMeaning(query, 'EN-ML', 
+          results = await ref.read(olamDictionaryRepositoryProvider).searchByMeaning(query, 'EN-ML', 
                                                    wholeWord: _wholeWordSearch, 
                                                    caseSensitive: _caseSensitiveSearch);
           break;
           
         case 'ML-ML':
           // Search Malayalam word, return Malayalam meaning
-          results = await searchDictionaryByWord(query, 'ML-ML', 
+          results = await ref.read(olamDictionaryRepositoryProvider).searchByWord(query, 'ML-ML', 
                                                 wholeWord: _wholeWordSearch, 
                                                 caseSensitive: _caseSensitiveSearch);
           break;
@@ -378,7 +362,7 @@ class _OlamDictionaryWidgetState extends State<OlamDictionaryWidget>
         setState(() {
           _isLoading = false;
         });
-        SnackbarHelper.showError(context, 'Search failed: $e');
+        SnackbarHelper.showError(context, 'Dictionary search failed. Please try again.');
       }
     }
   }
@@ -413,7 +397,7 @@ class _OlamDictionaryWidgetState extends State<OlamDictionaryWidget>
       logInfo('Starting dictionary database update...');
       
       // Clear existing dictionary entries
-      await clearDictionaryEntries();
+      await ref.read(olamDictionaryRepositoryProvider).clearEntries();
 
       // Download and process EN-ML dictionary
       await _downloadAndProcessDictionary(_enmlUrl, 'enml', 'EN-ML');
@@ -437,7 +421,7 @@ class _OlamDictionaryWidgetState extends State<OlamDictionaryWidget>
     } catch (e) {
       logError('Dictionary update failed: $e');
       if (mounted) {
-        SnackbarHelper.showError(context, 'Update failed: $e');
+        SnackbarHelper.showError(context, 'Dictionary update failed. Please try again.');
       }
     } finally {
       if (mounted) {
@@ -582,11 +566,11 @@ class _OlamDictionaryWidgetState extends State<OlamDictionaryWidget>
 
     if (entries.isNotEmpty) {
       // Use helper function for batch insert
-      await addDictionaryEntries(entries);
+      await ref.read(olamDictionaryRepositoryProvider).addEntries(entries);
       logInfo('Successfully stored ${entries.length} $dictionaryType dictionary entries in database');
       
       // Verify the data was actually inserted
-      final countAfterInsert = await isar.dictionaryEntrys.count();
+      final countAfterInsert = await ref.read(olamDictionaryRepositoryProvider).countEntries();
       logInfo('Database count after insert: $countAfterInsert');
     } else {
       logError('No valid entries found for $dictionaryType dictionary');
@@ -653,11 +637,9 @@ class _OlamDictionaryWidgetState extends State<OlamDictionaryWidget>
       child: Column(
         children: [
           // Sticky header section
-          Container(
-            decoration: BoxDecoration(
-              color: surfaceColor,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            ),
+          Material(
+            color: surfaceColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
             child: Padding(
               padding: const EdgeInsets.all(24.0),
               child: Column(
@@ -672,7 +654,7 @@ class _OlamDictionaryWidgetState extends State<OlamDictionaryWidget>
                   _buildSearchField(isDark, primaryColor, onSurfaceColor, borderColor),
                   
                   // Search button under the text field
-                  _buildSearchButton(primaryColor, onSurfaceColor),
+                  _buildSearchButton(),
                   
                   // Search filter options
                   _buildSearchFilters(onSurfaceColor),
@@ -687,7 +669,7 @@ class _OlamDictionaryWidgetState extends State<OlamDictionaryWidget>
                       ),
                   
                   // Tab segments
-                  _buildTabBar(isDark, primaryColor, onSurfaceColor, borderColor),
+                  _buildTabBar(isDark, onSurfaceColor, borderColor),
                 ],
               ),
             ),
@@ -755,7 +737,7 @@ class _OlamDictionaryWidgetState extends State<OlamDictionaryWidget>
             ),
             IconButton(
               onPressed: () => Navigator.pop(context),
-              icon: const Icon(Icons.close),
+              icon: Icon(Icons.close),
             ),
           ],
         ),
@@ -767,7 +749,7 @@ class _OlamDictionaryWidgetState extends State<OlamDictionaryWidget>
   Widget _buildSearchField(bool isDark, Color primaryColor, Color onSurfaceColor, Color borderColor) {
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+        color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: borderColor,
@@ -812,36 +794,13 @@ class _OlamDictionaryWidgetState extends State<OlamDictionaryWidget>
     );
   }
 
-  /// Build the search button
-  Widget _buildSearchButton(Color primaryColor, Color onSurfaceColor) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 12),
-      child: SizedBox(
-        width: double.infinity,
-        child: ElevatedButton.icon(
-          onPressed: _performSearch,
-          icon: const Icon(Icons.search, color: Colors.white),
-          label: const Text(
-            'Search',
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 16,
-              color: Colors.white,
-            ),
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: primaryColor,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            elevation: 0,
-          ),
-        ),
-      ),
-    );
-  }
+  Widget _buildSearchButton() => Padding(
+    padding: const EdgeInsets.only(top: 12),
+    child: SizedBox(
+      width: double.infinity,
+      child: DictionarySearchAction(onPressed: _performSearch),
+    ),
+  );
 
   /// Build search filter controls
   Widget _buildSearchFilters(Color onSurfaceColor) {
@@ -857,7 +816,7 @@ class _OlamDictionaryWidgetState extends State<OlamDictionaryWidget>
                   setState(() {
                     _wholeWordSearch = value ?? false;
                   });
-                  await PreferencesModel.setOlamWholeWordSearch(_wholeWordSearch);
+                  await ref.read(appPreferencesRepositoryProvider).setOlamWholeWordSearch(_wholeWordSearch);
                 }
               },
               title: Text(
@@ -880,7 +839,7 @@ class _OlamDictionaryWidgetState extends State<OlamDictionaryWidget>
                   setState(() {
                     _caseSensitiveSearch = value ?? false;
                   });
-                  await PreferencesModel.setOlamCaseSensitiveSearch(_caseSensitiveSearch);
+                  await ref.read(appPreferencesRepositoryProvider).setOlamCaseSensitiveSearch(_caseSensitiveSearch);
                 }
               },
               title: Text(
@@ -915,12 +874,12 @@ class _OlamDictionaryWidgetState extends State<OlamDictionaryWidget>
   }
 
   /// Build the tab bar for dictionary types
-  Widget _buildTabBar(bool isDark, Color primaryColor, Color onSurfaceColor, Color borderColor) {
+  Widget _buildTabBar(bool isDark, Color onSurfaceColor, Color borderColor) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: isDark ? onSurfaceColor.withValues(alpha: 0.08) : Colors.grey.shade100,
+        color: isDark ? onSurfaceColor.withValues(alpha: 0.08) : Theme.of(context).colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: borderColor.withValues(alpha: 0.5),
@@ -937,13 +896,13 @@ class _OlamDictionaryWidgetState extends State<OlamDictionaryWidget>
       child: Row(
         children: [
           Expanded(
-            child: _buildTabItem('EN-ML', 0, 'English → Malayalam', primaryColor, onSurfaceColor),
+            child: _buildTabItem('EN-ML', 0, 'English → Malayalam', onSurfaceColor),
           ),
           Expanded(
-            child: _buildTabItem('ML-EN', 1, 'Malayalam → English', primaryColor, onSurfaceColor),
+            child: _buildTabItem('ML-EN', 1, 'Malayalam → English', onSurfaceColor),
           ),
           Expanded(
-            child: _buildTabItem('ML-ML', 2, 'Malayalam → Malayalam', primaryColor, onSurfaceColor),
+            child: _buildTabItem('ML-ML', 2, 'Malayalam → Malayalam', onSurfaceColor),
           ),
         ],
       ),
@@ -951,9 +910,10 @@ class _OlamDictionaryWidgetState extends State<OlamDictionaryWidget>
   }
 
   /// Build individual tab item with animation
-  Widget _buildTabItem(String tabKey, int index, String tooltip, Color primaryColor, Color onSurfaceColor) {
+  Widget _buildTabItem(String tabKey, int index, String tooltip, Color onSurfaceColor) {
     final isSelected = _selectedTab == tabKey;
-    
+    final tabColors = DictionaryLanguageTabColors.of(Theme.of(context));
+
     return GestureDetector(
       onTap: () {
         if (_tabController.index != index) {
@@ -975,13 +935,16 @@ class _OlamDictionaryWidgetState extends State<OlamDictionaryWidget>
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
           margin: const EdgeInsets.all(2),
           decoration: BoxDecoration(
-            color: isSelected 
-                ? primaryColor
+            color: isSelected
+                ? tabColors.selectedBackground
                 : Colors.transparent,
+            border: isSelected && tabColors.neutralSelection
+                ? Border.all(color: Theme.of(context).colorScheme.outline)
+                : null,
             borderRadius: BorderRadius.circular(12),
             boxShadow: isSelected ? [
               BoxShadow(
-                color: primaryColor.withValues(alpha: 0.3),
+                color: tabColors.selectedBackground.withValues(alpha: 0.3),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -993,8 +956,8 @@ class _OlamDictionaryWidgetState extends State<OlamDictionaryWidget>
             style: TextStyle(
               fontSize: 14,
               fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-              color: isSelected 
-                  ? Colors.white
+              color: isSelected
+                  ? tabColors.selectedForeground
                   : onSurfaceColor.withValues(alpha: 0.7),
               letterSpacing: isSelected ? 0.5 : 0,
             ),
@@ -1020,7 +983,7 @@ class _OlamDictionaryWidgetState extends State<OlamDictionaryWidget>
         ? 'Updating... ${(_downloadProgress * 100).toInt()}%'
         : (_shouldShowUpdateNotification ? 'Update Available' : 'Update Dictionary');
     
-    final textColor = _shouldShowUpdateNotification ? Colors.orange.withValues(alpha: 0.5) : onSurfaceColor.withValues(alpha: 0.5);
+    final textColor = _shouldShowUpdateNotification ? Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.5) : onSurfaceColor.withValues(alpha: 0.5);
     
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -1127,7 +1090,7 @@ class _OlamDictionaryWidgetState extends State<OlamDictionaryWidget>
         color: surfaceColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isDark ? onSurfaceColor.withValues(alpha: 0.1) : Colors.grey.shade200,
+          color: isDark ? onSurfaceColor.withValues(alpha: 0.1) : Theme.of(context).colorScheme.outlineVariant,
           width: 1,
         ),
       ),

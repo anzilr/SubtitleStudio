@@ -234,20 +234,20 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF4A90E2).withValues(alpha: 0.1),
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: SvgPicture.asset(
                         'assets/msone.svg',
                         height: 28,
                         width: 28,
-                        colorFilter: const ColorFilter.mode(
-                          Color(0xFF4A90E2),
+                        colorFilter: ColorFilter.mode(
+                          Theme.of(context).colorScheme.primary,
                           BlendMode.srcIn,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -258,7 +258,7 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          SizedBox(height: 4),
                           Text(
                             "Sign in to search the dictionary",
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -272,15 +272,15 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
                 ),
               ),
               
-              const SizedBox(height: 24),
+              SizedBox(height: 24),
               
               // Username field
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.05),
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: Colors.blue.withValues(alpha: 0.2),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
                     width: 1,
                   ),
                 ),
@@ -290,26 +290,26 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
                     labelText: 'Username',
                     prefixIcon: Icon(
                       Icons.person_outline,
-                      color: const Color(0xFF4A90E2),
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                     labelStyle: TextStyle(
-                      color: const Color(0xFF4A90E2),
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
                 ),
               ),
               
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               
               // Password field
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.05),
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: Colors.blue.withValues(alpha: 0.2),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
                     width: 1,
                   ),
                 ),
@@ -320,26 +320,26 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
                     labelText: 'Password',
                     prefixIcon: Icon(
                       Icons.lock_outline,
-                      color: const Color(0xFF4A90E2),
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                     labelStyle: TextStyle(
-                      color: const Color(0xFF4A90E2),
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
                 ),
               ),
               
               if (_errorMessage != null) ...[
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.red.withValues(alpha: 0.1),
+                    color: Theme.of(context).colorScheme.error.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: Colors.red.withValues(alpha: 0.3),
+                      color: Theme.of(context).colorScheme.error.withValues(alpha: 0.3),
                       width: 1,
                     ),
                   ),
@@ -347,15 +347,15 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
                     children: [
                       Icon(
                         Icons.error_outline,
-                        color: Colors.red,
+                        color: Theme.of(context).colorScheme.error,
                         size: 20,
                       ),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           _errorMessage!,
                           style: TextStyle(
-                            color: Colors.red,
+                            color: Theme.of(context).colorScheme.error,
                             fontSize: 14,
                           ),
                         ),
@@ -365,7 +365,7 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
                 ),
               ],
               
-              const SizedBox(height: 24),
+              SizedBox(height: 24),
               
               // Login button
               Container(
@@ -373,20 +373,20 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
                 child: ElevatedButton(
                   onPressed: _loginInProgress ? null : _login,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF4A90E2),
-                    foregroundColor: Colors.white,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                   child: _loginInProgress
-                      ? const SizedBox(
+                      ? SizedBox(
                           height: 20,
                           width: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                           ),
                         )
                       : Row(
@@ -396,7 +396,7 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
                               Icons.login,
                               size: 20,
                             ),
-                            const SizedBox(width: 8),
+                            SizedBox(width: 8),
                             Text(
                               "Sign In",
                               style: TextStyle(
@@ -409,7 +409,7 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
                 ),
               ),
               
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
             ],
           ),
         ),
@@ -428,20 +428,20 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF4A90E2).withValues(alpha: 0.1),
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: SvgPicture.asset(
                   'assets/msone.svg',
                   height: 24,
                   width: 24,
-                  colorFilter: const ColorFilter.mode(
-                    Color(0xFF4A90E2),
+                  colorFilter: ColorFilter.mode(
+                    Theme.of(context).colorScheme.primary,
                     BlendMode.srcIn,
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(
                 child: Text(
                   "MSone Dictionary",
@@ -453,14 +453,14 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
               // Compact logout button
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.red.withValues(alpha: 0.1),
+                  color: Theme.of(context).colorScheme.error.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: IconButton(
                   onPressed: _logout,
                   icon: Icon(
                     Icons.logout,
-                    color: Colors.red,
+                    color: Theme.of(context).colorScheme.error,
                     size: 18,
                   ),
                   tooltip: 'Logout',
@@ -480,10 +480,10 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
               // Text search field - more compact
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.05),
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: Colors.blue.withValues(alpha: 0.2),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
                     width: 1,
                   ),
                 ),
@@ -494,28 +494,28 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
                     hintText: 'Enter text to search',
                     prefixIcon: Icon(
                       Icons.search,
-                      color: const Color(0xFF4A90E2),
+                      color: Theme.of(context).colorScheme.primary,
                       size: 20,
                     ),
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                     labelStyle: TextStyle(
-                      color: const Color(0xFF4A90E2),
+                      color: Theme.of(context).colorScheme.primary,
                       fontSize: 14,
                     ),
                   ),
                 ),
               ),
               
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               
               // Translator filter field - full width
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.green.withValues(alpha: 0.05),
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: Colors.green.withValues(alpha: 0.2),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
                     width: 1,
                   ),
                 ),
@@ -526,20 +526,20 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
                     hintText: 'Filter by translator',
                     prefixIcon: Icon(
                       Icons.person_outline,
-                      color: const Color(0xFF50C878),
+                      color: Theme.of(context).colorScheme.primary,
                       size: 20,
                     ),
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                     labelStyle: TextStyle(
-                      color: const Color(0xFF50C878),
+                      color: Theme.of(context).colorScheme.primary,
                       fontSize: 14,
                     ),
                   ),
                 ),
               ),
               
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               
               // Search button below text fields - full width
               Container(
@@ -548,20 +548,20 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : () => _search(),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF4A90E2),
-                    foregroundColor: Colors.white,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
                   child: _isLoading
-                      ? const SizedBox(
+                      ? SizedBox(
                           height: 16,
                           width: 16,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                           ),
                         )
                       : Row(
@@ -571,7 +571,7 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
                               Icons.search,
                               size: 18,
                             ),
-                            const SizedBox(width: 8),
+                            SizedBox(width: 8),
                             Text(
                               "Search Dictionary",
                               style: TextStyle(
@@ -585,14 +585,14 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
               ),
               
               if (_errorMessage != null) ...[
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: Colors.red.withValues(alpha: 0.1),
+                    color: Theme.of(context).colorScheme.error.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(6),
                     border: Border.all(
-                      color: Colors.red.withValues(alpha: 0.3),
+                      color: Theme.of(context).colorScheme.error.withValues(alpha: 0.3),
                       width: 1,
                     ),
                   ),
@@ -600,15 +600,15 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
                     children: [
                       Icon(
                         Icons.error_outline,
-                        color: Colors.red,
+                        color: Theme.of(context).colorScheme.error,
                         size: 16,
                       ),
-                      const SizedBox(width: 6),
+                      SizedBox(width: 6),
                       Expanded(
                         child: Text(
                           _errorMessage!,
                           style: TextStyle(
-                            color: Colors.red,
+                            color: Theme.of(context).colorScheme.error,
                             fontSize: 12,
                           ),
                         ),
@@ -623,7 +623,7 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
         
         // Compact results info
         if (_pagination != null) ...[
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20.0),
             child: Row(
@@ -631,7 +631,7 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF50C878).withValues(alpha: 0.1),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Row(
@@ -639,15 +639,15 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
                     children: [
                       Icon(
                         Icons.info_outline,
-                        color: const Color(0xFF50C878),
+                        color: Theme.of(context).colorScheme.primary,
                         size: 12,
                       ),
-                      const SizedBox(width: 4),
+                      SizedBox(width: 4),
                       Text(
                         '${_pagination!.totalResults} results',
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
-                          color: const Color(0xFF50C878),
+                          color: Theme.of(context).colorScheme.primary,
                           fontSize: 12,
                         ),
                       ),
@@ -659,7 +659,7 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
           ),
         ],
         
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         
         // Flexible results list instead of Expanded
         Flexible(
@@ -674,8 +674,8 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
             child: OutlinedButton(
               onPressed: _isLoading ? null : () => _search(_pagination!.page + 1),
               style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF4A90E2),
-                side: BorderSide(color: const Color(0xFF4A90E2).withValues(alpha: 0.5)),
+                foregroundColor: Theme.of(context).colorScheme.primary,
+                side: BorderSide(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5)),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -688,7 +688,7 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
                     Icons.expand_more,
                     size: 16,
                   ),
-                  const SizedBox(width: 6),
+                  SizedBox(width: 6),
                   Text(
                     'Load More Results',
                     style: TextStyle(
@@ -713,23 +713,23 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.blue.withValues(alpha: 0.1),
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Icon(
                 Icons.search_off,
                 size: 48,
-                color: const Color(0xFF4A90E2),
+                color: Theme.of(context).colorScheme.primary,
               ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Text(
               'No results found',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             Text(
               'Try different search terms',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -757,7 +757,7 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
             color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: Colors.grey.withValues(alpha: 0.2),
+              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.2),
               width: 1,
             ),
             boxShadow: [
@@ -780,7 +780,7 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF4A90E2).withValues(alpha: 0.1),
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Row(
@@ -788,15 +788,15 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
                         children: [
                           Icon(
                             Icons.person,
-                            color: const Color(0xFF4A90E2),
+                            color: Theme.of(context).colorScheme.primary,
                             size: 12,
                           ),
-                          const SizedBox(width: 4),
+                          SizedBox(width: 4),
                           Text(
                             result.translator,
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
-                              color: const Color(0xFF4A90E2),
+                              color: Theme.of(context).colorScheme.primary,
                               fontSize: 11,
                             ),
                           ),
@@ -823,16 +823,16 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
                   ],
                 ),
                 
-                const SizedBox(height: 10),
+                SizedBox(height: 10),
 
                 // Compact English section
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: Colors.blue.withValues(alpha: 0.05),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(6),
                     border: Border.all(
-                      color: Colors.blue.withValues(alpha: 0.2),
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
                       width: 1,
                     ),
                   ),
@@ -844,22 +844,22 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
                         children: [
                           Icon(
                             Icons.schedule,
-                            color: const Color(0xFF4A90E2),
+                            color: Theme.of(context).colorScheme.primary,
                             size: 12,
                           ),
-                          const SizedBox(width: 4),
+                          SizedBox(width: 4),
                           Text(
                             result.timeCodeEn,
                             style: TextStyle(
                               fontFamily: GoogleFonts.spaceMono().fontFamily,
-                              color: const Color(0xFF4A90E2),
+                              color: Theme.of(context).colorScheme.primary,
                               fontSize: 10,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 6),
+                      SizedBox(height: 6),
                       // English content with copy button
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -878,7 +878,7 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         ListTile(
-                                          leading: Icon(Icons.copy, color: const Color(0xFF4A90E2)),
+                                          leading: Icon(Icons.copy, color: Theme.of(context).colorScheme.primary),
                                           title: Text('Copy English text'),
                                           onTap: () {
                                             _copyToClipboard(result.englishLine);
@@ -908,14 +908,14 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
                           Container(
                             margin: const EdgeInsets.only(left: 6),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF4A90E2).withValues(alpha: 0.1),
+                              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: IconButton(
                               icon: Icon(
                                 Icons.copy,
                                 size: 14,
-                                color: const Color(0xFF4A90E2),
+                                color: Theme.of(context).colorScheme.primary,
                               ),
                               constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
                               onPressed: () => _copyToClipboard(result.englishLine),
@@ -928,7 +928,7 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
                   ),
                 ),
 
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
 
                 // Compact Malayalam section
                 InkWell(
@@ -937,10 +937,10 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
                   child: Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF50C878).withValues(alpha: 0.05),
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(
-                        color: const Color(0xFF50C878).withValues(alpha: 0.2),
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
                         width: 1,
                       ),
                     ),
@@ -952,22 +952,22 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
                           children: [
                             Icon(
                               Icons.schedule,
-                              color: const Color(0xFF50C878),
+                              color: Theme.of(context).colorScheme.primary,
                               size: 12,
                             ),
-                            const SizedBox(width: 4),
+                            SizedBox(width: 4),
                             Text(
                               result.timeCodeMl,
                               style: TextStyle(
                                 fontFamily: GoogleFonts.spaceMono().fontFamily,
-                                color: const Color(0xFF50C878),
+                                color: Theme.of(context).colorScheme.primary,
                                 fontSize: 10,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 6),
+                        SizedBox(height: 6),
                         // Malayalam content with copy button
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -987,7 +987,7 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           ListTile(
-                                            leading: Icon(Icons.copy, color: const Color(0xFF50C878)),
+                                            leading: Icon(Icons.copy, color: Theme.of(context).colorScheme.primary),
                                             title: Text('Copy Malayalam text'),
                                             onTap: () {
                                               _copyToClipboard(result.translationLine);
@@ -1016,14 +1016,14 @@ class DictionarySearchWidgetState extends State<DictionarySearchWidget> {
                             Container(
                               margin: const EdgeInsets.only(left: 6),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF50C878).withValues(alpha: 0.1),
+                                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: IconButton(
                                 icon: Icon(
                                   Icons.copy,
                                   size: 14,
-                                  color: const Color(0xFF50C878),
+                                  color: Theme.of(context).colorScheme.primary,
                                 ),
                                 constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
                                 onPressed: () => _copyToClipboard(result.translationLine),
@@ -1196,6 +1196,9 @@ class _DummyTextInputClient implements TextInputClient {
   void insertContent(KeyboardInsertedContent content) {
     // Empty implementation for dummy client
   }
+
+  @override
+  bool onFocusReceived() => false;
 }
 
 class DictionaryResult {

@@ -1,0 +1,74 @@
+name: Platform-sensitive Flutter checks
+
+# This gate is opt-in for platform-sensitive edits: paths, permissions,
+# save/export, import/extract and encoding. Routine core/UI refactors use
+# only .github/ci-checkpoint (Linux full suite) to conserve runner minutes.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - refactor/riverpod-architecture
+    paths:
+      - .github/ci-cross-platform-checkpoint
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  platform-file-access:
+    name: ${{ matrix.os }} — portable file and encoding tests
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.5"
+          channel: stable
+          cache: true
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      # These are host Flutter unit/widget tests, not desktop app builds.
+      # iOS document behavior is simulated with injected adapters; native
+      # sandbox/picker tests remain a separate acceptance requirement.
+      - name: File access, Source View and encoding tests
+        shell: bash
+        run: |
+          flutter test -j 1 \
+            test/studio_file_identity_test.dart \
+            test/studio_picked_file_reference_test.dart \
+            test/saf_video_picker_identity_test.dart \
+            test/source_view_file_target_test.dart \
+            test/source_view_file_access_test.dart \
+            test/source_view_encoding_controller_test.dart \
+            test/project_document_update_service_test.dart \
+            test/subtitle_import_file_reader_test.dart \
+            test/secondary_subtitle_document_reader_test.dart \
+            test/secondary_subtitle_storage_test.dart \
+            test/subtitle_encoding_decoder_test.dart \
+            test/subtitle_extended_encoding_service_test.dart \
+            test/subtitle_parser_srt_vtt_test.dart \
+            test/subtitle_processor_hearing_impaired_test.dart \
+            test/subtitle_entry_test.dart \
+            test/raw_srt_document_test.dart \
+            test/srt_encoding_integration_test.dart \
+            test/edit_line_file_save_service_test.dart \
+            test/editor_direct_save_service_test.dart \
+            test/editor_export_service_test.dart

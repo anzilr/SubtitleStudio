@@ -1,9 +1,9 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'saf_file_handler.dart';
 import 'saf_path_converter.dart';
+import 'package:subtitle_studio/core/file_access/studio_picked_file_reference.dart';
 
 /// Platform-aware file handler that uses SAF on Android and direct file access on other platforms
 /// 
@@ -66,7 +66,7 @@ class PlatformFileHandler {
         );
       } catch (e) {
         if (kDebugMode) {
-          print('Error reading file: $e');
+          debugPrint('PlatformFileHandler: file read unavailable (${e.runtimeType})');
         }
         return null;
       }
@@ -111,7 +111,7 @@ class PlatformFileHandler {
         }
       } catch (e) {
         if (kDebugMode) {
-          print('Error writing file with SAF: $e');
+          debugPrint('PlatformFileHandler: SAF write unavailable (${e.runtimeType})');
         }
         return false;
       }
@@ -119,7 +119,7 @@ class PlatformFileHandler {
       // On iOS, we cannot write to arbitrary file paths due to sandbox restrictions
       // The file picker returns a path, but we don't have write access to it
       if (kDebugMode) {
-        print('iOS: Cannot write to arbitrary file path due to sandbox restrictions: $filePath');
+        debugPrint('PlatformFileHandler: iOS existing-file write unsupported');
       }
       return false;
     } else {
@@ -131,7 +131,7 @@ class PlatformFileHandler {
         final parentDir = file.parent;
         if (!await parentDir.exists()) {
           if (kDebugMode) {
-            print('Creating parent directory: ${parentDir.path}');
+            debugPrint('PlatformFileHandler: preparing output directory');
           }
           await parentDir.create(recursive: true);
         }
@@ -140,14 +140,14 @@ class PlatformFileHandler {
         await file.writeAsBytes(contentBytes);
         
         if (kDebugMode) {
-          print('Successfully wrote file: $filePath (${contentBytes.length} bytes)');
+          debugPrint('PlatformFileHandler: wrote ${contentBytes.length} bytes');
         }
         
         return true;
       } catch (e) {
         if (kDebugMode) {
-          print('Error writing file to $filePath: $e');
-          print('Stack trace: ${StackTrace.current}');
+          debugPrint('PlatformFileHandler: native file write failed (${e.runtimeType})');
+          debugPrint('PlatformFileHandler: native file write not completed');
         }
         return false;
       }
@@ -166,7 +166,7 @@ class PlatformFileHandler {
       return success;
     } catch (e) {
       if (kDebugMode) {
-        print('Error writing to SAF URI: $e');
+        debugPrint('PlatformFileHandler: SAF URI write failed (${e.runtimeType})');
       }
       return false;
     }
@@ -183,12 +183,16 @@ class PlatformFileHandler {
   /// 
   /// Returns a [PlatformFileInfo] object if successful
   static Future<PlatformFileInfo?> saveNewFile({
-    required String content,
+    String? content,
+    Uint8List? bytes,
     required String fileName,
     String mimeType = 'text/plain',
   }) async {
+    if (content == null && bytes == null) {
+      throw ArgumentError('Content or bytes must be provided.');
+    }
     if (Platform.isAndroid) {
-      final contentBytes = Uint8List.fromList(utf8.encode(content));
+      final contentBytes = bytes ?? Uint8List.fromList(utf8.encode(content!));
       
       try {
         final safInfo = await SafFileHandler.saveNewFile(
@@ -202,7 +206,7 @@ class PlatformFileHandler {
           final correctedPath = SafPathConverter.normalizePath(safInfo.uri);
           
           if (kDebugMode) {
-            print('PlatformFileHandler saveNewFile: originalPath=${safInfo.displayPath}, correctedPath=$correctedPath, uri=${safInfo.uri}');
+            debugPrint('PlatformFileHandler: SAF document created');
           }
           
           return PlatformFileInfo(
@@ -215,7 +219,7 @@ class PlatformFileHandler {
         return null;
       } catch (e) {
         if (kDebugMode) {
-          print('Error saving new file with SAF: $e');
+          debugPrint('PlatformFileHandler: SAF Save As failed (${e.runtimeType})');
         }
         return null;
       }
@@ -292,6 +296,16 @@ class PlatformFileInfo {
   
   /// Get the file content as a UTF-8 string
   String get contentAsString => utf8.decode(content);
+
+  /// An authoritative storage locator distinct from the SAF display path.
+  StudioPickedFileReference get pickedReference =>
+      StudioPickedFileReference.fromPicker(
+        accessLocator: isFromSaf
+            ? (safUri ?? (throw const FormatException('SAF URI missing.')))
+            : path,
+        displayPath: path,
+        isFromSaf: isFromSaf,
+      );
   
   /// Get the filename from the path
   String get fileName {
@@ -328,5 +342,5 @@ class PlatformFileInfo {
   }
   
   @override
-  String toString() => 'PlatformFileInfo(path: $path, size: ${content.length} bytes, fromSaf: $isFromSaf)';
+  String toString() => 'PlatformFileInfo(size: ${content.length} bytes, fromSaf: $isFromSaf)';
 }

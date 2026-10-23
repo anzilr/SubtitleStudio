@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:subtitle_studio/themes/studio_design_tokens.dart';
 import 'package:subtitle_studio/utils/app_logger.dart';
 
 void showGotToLineModal({
@@ -7,12 +10,13 @@ void showGotToLineModal({
   int hintText = 0,
   String title = 'Input',
   required ValueChanged<String> onSubmitted,
-}) async {
-  await AppLogger.instance.info('Showing goto line modal', context: 'showGotToLineModal', extra: {
+}) {
+  // Opening the modal must not depend on file-based diagnostics I/O.
+  unawaited(AppLogger.instance.info('Showing goto line modal', context: 'showGotToLineModal', extra: {
     'initialValue': initialValue,
     'hintText': hintText,
     'title': title,
-  });
+  }));
   
   // Initialize with default value or provided value
   int initialLineNumber = int.tryParse(initialValue) ?? 1;
@@ -44,7 +48,7 @@ void showGotToLineModal({
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.red,
+              color: Theme.of(context).colorScheme.error,
               borderRadius: BorderRadius.circular(8),
               boxShadow: [
                 BoxShadow(
@@ -56,17 +60,17 @@ void showGotToLineModal({
             ),
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.error,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onError,
                   size: 20,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     message,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onError,
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
@@ -133,7 +137,6 @@ void showGotToLineModal({
     isScrollControlled: true,
     builder: (context) {
       // Dynamic color variables for adaptive theming
-      final isDark = Theme.of(context).brightness == Brightness.dark;
       final primaryColor = Theme.of(context).primaryColor;
       final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
       final mutedColor = onSurfaceColor.withValues(alpha: 0.6);
@@ -149,7 +152,7 @@ void showGotToLineModal({
             bottom: MediaQuery.of(context).viewInsets.bottom,
           ),
           child: Padding(
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.all(12.0),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -202,7 +205,7 @@ void showGotToLineModal({
                     Expanded(
                       child: Container(
                         decoration: BoxDecoration(
-                          color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                          color: StudioDesignTokens.of(context).fieldSurface,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                             color: borderColor,
@@ -243,7 +246,7 @@ void showGotToLineModal({
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
                       decoration: BoxDecoration(
-                        color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                        color: StudioDesignTokens.of(context).fieldSurface,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: borderColor,
@@ -268,9 +271,9 @@ void showGotToLineModal({
                     valueListenable: sliderValue,
                     builder: (context, value, child) {
                       return Container(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: isDark ? onSurfaceColor.withValues(alpha: 0.05) : Colors.grey.shade50,
+                          color: StudioDesignTokens.of(context).fieldSurface,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                             color: borderColor,
@@ -287,11 +290,15 @@ void showGotToLineModal({
                                   size: 20,
                                 ),
                                 const SizedBox(width: 8),
-                                Text(
+                                Flexible(
+                                  child: Text(
                                   'Quick Navigation',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                                     fontWeight: FontWeight.w600,
                                     color: primaryColor,
+                                  ),
                                   ),
                                 ),
                                 const Spacer(),
@@ -303,8 +310,8 @@ void showGotToLineModal({
                                   ),
                                   child: Text(
                                     'Line ${value.round()}',
-                                    style: const TextStyle(
-                                      color: Colors.white,
+                                    style: TextStyle(
+                                      color: Theme.of(context).colorScheme.onPrimary,
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -325,13 +332,13 @@ void showGotToLineModal({
                                 Expanded(
                                   child: SliderTheme(
                                     data: SliderTheme.of(context).copyWith(
-                                      activeTrackColor: isDark ? Colors.blue.shade400 : Colors.blue.shade600,
-                                      inactiveTrackColor: isDark ? Colors.grey.shade600 : Colors.grey.shade300,
-                                      thumbColor: isDark ? Colors.blue.shade300 : Colors.blue.shade700,
-                                      overlayColor: (isDark ? Colors.blue.shade300 : Colors.blue.shade700).withValues(alpha: 0.2),
-                                      valueIndicatorColor: isDark ? Colors.blue.shade400 : Colors.blue.shade600,
-                                      valueIndicatorTextStyle: const TextStyle(
-                                        color: Colors.white,
+                                      activeTrackColor: StudioDesignTokens.of(context).primaryAction,
+                                      inactiveTrackColor: StudioDesignTokens.of(context).outline,
+                                      thumbColor: StudioDesignTokens.of(context).primaryAction,
+                                      overlayColor: StudioDesignTokens.of(context).primaryAction.withValues(alpha: 0.18),
+                                      valueIndicatorColor: StudioDesignTokens.of(context).raisedSurface,
+                                      valueIndicatorTextStyle: TextStyle(
+                                        color: StudioDesignTokens.of(context).onSurface,
                                       ),
                                       trackHeight: 4.0,
                                       thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10.0),
@@ -380,7 +387,10 @@ void showGotToLineModal({
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          child: Row(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Row(
+                            mainAxisSize: MainAxisSize.min,
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
@@ -398,11 +408,12 @@ void showGotToLineModal({
                                 ),
                               ),
                             ],
+                            ),
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: Container(
                         height: 50,
@@ -410,13 +421,16 @@ void showGotToLineModal({
                           onPressed: processInput,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: primaryColor,
-                            foregroundColor: Colors.white,
+                            foregroundColor: Theme.of(context).colorScheme.onPrimary,
                             elevation: 0,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          child: Row(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Row(
+                            mainAxisSize: MainAxisSize.min,
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               const Icon(Icons.arrow_upward_rounded, size: 20),
@@ -429,6 +443,7 @@ void showGotToLineModal({
                                 ),
                               ),
                             ],
+                            ),
                           ),
                         ),
                       ),
