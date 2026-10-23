@@ -287,6 +287,15 @@ extension _WaveformInteractions on WaveformWidgetState {
             WaveformWidgetState._staticLastMouseClickPosition != null &&
             now.difference(WaveformWidgetState._staticLastMouseClickTime!) < const Duration(milliseconds: 500) &&
             (position - WaveformWidgetState._staticLastMouseClickPosition!).distance < 20) {
+          // In Studio Dock, the waveform can seek but cannot invent an
+          // unsaved cue before native checkpoint-backed add is wired.
+          if (!widget.enableTimeEditing) {
+            _seekToPosition(position, state);
+            WaveformWidgetState._staticLastMouseClickTime = null;
+            WaveformWidgetState._staticLastMouseClickPosition = null;
+            WaveformWidgetState._staticLastMouseClickSubtitleIndex = null;
+            return;
+          }
           // Double-click on playhead - enter add line mode with 2-second default duration
           // Use viewport center time (where playhead visually appears)
           final startTime = _getViewportCenterTime(state);
@@ -356,6 +365,7 @@ extension _WaveformInteractions on WaveformWidgetState {
 
   // Handle mouse right-click (for entering edit mode on subtitle)
   void _handleMouseRightClick(PointerDownEvent event, WaveformReady state) {
+    if (!widget.enableTimeEditing) return;
     final position = event.localPosition;
     final subtitleIndex = _getSubtitleAtPosition(position, state);
     
@@ -387,6 +397,7 @@ extension _WaveformInteractions on WaveformWidgetState {
 
   // Handle long press start - enter edit mode on subtitle or add line mode on playhead
   void _handleLongPressStart(LongPressStartDetails details, WaveformReady state) {
+    if (!widget.enableTimeEditing) return;
     final position = details.localPosition;
     
     // Check if long press is on the playhead arrow area (top 12 pixels)
