@@ -66,4 +66,45 @@ void main() {
       await harness.close();
     }
   });
+
+  test('rapid video-divider changes persist only the final ratios', () async {
+    final harness = await TestIsarHarness.open();
+    try {
+      final container = ProviderContainer(overrides: [
+        isarProvider.overrideWithValue(harness.isar),
+        editLineConfigurationProvider.overrideWithValue(
+          const EditLineConfiguration(
+            subtitleCollectionId: 1,
+            lineIndex: 1,
+            sessionId: 1,
+          ),
+        ),
+      ]);
+
+      final controller = container.read(editLineControllerProvider.notifier);
+      for (var i = 0; i < 1000; i++) {
+        final fraction = i / 999;
+        controller.scheduleResizeRatio(i == 999 ? 0.8 : 0.2 + 0.6 * fraction);
+        controller.scheduleMobileVideoResizeRatio(
+          i == 999 ? 0.2 : 0.8 - 0.6 * fraction,
+        );
+      }
+
+      final live = container.read(editLineControllerProvider);
+      expect(live.resizeRatio, closeTo(0.8, 0.000001));
+      expect(live.mobileVideoResizeRatio, closeTo(0.2, 0.000001));
+
+      // Pending debounced writes must retain the final value even when
+      // the user closes Edit Line directly after a fast drag.
+      container.dispose();
+      final saved = await _waitForSavedRatios(
+        harness.isar,
+        desktop: 0.8,
+        mobile: 0.2,
+      );
+      expect(saved.editScreenResizeRatio, 0.35);
+    } finally {
+      await harness.close();
+    }
+  });
 }

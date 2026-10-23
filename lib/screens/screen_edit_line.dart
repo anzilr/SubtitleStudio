@@ -172,7 +172,6 @@ class EditSubtitleScreenState extends riverpod.ConsumerState<EditSubtitleScreen>
 
   // Resize ratio for desktop layout
   double _resizeRatio = 0.35;
-  double? _lastLoggedRatio; // Track last logged ratio to reduce debug noise
   bool _isResizeRatioLoaded =
       false; // Track if resize ratio has been loaded from preferences
 

@@ -102,17 +102,6 @@ extension _EditLinePreferences on EditSubtitleScreenState {
       _resizeRatio = ratio;
     });
     _editLineController.scheduleResizeRatio(ratio);
-
-    if (_lastLoggedRatio == null ||
-        (ratio - _lastLoggedRatio!).abs() > 0.05) {
-      _lastLoggedRatio = ratio;
-      unawaited(
-        logInfo(
-          '_saveResizeRatio called with: $ratio',
-          context: 'EditSubtitleScreen._saveResizeRatio',
-        ),
-      );
-    }
   }
 
   void _saveMobileResizeRatio(double ratio) {

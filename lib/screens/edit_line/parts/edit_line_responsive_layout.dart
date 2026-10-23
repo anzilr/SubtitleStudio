@@ -5,10 +5,6 @@ extension _EditLineResponsiveLayout on EditSubtitleScreenState {
     if (ResponsiveLayout.shouldUseDesktopLayout(context)) {
       // Don't build the ResizableSplitView until the resize ratio is loaded
       if (!_isResizeRatioLoaded) {
-        logInfo(
-          'Waiting for resize ratio to load...',
-          context: 'EditSubtitleScreen._buildResponsiveContent',
-        );
         // Return a temporary layout while loading
         return Row(
           children: [
@@ -63,16 +59,6 @@ extension _EditLineResponsiveLayout on EditSubtitleScreenState {
         );
       }
 
-      // Only log ratio changes when they're significant to reduce debug noise
-      if (_lastLoggedRatio == null ||
-          (_resizeRatio - _lastLoggedRatio!).abs() > 0.01) {
-        logInfo(
-          'Creating ResizableSplitView with initialRatio: $_resizeRatio, loaded: $_isResizeRatioLoaded',
-          context: 'EditSubtitleScreen._buildResponsiveContent',
-        );
-        _lastLoggedRatio = _resizeRatio;
-      }
-
       // Desktop layout: resizable editing interface and video player side by side
       // Apply layout switching based on preference (layout1/layout2)
       final videoContent = shouldShowVideo && _selectedVideoPath != null
@@ -91,13 +77,6 @@ extension _EditLineResponsiveLayout on EditSubtitleScreenState {
         maxRatio: 0.8,
         dividerThickness: 6.0, // Increased from default 4.0 for better touch interaction
         onRatioChanged: (ratio) {
-          // Only log every 10th ratio change to reduce noise
-          if ((ratio * 1000).round() % 10 == 0) {
-            logInfo(
-              'ResizableSplitView onRatioChanged: $ratio',
-              context: 'EditSubtitleScreen._buildResponsiveContent',
-            );
-          }
           _saveResizeRatio(ratio);
         },
         leftChild: leftChild,
@@ -107,19 +86,9 @@ extension _EditLineResponsiveLayout on EditSubtitleScreenState {
       // Mobile layout: vertical layout with resizable video
       // Don't build until mobile resize ratio is loaded
       if (!_isMobileResizeRatioLoaded) {
-        logInfo(
-          'Waiting for mobile resize ratio to load...',
-          context: 'EditSubtitleScreen.build',
-        );
         // Return a temporary layout while loading
         return originalContent;
       }
-
-      // Removed excessive logging that was causing performance issues during keyboard animations
-      // logInfo(
-      //   'Creating mobile ResizableSplitView with mobileRatio: $_mobileVideoResizeRatio, loaded: $_isMobileResizeRatioLoaded',
-      //   context: 'EditSubtitleScreen.build',
-      // );
 
       // Mobile layout with vertical ResizableSplitView - only if auto-resize is enabled and video is visible
       return ResponsiveLayout.shouldUseMobileLayout(context) && _autoResizeOnKeyboard && shouldShowVideo
@@ -130,10 +99,6 @@ extension _EditLineResponsiveLayout on EditSubtitleScreenState {
             vertical: true, // Vertical split for mobile
             dividerThickness: 6.0, // Increased for mobile touch interaction
             onRatioChanged: (ratio) {
-              logInfo(
-                'Mobile ResizableSplitView onRatioChanged: $ratio',
-                context: 'EditSubtitleScreen.build',
-              );
               // Only save the ratio, don't trigger setState to avoid build loops
               _saveMobileResizeRatio(ratio);
             },

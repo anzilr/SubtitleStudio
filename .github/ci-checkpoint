@@ -410,3 +410,11 @@ spacing. Keep compact text/video sizing and CP91 R9 R2 video GlobalKey
 slot fix unchanged. Tests cover 320px and wide action rows, controls
 without video, and side-by-side timestamps across widths. Flutter pub get,
 analyze and full tests only. Do NOT build any platform in CI.
+
+CP92 R1 October 23 2026: eliminate mobile video-divider per-frame
+logInfo calls and redundant desktop/ratio-loading layout traces in Edit
+Line. Retain the existing onRatioChanged callbacks, Riverpod controllers,
+debounced preference writes, and video GlobalKey layout. Remove obsolete
+_lastLoggedRatio state. Add a 1000-update desktop/mobile ratio regression
+that verifies final persisted values after provider disposal. Full Linux
+Flutter pub get, analyze and test only; no platform builds in CI.
