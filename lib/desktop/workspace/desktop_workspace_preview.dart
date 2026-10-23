@@ -553,7 +553,9 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
     ),
   );
 
-  Widget _projectSidebar() => Container(
+  Widget _projectSidebar() => widget.liveReadOnly
+      ? _readOnlyProjectSidebar()
+      : Container(
     decoration: const BoxDecoration(border:
         Border(right: BorderSide(color: _border))),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start,
@@ -582,6 +584,27 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
         ),
       ],
     ),
+  );
+
+  Widget _readOnlyProjectSidebar() => Container(
+    decoration: const BoxDecoration(
+      border: Border(right: BorderSide(color: _border))),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      _paneHeader(Icons.folder_open_rounded, 'PROJECT',
+          trailing: 'READ ONLY'),
+      const SizedBox(height: 10),
+      _sidebarRow(Icons.subtitles_rounded,
+          widget.projectTitle ?? 'Subtitle session',
+          selected: true),
+      const Padding(
+        padding: EdgeInsets.all(16),
+        child: Text(
+          'Showing the current subtitle snapshot. Media, attachments, '
+          'versions and additional tracks are not connected in this preview.',
+          style: TextStyle(color: _muted, fontSize: 11, height: 1.5),
+        ),
+      ),
+    ]),
   );
 
   Widget _sidebarRow(IconData icon, String label,
