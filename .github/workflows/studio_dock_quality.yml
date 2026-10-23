@@ -1,0 +1,38 @@
+name: Studio Dock Flutter quality
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/studio-dock-integration
+    paths:
+      - .github/ci-studio-dock
+
+permissions:
+  contents: read
+
+concurrency:
+  group: studio-dock-quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  desktop-quality:
+    name: Flutter analyzer and Studio Dock tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.5'
+          channel: stable
+          cache: true
+      - name: Resolve dependencies
+        run: flutter pub get
+      - name: Analyze all Dart files
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+      - name: Run Studio Dock regression suite
+        shell: bash
+        run: flutter test -j 1 test/studio_dock*_test.dart
