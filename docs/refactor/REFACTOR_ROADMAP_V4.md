@@ -30,8 +30,9 @@
 > **zero-byte Android SAF read** as a valid empty document, without falling
 > through to a stale native cache or failing a direct `content://` source.
 > Null/error reads retain the existing strict grant and fallback behavior.
-> Adapter and controller tests added; Linux CI and physical Android/Windows
-> smoke acceptance are tracked separately.
+> Adapter and controller tests added; [790 tests and zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39954208733)
+> in Linux Flutter CI. Physical Android/Windows smoke acceptance remains
+> pending separately.
 > [R3 report](CHECKPOINT93_R3_ZERO_BYTE_SAF_SOURCE_ACCEPTANCE_2026-10-23.md).
 
 > **PARALLEL DESKTOP WORK APPROVED — 2026-10-20:** User elected to **see and refine a desktop UI now while CP88–CP93 refactoring continues**. A separate [desktop preview branch](https://github.com/anzilr/SubtitleStudio/tree/feature/desktop-workspace-preview) contains a demo-data-only Flutter workspace shell and an independent Windows entrypoint; it does not open or modify projects. Continue CP88–CP93 here. Full desktop *data/media integration and production acceptance* remain gated on shared-core readiness/CP93. This updates and supersedes the earlier "only after CP93 begin PC workspace" instruction below without reopening deferred CP86 waveform work. [Current parallel execution plan](REFACTOR_TO_DESKTOP_EXECUTION_2026-10-20.md).

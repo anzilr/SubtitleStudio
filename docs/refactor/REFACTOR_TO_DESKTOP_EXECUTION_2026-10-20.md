@@ -599,7 +599,8 @@ its empty content cannot be replaced by an old native cache. True provider
 failures (null/exception) still use the existing narrowly authorized native
 fallback. Add both adapter and Source View controller regression tests.
 [R3 report](CHECKPOINT93_R3_ZERO_BYTE_SAF_SOURCE_ACCEPTANCE_2026-10-23.md).
-**Verification:** Linux Flutter CI pending; Android/Windows native acceptance
+**Verification:** [Linux Flutter gate 39954208733](https://github.com/anzilr/SubtitleStudio/actions/runs/39954208733),
+**790 tests passed, zero analyzer issues**. Android/Windows native acceptance
 remains pending, with no platform builds in GitHub Actions.
 
 ### Production Desktop Workspace Integration / UI [AFTER CP93]

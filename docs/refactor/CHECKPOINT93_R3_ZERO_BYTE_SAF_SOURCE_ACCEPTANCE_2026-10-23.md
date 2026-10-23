@@ -37,8 +37,10 @@ inside nonempty SRT files, which was already tested separately.
 ## Verification
 
 - Local `git diff --check`: clean.
-- Linux GitHub Actions Flutter dependency resolution, analysis and complete
-  test suite: pending checkpoint CI. No platform builds permitted in CI.
+- [Linux Flutter quality gate 39954208733](https://github.com/anzilr/SubtitleStudio/actions/runs/39954208733):
+  **790 tests passed, zero analyzer issues**. Dependency resolution,
+  analysis and tests only; no platform builds in CI.
+- Verified implementation commit: `f3c8fba1064cb467ba06550ccf9b5cba52fdc48e`.
 - Real SAF grant/revocation and actual Android/Windows runtime smoke: pending.
 
 ## Next
