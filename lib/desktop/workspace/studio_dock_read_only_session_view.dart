@@ -24,6 +24,8 @@ class StudioDockReadOnlySessionView extends ConsumerStatefulWidget {
     required this.sessionId,
     required this.collectionId,
     this.onChooseProject,
+    this.onImportFile,
+    this.onNewProject,
     this.enableTextEditing = false,
     this.allowNativePlayback = false,
     this.suppressParentEditorHotkeys = true,
@@ -32,6 +34,8 @@ class StudioDockReadOnlySessionView extends ConsumerStatefulWidget {
   final int sessionId;
   final int collectionId;
   final VoidCallback? onChooseProject;
+  final VoidCallback? onImportFile;
+  final VoidCallback? onNewProject;
   /// Opt in to checkpoint-backed text edits; the old Editor preview stays read-only.
   final bool enableTextEditing;
   /// Only true for the standalone native desktop Home. An Editor-hosted route
@@ -175,6 +179,8 @@ class _StudioDockReadOnlySessionViewState
         projectTitle: session.fileName,
         encoding: session.encoding,
         onChooseProject: widget.onChooseProject,
+        onImportFile: widget.onImportFile,
+        onNewProject: widget.onNewProject,
         onApplyCueText: widget.enableTextEditing ? _applyText : null,
         manageLiveHotkeys: !widget.suppressParentEditorHotkeys,
         videoSurface: validVideoPath == null || !widget.allowNativePlayback
