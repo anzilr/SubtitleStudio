@@ -115,3 +115,5 @@ Desktop UI preview first milestone October 20 2026: standalone lib/main_desktop_
 Desktop workspace preview analyzer cleanup: no redundant dart:ui imports, full suite must continue to pass. Flutter pub get/analyze/test only; NO native Windows, Android, Linux, macOS, iOS or Web build in CI.
 
 STUDIO DOCK DS1 2026-10-23: isolated desktop layout with 43/13/44 center panels, four inspector tabs, Original and Edited grid columns, narrow overlays, splitter/geometry and widget tests. Flutter pub get/analyze/test only; NO platform builds on GitHub Actions. Preview does not read or write user files.
+
+DS1 GEOMETRY R2 2026-10-23: initial quality gate 40011822272 passed analyzer and 577 Flutter tests, one failed floating-point inverted clamp bound at 380px preview height. Stabilize minimum/maximum clamp endpoints, run flutter pub get / flutter analyze / flutter test only. No platform builds.
