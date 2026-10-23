@@ -562,7 +562,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
 
   Widget _subtitleTable() => Column(children: [
     _paneHeader(Icons.view_list_outlined, 'SUBTITLE LINES',
-      trailing: '${_visible.length} / ${_cues.length}'),
+        trailing: _visible.length.toString() + ' / ' + _cues.length.toString()),
     SizedBox(height: 43, child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 4),
       child: TextField(
@@ -579,57 +579,96 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
         onChanged: (value) => setState(() => _query = value),
       ),
     )),
-    Container(height: 33, color: const Color(0xFF21262B),
-      padding: const EdgeInsets.symmetric(horizontal: 13),
-      child: const Row(children: [
-        SizedBox(width: 30, child: Text('#',
-            style: TextStyle(fontSize: 11, color: _muted))),
-        SizedBox(width: 115, child: Text('START',
-            style: TextStyle(fontSize: 11, color: _muted))),
-        SizedBox(width: 115, child: Text('END',
-            style: TextStyle(fontSize: 11, color: _muted))),
-        Expanded(child: Text('TEXT',
-            style: TextStyle(fontSize: 11, color: _muted))),
-      ])),
-    Expanded(child: _visible.isEmpty
-      ? const Center(child: Text('No matching subtitle lines',
-          style: TextStyle(color: _muted)))
-      : ListView.builder(
-          itemCount: _visible.length,
-          itemExtent: 40,
-          itemBuilder: (context, i) {
-            final cue = _visible[i];
-            final selected = cue.id == _selectedId;
-            return Material(
-              color: selected ? _accent.withValues(alpha: .14)
-                  : i.isOdd ? const Color(0xFF1B1F23) : Colors.transparent,
-              child: InkWell(
-                key: ValueKey('desktop-cue-${cue.id}'),
-                onTap: () => setState(() => _selectedId = cue.id),
-                child: Container(
-                  decoration: const BoxDecoration(border:
-                    Border(bottom: BorderSide(color: _border, width: .4))),
-                  padding: const EdgeInsets.symmetric(horizontal: 13),
-                  child: Row(children: [
-                    SizedBox(width: 30,
-                        child: Text('${cue.id}', style: TextStyle(
-                          fontSize: 11, color: selected ? _accent : _muted))),
-                    SizedBox(width: 115, child: Text(cue.start,
-                        style: const TextStyle(fontSize: 11, color: _muted))),
-                    SizedBox(width: 115, child: Text(cue.end,
-                        style: const TextStyle(fontSize: 11, color: _muted))),
-                    Expanded(child: Text(cue.edited, maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 12))),
-                    if (cue.marked) const Icon(Icons.bookmark,
-                        color: Color(0xFFE9C46A), size: 14),
-                  ]),
-                ),
-              ),
-            );
-          },
-        )),
+    Expanded(child: LayoutBuilder(builder: (context, limits) {
+      final gridWidth = math.max(850.0, limits.maxWidth);
+      return SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: SizedBox(
+          width: gridWidth,
+          height: limits.maxHeight,
+          child: Column(children: [
+            Container(
+              height: 33,
+              color: const Color(0xFF21262B),
+              padding: const EdgeInsets.symmetric(horizontal: 13),
+              child: _gridCells(null),
+            ),
+            Expanded(child: _visible.isEmpty
+              ? const Center(child: Text('No matching subtitle lines',
+                  style: TextStyle(color: _muted)))
+              : ListView.builder(
+                  itemCount: _visible.length,
+                  itemExtent: 40,
+                  itemBuilder: (context, i) {
+                    final cue = _visible[i];
+                    final selected = cue.id == _selectedId;
+                    return Material(
+                      color: selected ? _accent.withValues(alpha: .14)
+                          : i.isOdd
+                              ? const Color(0xFF1B1F23)
+                              : Colors.transparent,
+                      child: InkWell(
+                        key: ValueKey('desktop-cue-' + cue.id.toString()),
+                        onTap: () => setState(() => _selectedId = cue.id),
+                        child: Container(
+                          decoration: const BoxDecoration(border: Border(
+                            bottom: BorderSide(color: _border, width: .4),
+                          )),
+                          padding: const EdgeInsets.symmetric(horizontal: 13),
+                          child: _gridCells(cue),
+                        ),
+                      ),
+                    );
+                  },
+                )),
+          ]),
+        ),
+      );
+    })),
   ]);
+
+  Widget _gridCells(WorkspaceDemoCue? cue) {
+    final heading = cue == null;
+    Text cell(String value, {bool primary = false}) => Text(
+      value, maxLines: 1, overflow: TextOverflow.ellipsis,
+      style: TextStyle(fontSize: heading ? 10 : 11,
+        color: heading ? _muted : primary ? Colors.white : _muted),
+    );
+    return Row(children: [
+      SizedBox(width: 32, child: cell(heading ? '#' : cue.id.toString())),
+      SizedBox(width: 108, child: cell(heading ? 'START' : cue.start)),
+      SizedBox(width: 108, child: cell(heading ? 'END' : cue.end)),
+      SizedBox(width: 84, child: cell(heading
+          ? 'DURATION' : _cueDuration(cue))),
+      Expanded(child: Padding(
+        padding: const EdgeInsets.only(right: 12),
+        child: cell(heading ? 'ORIGINAL' : cue.original, primary: true),
+      )),
+      Expanded(child: Padding(
+        padding: const EdgeInsets.only(right: 10),
+        child: cell(heading ? 'EDITED' : cue.edited, primary: true),
+      )),
+      SizedBox(width: 55, child: heading
+          ? cell('STATUS')
+          : cue.marked
+              ? const Icon(Icons.bookmark, color: Color(0xFFE9C46A),
+                  size: 14)
+              : const SizedBox.shrink()),
+    ]);
+  }
+
+  String _cueDuration(WorkspaceDemoCue cue) {
+    int parse(String value) {
+      final parts = value.split(RegExp('[:,]'));
+      if (parts.length != 4) return 0;
+      final values = parts.map(int.tryParse).toList();
+      if (values.any((element) => element == null)) return 0;
+      return (values[0]! * 3600 + values[1]! * 60 + values[2]!) * 1000
+          + values[3]!;
+    }
+    final millis = math.max(0, parse(cue.end) - parse(cue.start));
+    return (millis / 1000).toStringAsFixed(3) + 's';
+  }
 
   Widget _inspector() => Container(
     color: const Color(0xFF191D21),
