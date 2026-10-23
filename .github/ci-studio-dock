@@ -9,3 +9,5 @@ DS4 R1.1 2026-10-24: Studio Dock is the ONLY native desktop interface. Remove le
 DS4 R1.1 CI CORRECTION 2026-10-24: resolve two undefined desktop theme constants in branded empty view; remove unused imports, rerun full Flutter analysis and Studio Dock tests only, no builds.
 
 DS4 R1.1 TEST FIX 2026-10-24: fix project-dialog dismissal lifecycle and branded empty cue regression. Flutter-only analyzer and Studio Dock tests; no native builds.
+
+DS4 R1.1 LAST GATE 2026-10-24: guard unsaved draft before toolbar New or Import; test Cancel/Discard; Studio Dock only, no classic UI or builds.
