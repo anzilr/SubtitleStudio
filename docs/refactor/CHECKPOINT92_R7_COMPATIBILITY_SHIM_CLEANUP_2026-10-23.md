@@ -35,7 +35,10 @@ Branch: `refactor/riverpod-architecture`
 ## Verification
 
 - Local repository-wide usage scans and `git diff --check` completed.
-- Flutter analyzer and complete Flutter suite: **pending Linux GitHub Actions**.
+- Final Linux GitHub [Flutter quality gate 39948838690](https://github.com/anzilr/SubtitleStudio/actions/runs/39948838690)
+  **passed 785 Flutter tests, zero analyzer issues**. The test count adds
+  two compatibility source-contract checks relative to the 783-test R6 gate.
+- Verified code commit: `bcfad76bda19017684cdab7c0870843691aa0439`.
 - Android/Windows/macOS/iOS builds and device tests: not performed in CI.
 
 ## Next

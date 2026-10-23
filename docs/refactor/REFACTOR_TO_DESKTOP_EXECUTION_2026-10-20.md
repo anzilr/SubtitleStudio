@@ -563,7 +563,8 @@ which invokes the same unchanged native URI-only Android document picker.
 Typed result regression tests and a source-contract guard cover the change;
 persisted project/history/Isar schemas, document grants and mobile UI are
 unchanged. [R7 report](CHECKPOINT92_R7_COMPATIBILITY_SHIM_CLEANUP_2026-10-23.md).
-**Verification:** Pending Linux Flutter quality gate (no platform builds).
+**Verification:** [Linux Flutter gate 39948838690](https://github.com/anzilr/SubtitleStudio/actions/runs/39948838690),
+**785 tests passed, zero analyzer issues** (no platform builds).
 
 ### CP93 — Core refactor acceptance and handoff
 - Flutter analysis and full unit/widget/Isar integration tests in GitHub Actions (dependency resolution + tests only; **no platform builds in CI**).
