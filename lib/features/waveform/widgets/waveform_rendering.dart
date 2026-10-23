@@ -2,6 +2,11 @@ part of 'waveform_widget.dart';
 
 extension _WaveformRendering on WaveformWidgetState {
   Widget _buildEmptyState() {
+    if (widget.compact) {
+      return Center(child: Text('No waveform loaded',
+        style: TextStyle(fontSize: 11,
+          color: Theme.of(context).colorScheme.onSurfaceVariant)));
+    }
     return Container(
       height: widget.height,
       decoration: BoxDecoration(
@@ -32,6 +37,19 @@ extension _WaveformRendering on WaveformWidgetState {
   }
 
   Widget _buildLoadingState(WaveformLoading state) {
+    if (widget.compact) {
+      return Center(child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(width: 16, height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2)),
+          const SizedBox(width: 10),
+          Text(state.progress >= 0.35
+              ? 'Preparing waveform…' : 'Generating waveform…',
+              style: const TextStyle(fontSize: 11)),
+        ],
+      ));
+    }
     final colors = Theme.of(context).colorScheme;
     final preparing = state.progress >= 0.35;
     
@@ -96,6 +114,19 @@ extension _WaveformRendering on WaveformWidgetState {
   }
 
   Widget _buildErrorState(WaveformError state) {
+    if (widget.compact) {
+      return Center(child: Tooltip(
+        message: state.message,
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(Icons.error_outline, size: 16,
+              color: Theme.of(context).colorScheme.error),
+          const SizedBox(width: 6),
+          Flexible(child: Text('Waveform unavailable · inspect audio source',
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 11))),
+        ]),
+      ));
+    }
     return Container(
       height: widget.height,
       decoration: BoxDecoration(
@@ -147,6 +178,46 @@ extension _WaveformRendering on WaveformWidgetState {
     );
   }
 
+  Widget _buildCompactToolbar(WaveformReady state) => SizedBox(
+    height: 28,
+    child: Row(children: [
+      IconButton(
+        key: const ValueKey('waveform-compact-zoom-out'),
+        tooltip: 'Zoom waveform out',
+        icon: const Icon(Icons.remove, size: 16),
+        onPressed: state.canZoomOut
+            ? () => ref.read(waveformControllerProvider.notifier)
+                .dispatch(const ZoomOut()) : null,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(minWidth: 28, minHeight: 26),
+      ),
+      Text('Waveform', style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+          fontSize: 10)),
+      IconButton(
+        key: const ValueKey('waveform-compact-zoom-in'),
+        tooltip: 'Zoom waveform in',
+        icon: const Icon(Icons.add, size: 16),
+        onPressed: state.canZoomIn
+            ? () => ref.read(waveformControllerProvider.notifier)
+                .dispatch(const ZoomIn()) : null,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(minWidth: 28, minHeight: 26),
+      ),
+      const Spacer(),
+      IconButton(
+        tooltip: state.autoScroll ? 'Disable waveform auto-scroll'
+            : 'Enable waveform auto-scroll',
+        icon: Icon(state.autoScroll ? Icons.sync : Icons.sync_disabled,
+            size: 16),
+        onPressed: () => ref.read(waveformControllerProvider.notifier)
+            .dispatch(const ToggleAutoScroll()),
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(minWidth: 28, minHeight: 26),
+      ),
+    ]),
+  );
+
   Widget _buildWaveformView(WaveformReady state) {
     // Update viewport width when widget size changes
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -154,7 +225,8 @@ extension _WaveformRendering on WaveformWidgetState {
         final renderBox = context.findRenderObject() as RenderBox?;
         if (renderBox != null) {
           // Account for border and vertical zoom bar width
-          final width = renderBox.size.width - 50; // 50px for vertical zoom bar and borders
+          final width = (renderBox.size.width -
+              (widget.compact ? 2 : 50)).clamp(1.0, double.infinity).toDouble();
           if (width != state.viewportWidth) {
             ref.read(waveformControllerProvider.notifier).dispatch(UpdateViewportWidth(width));
           }
@@ -172,8 +244,9 @@ extension _WaveformRendering on WaveformWidgetState {
       ),
       child: Column(
         children: [
-          // Horizontal bar with zoom controls on left and menu button box on right
-          LayoutBuilder(
+          // The desktop band has only ~13% of available vertical space.
+          // Keep waveform interaction area usable without the full toolbar.
+          if (widget.compact) _buildCompactToolbar(state) else LayoutBuilder(
             builder: (context, constraints) {
               // Calculate width for left section (total width - menu button width)
               final leftSectionWidth = constraints.maxWidth - 48;
@@ -605,8 +678,8 @@ extension _WaveformRendering on WaveformWidgetState {
                     ),
                   ),
                 ),
-                // Right side: Vertical zoom control
-                Container(
+                // Compact Studio Dock omits the full-height amplitude strip.
+                if (!widget.compact) Container(
                   width: 48,
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.5),
