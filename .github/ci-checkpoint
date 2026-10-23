@@ -501,3 +501,5 @@ DS3 R2 2026-10-24: enable real Studio Dock text edits via updateMultipleLinesWit
 DS3 R2 FINAL 2026-10-24: checkpoint-backed editable inspector; tests for stale conflict and Apply/Discard/Cancel; honest disconnected media placeholders; native startup remains Studio Dock. Run flutter pub get, flutter analyze and flutter test ONLY, no platform builds. See docs/refactor/STUDIO_DOCK_DS3_R2_TEXT_EDIT_2026-10-24.md.
 
 DS3 R2 FINISHED SOURCE 2026-10-24: retain drafts and guard in-app route pop, freeze input during atomic Apply, keep media explicitly disconnected, preserve null edit, metadata and stale-state protections. Full flutter analyze/test only; NO platform builds in CI.
+
+DS3 R2 REGRESSION GATE 2026-10-24: inspect failed-Apply transient SnackBar before widget-test pumpAndSettle consumes timeout; all Flutter-only checks, no builds.
