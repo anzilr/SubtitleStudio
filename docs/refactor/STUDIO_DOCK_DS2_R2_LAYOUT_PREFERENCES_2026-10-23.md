@@ -22,3 +22,6 @@ Build on: [DS2 R1 hotkey reuse](STUDIO_DOCK_DS2_R1_HOTKEYS_AND_INTERACTIONS_2026
 
 ## Next
 DS2 keyboard and context-menu acceptance on Windows, then the shared-core production integration gate (DS3). Continue using the existing `MSoneHotkeyManager` and registered HotkeyAction bindings rather than introducing duplicate keyboard infrastructure.
+
+## Final verified gate
+- [Flutter Actions #40015984494](https://github.com/anzilr/SubtitleStudio/actions/runs/40015984494): **584 tests passed, analyzer zero issues**. Native Windows visual and keyboard tests remain pending. No native platform builds ran in Actions.
