@@ -46,6 +46,7 @@ class DesktopWorkspacePreview extends StatefulWidget {
     this.onChooseProject,
     this.onApplyCueText,
     this.videoSurface,
+    this.manageLiveHotkeys = false,
   });
 
   /// Supplied only by the DS3 real-session loader. Demo mode still owns its
@@ -60,6 +61,9 @@ class DesktopWorkspacePreview extends StatefulWidget {
   /// Optional existing native-player surface. Only the standalone desktop
   /// host may provide it; the classic Editor preview must leave it null.
   final Widget? videoSurface;
+  /// Standalone desktop is allowed to own shared application callbacks;
+  /// an overlay on the classic Editor must not override its registrations.
+  final bool manageLiveHotkeys;
 
   @override
   State<DesktopWorkspacePreview> createState() =>
@@ -170,13 +174,19 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
     // Direct widget previews do not initialize native plugins.
     // The live read-only viewer may be nested in an already-running Editor.
     // Never override its registered MSoneHotkeyManager callbacks.
-    if (!widget.liveReadOnly) unawaited(_installManagedHotkeys());
+    if (!widget.liveReadOnly || widget.manageLiveHotkeys) {
+      unawaited(_installManagedHotkeys());
+    }
     unawaited(_restoreLayout());
   }
 
   Future<void> _installManagedHotkeys() async {
     final manager = MSoneHotkeyManager.instance;
     for (final action in _managedActions) {
+      if (widget.liveReadOnly &&
+          action != HotkeyAction.nextLine &&
+          action != HotkeyAction.previousLine &&
+          action != HotkeyAction.findReplace) continue;
       if (!mounted) return;
       await manager.registerCallback(action, () {
         if (mounted && !_isEditingText) _dispatchManagedAction(action);
@@ -188,8 +198,12 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   void dispose() {
     _layoutSaveTimer?.cancel();
     if (_layoutChangedSinceMount) unawaited(_persistLayout());
-    if (!widget.liveReadOnly) {
+    if (!widget.liveReadOnly || widget.manageLiveHotkeys) {
       for (final action in _managedActions) {
+        if (widget.liveReadOnly &&
+            action != HotkeyAction.nextLine &&
+            action != HotkeyAction.previousLine &&
+            action != HotkeyAction.findReplace) continue;
         unawaited(MSoneHotkeyManager.instance.unregisterCallback(action));
       }
     }
