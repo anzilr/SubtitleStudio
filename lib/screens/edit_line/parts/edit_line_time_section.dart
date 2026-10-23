@@ -57,9 +57,8 @@ extension _EditLineTimeSection on EditSubtitleScreenState {
                                               ),
                                               if (_isTimeVisible)
                                                 Padding(
-                                                  padding: EdgeInsets.symmetric(
-                                                    vertical: EditLinePortraitMetrics
-                                                        .of(context).sectionGap,
+                                                  padding: const EdgeInsets.symmetric(
+                                                    vertical: 16,
                                                   ),
                                                   child: EditLineTimeFieldsLayout(
                                                     startField: _buildTimeComponentFields(

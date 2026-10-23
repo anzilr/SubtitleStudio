@@ -401,3 +401,12 @@ all 170/200/240 height cases, preserve unrelated 240px and 1px widgets,
 and transition fixed/resizable arrangements with one GlobalKey. Native
 libmpv SIGSEGV after manual hot restart is tracked independently, not
 claimed resolved here. Flutter pub get/analyze/full tests ONLY; no builds.
+
+CP91 R9 R3 October 23 2026: restore user-preferred original Edit Line
+single-row editing actions (Previous, Dictionary, Formatting, Subtitle
+Actions, Save, Play/Pause, Next) with all tools visible at narrow widths;
+restore side-by-side Start/End Time controls and original time-section
+spacing. Keep compact text/video sizing and CP91 R9 R2 video GlobalKey
+slot fix unchanged. Tests cover 320px and wide action rows, controls
+without video, and side-by-side timestamps across widths. Flutter pub get,
+analyze and full tests only. Do NOT build any platform in CI.

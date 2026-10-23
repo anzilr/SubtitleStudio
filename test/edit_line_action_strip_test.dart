@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:subtitle_studio/screens/edit_line/widgets/edit_line_action_strip.dart';
 
 void main() {
-  testWidgets('compact bar keeps primary actions visible and reveals tools',
+  testWidgets('compact and wide toolbars show all original actions in one row',
       (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(320, 720);
@@ -15,16 +15,15 @@ void main() {
           child: IconButton(
             key: ValueKey(id),
             tooltip: id,
-            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+            constraints: const BoxConstraints(minWidth: 24, maxWidth: 36),
             onPressed: () => taps.add(id),
             icon: const Icon(Icons.circle_outlined),
           ),
         );
 
-    Widget build({required bool compact, bool video = true}) => MaterialApp(
+    Widget build({bool video = true}) => MaterialApp(
           home: Scaffold(
             body: EditLineActionStrip(
-              compact: compact,
               previous: action('previous'),
               dictionary: action('dictionary'),
               formatting: action('formatting'),
@@ -36,34 +35,43 @@ void main() {
           ),
         );
 
-    await tester.pumpWidget(build(compact: true));
-    expect(find.byKey(const ValueKey('edit-line-compact-actions')),
-        findsOneWidget);
+    await tester.pumpWidget(build());
     expect(find.byKey(const ValueKey('previous')), findsOneWidget);
     expect(find.byKey(const ValueKey('save')), findsOneWidget);
     expect(find.byKey(const ValueKey('play')), findsOneWidget);
     expect(find.byKey(const ValueKey('next')), findsOneWidget);
-    expect(find.byKey(const ValueKey('dictionary')), findsNothing);
-    expect(find.byKey(const ValueKey('formatting')), findsNothing);
-    expect(find.byKey(const ValueKey('subtitle-actions')), findsNothing);
+    expect(find.byKey(const ValueKey('dictionary')), findsOneWidget);
+    expect(find.byKey(const ValueKey('formatting')), findsOneWidget);
+    expect(find.byKey(const ValueKey('subtitle-actions')), findsOneWidget);
+    expect(find.byKey(const ValueKey('edit-line-tools-toggle')), findsNothing);
+    final toolbar = tester.widget<Row>(
+      find.byKey(const ValueKey('edit-line-actions-row')),
+    );
+    expect(toolbar.children, hasLength(7));
+    final previous = tester.getRect(find.byKey(const ValueKey('previous')));
+    final dictionary = tester.getRect(find.byKey(const ValueKey('dictionary')));
+    final formatting = tester.getRect(find.byKey(const ValueKey('formatting')));
+    final subtitleActions = tester.getRect(find.byKey(const ValueKey('subtitle-actions')));
+    final save = tester.getRect(find.byKey(const ValueKey('save')));
+    final play = tester.getRect(find.byKey(const ValueKey('play')));
+    final next = tester.getRect(find.byKey(const ValueKey('next')));
+    expect(previous.right, lessThanOrEqualTo(dictionary.left));
+    expect(dictionary.right, lessThanOrEqualTo(formatting.left));
+    expect(formatting.right, lessThanOrEqualTo(subtitleActions.left));
+    expect(subtitleActions.right, lessThanOrEqualTo(save.left));
+    expect(save.right, lessThanOrEqualTo(play.left));
+    expect(play.right, lessThanOrEqualTo(next.left));
 
     await tester.tap(find.byKey(const ValueKey('save')));
     await tester.tap(find.byKey(const ValueKey('next')));
     expect(taps, ['save', 'next']);
 
-    await tester.tap(find.byKey(const ValueKey('edit-line-tools-toggle')));
-    await tester.pump();
-    expect(find.byKey(const ValueKey('edit-line-extra-tools')), findsOneWidget);
-    expect(find.byKey(const ValueKey('dictionary')), findsOneWidget);
-    expect(find.byKey(const ValueKey('formatting')), findsOneWidget);
-    expect(find.byKey(const ValueKey('subtitle-actions')), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('dictionary')));
     expect(taps.last, 'dictionary');
     expect(tester.takeException(), isNull);
 
     tester.view.physicalSize = const Size(800, 600);
-    await tester.pumpWidget(build(compact: false));
-    expect(find.byKey(const ValueKey('edit-line-compact-actions')), findsNothing);
+    await tester.pumpWidget(build());
     expect(find.byKey(const ValueKey('edit-line-tools-toggle')), findsNothing);
     expect(find.byKey(const ValueKey('dictionary')), findsOneWidget);
     expect(find.byKey(const ValueKey('formatting')), findsOneWidget);
@@ -71,21 +79,22 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('no-video compact toolbar retains access to every provided action',
+  testWidgets('toolbar without video keeps dictionary and formatting visible',
       (tester) async {
     final tapped = <String>[];
     Widget action(String id) => Flexible(
-          child: TextButton(
+          child: IconButton(
             key: ValueKey(id),
+            tooltip: id,
+            constraints: const BoxConstraints(minWidth: 24, maxWidth: 36),
             onPressed: () => tapped.add(id),
-            child: Text(id),
+            icon: const Icon(Icons.circle_outlined),
           ),
         );
 
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(
         body: EditLineActionStrip(
-          compact: true,
           previous: action('prev'),
           dictionary: action('dictionary'),
           formatting: action('formatting'),
@@ -97,15 +106,11 @@ void main() {
 
     expect(find.byKey(const ValueKey('save')), findsOneWidget);
     expect(find.byKey(const ValueKey('next')), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('edit-line-tools-toggle')));
-    await tester.pump();
     expect(find.byKey(const ValueKey('dictionary')), findsOneWidget);
     expect(find.byKey(const ValueKey('formatting')), findsOneWidget);
-    expect(find.byKey(const ValueKey('edit-line-extra-tools')), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('edit-line-tools-toggle')));
-    await tester.pump();
-    expect(find.byKey(const ValueKey('edit-line-extra-tools')), findsNothing);
-    expect(tapped, isEmpty);
+    expect(find.byKey(const ValueKey('edit-line-tools-toggle')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('formatting')));
+    expect(tapped, ['formatting']);
     expect(tester.takeException(), isNull);
   });
 }

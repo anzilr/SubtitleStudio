@@ -10,7 +10,6 @@ class EditLinePortraitMetrics {
     required this.videoHeight,
     required this.originalCueHeight,
     required this.editedCueHeight,
-    required this.sectionGap,
   });
 
   final bool isCompactPortrait;
@@ -18,7 +17,6 @@ class EditLinePortraitMetrics {
   final double videoHeight;
   final double originalCueHeight;
   final double editedCueHeight;
-  final double sectionGap;
 
   factory EditLinePortraitMetrics.fromSize(Size size) {
     final compact = size.width <= 430 && size.height > size.width;
@@ -31,7 +29,6 @@ class EditLinePortraitMetrics {
       // Reference text needs less space than the actively edited subtitle.
       originalCueHeight: compact ? 76 : 100,
       editedCueHeight: compact ? 120 : 100,
-      sectionGap: compact ? 8 : 16,
     );
   }
 
@@ -39,8 +36,8 @@ class EditLinePortraitMetrics {
       EditLinePortraitMetrics.fromSize(MediaQuery.sizeOf(context));
 }
 
-/// Full timestamps remain readable on small phones rather than being forced
-/// into two very narrow columns. Both fields retain the caller's controllers.
+/// Retains the original Start/End Time fields side by side on all sizes.
+/// The caller owns both field controllers and validation state.
 class EditLineTimeFieldsLayout extends StatelessWidget {
   const EditLineTimeFieldsLayout({
     super.key,
@@ -52,28 +49,13 @@ class EditLineTimeFieldsLayout extends StatelessWidget {
   final Widget endField;
 
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) {
-      if (constraints.maxWidth < 380) {
-        return Column(
-          key: const ValueKey('edit-line-time-stacked'),
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            startField,
-            const SizedBox(height: 8),
-            endField,
-          ],
-        );
-      }
-      return Row(
-        key: const ValueKey('edit-line-time-side-by-side'),
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(child: startField),
-          const SizedBox(width: 16),
-          Expanded(child: endField),
-        ],
-      );
-    },
+  Widget build(BuildContext context) => Row(
+    key: const ValueKey('edit-line-time-side-by-side'),
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Expanded(child: startField),
+      const SizedBox(width: 16),
+      Expanded(child: endField),
+    ],
   );
 }

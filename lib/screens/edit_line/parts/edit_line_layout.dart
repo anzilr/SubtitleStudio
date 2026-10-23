@@ -268,13 +268,10 @@ extension _EditLineLayout on EditSubtitleScreenState {
                                                       availableWidth < 400
                                                           ? 0.4
                                                           : 1.0; // Less padding for narrow screens
-                                                  final actionButtonConstraints =
-                                                      portraitMetrics.isCompactPortrait
-                                                          ? const BoxConstraints(minWidth: 48, minHeight: 48)
-                                                          : const BoxConstraints(minWidth: 24, maxWidth: 36);
+                                                  const actionButtonConstraints =
+                                                      BoxConstraints(minWidth: 24, maxWidth: 36);
 
                                                   return EditLineActionStrip(
-                                                    compact: portraitMetrics.isCompactPortrait,
                                                     previous: Flexible(
                                                         child: IconButton(
                                                           tooltip: 'Previous subtitle',
@@ -650,7 +647,7 @@ extension _EditLineLayout on EditSubtitleScreenState {
 
                                           // Time fields section - update keyboard type for both fields
                                           _buildEditLineTimeSection(),
-                                          SizedBox(height: portraitMetrics.sectionGap),
+                                          const SizedBox(height: 16),
                                         ],
                                       ),
                                     ),

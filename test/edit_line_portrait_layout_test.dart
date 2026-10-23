@@ -10,7 +10,6 @@ void main() {
     expect(narrow.contentPadding, 10);
     expect(narrow.originalCueHeight, 76);
     expect(narrow.editedCueHeight, 120);
-    expect(narrow.sectionGap, 8);
 
     final shortPhone = EditLinePortraitMetrics.fromSize(const Size(390, 600));
     expect(shortPhone.isCompactPortrait, isTrue);
@@ -23,11 +22,10 @@ void main() {
       expect(wider.contentPadding, 16);
       expect(wider.originalCueHeight, 100);
       expect(wider.editedCueHeight, 100);
-      expect(wider.sectionGap, 16);
     }
   });
 
-  testWidgets('narrow time fields stack without losing their widgets',
+  testWidgets('start and end time stay side by side at phone widths',
       (tester) async {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -56,20 +54,20 @@ void main() {
 
     tester.view.physicalSize = const Size(320, 720);
     await tester.pumpWidget(build());
-    expect(find.byKey(const ValueKey('edit-line-time-stacked')), findsOneWidget);
-    expect(find.byKey(const ValueKey('edit-line-time-side-by-side')), findsNothing);
+    expect(find.byKey(const ValueKey('edit-line-time-side-by-side')),
+        findsOneWidget);
     final narrowStart = tester.getRect(find.byKey(startKey));
     final narrowEnd = tester.getRect(find.byKey(endKey));
-    expect(narrowEnd.top, greaterThan(narrowStart.bottom));
-    expect(narrowStart.width, 300);
-    expect(narrowEnd.width, 300);
+    expect(narrowStart.top, narrowEnd.top);
+    expect(narrowEnd.left, greaterThan(narrowStart.right));
+    expect(narrowStart.width, closeTo(142, 0.001));
+    expect(narrowEnd.width, closeTo(142, 0.001));
     expect(tester.takeException(), isNull);
 
     tester.view.physicalSize = const Size(430, 800);
     await tester.pumpWidget(build());
     expect(find.byKey(const ValueKey('edit-line-time-side-by-side')),
         findsOneWidget);
-    expect(find.byKey(const ValueKey('edit-line-time-stacked')), findsNothing);
     final wideStart = tester.getRect(find.byKey(startKey));
     final wideEnd = tester.getRect(find.byKey(endKey));
     expect(wideStart.top, wideEnd.top);
