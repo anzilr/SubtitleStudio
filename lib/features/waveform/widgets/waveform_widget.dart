@@ -33,6 +33,9 @@ class WaveformWidget extends riverpod.ConsumerStatefulWidget {
   final Function()? onSubtitlesUpdated; // Callback when subtitles are updated (for refreshing parent)
   final Function(Duration startTime, Duration endTime)? onAddLineConfirmed; // Callback when add line is confirmed with selected times
   final double height;
+  /// Opt-in minimal toolbar/zoom UI when embedded in a short desktop band.
+  /// The full-sized mobile and classic waveform remains unchanged.
+  final bool compact;
   final int? subtitleCollectionId; // For database updates
   final int? sessionId; // For checkpoint creation
   final int? highlightedSubtitleIndex; // Index of currently highlighted subtitle (0-based)
@@ -51,6 +54,7 @@ class WaveformWidget extends riverpod.ConsumerStatefulWidget {
     this.onSubtitlesUpdated,
     this.onAddLineConfirmed,
     this.height = 180.0,
+    this.compact = false,
     this.subtitleCollectionId,
     this.sessionId,
     this.highlightedSubtitleIndex,
