@@ -83,7 +83,10 @@ void main() {
       find.byKey(const ValueKey('studio-edit-1-0')), 'Conflicted draft');
     await tester.pump();
     await tester.tap(find.byKey(const ValueKey('studio-apply-cue')));
-    await tester.pumpAndSettle();
+    // Inspect before the transient SnackBar auto-dismisses; pumpAndSettle
+    // otherwise advances the full notification lifetime.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
     expect(find.text('Conflicted draft'), findsWidgets);
     expect(find.byKey(const ValueKey('studio-discard-cue')), findsOneWidget);
     expect(find.textContaining('Could not apply this edit'), findsWidgets);
