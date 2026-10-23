@@ -31,6 +31,28 @@ void main() {
     expect(seeks.length, 2);
   });
 
+  test('explicit audio tracks never masquerade as an old cached stream', () {
+    final link = StudioDockPlaybackLink();
+    expect(link.audio.value.status, StudioDockAudioStatus.waiting);
+    link.updateAudioReady('auto', null);
+    expect(link.audio.value.status, StudioDockAudioStatus.ready);
+    expect(link.audio.value.streamSelector, isNull);
+
+    link.prepareAudio();
+    expect(link.audio.value.status, StudioDockAudioStatus.waiting);
+    link.updateAudioReady('3', 'ffmpeg:stream:5');
+    expect(link.audio.value.trackId, '3');
+    expect(link.audio.value.streamSelector, 'ffmpeg:stream:5');
+
+    link.updateAudioUnavailable('4', 'Verified stream metadata missing');
+    expect(link.audio.value.status, StudioDockAudioStatus.unavailable);
+    expect(link.audio.value.streamSelector, isNull);
+    expect(link.audio.value.error, contains('metadata missing'));
+    link.detach();
+    expect(link.audio.value.status, StudioDockAudioStatus.waiting);
+    link.dispose();
+  });
+
   testWidgets('attach-video command is available without classic editor',
       (tester) async {
     SharedPreferences.setMockInitialValues({});
