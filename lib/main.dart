@@ -73,6 +73,7 @@ Future<void> main(List<String> args) async {
     if (lowercasePath.endsWith('.srt') || 
         lowercasePath.endsWith('.ass') || 
         lowercasePath.endsWith('.vtt') || 
+        lowercasePath.endsWith('.ssa') || 
         lowercasePath.endsWith('.msone')) {
       initialFile = filePath;
       await AppLogger.instance.info('Opening file from command line: $filePath');
