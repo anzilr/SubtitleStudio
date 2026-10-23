@@ -152,6 +152,7 @@ extension _EditLineLayout on EditSubtitleScreenState {
                                 // Video player at the top
                                 if (shouldShowVideo)
                                   SizedBox(
+                                    key: EditLineVideoSlot.inlinePlayer,
                                     height: portraitMetrics.videoHeight,
                                     child: VideoPlayerWidget(
                                       key: _videoPlayerKey,
@@ -225,7 +226,11 @@ extension _EditLineLayout on EditSubtitleScreenState {
                                     ),
                                   ),
                                 // Add spacing after video when it's shown
-                                if (shouldShowVideo) const SizedBox(height: 1),
+                                if (shouldShowVideo)
+                                  const SizedBox(
+                                    key: EditLineVideoSlot.inlineSpacing,
+                                    height: 1,
+                                  ),
                                 // Main content in scrollable area
                                 Expanded(
                                   child: Padding(

@@ -390,3 +390,14 @@ in compact mode; retain the original full toolbar order and sizing on wider
 screens. Do not alter action callbacks, Riverpod controllers, media lifecycle,
 skins, timeline or persistence. Add compact/expanded/wide widget regressions.
 Flutter pub get, analyze and complete tests on Linux only; NO platform builds.
+
+CP91 R9 R2 October 23 2026: Android device repro of duplicate
+VideoPlayerWidget GlobalKey after CP91 R8 compact portrait resized inline
+video from fixed 240px to 170-200px. _buildContentWithoutVideo only removed
+the exact 240px SizedBox, allowing inline and vertical split players with the
+same GlobalKey to mount simultaneously. Replace height-based filtering with
+explicit inline-player and inline-spacing slot keys. Regression tests prove
+all 170/200/240 height cases, preserve unrelated 240px and 1px widgets,
+and transition fixed/resizable arrangements with one GlobalKey. Native
+libmpv SIGSEGV after manual hot restart is tracked independently, not
+claimed resolved here. Flutter pub get/analyze/full tests ONLY; no builds.

@@ -178,27 +178,12 @@ extension _EditLineActions on EditSubtitleScreenState {
 
   // Handle mark/unmark from video player fullscreen controls
   Widget _buildContentWithoutVideo(Column originalContent) {
-    // Create a modified version of the original content without the video player
-    final children = originalContent.children;
-    final modifiedChildren = <Widget>[];
-
-    for (final child in children) {
-      // Skip the video player widget (SizedBox with height 240 containing VideoPlayerWidget)
-      if (child is SizedBox && child.height == 240) {
-        continue; // Skip video player
-      }
-      // Skip the spacing after video player
-      else if (modifiedChildren.isNotEmpty &&
-          modifiedChildren.last is SizedBox &&
-          child is SizedBox &&
-          child.height == 1) {
-        continue; // Skip spacing after video
-      } else {
-        modifiedChildren.add(child);
-      }
-    }
-
-    return Column(children: modifiedChildren);
+    // Remove the explicit inline player slot, not an arbitrary 240px box.
+    // Portrait video is 170–200px after CP91 R8, and a height predicate left
+    // two VideoPlayerWidgets mounted with the same GlobalKey in split mode.
+    return Column(
+      children: EditLineVideoSlot.withoutInlineVideo(originalContent.children),
+    );
   }
 
 
