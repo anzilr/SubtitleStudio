@@ -45,6 +45,7 @@ class DesktopWorkspacePreview extends StatefulWidget {
     this.encoding,
     this.onChooseProject,
     this.onApplyCueText,
+    this.videoSurface,
   });
 
   /// Supplied only by the DS3 real-session loader. Demo mode still owns its
@@ -56,6 +57,9 @@ class DesktopWorkspacePreview extends StatefulWidget {
   final VoidCallback? onChooseProject;
   /// Non-null only when the production checkpoint-backed edit bridge is ready.
   final Future<bool> Function(int cueNumber, String editedText)? onApplyCueText;
+  /// Optional existing native-player surface. Only the standalone desktop
+  /// host may provide it; the classic Editor preview must leave it null.
+  final Widget? videoSurface;
 
   @override
   State<DesktopWorkspacePreview> createState() =>
@@ -510,8 +514,13 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
                     _dragHandle(onDelta: (dx) => setState(() =>
                         _sidebarWidth = (_sidebarWidth + dx)
                             .clamp(200.0, 340.0).toDouble())),
-                  Expanded(child: _section == 0
-                      ? _editingWorkspace() : _secondarySection()),
+                  Expanded(child: IndexedStack(
+                    index: _section == 0 ? 0 : 1,
+                    children: [
+                      _editingWorkspace(),
+                      _secondarySection(),
+                    ],
+                  )),
                   if (inspectorVisible)
                     _dragHandle(onDelta: (dx) => setState(() =>
                         _inspectorWidth = (_inspectorWidth - dx)
@@ -798,8 +807,8 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
           key: const ValueKey('dock-video-band'),
           height: bands.video,
           child: Column(children: [
-            Expanded(child: _videoPanel()),
-            _transport(),
+            Expanded(child: widget.videoSurface ?? _videoPanel()),
+            if (widget.videoSurface == null) _transport(),
           ]),
         ),
         _horizontalSplitter(
