@@ -548,11 +548,13 @@ without private media identifiers. Measurements are descriptive only, never
 a brittle CI pass/fail latency requirement. Core services and native behavior
 are unchanged; file pickers, media decoding and UI frames are not covered.
 [R6 report](CHECKPOINT92_R6_CORE_WORKFLOW_BASELINES_2026-10-23.md).
-**First measurement:** [Linux Flutter run 39946376552](https://github.com/anzilr/SubtitleStudio/actions/runs/39946376552),
-783 tests passed. With 1,000 synthetic cues, three samples gave median
-import/open/save/restore **49.94 / 1.27 / 5.47 / 33.82 ms** on a shared runner.
-One nonfatal unused-import warning was found and removed; final analyzer
-rerun pending. These times are not native performance targets.
+**Verification:** [Linux Flutter run 39947041945](https://github.com/anzilr/SubtitleStudio/actions/runs/39947041945),
+**783 tests passed and zero analyzer issues**. With 1,000 synthetic cues,
+three samples gave median import/open/save/restore
+**36.77 / 0.56 / 3.92 / 23.33 ms** on a shared runner. The earlier successful
+[run 39946376552](https://github.com/anzilr/SubtitleStudio/actions/runs/39946376552)
+recorded different medians and one subsequently fixed import warning. These
+times are not native performance targets.
 
 ### CP93 — Core refactor acceptance and handoff
 - Flutter analysis and full unit/widget/Isar integration tests in GitHub Actions (dependency resolution + tests only; **no platform builds in CI**).

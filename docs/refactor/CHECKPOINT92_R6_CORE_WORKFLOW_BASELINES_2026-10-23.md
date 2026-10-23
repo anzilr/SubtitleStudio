@@ -39,26 +39,31 @@ repetition count, median and maximum elapsed milliseconds.
 ## Verification
 
 - `git diff --check` locally: clean.
-- Initial Linux GitHub quality gate
+- The final Linux GitHub
+  [Flutter quality gate 39947041945](https://github.com/anzilr/SubtitleStudio/actions/runs/39947041945)
+  **passed: 783 tests, zero analyzer issues**. The first run
   [39946376552](https://github.com/anzilr/SubtitleStudio/actions/runs/39946376552)
-  completed **783 passing tests** and recorded the measurements below. It
-  reported one nonfatal unused-import analyzer warning in this new test. That
-  import was removed; the final clean analyzer gate is pending.
+  also passed 783 tests but reported one nonfatal unused-import warning, which
+  was removed before the final verified run.
+- Verified implementation and analyzer-fix commits:
+  `00c97a192058b68c34a890de5279e2ac25dd7cad` and
+  `54c7587e9e0081327bda52c51563c937fc84bfb9`.
 - No Android/Windows/macOS/iOS application builds in GitHub Actions.
 
-## First Linux CI baseline (1,000 synthetic cues, three samples)
+## Verified Linux CI baseline (1,000 synthetic cues, three samples)
 
 | Stage | Median | Maximum |
 | --- | ---: | ---: |
-| Import, SRT → Isar | 49.94 ms | 149.82 ms |
-| Open, Isar collection read | 1.27 ms | 13.45 ms |
-| Save, encode and native overwrite | 5.47 ms | 16.86 ms |
-| Restore, reconstruct V2 history and transact | 33.82 ms | 57.53 ms |
+| Import, SRT → Isar | 36.77 ms | 98.70 ms |
+| Open, Isar collection read | 0.56 ms | 6.80 ms |
+| Save, encode and native overwrite | 3.92 ms | 13.18 ms |
+| Restore, reconstruct V2 history and transact | 23.33 ms | 45.47 ms |
 
-All values came from the synthetic benchmark's single aggregate log line.
-They describe a shared Linux Actions runner, not user-device wall time.
-The widest spread occurs in initial import/open iterations where host cache
-and JIT warmup affect timings. These are baseline observations only.
+All values came from the final synthetic benchmark's single aggregate log
+line. The first CI run had medians of **49.94 / 1.27 / 5.47 / 33.82 ms**
+for import/open/save/restore. The difference between successful runs reinforces
+that shared-runner load, caches and JIT warmup affect timings; these are
+baseline observations rather than user-device wall times or release targets.
 
 ## Next
 

@@ -1,12 +1,14 @@
 # SubtitleStudio Refactor Roadmap v4
 
-> **CURRENT CP92 STATUS — 2026-10-23:** CP92 R1–R5 cleanup and diagnostic
-> privacy work passed the Linux Flutter quality gate. Latest verified R5:
-> [782 tests and zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39944813390).
+> **CURRENT CP92 STATUS — 2026-10-23:** CP92 R1–R6 cleanup, diagnostic
+> privacy and synthetic performance baselines passed the Linux Flutter gate.
+> Latest verified R6:
+> [783 tests and zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39947041945).
 > System FFmpeg and FFmpegKit waveform errors now expose numeric status and
 > recovery guidance without media paths, SAF document identities, native
 > commands or stderr/log bodies. [R5 report](CHECKPOINT92_R5_WAVEFORM_FFMPEG_PRIVACY_2026-10-23.md).
-> **R6 underway:** [synthetic import/open/save/restore performance baselines](CHECKPOINT92_R6_CORE_WORKFLOW_BASELINES_2026-10-23.md).
+> **R6 measured:** [synthetic import/open/save/restore performance baselines](CHECKPOINT92_R6_CORE_WORKFLOW_BASELINES_2026-10-23.md)
+> (1,000 cues, three samples; Linux medians 36.77/0.56/3.92/23.33 ms).
 > **Next:** CP92 R7 proven-unused shim
 > cleanup, then CP93 shared-core/native acceptance. Keep the CP86 waveform
 > optimization experiment isolated and the desktop preview demo-only.
