@@ -64,7 +64,7 @@ void main() {
       ),
     ));
     await tester.pumpAndSettle();
-    expect(find.text('This subtitle session has no cues.'), findsOneWidget);
+    expect(find.text('This project has no subtitle cues yet.'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }
