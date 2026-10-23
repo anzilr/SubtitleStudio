@@ -59,30 +59,56 @@ class _WaveformBodyState extends ConsumerState<_WaveformBody> {
   @override
   void initState() {
     super.initState();
+    widget.playback.audio.addListener(_scheduleLoad);
     _scheduleLoad();
   }
 
   @override
   void didUpdateWidget(covariant _WaveformBody old) {
     super.didUpdateWidget(old);
+    if (old.playback != widget.playback) {
+      old.playback.audio.removeListener(_scheduleLoad);
+      widget.playback.audio.addListener(_scheduleLoad);
+    }
     if (old.videoPath != widget.videoPath ||
-        old.collectionId != widget.collectionId) {
+        old.collectionId != widget.collectionId ||
+        old.playback != widget.playback) {
       _scheduleLoad();
     }
+  }
+
+  @override
+  void dispose() {
+    _loadRevision++;
+    widget.playback.audio.removeListener(_scheduleLoad);
+    super.dispose();
   }
 
   void _scheduleLoad() {
     final revision = ++_loadRevision;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || revision != _loadRevision) return;
-      // Retain production caching and FFmpeg loading progress, and never
-      // decode again merely because the user resizes Studio Dock.
-      unawaited(ref.read(waveformControllerProvider.notifier).dispatch(
-        LoadAudioFile(
-          widget.videoPath,
-          subtitleCollectionId: widget.collectionId,
-        ),
-      ));
+      final selection = widget.playback.audio.value;
+      final controller = ref.read(waveformControllerProvider.notifier);
+      switch (selection.status) {
+        case StudioDockAudioStatus.waiting:
+          // Do not display a previous audio track during mpv track changes.
+          unawaited(controller.dispatch(const ClearWaveform()));
+        case StudioDockAudioStatus.unavailable:
+          unawaited(controller.dispatch(WaveformTrackSelectionFailed(
+            selection.error ?? 'Audio track metadata is unavailable.',
+            filePath: widget.videoPath,
+          )));
+        case StudioDockAudioStatus.ready:
+          // A player-resolved null selector means *auto*, not the older
+          // saved FFmpeg preference for this subtitle collection.
+          unawaited(controller.dispatch(LoadAudioFile(
+            widget.videoPath,
+            subtitleCollectionId: widget.collectionId,
+            audioTrackId: selection.streamSelector,
+            useSavedAudioTrackPreference: false,
+          )));
+      }
     });
   }
 
