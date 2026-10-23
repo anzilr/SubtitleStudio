@@ -65,7 +65,7 @@ void main() {
     });
 
     await launch(tester);
-    expect(find.text('LIVE · READ ONLY'), findsOneWidget);
+    expect(find.text('LIVE · TEXT EDIT'), findsOneWidget);
     expect(find.text('Last.srt'), findsWidgets);
     expect(find.byKey(const ValueKey('studio-dock-switch-project')),
         findsOneWidget);
@@ -85,7 +85,7 @@ void main() {
     await tester.tap(find.byKey(ValueKey('studio-dock-project-${first.id}')));
     await tester.pumpAndSettle();
     expect(find.text('First.srt'), findsWidgets);
-    expect(find.text('LIVE · READ ONLY'), findsOneWidget);
+    expect(find.text('LIVE · TEXT EDIT'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
