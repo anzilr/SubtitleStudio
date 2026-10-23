@@ -91,6 +91,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   final Set<int> _selectedIds = {5};
   final FocusNode _gridFocus = FocusNode(debugLabel: 'Studio Dock grid');
   final FocusNode _searchFocus = FocusNode(debugLabel: 'Studio Dock search');
+  final TextEditingController _commandSearch = TextEditingController();
   int _section = 0;
   bool _playing = false;
   bool _inspectorOpen = true;
@@ -145,6 +146,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
     for (final action in _managedActions) {
       unawaited(MSoneHotkeyManager.instance.unregisterCallback(action));
     }
+    _commandSearch.dispose();
     _gridFocus.dispose();
     _searchFocus.dispose();
     super.dispose();
@@ -254,10 +256,12 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   Widget build(BuildContext context) {
     return CallbackShortcuts(
       bindings: {
-        const SingleActivator(LogicalKeyboardKey.arrowDown, control: true):
-            () => _selectRelative(1),
-        const SingleActivator(LogicalKeyboardKey.arrowUp, control: true):
-            () => _selectRelative(-1),
+        // Only palette chord is new: the other shortcuts belong to
+        // MSoneHotkeyManager and must not be duplicated here.
+        const SingleActivator(LogicalKeyboardKey.keyK, control: true):
+            _showCommandPalette,
+        const SingleActivator(LogicalKeyboardKey.keyK, meta: true):
+            _showCommandPalette,
       },
       child: Focus(
         autofocus: true,
@@ -356,7 +360,14 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
       const Spacer(),
       const Text('DEMO WORKSPACE', style:
           TextStyle(color: _muted, letterSpacing: 1, fontSize: 10)),
-      const SizedBox(width: 14),
+      const SizedBox(width: 6),
+      IconButton(
+        key: const ValueKey('desktop-command-palette'),
+        icon: const Icon(Icons.keyboard_command_key),
+        tooltip: 'Command palette (Ctrl/Cmd+K)',
+        onPressed: _showCommandPalette,
+      ),
+      const SizedBox(width: 5),
       IconButton(
         key: const ValueKey('toggle-explorer'),
         icon: const Icon(Icons.folder_open_outlined),
@@ -744,6 +755,8 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
                       child: InkWell(
                         key: ValueKey('desktop-cue-' + cue.id.toString()),
                         onTap: () => _selectFromPointer(cue.id),
+                        onSecondaryTapDown: (details) =>
+                            _showCueContextMenu(cue, details.globalPosition),
                         child: Container(
                           decoration: const BoxDecoration(border: Border(
                             bottom: BorderSide(color: _border, width: .4),
@@ -761,6 +774,102 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
       );
     })),
   ]);
+
+
+  Future<void> _showCueContextMenu(
+      WorkspaceDemoCue cue, Offset position) async {
+    final renderObject = Overlay.of(context).context.findRenderObject();
+    if (renderObject is! RenderBox) return;
+    final result = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromRect(
+        Rect.fromLTWH(position.dx, position.dy, 1, 1),
+        Offset.zero & renderObject.size,
+      ),
+      items: const [
+        PopupMenuItem(value: 'select', child: Text('Select cue')),
+        PopupMenuItem(value: 'mark', child: Text('Toggle review mark')),
+        PopupMenuItem(value: 'copy', child: Text('Copy timecodes')),
+      ],
+    );
+    if (!mounted) return;
+    switch (result) {
+      case 'select':
+        _selectCue(cue.id);
+      case 'mark':
+        _selectCue(cue.id);
+        _toggleMarkedSelection();
+      case 'copy':
+        await Clipboard.setData(
+          ClipboardData(text: cue.start + ' --> ' + cue.end),
+        );
+      default:
+        break;
+    }
+  }
+
+  void _showCommandPalette() {
+    _commandSearch.clear();
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, refresh) {
+          final commands = <MapEntry<String, VoidCallback>>[
+            MapEntry('Find subtitle', () => _searchFocus.requestFocus()),
+            MapEntry('Next cue', () => _selectRelative(1)),
+            MapEntry('Previous cue', () => _selectRelative(-1)),
+            MapEntry('Toggle playback preview',
+                () => _dispatchManagedAction(HotkeyAction.playPause)),
+            MapEntry('Toggle review mark', _toggleMarkedSelection),
+            MapEntry('Show Inspector: Text', () => setState(() {
+              _inspectorTab = 0;
+              _inspectorOpen = true;
+              _inspectorOverlayOpen = true;
+            })),
+            MapEntry('Show Inspector: Timing', () => setState(() {
+              _inspectorTab = 1;
+              _inspectorOpen = true;
+              _inspectorOverlayOpen = true;
+            })),
+          ];
+          final filter = _commandSearch.text.trim().toLowerCase();
+          final visible = commands.where((item) =>
+              item.key.toLowerCase().contains(filter)).toList();
+          return AlertDialog(
+            title: const Text('Studio Dock commands'),
+            content: SizedBox(
+              width: 420,
+              height: 300,
+              child: Column(children: [
+                TextField(
+                  key: const ValueKey('palette-search'),
+                  controller: _commandSearch,
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    prefixIcon: Icon(Icons.search),
+                    hintText: 'Search commands',
+                  ),
+                  onChanged: (_) => refresh(() {}),
+                ),
+                Expanded(child: ListView.builder(
+                  itemCount: visible.length,
+                  itemBuilder: (_, i) => ListTile(
+                    key: ValueKey('palette-command-' + i.toString()),
+                    dense: true,
+                    title: Text(visible[i].key),
+                    onTap: () {
+                      Navigator.of(dialogContext).pop();
+                      visible[i].value();
+                    },
+                  ),
+                )),
+              ]),
+            ),
+          );
+        },
+      ),
+    );
+  }
 
   Widget _gridCells(WorkspaceDemoCue? cue) {
     final heading = cue == null;
