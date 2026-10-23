@@ -471,7 +471,9 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop && !_savingDraft) {
           unawaited(_confirmDraftBeforeLeaving().then((allowed) {
-            if (allowed && mounted) Navigator.of(context).maybePop();
+            if (allowed && mounted && Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            }
           }));
         }
       },
