@@ -60,7 +60,8 @@ void main() {
         home: Scaffold(body: Center(
           child: SizedBox(width: 500, height: 87,
             child: WaveformWidget(
-              compact: true, height: 87, subtitles: [],
+              compact: true, enableTimeEditing: false,
+              height: 87, subtitles: [],
             ),
           ),
         )),
@@ -71,6 +72,8 @@ void main() {
         findsOneWidget);
     expect(find.byKey(const ValueKey('waveform-compact-zoom-out')),
         findsOneWidget);
+    expect(tester.widget<WaveformWidget>(find.byType(WaveformWidget))
+        .enableTimeEditing, isFalse);
     expect(find.byTooltip('Waveform Options'), findsNothing,
         reason: 'Full toolbar must not consume compact waveform height');
     expect(tester.takeException(), isNull);
