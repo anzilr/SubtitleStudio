@@ -37,7 +37,20 @@ class WorkspaceDemoCue {
 /// absent: shared Editor, Isar, checkpoints, media and file-access providers
 /// remain authoritative in the refactoring branch.
 class DesktopWorkspacePreview extends StatefulWidget {
-  const DesktopWorkspacePreview({super.key});
+  const DesktopWorkspacePreview({
+    super.key,
+    this.initialCues,
+    this.liveReadOnly = false,
+    this.projectTitle,
+    this.encoding,
+  });
+
+  /// Supplied only by the DS3 real-session loader. Demo mode still owns its
+  /// original sample cues and never touches a database.
+  final List<WorkspaceDemoCue>? initialCues;
+  final bool liveReadOnly;
+  final String? projectTitle;
+  final String? encoding;
 
   @override
   State<DesktopWorkspacePreview> createState() =>
@@ -49,7 +62,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   static const _border = Color(0xFF30363D);
   static const _muted = Color(0xFF98A2AD);
 
-  final List<WorkspaceDemoCue> _cues = [
+  static const List<WorkspaceDemoCue> _demoCues = [
     const WorkspaceDemoCue(id: 1, start: '00:00:08,200', end: '00:00:11,400',
       original: 'The city always looks different at night.',
       edited: 'The city always looks different at night.'),
@@ -87,6 +100,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
       original: 'Then let us not waste another minute.',
       edited: 'Then let us not waste another minute.'),
   ];
+  late final List<WorkspaceDemoCue> _cues;
   int _selectedId = 5;
   int _selectionAnchor = 5;
   final Set<int> _selectedIds = {5};
@@ -130,6 +144,15 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   @override
   void initState() {
     super.initState();
+    _cues = List<WorkspaceDemoCue>.from(
+        widget.initialCues ?? _demoCues);
+    if (widget.initialCues != null) {
+      _selectedId = _cues.isEmpty ? -1 : _cues.first.id;
+      _selectionAnchor = _selectedId;
+      _selectedIds
+        ..clear()
+        ..addAll(_selectedId > 0 ? [_selectedId] : <int>[]);
+    }
     // Desktop entrypoint initializes the application's existing hotkey manager.
     // Direct widget previews do not initialize native plugins.
     unawaited(_installManagedHotkeys());
@@ -233,7 +256,9 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
       case HotkeyAction.previousLine:
         _selectRelative(-1);
       case HotkeyAction.playPause:
-        setState(() => _playing = !_playing);
+        if (!widget.liveReadOnly) {
+          setState(() => _playing = !_playing);
+        }
       case HotkeyAction.findReplace:
         _searchFocus.requestFocus();
       case HotkeyAction.markLine:
@@ -244,7 +269,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   }
 
   void _toggleMarkedSelection() {
-    if (_selectedIds.isEmpty) return;
+    if (widget.liveReadOnly || _selectedIds.isEmpty) return;
     setState(() {
       for (var i = 0; i < _cues.length; i++) {
         final cue = _cues[i];
@@ -307,6 +332,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   }
 
   void _replaceCue(WorkspaceDemoCue updated) {
+    if (widget.liveReadOnly) return;
     final i = _cues.indexWhere((cue) => cue.id == updated.id);
     if (i < 0) return;
     setState(() => _cues[i] = updated);
@@ -322,6 +348,11 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.initialCues != null && _cues.isEmpty) {
+      return const Scaffold(body: Center(
+        child: Text('This subtitle session has no cues.'),
+      ));
+    }
     return CallbackShortcuts(
       bindings: {
         // Only palette chord is new: the other shortcuts belong to
@@ -421,13 +452,14 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
       Container(width: 1, height: 23, color: _border),
       const SizedBox(width: 15),
       Flexible(child: Text(
-        'Night Drive  /  Main subtitles',
+        widget.projectTitle ?? 'Night Drive  /  Main subtitles',
         maxLines: 1, overflow: TextOverflow.ellipsis,
         style: const TextStyle(color: _muted, fontSize: 12),
       )),
       const Spacer(),
-      const Text('DEMO WORKSPACE', style:
-          TextStyle(color: _muted, letterSpacing: 1, fontSize: 10)),
+      Text(widget.liveReadOnly ? 'LIVE · READ ONLY' : 'DEMO WORKSPACE',
+        style: const TextStyle(
+          color: _muted, letterSpacing: 1, fontSize: 10)),
       const SizedBox(width: 6),
       IconButton(
         key: const ValueKey('desktop-command-palette'),
@@ -472,7 +504,8 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
       const SizedBox(width: 7),
       const Icon(Icons.circle, size: 9, color: _accent),
       const SizedBox(width: 7),
-      const Text('Preview', style: TextStyle(fontSize: 12)),
+      Text(widget.liveReadOnly ? 'Read-only' : 'Preview',
+          style: const TextStyle(fontSize: 12)),
     ]),
   );
 
@@ -708,13 +741,18 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
             child: Stack(children: [
               Positioned.fill(child: CustomPaint(
                 painter: const _DemoHorizonPainter())),
-              const Positioned(left: 17, top: 13,
-                child: Text('DEMO VIDEO · PLACEHOLDER',
-                  style: TextStyle(fontSize: 10,
+              Positioned(left: 17, top: 13,
+                child: Text(widget.liveReadOnly
+                    ? 'REAL CUES · VIDEO NOT CONNECTED'
+                    : 'DEMO VIDEO · PLACEHOLDER',
+                  style: const TextStyle(fontSize: 10,
                     color: Color(0xFFACB6BD), letterSpacing: 1))),
               Center(child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Text(_selected.edited,
+                child: Text(widget.liveReadOnly
+                    ? (_selected.edited.isEmpty
+                        ? _selected.original : _selected.edited)
+                    : _selected.edited,
                   maxLines: 2, textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 16, height: 1.4, fontWeight: FontWeight.w600,
@@ -743,8 +781,11 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
         key: const ValueKey('preview-play'),
         icon: Icon(_playing ? Icons.pause_circle_filled_rounded
             : Icons.play_circle_fill_rounded, color: _accent, size: 25),
-        tooltip: 'Toggle simulated playback',
-        onPressed: () => _dispatchManagedAction(HotkeyAction.playPause)),
+        tooltip: widget.liveReadOnly
+            ? 'Media playback is not connected in this preview'
+            : 'Toggle simulated playback',
+        onPressed: widget.liveReadOnly ? null
+            : () => _dispatchManagedAction(HotkeyAction.playPause)),
       IconButton(icon: const Icon(Icons.skip_next_rounded, size: 19),
         tooltip: 'Next cue', onPressed: () => _selectRelative(1)),
       const SizedBox(width: 14),
@@ -867,10 +908,12 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
         Rect.fromLTWH(position.dx, position.dy, 1, 1),
         Offset.zero & renderObject.size,
       ),
-      items: const [
-        PopupMenuItem(value: 'select', child: Text('Select cue')),
-        PopupMenuItem(value: 'mark', child: Text('Toggle review mark')),
-        PopupMenuItem(value: 'copy', child: Text('Copy timecodes')),
+      items: [
+        const PopupMenuItem(value: 'select', child: Text('Select cue')),
+        if (!widget.liveReadOnly)
+          const PopupMenuItem(value: 'mark',
+              child: Text('Toggle review mark')),
+        const PopupMenuItem(value: 'copy', child: Text('Copy timecodes')),
       ],
     );
     if (!mounted) return;
@@ -899,9 +942,11 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
             MapEntry('Find subtitle', () => _searchFocus.requestFocus()),
             MapEntry('Next cue', () => _selectRelative(1)),
             MapEntry('Previous cue', () => _selectRelative(-1)),
-            MapEntry('Toggle playback preview',
-                () => _dispatchManagedAction(HotkeyAction.playPause)),
-            MapEntry('Toggle review mark', _toggleMarkedSelection),
+            if (!widget.liveReadOnly)
+              MapEntry('Toggle playback preview',
+                  () => _dispatchManagedAction(HotkeyAction.playPause)),
+            if (!widget.liveReadOnly)
+              MapEntry('Toggle review mark', _toggleMarkedSelection),
             MapEntry('Reset workspace layout', _resetLayout),
             MapEntry('Show Inspector: Text', () => setState(() {
               _inspectorTab = 0;
@@ -1028,9 +1073,11 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
           decoration: const BoxDecoration(
             border: Border(top: BorderSide(color: _border)),
           ),
-          child: const Text('Demo only · changes are not saved to files',
+          child: Text(widget.liveReadOnly
+              ? 'Read-only session · no changes are saved'
+              : 'Demo only · changes are not saved to files',
             textAlign: TextAlign.center,
-            style: TextStyle(color: _muted, fontSize: 11)),
+            style: const TextStyle(color: _muted, fontSize: 11)),
         ),
       ]),
     );
@@ -1055,6 +1102,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
           TextFormField(
             key: ValueKey('desktop-edit-' + _selected.id.toString()),
             initialValue: _selected.edited,
+            readOnly: widget.liveReadOnly,
             minLines: 3, maxLines: 8,
             style: const TextStyle(fontSize: 13, height: 1.5),
             decoration: InputDecoration(
@@ -1067,7 +1115,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
           ),
           const SizedBox(height: 14),
           OutlinedButton.icon(
-            onPressed: () => _replaceCue(
+            onPressed: widget.liveReadOnly ? null : () => _replaceCue(
                 _selected.copyWith(edited: _selected.original)),
             icon: const Icon(Icons.restore, size: 15),
             label: const Text('Reset to original'),
@@ -1108,7 +1156,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
           const SizedBox(height: 15),
           OutlinedButton.icon(
             key: const ValueKey('desktop-mark-cue'),
-            onPressed: () => _replaceCue(_selected.copyWith(
+            onPressed: widget.liveReadOnly ? null : () => _replaceCue(_selected.copyWith(
                 marked: !_selected.marked)),
             icon: Icon(_selected.marked
                 ? Icons.bookmark : Icons.bookmark_outline, size: 15),
@@ -1172,13 +1220,17 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
     padding: const EdgeInsets.symmetric(horizontal: 15),
     decoration: const BoxDecoration(border:
         Border(top: BorderSide(color: _border))),
-    child: const Row(children: [
-      Icon(Icons.info_outline, color: _accent, size: 13),
-      SizedBox(width: 8),
-      Expanded(child: Text('Demo workspace · no files are modified',
-        style: TextStyle(color: _muted, fontSize: 10))),
-      Text('Desktop prototype  •  Windows / macOS / Linux',
-        style: TextStyle(color: _muted, fontSize: 10)),
+    child: Row(children: [
+      const Icon(Icons.info_outline, color: _accent, size: 13),
+      const SizedBox(width: 8),
+      Expanded(child: Text(widget.liveReadOnly
+          ? 'Real session · read only · no database changes'
+          : 'Demo workspace · no files are modified',
+        style: const TextStyle(color: _muted, fontSize: 10))),
+      Text(widget.encoding == null
+          ? 'Desktop prototype  •  Windows / macOS / Linux'
+          : 'Encoding: ' + widget.encoding!,
+        style: const TextStyle(color: _muted, fontSize: 10)),
     ]),
   );
 }
