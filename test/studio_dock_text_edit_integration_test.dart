@@ -90,9 +90,9 @@ void main() {
     final ids = await seed();
     final baseline = await loader.load(
       sessionId: ids.sessionId, collectionId: ids.collectionId);
-    final same = await editor.apply(
+    final result = await editor.apply(
       baseline: baseline, cueNumber: 1, editedText: '');
-    expect(same, same);
+    expect(identical(result, baseline), isTrue);
     expect((await db.isar.subtitleCollections.get(ids.collectionId))!
         .lines[0].edited, isNull);
     expect(await db.isar.checkpoints.count(), 0);
