@@ -23,3 +23,6 @@ Specification: [Studio Dock v1](STUDIO_DOCK_V1_IMPLEMENTATION_DESIGN_2026-10-23.
 - Windows native visual smoke is a separate user/local validation gate.
 - Deferred to DS2 R2: pane preference persistence, shortcut lifecycle hardening and advanced focus/context-menu actions.
 - Later DS3–DS5 will wire production transactions, playback and file persistence only via authoritative shared services.
+
+## Final verified gate
+- [Flutter Actions #40015101393](https://github.com/anzilr/SubtitleStudio/actions/runs/40015101393): **581 tests passed, analyzer zero issues**. No native platform builds.
