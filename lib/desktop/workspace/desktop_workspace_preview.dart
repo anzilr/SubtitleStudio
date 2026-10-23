@@ -43,6 +43,7 @@ class DesktopWorkspacePreview extends StatefulWidget {
     this.liveReadOnly = false,
     this.projectTitle,
     this.encoding,
+    this.onChooseProject,
   });
 
   /// Supplied only by the DS3 real-session loader. Demo mode still owns its
@@ -51,6 +52,7 @@ class DesktopWorkspacePreview extends StatefulWidget {
   final bool liveReadOnly;
   final String? projectTitle;
   final String? encoding;
+  final VoidCallback? onChooseProject;
 
   @override
   State<DesktopWorkspacePreview> createState() =>
@@ -464,6 +466,13 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
       Text(widget.liveReadOnly ? 'LIVE · READ ONLY' : 'DEMO WORKSPACE',
         style: const TextStyle(
           color: _muted, letterSpacing: 1, fontSize: 10)),
+      if (widget.onChooseProject != null)
+        IconButton(
+          key: const ValueKey('studio-dock-switch-project'),
+          icon: const Icon(Icons.folder_open_outlined),
+          tooltip: 'Switch project',
+          onPressed: widget.onChooseProject,
+        ),
       const SizedBox(width: 6),
       IconButton(
         key: const ValueKey('desktop-command-palette'),
