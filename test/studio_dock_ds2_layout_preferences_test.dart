@@ -16,7 +16,7 @@ void main() {
       explorerWidth: 310,
       inspectorWidth: 410,
       videoShare: .52,
-      waveformShare: .15,
+      waveformShare: .24,
       explorerOpen: false,
       inspectorOpen: false,
     );
@@ -26,7 +26,7 @@ void main() {
     expect(loaded.explorerWidth, 310);
     expect(loaded.inspectorWidth, 410);
     expect(loaded.videoShare, .52);
-    expect(loaded.waveformShare, .15);
+    expect(loaded.waveformShare, .24);
     expect(loaded.explorerOpen, false);
     expect(loaded.inspectorOpen, false);
   });
@@ -44,7 +44,7 @@ void main() {
     expect(layout.explorerWidth, 340);
     expect(layout.inspectorWidth, 280);
     expect(layout.videoShare, .62);
-    expect(layout.waveformShare, .11);
+    expect(layout.waveformShare, .18);
   });
 
   testWidgets('wide preview restores hidden explorer and reset restores it',

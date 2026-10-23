@@ -4,11 +4,11 @@ import 'package:subtitle_studio/desktop/workspace/studio_dock_geometry.dart';
 import 'package:subtitle_studio/main_desktop_preview.dart';
 
 void main() {
-  test('balanced dock geometry uses 43/13/44 proportions', () {
+  test('balanced dock geometry uses 38/24/38 proportions', () {
     final layout = StudioDockBands.resolve(1010);
-    expect(layout.video, closeTo(430, .001));
-    expect(layout.waveform, closeTo(130, .001));
-    expect(layout.table, closeTo(440, .001));
+    expect(layout.video, closeTo(380, .001));
+    expect(layout.waveform, closeTo(240, .001));
+    expect(layout.table, closeTo(380, .001));
   });
 
   test('short windows retain nonnegative panels without overflow', () {

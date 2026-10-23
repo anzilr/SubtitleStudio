@@ -296,6 +296,7 @@ class _StudioDockReadOnlySessionViewState
       Widget buildDock(String? validVideoPath) => DesktopWorkspacePreview(
         key: ValueKey('studio-dock-session-${session.sessionId}'),
         initialCues: cues,
+        playback: widget.allowNativePlayback ? _playback : null,
         liveReadOnly: true,
         projectTitle: session.fileName,
         encoding: session.encoding,

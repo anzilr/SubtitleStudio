@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:subtitle_studio/utils/time_input_formatter.dart';
 import 'studio_dock_geometry.dart';
+import 'studio_dock_playback_link.dart';
 import 'studio_dock_layout_preferences.dart';
 import 'studio_dock_timing_edit_service.dart';
 import 'studio_dock_insert_cue_dialog.dart';
@@ -70,6 +71,7 @@ class DesktopWorkspacePreview extends StatefulWidget {
     this.onDeleteCue,
     this.videoSurface,
     this.waveformSurface,
+    this.playback,
     this.onChooseVideo,
     this.manageLiveHotkeys = false,
   });
@@ -97,6 +99,7 @@ class DesktopWorkspacePreview extends StatefulWidget {
   final Widget? videoSurface;
   /// The real production waveform shares a seek/position link with video.
   final Widget? waveformSurface;
+  final StudioDockPlaybackLink? playback;
   /// Select/change media with the existing native picker and video repository.
   final VoidCallback? onChooseVideo;
   /// Standalone desktop is allowed to own shared application callbacks;
@@ -109,9 +112,9 @@ class DesktopWorkspacePreview extends StatefulWidget {
 }
 
 class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
-  static const _accent = Color(0xFF2A9D8F);
-  static const _border = Color(0xFF30363D);
-  static const _muted = Color(0xFF98A2AD);
+  Color get _accent => Theme.of(context).colorScheme.primary;
+  Color get _border => Theme.of(context).colorScheme.outlineVariant;
+  Color get _muted => Theme.of(context).colorScheme.onSurfaceVariant;
 
   static const List<WorkspaceDemoCue> _demoCues = [
     const WorkspaceDemoCue(id: 1, start: '00:00:08,200', end: '00:00:11,400',
@@ -158,6 +161,9 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   final StudioDockLayoutPreferences _layoutPreferences = StudioDockLayoutPreferences();
   Timer? _layoutSaveTimer;
   bool _layoutChangedSinceMount = false;
+  final ScrollController _cueScroll = ScrollController();
+  int? _playingCueId;
+  bool _followPlayback = true;
   final FocusNode _gridFocus = FocusNode(debugLabel: 'Studio Dock grid');
   final FocusNode _searchFocus = FocusNode(debugLabel: 'Studio Dock search');
   final TextEditingController _commandSearch = TextEditingController();
@@ -220,6 +226,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
     if (!widget.liveReadOnly || widget.manageLiveHotkeys) {
       unawaited(_installManagedHotkeys());
     }
+    widget.playback?.position.addListener(_onPlaybackPosition);
     unawaited(_restoreLayout());
   }
 
@@ -238,7 +245,42 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   }
 
   @override
+  void didUpdateWidget(covariant DesktopWorkspacePreview oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.playback != widget.playback) {
+      oldWidget.playback?.position.removeListener(_onPlaybackPosition);
+      widget.playback?.position.addListener(_onPlaybackPosition);
+      _onPlaybackPosition();
+    }
+  }
+
+  void _onPlaybackPosition() {
+    if (!mounted || widget.playback == null || _cues.isEmpty) return;
+    final millis = widget.playback!.position.value.inMilliseconds;
+    int? active;
+    for (final cue in _cues) {
+      final start = TimeValidator.timeStringToMilliseconds(cue.start);
+      final end = TimeValidator.timeStringToMilliseconds(cue.end);
+      if (millis >= start && millis < end) { active = cue.id; break; }
+    }
+    if (active == _playingCueId) return;
+    setState(() => _playingCueId = active);
+    if (!_followPlayback || active == null || _query.isNotEmpty) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_cueScroll.hasClients || !_followPlayback) return;
+      final index = _visible.indexWhere((cue) => cue.id == active);
+      if (index < 0) return;
+      final target = (index * 40.0 - _cueScroll.position.viewportDimension / 2 + 20)
+          .clamp(0.0, _cueScroll.position.maxScrollExtent).toDouble();
+      _cueScroll.animateTo(target,
+          duration: const Duration(milliseconds: 180), curve: Curves.easeOut);
+    });
+  }
+
+  @override
   void dispose() {
+    widget.playback?.position.removeListener(_onPlaybackPosition);
+    _cueScroll.dispose();
     _layoutSaveTimer?.cancel();
     if (_layoutChangedSinceMount) unawaited(_persistLayout());
     if (!widget.liveReadOnly || widget.manageLiveHotkeys) {
@@ -647,6 +689,10 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
     _selectCue(id,
         range: keyboard.isShiftPressed,
         toggle: keyboard.isControlPressed || keyboard.isMetaPressed);
+    if (!keyboard.isShiftPressed && !keyboard.isControlPressed && !keyboard.isMetaPressed) {
+      final cue = _cues.where((item) => item.id == id).firstOrNull;
+      if (cue != null) widget.playback?.seek(Duration(milliseconds: TimeValidator.timeStringToMilliseconds(cue.start)));
+    }
     _gridFocus.requestFocus();
   }
 
@@ -1183,7 +1229,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
 
   Widget _videoPanel() => Container(
     padding: const EdgeInsets.all(14),
-    color: const Color(0xFF131619),
+    color: Theme.of(context).colorScheme.surface,
     child: Column(children: [
       Row(children: [
         const Icon(Icons.videocam_outlined, size: 16, color: _muted),
@@ -1274,7 +1320,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
 
   Widget _waveformPanel() => Container(
     padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
-    color: const Color(0xFF171B20),
+    color: Theme.of(context).colorScheme.surfaceContainerLow,
     child: Column(children: [
       Row(children: [
         const Icon(Icons.graphic_eq, size: 15, color: _accent),
@@ -1300,8 +1346,16 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   );
 
   Widget _subtitleTable() => Column(children: [
-    _paneHeader(Icons.view_list_outlined, 'SUBTITLE LINES',
-        trailing: _visible.length.toString() + ' / ' + _cues.length.toString()),
+    Row(children: [
+      Expanded(child: _paneHeader(Icons.view_list_outlined, 'SUBTITLE LINES',
+        trailing: _visible.length.toString() + ' / ' + _cues.length.toString())),
+      if (widget.playback != null) IconButton(
+        key: const ValueKey('studio-dock-follow-playback'),
+        tooltip: _followPlayback ? 'Pause subtitle follow' : 'Follow playback',
+        icon: Icon(_followPlayback ? Icons.my_location : Icons.location_disabled),
+        onPressed: () { setState(() => _followPlayback = !_followPlayback); _onPlaybackPosition(); },
+      ),
+    ]),
     SizedBox(height: 43, child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 4),
       child: TextField(
@@ -1341,6 +1395,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
               ? const Center(child: Text('No matching subtitle lines',
                   style: TextStyle(color: _muted)))
               : ListView.builder(
+                  controller: _cueScroll,
                   itemCount: _visible.length,
                   itemExtent: 40,
                   itemBuilder: (context, i) {
@@ -1348,6 +1403,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
                     final selected = _selectedIds.contains(cue.id);
                     return Material(
                       color: selected ? _accent.withValues(alpha: .14)
+                          : cue.id == _playingCueId ? _accent.withValues(alpha: .09)
                           : i.isOdd
                               ? const Color(0xFF1B1F23)
                               : Colors.transparent,
