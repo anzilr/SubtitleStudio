@@ -454,6 +454,17 @@ initialization or disposal.
 [R9 R2 report](CHECKPOINT91_R9_R2_VIDEO_GLOBALKEY_REGRESSION_2026-10-23.md).
 **Verification:** [Linux 768 Flutter tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39908801629).
 
+**CP91 R9 R3 (October 23, 2026):** After Android feedback, restore the
+previous Edit Line control arrangement: the full single-row action toolbar
+with all editing tools immediately visible and the Start/End Time controls
+side by side, including at 320px. Restore original icon-button width
+constraints and time-section spacing. Keep compact cue/video dimensions,
+the R9 R2 explicit video-slot GlobalKey fix, callbacks, persistence and
+media ownership unchanged. Widget regressions exercise narrow/wide action
+order, no-video actions and horizontal timestamp alignment.
+[R9 R3 report](CHECKPOINT91_R9_R3_RESTORE_EDIT_LINE_CONTROLS_2026-10-23.md).
+**Verification:** [Linux 768 Flutter tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39913695448).
+
 **Next:** R8/R9 physical-device acceptance for compact portrait editing;
 then CP92 cleanup/performance and CP93 refactor acceptance. Do not treat
 Linux widget tests as proof of native ergonomics. The desktop workspace
