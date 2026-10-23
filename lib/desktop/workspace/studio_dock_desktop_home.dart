@@ -101,7 +101,9 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
 
   Future<void> _createProject() async {
     if (_busy) return;
-    final controller = TextEditingController();
+    // A local string avoids disposing a TextEditingController while Flutter
+    // is still animating the modal route out of the tree.
+    var projectName = '';
     final name = await showDialog<String>(
       context: context,
       builder: (dialog) => AlertDialog(
@@ -110,7 +112,7 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
           width: 420,
           child: TextField(
             key: const ValueKey('studio-dock-new-project-name'),
-            controller: controller,
+            onChanged: (value) => projectName = value,
             autofocus: true,
             decoration: const InputDecoration(
               labelText: 'Project name',
@@ -125,13 +127,12 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(dialog, controller.text),
+            onPressed: () => Navigator.pop(dialog, projectName),
             child: const Text('Create'),
           ),
         ],
       ),
     );
-    controller.dispose();
     if (!mounted || name == null) return;
     setState(() { _busy = true; _error = null; });
     try {
