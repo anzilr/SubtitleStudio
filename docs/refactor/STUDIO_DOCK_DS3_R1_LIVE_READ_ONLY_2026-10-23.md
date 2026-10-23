@@ -37,3 +37,11 @@ This checkpoint intentionally does **not** modify production Android navigation.
 - New widget regressions verify the real-data projection is read-only, playback and mutation controls are unavailable, and empty real sessions do not fabricate cues. Additional hotkey suppression test protects the route lifecycle.
 - The read-only session is a snapshot as loaded. Editing and automatic live reconciliation are **not** implemented yet. Reopen from the editor to refresh until DS3 R2 adds controlled synchronization.
 - Windows native acceptance still pending because Workspace Bridge is offline; Flutter analyzer/test results will be recorded below after the final gate.
+
+## Final Flutter gate — PASSED
+- GitHub Actions: https://github.com/anzilr/SubtitleStudio/actions/runs/40018957790
+- Flutter analysis: **No issues**.
+- Full suite: **823 tests passed**.
+- Workflow included only flutter pub get, flutter analyze and flutter test; **no platform builds**.
+- Native Windows UI/hotkey/resize/file acceptance: **pending user/local host test**.
+- Next checkpoint: DS3 R2 transaction-safe actual cue editing with stale-edit detection, then DS4 shared player and waveform ownership. Do not present DS3 R1 as a full desktop editor.
