@@ -15,3 +15,5 @@ DS4 R1.1 LAST GATE 2026-10-24: guard unsaved draft before toolbar New or Import;
 DS4 R2 2026-10-24: link production WaveformWidget through the existing single media_kit player, player state, paced seek and Isar cue projection; focused Flutter analysis and tests only, no builds.
 
 DS4 R2 FINAL ANALYZE+TEST 2026-10-24: fixed SubtitleLine model import; added direct Attach Video with save path, native picker and draft guard. Test production waveform pair and video link. Flutter only; NO platform builds.
+
+DS4 R3 2026-10-24: opt-in compact 13% waveform layout, selected mpv audio to verified FFmpeg stream, skip stale saved preference for auto, ignore stale async results, add compact/audio tests. Flutter analyze plus Studio Dock tests ONLY; no builds.
