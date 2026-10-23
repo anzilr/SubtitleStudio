@@ -4,7 +4,6 @@ import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/screens/home/repositories/session_repository.dart';
 import 'package:subtitle_studio/screens/screen_home.dart';
-import 'package:subtitle_studio/utils/msone_hotkey_manager.dart';
 
 import 'studio_dock_read_only_session_view.dart';
 
@@ -48,24 +47,21 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
     });
   }
 
-  Future<void> _openClassicHome({bool fromReadOnly = false}) async {
+  Future<void> _openClassicHome() async {
     // The live read-only pane remains mounted behind the legacy route.
-    // Release its suppression while the legacy Home is the active route;
-    // otherwise Home's shared MSoneHotkeyManager actions would be blocked.
-    final manager = MSoneHotkeyManager.instance;
+    // This is the standalone desktop host: no parent Editor callbacks are
+    // suppressed. The legacy route may use the existing hotkeys normally.
     // Unmount the Studio Dock player *before* classic Home can push an Editor
     // route. Exactly one native player is allowed to own the session.
     setState(() => _classicFlowActive = true);
     await WidgetsBinding.instance.endOfFrame;
     if (!mounted) return;
-    if (fromReadOnly) manager.resumeCallbacks();
     try {
       await Navigator.of(context).push(MaterialPageRoute<void>(
         builder: (_) => const HomeScreen(),
       ));
     } finally {
       if (mounted) {
-        if (fromReadOnly) manager.suspendCallbacks();
         setState(() => _classicFlowActive = false);
         _refresh();
       }
@@ -121,7 +117,7 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
     );
     if (!mounted || selectedId == null) return;
     if (selectedId == -1) {
-      await _openClassicHome(fromReadOnly: true);
+      await _openClassicHome();
       return;
     }
     if (snapshot.sessions.any((session) => session.id == selectedId)) {
