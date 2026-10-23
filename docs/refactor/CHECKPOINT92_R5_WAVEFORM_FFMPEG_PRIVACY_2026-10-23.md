@@ -41,7 +41,11 @@ file paths, content-document identifiers and media metadata in the UI/logs.
 
 - Local `git diff --check` clean.
 - Flutter SDK is unavailable in this execution workspace. GitHub Linux
-  `flutter pub get`, `flutter analyze` and `flutter test` gate **pending**.
+  [Flutter quality gate 39944813390](https://github.com/anzilr/SubtitleStudio/actions/runs/39944813390)
+  **passed: 782 tests and zero analyzer issues**, including all three
+  `waveform_audio_diagnostic_privacy_test.dart` regressions.
+- Verified implementation commit:
+  `27ef8b2b9eb89378b992f6c409edab5dcddeb238`.
 - No native application builds in GitHub Actions. Android document grants,
   explicit/Auto track switching and Windows FFmpeg failures still need local
   device validation; these are not accepted by Flutter-only CI.

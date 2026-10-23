@@ -1,5 +1,15 @@
 # SubtitleStudio Refactor Roadmap v4
 
+> **CURRENT CP92 STATUS — 2026-10-23:** CP92 R1–R5 cleanup and diagnostic
+> privacy work passed the Linux Flutter quality gate. Latest R5:
+> [782 tests and zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39944813390).
+> System FFmpeg and FFmpegKit waveform errors now expose numeric status and
+> recovery guidance without media paths, SAF document identities, native
+> commands or stderr/log bodies. [R5 report](CHECKPOINT92_R5_WAVEFORM_FFMPEG_PRIVACY_2026-10-23.md).
+> **Next:** CP92 R6 import/open/save/restore baselines, R7 proven-unused shim
+> cleanup, then CP93 shared-core/native acceptance. Keep the CP86 waveform
+> optimization experiment isolated and the desktop preview demo-only.
+
 > **PARALLEL DESKTOP WORK APPROVED — 2026-10-20:** User elected to **see and refine a desktop UI now while CP88–CP93 refactoring continues**. A separate [desktop preview branch](https://github.com/anzilr/SubtitleStudio/tree/feature/desktop-workspace-preview) contains a demo-data-only Flutter workspace shell and an independent Windows entrypoint; it does not open or modify projects. Continue CP88–CP93 here. Full desktop *data/media integration and production acceptance* remain gated on shared-core readiness/CP93. This updates and supersedes the earlier "only after CP93 begin PC workspace" instruction below without reopening deferred CP86 waveform work. [Current parallel execution plan](REFACTOR_TO_DESKTOP_EXECUTION_2026-10-20.md).
 
 

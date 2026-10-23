@@ -535,8 +535,8 @@ formats, source identity and UI layout are unchanged. Controller regression
 tests cover private-path redaction and explicit safe native error messages;
 source guards protect the native diagnostic boundary.
 [R5 report](CHECKPOINT92_R5_WAVEFORM_FFMPEG_PRIVACY_2026-10-23.md).
-**Verification:** Flutter-only CI pending; native media-provider acceptance
-remains separate.
+**Verification:** [Linux 782 Flutter tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39944813390).
+Native media-provider acceptance remains separate.
 
 ### CP93 — Core refactor acceptance and handoff
 - Flutter analysis and full unit/widget/Isar integration tests in GitHub Actions (dependency resolution + tests only; **no platform builds in CI**).
