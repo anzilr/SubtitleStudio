@@ -1,0 +1,97 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:subtitle_studio/app/providers/core_providers.dart';
+import 'package:subtitle_studio/screens/edit/providers/subtitle_repository_provider.dart';
+
+import 'desktop_workspace_preview.dart';
+import 'studio_dock_session_loader.dart';
+import 'studio_dock_session_snapshot.dart';
+
+/// DS3 R1 opt-in production-data view. It intentionally never opens a
+/// media player or exposes editing actions until the write/undo transaction
+/// boundary has been separately accepted.
+class StudioDockReadOnlySessionView extends ConsumerStatefulWidget {
+  const StudioDockReadOnlySessionView({
+    super.key,
+    required this.sessionId,
+    required this.collectionId,
+  });
+
+  final int sessionId;
+  final int collectionId;
+
+  @override
+  ConsumerState<StudioDockReadOnlySessionView> createState() =>
+      _StudioDockReadOnlySessionViewState();
+}
+
+class _StudioDockReadOnlySessionViewState
+    extends ConsumerState<StudioDockReadOnlySessionView> {
+  late Future<StudioDockSessionSnapshot> _snapshot;
+
+  @override
+  void initState() {
+    super.initState();
+    _snapshot = _load();
+  }
+
+  Future<StudioDockSessionSnapshot> _load() {
+    final loader = StudioDockSessionLoader(
+      ref.read(projectRepositoryProvider),
+      ref.read(subtitleRepositoryProvider),
+    );
+    return loader.load(
+      sessionId: widget.sessionId,
+      collectionId: widget.collectionId,
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant StudioDockReadOnlySessionView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.sessionId != oldWidget.sessionId ||
+        widget.collectionId != oldWidget.collectionId) {
+      _snapshot = _load();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<StudioDockSessionSnapshot>(
+    future: _snapshot,
+    builder: (context, state) {
+      if (state.connectionState != ConnectionState.done) {
+        return const Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        );
+      }
+      if (state.hasError) {
+        return Scaffold(
+          appBar: AppBar(title: const Text('Studio Dock')),
+          body: const Center(
+            child: Text('Could not load this subtitle session. '
+                'Return to the editor and try again.'),
+          ),
+        );
+      }
+      final session = state.requireData;
+      final cues = [
+        for (final line in session.cues)
+          WorkspaceDemoCue(
+            id: line.index,
+            start: line.start,
+            end: line.end,
+            original: line.original,
+            edited: line.edited,
+            marked: line.marked,
+          ),
+      ];
+      return DesktopWorkspacePreview(
+        key: ValueKey('studio-dock-session-${session.sessionId}'),
+        initialCues: cues,
+        liveReadOnly: true,
+        projectTitle: session.fileName,
+        encoding: session.encoding,
+      );
+    },
+  );
+}
