@@ -24,6 +24,8 @@ class StudioDockDesktopHome extends ConsumerStatefulWidget {
 class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
   late Future<_DesktopSessions> _sessionsFuture;
   int? _chosenSessionId;
+  bool _classicFlowActive = false;
+  int _reloadRevision = 0;
 
   @override
   void initState() {
@@ -40,7 +42,10 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
 
   void _refresh() {
     if (!mounted) return;
-    setState(() => _sessionsFuture = _loadSessions());
+    setState(() {
+      _reloadRevision++;
+      _sessionsFuture = _loadSessions();
+    });
   }
 
   Future<void> _openClassicHome({bool fromReadOnly = false}) async {
@@ -48,15 +53,23 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
     // Release its suppression while the legacy Home is the active route;
     // otherwise Home's shared MSoneHotkeyManager actions would be blocked.
     final manager = MSoneHotkeyManager.instance;
+    // Unmount the Studio Dock player *before* classic Home can push an Editor
+    // route. Exactly one native player is allowed to own the session.
+    setState(() => _classicFlowActive = true);
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
     if (fromReadOnly) manager.resumeCallbacks();
     try {
       await Navigator.of(context).push(MaterialPageRoute<void>(
         builder: (_) => const HomeScreen(),
       ));
     } finally {
-      if (mounted && fromReadOnly) manager.suspendCallbacks();
+      if (mounted) {
+        if (fromReadOnly) manager.suspendCallbacks();
+        setState(() => _classicFlowActive = false);
+        _refresh();
+      }
     }
-    _refresh();
   }
 
   Future<void> _chooseProject(_DesktopSessions snapshot) async {
@@ -151,12 +164,12 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
         final active = snapshot.sessions.firstWhere((s) => s.id == activeId);
 
         return StudioDockReadOnlySessionView(
-          key: ValueKey('studio-dock-active-session-$activeId'),
+          key: ValueKey('studio-dock-active-session-$activeId-$_reloadRevision'),
           sessionId: active.id,
           collectionId: active.subtitleCollectionId,
           onChooseProject: () => _chooseProject(snapshot),
           enableTextEditing: true,
-          allowNativePlayback: true,
+          allowNativePlayback: !_classicFlowActive,
         );
       },
     );
