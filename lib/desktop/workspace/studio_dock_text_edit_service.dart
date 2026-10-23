@@ -41,15 +41,16 @@ class StudioDockTextEditService {
     // unchanged draft (including the difference between null and '').
     if (editedText == cue.edited) return baseline;
 
+    final selectedCue = cue;
     SubtitleLine cloneBaseline() => SubtitleLine()
-      ..index = cue!.index
-      ..startTime = cue.start
-      ..endTime = cue.end
-      ..original = cue.original
-      ..edited = cue.storedEdited
-      ..marked = cue.marked
-      ..comment = cue.comment
-      ..resolved = cue.resolved;
+      ..index = selectedCue.index
+      ..startTime = selectedCue.start
+      ..endTime = selectedCue.end
+      ..original = selectedCue.original
+      ..edited = selectedCue.storedEdited
+      ..marked = selectedCue.marked
+      ..comment = selectedCue.comment
+      ..resolved = selectedCue.resolved;
 
     final before = cloneBaseline();
     final after = cloneBaseline()..edited = editedText;
