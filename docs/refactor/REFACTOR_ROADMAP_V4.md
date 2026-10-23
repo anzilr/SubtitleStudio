@@ -12,10 +12,11 @@
 > **CP92 R7 verified:** removed unused import-result map
 > converters and the Dart-only SAF picker alias, preserving native URI-only
 > document selection and stored formats. [R7 report](CHECKPOINT92_R7_COMPATIBILITY_SHIM_CLEANUP_2026-10-23.md).
-> **CP93 R1 started:** integrated `.msone` portability regression and
+> **CP93 R1 automated gate passed:** integrated `.msone` portability regression and
 > [Android/Windows smoke checklist](CHECKPOINT93_R1_PORTABILITY_ACCEPTANCE_2026-10-23.md)
 > cover blank subtitles, charset choice, detached HEAD and imported named
-> refs. Automated/native acceptance pending. Keep the CP86 waveform
+> refs. [787 Flutter tests passed, zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39950148526).
+> Native Android/Windows acceptance remains pending. Keep the CP86 waveform
 > optimization experiment isolated and the desktop preview demo-only.
 
 > **PARALLEL DESKTOP WORK APPROVED — 2026-10-20:** User elected to **see and refine a desktop UI now while CP88–CP93 refactoring continues**. A separate [desktop preview branch](https://github.com/anzilr/SubtitleStudio/tree/feature/desktop-workspace-preview) contains a demo-data-only Flutter workspace shell and an independent Windows entrypoint; it does not open or modify projects. Continue CP88–CP93 here. Full desktop *data/media integration and production acceptance* remain gated on shared-core readiness/CP93. This updates and supersedes the earlier "only after CP93 begin PC workspace" instruction below without reopening deferred CP86 waveform work. [Current parallel execution plan](REFACTOR_TO_DESKTOP_EXECUTION_2026-10-20.md).

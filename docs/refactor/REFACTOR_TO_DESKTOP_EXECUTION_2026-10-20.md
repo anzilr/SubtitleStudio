@@ -579,7 +579,8 @@ fixture without a history-ref section and a distinct native Android/Windows
 smoke checklist. Runtime implementation remains unchanged; native sign-off
 must not be inferred from Linux CI.
 [R1 acceptance report](CHECKPOINT93_R1_PORTABILITY_ACCEPTANCE_2026-10-23.md).
-**Verification:** Pending Linux Flutter gate; device evidence pending.
+**Verification:** [Linux gate 39950148526](https://github.com/anzilr/SubtitleStudio/actions/runs/39950148526),
+**787 tests passed, zero analyzer issues**. Device evidence pending.
 
 ### Production Desktop Workspace Integration / UI [AFTER CP93]
 - The presentation shell may be designed and previewed now on the isolated branch. After CP93, connect it to the shared Riverpod, Isar, project, checkpoint, encoding and file-access core without duplicating domain logic.

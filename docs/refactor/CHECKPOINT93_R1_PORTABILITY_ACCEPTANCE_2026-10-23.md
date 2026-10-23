@@ -2,7 +2,7 @@
 
 Date: October 23, 2026  
 Active branch: `refactor/riverpod-architecture`  
-Status: automated checks pending; native device qualification outstanding
+Status: automated checks passed; native device qualification outstanding
 
 ## Scope
 
@@ -89,3 +89,14 @@ CP93 shared core is **not yet declared native accepted**. Automated Flutter
 analysis and the full suite must pass first. Subsequent native evidence must
 be recorded separately with exact device/platform and test outcome, with any
 P0/P1 defect resolved before production desktop integration is unblocked.
+
+## Automated verification — October 23, 2026
+
+- [Linux Flutter quality gate 39950148526](https://github.com/anzilr/SubtitleStudio/actions/runs/39950148526):
+  **787 tests passed, zero analyzer issues**.
+- Code/report commit: `e902a83bbf87a2813890cb3c19396bb8b4ac7bc6`.
+- `git diff --check`: clean before publishing.
+- No Android, iOS, macOS, Windows or Linux app builds in CI.
+- Native Android/Windows smoke acceptance remains **pending**; the green
+  Linux gate does not qualify media rendering, gesture recovery or SAF grant
+  persistence on actual hardware.
