@@ -670,76 +670,131 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
     return (millis / 1000).toStringAsFixed(3) + 's';
   }
 
-  Widget _inspector() => Container(
-    color: const Color(0xFF191D21),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      _paneHeader(Icons.tune_outlined, 'LINE INSPECTOR',
-          trailing: '#${_selectedId.toString().padLeft(2, '0')}'),
-      Expanded(child: ListView(padding: const EdgeInsets.all(16), children: [
-        _fieldLabel('START TIMECODE'),
-        _readonlyField(_selected.start),
-        const SizedBox(height: 13),
-        _fieldLabel('END TIMECODE'),
-        _readonlyField(_selected.end),
-        const SizedBox(height: 20),
-        _fieldLabel('ORIGINAL TEXT'),
+  Widget _inspector() {
+    const tabs = <String>['Text', 'Timing', 'Style', 'Notes'];
+    return Container(
+      color: const Color(0xFF191D21),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        _paneHeader(Icons.tune_outlined, 'LINE INSPECTOR',
+            trailing: '#' + _selectedId.toString().padLeft(2, '0')),
+        SizedBox(height: 43, child: Row(children: [
+          for (var i = 0; i < tabs.length; i++)
+            Expanded(child: TextButton(
+              key: ValueKey('inspector-tab-' + tabs[i]),
+              onPressed: () => setState(() => _inspectorTab = i),
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.zero,
+                foregroundColor: _inspectorTab == i ? _accent : _muted,
+                backgroundColor: _inspectorTab == i
+                    ? _accent.withValues(alpha: .10) : Colors.transparent,
+              ),
+              child: Text(tabs[i],
+                  style: const TextStyle(fontSize: 11)),
+            )),
+        ])),
+        Expanded(child: ListView(
+          key: ValueKey('inspector-page-' + _inspectorTab.toString()),
+          padding: const EdgeInsets.all(15),
+          children: _inspectorFields(),
+        )),
         Container(
           padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            border: Border.all(color: _border),
-            borderRadius: BorderRadius.circular(7),
+          decoration: const BoxDecoration(
+            border: Border(top: BorderSide(color: _border)),
           ),
-          child: Text(_selected.original,
+          child: const Text('Demo only · changes are not saved to files',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: _muted, fontSize: 11)),
+        ),
+      ]),
+    );
+  }
+
+  List<Widget> _inspectorFields() {
+    switch (_inspectorTab) {
+      case 0:
+        return [
+          _fieldLabel('ORIGINAL TEXT'),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              border: Border.all(color: _border),
+              borderRadius: BorderRadius.circular(7),
+            ),
+            child: Text(_selected.original,
               style: const TextStyle(fontSize: 13, height: 1.5)),
-        ),
-        const SizedBox(height: 20),
-        _fieldLabel('EDITED TEXT · DEMO ONLY'),
-        TextFormField(
-          key: ValueKey('desktop-edit-${_selected.id}'),
-          initialValue: _selected.edited,
-          minLines: 3, maxLines: 6,
-          style: const TextStyle(fontSize: 13, height: 1.5),
-          decoration: InputDecoration(
-            contentPadding: const EdgeInsets.all(12),
-            border: OutlineInputBorder(borderRadius:
-                BorderRadius.circular(7)),
           ),
-          onChanged: (text) => _replaceCue(_selected.copyWith(edited: text)),
-        ),
-        const SizedBox(height: 14),
-        Row(children: [
-          Expanded(child: OutlinedButton.icon(
-            key: const ValueKey('desktop-mark-cue'),
-            onPressed: () => _replaceCue(
-              _selected.copyWith(marked: !_selected.marked)),
-            icon: Icon(_selected.marked
-                ? Icons.bookmark : Icons.bookmark_outline, size: 15),
-            label: Text(_selected.marked ? 'Unmark' : 'Mark'),
-          )),
-          const SizedBox(width: 8),
-          Expanded(child: OutlinedButton.icon(
+          const SizedBox(height: 17),
+          _fieldLabel('EDITED TEXT · DEMO ONLY'),
+          TextFormField(
+            key: ValueKey('desktop-edit-' + _selected.id.toString()),
+            initialValue: _selected.edited,
+            minLines: 3, maxLines: 8,
+            style: const TextStyle(fontSize: 13, height: 1.5),
+            decoration: InputDecoration(
+              contentPadding: const EdgeInsets.all(12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(7)),
+            ),
+            onChanged: (value) =>
+                _replaceCue(_selected.copyWith(edited: value)),
+          ),
+          const SizedBox(height: 14),
+          OutlinedButton.icon(
             onPressed: () => _replaceCue(
                 _selected.copyWith(edited: _selected.original)),
             icon: const Icon(Icons.restore, size: 15),
-            label: const Text('Reset'),
-          )),
-        ]),
-        const SizedBox(height: 24),
-        _fieldLabel('TOOLS (COMING AFTER REFACTOR)'),
-        const SizedBox(height: 5),
-        const Text('Timing • Format • Comments • Dictionary',
-            style: TextStyle(fontSize: 11, color: _muted, height: 1.6)),
-      ])),
-      Container(
-        padding: const EdgeInsets.all(12),
-        decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: _border))),
-        child: const Text('Changes stay in this demo session.',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: _muted, fontSize: 11)),
-      ),
-    ]),
-  );
+            label: const Text('Reset to original'),
+          ),
+        ];
+      case 1:
+        return [
+          _fieldLabel('START TIMECODE'),
+          _readonlyField(_selected.start),
+          const SizedBox(height: 13),
+          _fieldLabel('END TIMECODE'),
+          _readonlyField(_selected.end),
+          const SizedBox(height: 13),
+          _fieldLabel('DURATION'),
+          _readonlyField(_cueDuration(_selected)),
+          const SizedBox(height: 16),
+          const Text('Time editing will use the shared editor timing '
+              'commands during production integration.',
+              style: TextStyle(fontSize: 11, color: _muted)),
+        ];
+      case 2:
+        return [
+          _fieldLabel('SUBTITLE STYLE'),
+          const Text('Color, alignment, placement and formatting '
+              'will reuse existing SubtitleStudio actions.',
+              style: TextStyle(fontSize: 12, color: _muted, height: 1.5)),
+          const SizedBox(height: 12),
+          const Text('Preview only · no simulated formatting saves',
+              style: TextStyle(fontSize: 11, color: _muted)),
+        ];
+      default:
+        return [
+          _fieldLabel('REVIEW NOTES'),
+          Text(_selected.marked
+              ? 'This subtitle is marked for review.'
+              : 'No review mark on this subtitle.',
+              style: const TextStyle(fontSize: 12)),
+          const SizedBox(height: 15),
+          OutlinedButton.icon(
+            key: const ValueKey('desktop-mark-cue'),
+            onPressed: () => _replaceCue(_selected.copyWith(
+                marked: !_selected.marked)),
+            icon: Icon(_selected.marked
+                ? Icons.bookmark : Icons.bookmark_outline, size: 15),
+            label: Text(_selected.marked ? 'Unmark' : 'Mark for review'),
+          ),
+          const SizedBox(height: 15),
+          const Text('Project comments will connect to shared '
+              'checkpoint and comment services.',
+              style: TextStyle(fontSize: 11, color: _muted, height: 1.5)),
+        ];
+    }
+  }
 
   Widget _fieldLabel(String text) => Padding(
     padding: const EdgeInsets.only(bottom: 7),
