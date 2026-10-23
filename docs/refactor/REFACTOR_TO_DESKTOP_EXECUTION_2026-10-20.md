@@ -613,9 +613,20 @@ This is an isolated stable-waveform seeking fix, **not** a merge of the
 deferred CP86 progressive decoding experiment.
 [R4 report](CHECKPOINT93_R4_PAUSED_WAVEFORM_SCRUB_2026-10-23.md).
 **Verification:** [Linux Flutter gate 39968610443](https://github.com/anzilr/SubtitleStudio/actions/runs/39968610443),
-**796 tests passed, zero analyzer issues**. Native OnePlus profile gesture
-acceptance remains pending because the VS Code checkout has preexisting local
-modifications that correctly blocked the bridge's safe Git pull.
+**796 tests passed, zero analyzer issues**. The initial local verification
+pull was blocked by preexisting files; a later profile capture confirmed
+the updated code was already installed in VS Code, as detailed below.
+
+**R4 profile continuation (October 23):** Despite a later safe Git pull being
+blocked by generated untracked `.widget_preview` and `libisar.dll`, the
+updated waveform coordinator and editor wiring were confirmed present in the
+workspace. The VS Code debugger did not attach; the approved visible-terminal
+`flutter run --profile -d d6e22c3f` ran successfully. On CPH2381, 33 paused
+drags produced 1,793 waveform position updates, **zero preview seeks** and
+33 final seeks, with adjacent native audio flushes. The capture had no fatal
+app error. Physical landing precision and subjective smoothness still require
+user confirmation; 22 skipped frames in six reports remain an independent
+performance signal. [Full result](CHECKPOINT93_R4_PAUSED_WAVEFORM_SCRUB_2026-10-23.md).
 
 ### Production Desktop Workspace Integration / UI [AFTER CP93]
 - The presentation shell may be designed and previewed now on the isolated branch. After CP93, connect it to the shared Riverpod, Isar, project, checkpoint, encoding and file-access core without duplicating domain logic.

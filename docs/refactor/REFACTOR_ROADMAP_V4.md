@@ -10,6 +10,12 @@
 > Physical-device acceptance is still pending. This does not
 > resume the separately frozen CP86 progressive audio-decoding experiment.
 
+> **CP93 R4 native profile follow-up:** CPH2381 recorded 33 paused waveform
+> drags with 1,793 visual updates, **0 intermediate native seeks** and one
+> final seek per gesture. Flutter crash/ANR absent; six reports of dropped
+> frames (22 total) remain a secondary performance signal. Visual landing
+> accuracy still needs user confirmation.
+
 > **CURRENT CP92 STATUS — 2026-10-23:** CP92 R1–R7 cleanup, diagnostic
 > privacy, synthetic performance baselines and proven-unused compatibility
 > shim removal passed the Linux Flutter gate. Latest verified R7:

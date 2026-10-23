@@ -2,7 +2,7 @@
 
 Date: October 23, 2026  
 Branch: `refactor/riverpod-architecture`  
-Android profile acceptance: pending physical gesture verification
+Android profile counters: observed on CPH2381; visual accuracy acceptance pending
 
 ## User-reported defect and profile evidence
 
@@ -51,12 +51,23 @@ files and playback engine are unchanged.
   **796 tests passed; zero analyzer issues**. Dependency resolution,
   analysis and tests only; **no platform builds in CI**.
 - Verified code checkpoint: `b15da6c7b85c2addb74244f452befc0d46a3f30f`.
-- Native OnePlus profile retest: pending. With video paused, drag across
-  dozens of waveform updates and confirm `previewSeeks=0`, one final seek,
-  accurate stationary playhead and minimal additional `STATE_FLUSHED` logs.
-  Repeat while playing and with mouse wheel; verify one final target per
-  gesture/burst, no snap-back and intact playback state.
+- Native OnePlus profile retest (Oct 23, log
+  `8078e7e1-97bd-4740-a648-d131f48fb093`): **33 paused gestures** in the
+  fresh app process (PID 27948) produced **1,793 visual update events and
+  zero intermediate seek previews**. A single final seek was logged after
+  each gesture. The corresponding `AudioTrack.flush()` records appear
+  immediately after those completions, not on every scroll update.
+- A separate earlier app process captured 63 gesture completions, 3,725
+  visual updates and 2 intermediate previews, consistent with a playing
+  period; the two process lifetimes are not combined to estimate latency.
+- No Flutter fatal, SIGSEGV or ANR appeared. In the full capture, six
+  `Skipped: true` frame reports counted 22 frames; the largest 191 ms
+  report was near FFmpeg media handling/GC. The remaining `STATE_FLUSHED`
+  events include genuine final seeks and track lifecycle operations and
+  must not be reported as zero across the full session.
+- User-visible landing accuracy, pause preservation, smoothness, long-duration
+  seeks and wheel behavior are **not yet accepted** from the log alone.
 
-Native performance and accuracy acceptance cannot be inferred from Linux
-unit tests. Do not treat this checkpoint as closing the remaining CP93
-Android/Windows file and media smoke-test gates.
+Native accuracy still requires user observation and, if inaccurate, explicit
+request/ack timing measurements. Do not treat this checkpoint as closing
+the remaining CP93 Android/Windows file and media smoke-test gates.
