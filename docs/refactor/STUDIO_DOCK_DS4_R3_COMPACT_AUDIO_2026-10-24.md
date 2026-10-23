@@ -22,3 +22,6 @@ Branch: feature/studio-dock-integration
 - Windows host still required to verify waveform actual source decoding, playhead sync, selected audio track switching (two-track MKV preferred), 13% height rendering at 1366x768 and 1920x1080, playing/paused scrubbing, and media switch disposal.
 - Native selected-track metadata may be unavailable for some containers; the waveform must show an error rather than fake a stream while video remains usable.
 - DS4 R4 after native feedback: improve compact layout further only if necessary. DS5: checkpoint-backed cue insertion/timing/style/notes and native Save/Export, solely in Studio Dock.
+## Verified focused gate
+- [Studio Dock quality #40031931662](https://github.com/anzilr/SubtitleStudio/actions/runs/40031931662) — **passed**, zero Flutter analyzer issues and **47 focused Studio Dock tests passed**. This includes compact ready/loading/error states, explicit auto-vs-saved-audio semantics, and audio selection lifecycle.
+- Native playback/multi-audio stream fidelity is not established by widget tests; verify locally on Windows.
