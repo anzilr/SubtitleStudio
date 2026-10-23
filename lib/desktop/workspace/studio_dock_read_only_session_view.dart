@@ -7,6 +7,7 @@ import 'package:subtitle_studio/utils/msone_hotkey_manager.dart';
 import 'desktop_workspace_preview.dart';
 import 'studio_dock_session_loader.dart';
 import 'studio_dock_session_snapshot.dart';
+import 'studio_dock_text_edit_service.dart';
 
 /// DS3 R1 opt-in production-data view. It intentionally never opens a
 /// media player or exposes editing actions until the write/undo transaction
@@ -17,11 +18,14 @@ class StudioDockReadOnlySessionView extends ConsumerStatefulWidget {
     required this.sessionId,
     required this.collectionId,
     this.onChooseProject,
+    this.enableTextEditing = false,
   });
 
   final int sessionId;
   final int collectionId;
   final VoidCallback? onChooseProject;
+  /// Opt in to checkpoint-backed text edits; the old Editor preview stays read-only.
+  final bool enableTextEditing;
 
   @override
   ConsumerState<StudioDockReadOnlySessionView> createState() =>
@@ -31,6 +35,29 @@ class StudioDockReadOnlySessionView extends ConsumerStatefulWidget {
 class _StudioDockReadOnlySessionViewState
     extends ConsumerState<StudioDockReadOnlySessionView> {
   late Future<StudioDockSessionSnapshot> _snapshot;
+  StudioDockSessionSnapshot? _latestBaseline;
+
+  Future<bool> _applyText(int cueNumber, String editedText) async {
+    final baseline = _latestBaseline;
+    if (baseline == null || !widget.enableTextEditing) return false;
+    final service = StudioDockTextEditService(
+      ref.read(projectRepositoryProvider),
+      ref.read(subtitleRepositoryProvider),
+    );
+    try {
+      final updated = await service.apply(
+        baseline: baseline,
+        cueNumber: cueNumber,
+        editedText: editedText,
+      );
+      if (!mounted || updated == null) return false;
+      _latestBaseline = updated;
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
 
   @override
   void initState() {
@@ -63,6 +90,7 @@ class _StudioDockReadOnlySessionViewState
     super.didUpdateWidget(oldWidget);
     if (widget.sessionId != oldWidget.sessionId ||
         widget.collectionId != oldWidget.collectionId) {
+      _latestBaseline = null;
       _snapshot = _load();
     }
   }
@@ -94,6 +122,7 @@ class _StudioDockReadOnlySessionViewState
         );
       }
       final session = state.requireData;
+      _latestBaseline ??= session;
       final cues = [
         for (final line in session.cues)
           WorkspaceDemoCue(
@@ -112,6 +141,7 @@ class _StudioDockReadOnlySessionViewState
         projectTitle: session.fileName,
         encoding: session.encoding,
         onChooseProject: widget.onChooseProject,
+        onApplyCueText: widget.enableTextEditing ? _applyText : null,
       );
     },
   );
