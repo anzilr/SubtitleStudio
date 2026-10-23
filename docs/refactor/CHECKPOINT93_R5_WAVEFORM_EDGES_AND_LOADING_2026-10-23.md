@@ -46,9 +46,11 @@ the very first/last samples, so add-line and copy were inaccurate or blocked.
 
 ## Validation
 
-- Source patch prepared in isolated worktree. Flutter SDK unavailable there;
-  GitHub Actions will run dependency resolution, analysis and full Flutter
-  tests. **No Android/desktop/iOS builds in Actions.**
+- Source patch prepared and reviewed in an isolated worktree. The full
+  [GitHub Flutter gate 39976867177](https://github.com/anzilr/SubtitleStudio/actions/runs/39976867177)
+  **passed: 801 tests, zero analyzer issues**. Flutter SDK is unavailable in
+  the isolated Linux scratch environment; CI ran dependency resolution,
+  analysis and Flutter tests only. **No platform builds in Actions.**
 - Physical OnePlus playback, paused endpoint scrubbing, copying and loader
   visual progress require user validation after successful CI.
 

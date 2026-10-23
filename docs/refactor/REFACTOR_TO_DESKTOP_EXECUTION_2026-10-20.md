@@ -642,8 +642,9 @@ indeterminate sweep for an unknown total. Forward FFmpeg time callbacks on the
 normal eager-PCM path as well as the optional compact peak path. Cache formats,
 playback engine and deferred CP86 experimental pipeline are unchanged.
 [R5 report](CHECKPOINT93_R5_WAVEFORM_EDGES_AND_LOADING_2026-10-23.md).
-**Verification:** Flutter analysis and full tests in GitHub CI; Android visual
-and native loading-speed acceptance pending.
+**Verification:** [Linux Flutter gate 39976867177](https://github.com/anzilr/SubtitleStudio/actions/runs/39976867177),
+**801 tests passed, zero analyzer issues**. Android visual and native
+loading-speed acceptance pending.
 
 ### Production Desktop Workspace Integration / UI [AFTER CP93]
 - The presentation shell may be designed and previewed now on the isolated branch. After CP93, connect it to the shared Riverpod, Isar, project, checkpoint, encoding and file-access core without duplicating domain logic.
