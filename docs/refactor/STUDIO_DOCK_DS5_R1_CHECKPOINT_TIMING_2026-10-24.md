@@ -18,3 +18,8 @@ Branch: `feature/studio-dock-integration`
 - Widget coverage: disabled Apply and error feedback on invalid time, Apply-only persistence, visible time update, and popup Cancel/Apply on tab switches.
 - Gate: Flutter analyzer and focused Studio Dock tests, followed by full Flutter tests. GitHub Actions may run `flutter pub get`, `flutter analyze`, and `flutter test` only—never platform builds.
 - Native Windows acceptance still requires visual/responsive timing inspector and real playback/waveform verification at desktop resolutions; DS5 R2 will address insertion/deletion through guarded history transactions and Save/Export in later steps.
+
+## Focused CI result
+
+- [Studio Dock Flutter quality #40033259224](https://github.com/anzilr/SubtitleStudio/actions/runs/40033259224) — passed, including analyzer and Studio Dock widget/integration regressions.
+- Full repository regression is the next quality gate; it has not been substituted with a native build.
