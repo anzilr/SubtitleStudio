@@ -8,6 +8,9 @@ class StudioDockLoadedCue {
     required this.original,
     required this.edited,
     required this.marked,
+    this.storedEdited,
+    this.comment,
+    this.resolved = false,
   });
 
   final int index;
@@ -16,6 +19,10 @@ class StudioDockLoadedCue {
   final String original;
   final String edited;
   final bool marked;
+  // Original persisted values preserved for optimistic concurrency checking.
+  final String? storedEdited;
+  final String? comment;
+  final bool resolved;
 }
 
 class StudioDockSessionSnapshot {
