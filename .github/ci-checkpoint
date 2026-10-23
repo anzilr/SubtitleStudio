@@ -503,3 +503,5 @@ DS3 R2 FINAL 2026-10-24: checkpoint-backed editable inspector; tests for stale c
 DS3 R2 FINISHED SOURCE 2026-10-24: retain drafts and guard in-app route pop, freeze input during atomic Apply, keep media explicitly disconnected, preserve null edit, metadata and stale-state protections. Full flutter analyze/test only; NO platform builds in CI.
 
 DS3 R2 REGRESSION GATE 2026-10-24: inspect failed-Apply transient SnackBar before widget-test pumpAndSettle consumes timeout; all Flutter-only checks, no builds.
+
+DS4 R1 FULL GATE 2026-10-24: studio dock existing media player ownership and shared hotkeys, rollback-safe legacy route handoff, checkpoint-backed text edits and responsive layout. Run flutter pub get / flutter analyze / flutter test only (no app builds).
