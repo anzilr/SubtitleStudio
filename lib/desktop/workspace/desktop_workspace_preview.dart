@@ -169,8 +169,8 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   bool _explorerOverlayOpen = false;
   bool _inspectorOverlayOpen = false;
   int _inspectorTab = 0;
-  double _videoShare = .43;
-  double _waveformShare = .13;
+  double _videoShare = .38;
+  double _waveformShare = .24;
   String _query = '';
   int? _draftCueId;
   String? _draftText;
@@ -308,8 +308,8 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
     setState(() {
       _sidebarWidth = 240;
       _inspectorWidth = 320;
-      _videoShare = .43;
-      _waveformShare = .13;
+      _videoShare = .38;
+      _waveformShare = .24;
       _explorerOpen = true;
       _inspectorOpen = true;
       _explorerOverlayOpen = false;
@@ -1124,11 +1124,11 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
           onDelta: (dy) => setState(() {
             final change = dy / limits.maxHeight;
             _videoShare = (_videoShare + change).clamp(.24, .62);
-            _waveformShare = (_waveformShare - change).clamp(.11, .26);
+            _waveformShare = (_waveformShare - change).clamp(.18, .38);
           }),
           onReset: () => setState(() {
-            _videoShare = .43;
-            _waveformShare = .13;
+            _videoShare = .38;
+            _waveformShare = .24;
           }),
         ),
         SizedBox(
@@ -1140,10 +1140,10 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
           key: const ValueKey('splitter-waveform-table'),
           onDelta: (dy) => setState(() =>
             _waveformShare = (_waveformShare + dy / limits.maxHeight)
-                .clamp(.11, .26)),
+                .clamp(.18, .38)),
           onReset: () => setState(() {
-            _videoShare = .43;
-            _waveformShare = .13;
+            _videoShare = .38;
+            _waveformShare = .24;
           }),
         ),
         Expanded(

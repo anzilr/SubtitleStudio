@@ -6,8 +6,8 @@ class StudioDockLayoutSnapshot {
   const StudioDockLayoutSnapshot({
     this.explorerWidth = 240,
     this.inspectorWidth = 320,
-    this.videoShare = .43,
-    this.waveformShare = .13,
+    this.videoShare = .38,
+    this.waveformShare = .24,
     this.explorerOpen = true,
     this.inspectorOpen = true,
   });
@@ -33,8 +33,8 @@ class StudioDockLayoutPreferences {
     return StudioDockLayoutSnapshot(
       explorerWidth: read('explorerWidth', 240, 200, 340),
       inspectorWidth: read('inspectorWidth', 320, 280, 440),
-      videoShare: read('videoShare', .43, .24, .62),
-      waveformShare: read('waveformShare', .13, .11, .26),
+      videoShare: read('videoShare', .38, .24, .62),
+      waveformShare: read('waveformShare', .24, .18, .38),
       explorerOpen: p.getBool(prefix + 'explorerOpen') ?? true,
       inspectorOpen: p.getBool(prefix + 'inspectorOpen') ?? true,
     );

@@ -274,7 +274,7 @@ void main() {
     await db.isar.writeTxn(() async {
       final collection =
           (await db.isar.subtitleCollections.get(ids.collectionId))!;
-      collection.lines.clear();
+      collection.lines = <SubtitleLine>[];
       await db.isar.subtitleCollections.put(collection);
     });
     final empty = await loader.load(
