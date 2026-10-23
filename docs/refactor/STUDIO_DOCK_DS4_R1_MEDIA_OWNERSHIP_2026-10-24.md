@@ -22,3 +22,10 @@
 
 ## Next
 DS4 R2: integrate existing waveform seek coordinator + widgets under one player owner, test edge/timecode seek and note/device lifetime. Next DS5: file save/export, native pickers, history and Source View integration.
+
+## CI evidence and follow-up
+
+- Initial focused gate [#40027327962](https://github.com/anzilr/SubtitleStudio/actions/runs/40027327962): analyzer passed, 26 tests passed, 5 failed. Reasons: IsarCore downloading in Flutter widget tests, a root center-panel remount when side panels disappear, and an ambiguous Discard matcher.
+- Corrected focused gate [#40027784196](https://github.com/anzilr/SubtitleStudio/actions/runs/40027784196): **Flutter analysis passed; all 31 Studio Dock tests passed.**
+- Further source improvement afterward: standalone root owns its supported hotkeys, classic embedded viewer remains suppressed, and the entire native player/hotkey owner is unmounted before pushing the classic Home/Editor. A new widget test verifies handoff and restoration, with injectable session catalog and classic route. This must pass the next focused gate.
+- Full Flutter suite on current branch must also be re-run after the final source revision; CI is Flutter pub get/analyze/tests **only**.
