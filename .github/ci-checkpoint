@@ -487,3 +487,5 @@ timeout, and verify bundled WebP decoding in Flutter tests. Run Flutter pub get,
 analysis and full tests on Linux only; no platform builds in Actions.
 
 DS3 R1 2026-10-23: feature/studio-dock-integration branches from current refactor, ports only isolated Studio Dock files, verifies live read-only session-to-collection ownership, no database writes, shared repositories, and widget flags. CI: flutter pub get, flutter analyze, flutter test; no platform builds.
+
+DS3 R1 FINAL GATE 2026-10-23: live read-only real session route on native desktop only; prevent underlying editor keyboard actions via MSoneHotkeyManager callback suppression; test empty sessions and safe controls, ownership, no writes. Flutter pub get/analyze/test ONLY; no builds.
