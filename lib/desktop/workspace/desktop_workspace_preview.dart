@@ -481,9 +481,9 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   Widget build(BuildContext context) {
     if (widget.initialCues != null && _cues.isEmpty) {
       return Scaffold(
-        backgroundColor: _background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
-          backgroundColor: _background,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           title: Text(widget.projectTitle ?? 'Studio Dock'),
           actions: [
             if (widget.onChooseProject != null)
