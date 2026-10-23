@@ -101,9 +101,9 @@ class MobileFFmpeg implements FFmpegInterface {
   Future<List<Map<String, dynamic>>> getSubtitleTracks(String videoPath) async {
     try {
       if (kDebugMode) {
-        print('Analyzing video file on ${Platform.operatingSystem}: $videoPath');
+        print('Analyzing video subtitle tracks on ${Platform.operatingSystem}');
       }
-      await logInfo('Starting subtitle track analysis on ${Platform.operatingSystem} for: $videoPath');
+      await logInfo('Starting subtitle track analysis on ${Platform.operatingSystem}');
 
       // For Android content URIs, use SAF parameter directly
       // For other paths, convert URI to proper file path if needed
@@ -117,18 +117,15 @@ class MobileFFmpeg implements FFmpegInterface {
       }
       
       if (kDebugMode) {
-        print('Original video path: $videoPath');
-        print('FFmpeg-compatible path: $ffmpegPath');
+        print('Prepared FFprobe input locator');
       }
 
       final session = await FFprobeKit.getMediaInformation(ffmpegPath);
       final MediaInformation? mediaInformation = session.getMediaInformation();
 
       if (mediaInformation == null) {
-        final logs = await session.getLogs();
-        final logMessages = logs.map((log) => log.getMessage()).toList();
-        final errorMsg =
-            'Failed to get media information:\n${logMessages.join('\n')}';
+        // Native FFprobe messages may include local paths and SAF parameters.
+        final errorMsg = 'FFprobe did not return media information';
         await logError(errorMsg, context: 'MobileFFmpeg.getSubtitleTracks');
         throw Exception(errorMsg);
       }
@@ -155,15 +152,14 @@ class MobileFFmpeg implements FFmpegInterface {
 
       if (kDebugMode) {
         print('Found ${subtitleTracks.length} subtitle tracks');
-        print(subtitleTracks);
       }
 
       return subtitleTracks;
-    } catch (e) {
+    } catch (_) {
       if (kDebugMode) {
-        print('Error getting subtitle tracks: $e');
+        print('Subtitle track analysis failed');
       }
-      throw Exception('Failed to get subtitle tracks: $e');
+      throw Exception('Failed to get subtitle tracks. Check media access and retry.');
     }
   }
 
@@ -181,9 +177,8 @@ class MobileFFmpeg implements FFmpegInterface {
       ));
 
       if (kDebugMode) {
-        print('Extracting subtitle on ${Platform.operatingSystem} from: $videoPath');
+        print('Extracting subtitle on ${Platform.operatingSystem}');
         print('Stream index: $streamIndex');
-        print('Output file: $outputFile');
       }
 
       // For Android content URIs, use SAF parameter directly
@@ -198,8 +193,7 @@ class MobileFFmpeg implements FFmpegInterface {
       }
       
       if (kDebugMode) {
-        print('Original video path: $videoPath');
-        print('FFmpeg-compatible path: $ffmpegPath');
+        print('Prepared FFmpeg input locator');
       }
 
       // Check if input file exists and is readable (skip for content URIs and special paths)
@@ -207,16 +201,14 @@ class MobileFFmpeg implements FFmpegInterface {
       if (!videoPath.startsWith('/proc/self/fd/') &&
           !videoPath.startsWith('content://') &&
           !await videoFile.exists()) {
-        throw Exception('Input video file does not exist: $videoPath');
+        throw Exception('Input video file is unavailable');
       }
 
       // Check if output directory exists and is writable
       final outputDir = Directory(outputPath);
       if (!await outputDir.exists()) {
         if (kDebugMode) {
-          print(
-            'Output directory does not exist, attempting to create: $outputPath',
-          );
+          print('Output directory does not exist; attempting to create it');
         }
         await outputDir.create(recursive: true);
       }
@@ -229,11 +221,11 @@ class MobileFFmpeg implements FFmpegInterface {
         if (kDebugMode) {
           print('Successfully verified write permissions for output directory');
         }
-      } catch (e) {
+      } catch (_) {
         if (kDebugMode) {
-          print('Error writing to output directory: $e');
+          print('Output directory write check failed');
         }
-        throw Exception('Cannot write to output directory: $e');
+        throw Exception('Cannot write to output directory');
       }
 
       // Build command - use FFmpeg-compatible path for SAF URIs
@@ -241,7 +233,7 @@ class MobileFFmpeg implements FFmpegInterface {
           '-y -i "$ffmpegPath" -map 0:s:$streamIndex -c:s srt "$outputFile"';
 
       if (kDebugMode) {
-        print('Executing FFmpeg command: $command');
+        print('Executing FFmpeg subtitle extraction for stream $streamIndex');
       }
 
       // Delete existing file if it exists
@@ -261,17 +253,9 @@ class MobileFFmpeg implements FFmpegInterface {
       final session = await FFmpegKit.execute(command);
       final returnCode = await session.getReturnCode();
 
-      // Get all logs for debugging
-      final logs = await session.getLogs();
-      final logMessages = logs.map((log) => log.getMessage()).toList();
-
       if (kDebugMode) {
         print('FFmpeg execution completed');
         print('Return code: ${returnCode?.getValue() ?? "unknown"}');
-        print('Log output:');
-        for (var log in logMessages) {
-          print('FFmpeg: $log');
-        }
       }
 
       if (returnCode == null) {
@@ -279,9 +263,7 @@ class MobileFFmpeg implements FFmpegInterface {
       }
 
       if (!returnCode.isValueSuccess()) {
-        throw Exception(
-          'FFmpeg process failed with code ${returnCode.getValue()}: ${logMessages.join('\n')}',
-        );
+        throw Exception('FFmpeg process failed with code ${returnCode.getValue()}');
       }
 
       // Verify the output file exists and has content
@@ -290,35 +272,11 @@ class MobileFFmpeg implements FFmpegInterface {
       ); // Wait a bit for file system
 
       if (kDebugMode) {
-        print('Checking if output file exists at: ${outputFileObj.absolute.path}');
-        print('Output file path (relative): $outputFile');
-        print('Output file path (absolute): ${outputFileObj.absolute.path}');
+        print('Checking whether FFmpeg created its output file');
       }
       
       if (!await outputFileObj.exists()) {
-        // Try to list files in the output directory to debug
-        try {
-          final outputDir = Directory(outputPath);
-          final files = await outputDir.list().toList();
-          if (kDebugMode) {
-            print('Files in output directory ($outputPath):');
-            for (var file in files) {
-              if (file.path.contains(videoFileName)) {
-                print('  MATCH: ${file.path}');
-              } else {
-                print('  ${file.path}');
-              }
-            }
-          }
-        } catch (e) {
-          if (kDebugMode) {
-            print('Error listing output directory: $e');
-          }
-        }
-        
-        throw Exception(
-          'Output file was not created after successful FFmpeg execution. Expected: ${outputFileObj.absolute.path}',
-        );
+        throw Exception('Output file was not created after successful FFmpeg execution');
       }
 
       final fileSize = await outputFileObj.length();
@@ -337,22 +295,19 @@ class MobileFFmpeg implements FFmpegInterface {
         if (kDebugMode) {
           print('Successfully read ${bytes.length} bytes from output file');
         }
-      } catch (e) {
+      } catch (_) {
         if (kDebugMode) {
-          print('Error reading from output file: $e');
+          print('Output file readability check failed');
         }
-        throw Exception('Output file exists but cannot be read: $e');
+        throw Exception('Output file exists but cannot be read');
       }
 
       return outputFile;
-    } catch (e) {
+    } catch (_) {
       if (kDebugMode) {
-        print('Error extracting subtitle: $e');
-        if (e is Exception) {
-          print('Exception details: ${e.toString()}');
-        }
+        print('Subtitle extraction failed');
       }
-      throw Exception('Failed to extract subtitle: $e');
+      throw Exception('Failed to extract subtitle. Check media access and retry.');
     }
   }
 
@@ -385,17 +340,15 @@ class MobileFFmpeg implements FFmpegInterface {
       ));
 
       if (kDebugMode) {
-        print('Extracting subtitle on ${Platform.operatingSystem} from: $videoPath');
+        print('Extracting subtitle on ${Platform.operatingSystem}');
         print('Stream index: $streamIndex');
-        print('Track info: $trackInfo');
-        print('Output file: $outputFile');
       }
 
       // Check if output directory exists and is writable
       final outputDir = Directory(outputPath);
       if (!await outputDir.exists()) {
         if (kDebugMode) {
-          print('Output directory does not exist, attempting to create: $outputPath');
+          print('Output directory does not exist; attempting to create it');
         }
         await outputDir.create(recursive: true);
       }
@@ -408,11 +361,11 @@ class MobileFFmpeg implements FFmpegInterface {
         if (kDebugMode) {
           print('Successfully verified write permissions for output directory');
         }
-      } catch (e) {
+      } catch (_) {
         if (kDebugMode) {
-          print('Error writing to output directory: $e');
+          print('Output directory write check failed');
         }
-        throw Exception('Cannot write to output directory: $e');
+        throw Exception('Cannot write to output directory');
       }
 
       // Convert URI to proper file path if needed, with SAF support for Android
@@ -427,8 +380,7 @@ class MobileFFmpeg implements FFmpegInterface {
       final convertedOutputFile = convertToFilePath(outputFile);
 
       if (kDebugMode) {
-        print('Converted video path: $ffmpegVideoPath');
-        print('Converted output file: $convertedOutputFile');
+        print('Prepared FFmpeg input and output locators');
       }
 
       // Delete existing file if it exists
@@ -444,25 +396,17 @@ class MobileFFmpeg implements FFmpegInterface {
       final command = '-y -i "$ffmpegVideoPath" -map 0:s:$streamIndex -c:s srt "$convertedOutputFile"';
 
       if (kDebugMode) {
-        print('FFmpeg command: $command');
+        print('Executing FFmpeg subtitle extraction for stream $streamIndex');
       }
 
-      await logInfo('Starting FFmpeg subtitle extraction with track info to: $convertedOutputFile');
+      await logInfo('Starting FFmpeg subtitle extraction with track information');
 
       final session = await FFmpegKit.execute(command);
       final returnCode = await session.getReturnCode();
 
-      // Get all logs for debugging
-      final logs = await session.getLogs();
-      final logMessages = logs.map((log) => log.getMessage()).toList();
-      
       if (kDebugMode) {
         print('FFmpeg execution completed');
         print('Return code: ${returnCode?.getValue() ?? "unknown"}');
-        print('Log output:');
-        for (var log in logMessages) {
-          print('FFmpeg: $log');
-        }
       }
 
       if (returnCode == null) {
@@ -470,7 +414,7 @@ class MobileFFmpeg implements FFmpegInterface {
       }
 
       if (!returnCode.isValueSuccess()) {
-        throw Exception('FFmpeg process failed with code ${returnCode.getValue()}: ${logMessages.join('\n')}');
+        throw Exception('FFmpeg process failed with code ${returnCode.getValue()}');
       }
 
       // Verify the output file exists and has content
@@ -495,26 +439,23 @@ class MobileFFmpeg implements FFmpegInterface {
         if (kDebugMode) {
           print('Successfully read ${bytes.length} bytes from output file');
         }
-      } catch (e) {
+      } catch (_) {
         if (kDebugMode) {
-          print('Error reading from output file: $e');
+          print('Output file readability check failed');
         }
-        throw Exception('Output file exists but cannot be read: $e');
+        throw Exception('Output file exists but cannot be read');
       }
 
       // Return the normalized output file path
       final normalizedOutputFile = FFmpegHelper.normalizePath(convertedOutputFile);
-      await logInfo('Successfully extracted subtitle to: $normalizedOutputFile');
+      await logInfo('Successfully extracted subtitle');
       return normalizedOutputFile;
-    } catch (e) {
-      await logError('Failed to extract subtitle with track info: $e');
+    } catch (_) {
+      await logError('Failed to extract subtitle with track information');
       if (kDebugMode) {
-        print('Error extracting subtitle: $e');
-        if (e is Exception) {
-          print('Exception details: ${e.toString()}');
-        }
+        print('Subtitle extraction with track information failed');
       }
-      throw Exception('Failed to extract subtitle: $e');
+      throw Exception('Failed to extract subtitle. Check media access and retry.');
     }
   }
 
@@ -522,25 +463,22 @@ class MobileFFmpeg implements FFmpegInterface {
   Future<double?> getVideoFramerate(String videoPath) async {
     try {
       if (kDebugMode) {
-        print('Getting framerate on ${Platform.operatingSystem} for: $videoPath');
+        print('Getting video framerate on ${Platform.operatingSystem}');
       }
 
       // Convert URI to proper file path if needed
       final convertedPath = convertToFilePath(videoPath);
       
       if (kDebugMode) {
-        print('Original video path: $videoPath');
-        print('Converted video path: $convertedPath');
+        print('Prepared FFprobe input locator');
       }
 
       final session = await FFprobeKit.getMediaInformation(convertedPath);
       final MediaInformation? mediaInformation = session.getMediaInformation();
 
       if (mediaInformation == null) {
-        final logs = await session.getLogs();
-        final logMessages = logs.map((log) => log.getMessage()).toList();
         if (kDebugMode) {
-          print('Failed to get media information:\n${logMessages.join('\n')}');
+          print('FFprobe did not return media information');
         }
         return null;
       }
@@ -570,9 +508,9 @@ class MobileFFmpeg implements FFmpegInterface {
                   return _normalizeFramerate(fps);
                 }
               }
-            } catch (e) {
+            } catch (_) {
               if (kDebugMode) {
-                print('Error parsing average framerate: $e');
+                print('Could not parse average framerate');
               }
             }
           }
@@ -595,9 +533,9 @@ class MobileFFmpeg implements FFmpegInterface {
                   return _normalizeFramerate(fps);
                 }
               }
-            } catch (e) {
+            } catch (_) {
               if (kDebugMode) {
-                print('Error parsing r_frame_rate: $e');
+                print('Could not parse r_frame_rate');
               }
             }
           }
@@ -608,9 +546,9 @@ class MobileFFmpeg implements FFmpegInterface {
         print('Could not determine framerate from video streams');
       }
       return null;
-    } catch (e) {
+    } catch (_) {
       if (kDebugMode) {
-        print('Error getting video framerate: $e');
+        print('Video framerate detection failed');
       }
       return null;
     }
@@ -716,9 +654,9 @@ class SystemFFmpeg implements FFmpegInterface {
         print('FFmpeg available on ${Platform.operatingSystem}: $_ffmpegAvailable');
         print('FFprobe available on ${Platform.operatingSystem}: $_ffprobeAvailable');
       }
-    } catch (e) {
+    } catch (_) {
       if (kDebugMode) {
-        print('Error checking FFmpeg availability on ${Platform.operatingSystem}: $e');
+        print('FFmpeg availability check failed on ${Platform.operatingSystem}');
       }
       _ffmpegAvailable = false;
       _ffprobeAvailable = false;
@@ -752,29 +690,27 @@ class SystemFFmpeg implements FFmpegInterface {
 
   @override
   Future<List<Map<String, dynamic>>> getSubtitleTracks(String videoPath) async {
+    await _checkAvailability();
+    _ensureAvailable();
     try {
-      await _checkAvailability();
-      _ensureAvailable();
-
       if (kDebugMode) {
-        print('Analyzing video file with system FFprobe on ${Platform.operatingSystem}: $videoPath');
+        print('Analyzing video subtitle tracks with system FFprobe on ${Platform.operatingSystem}');
       }
       await logInfo(
-        'Starting subtitle track analysis with system FFprobe on ${Platform.operatingSystem}: $videoPath',
+        'Starting subtitle track analysis with system FFprobe on ${Platform.operatingSystem}',
       );
 
       // Verify input file exists
       final videoFile = File(videoPath);
       if (!await videoFile.exists()) {
-        throw Exception('Input video file does not exist: $videoPath');
+        throw Exception('Input video file is unavailable');
       }
 
       // Use ffprobe to get stream information in JSON format
       final normalizedVideoPath = convertToFilePath(videoPath);
       
       if (kDebugMode) {
-        print('Original video path: $videoPath');
-        print('Normalized video path: $normalizedVideoPath');
+        print('Prepared system FFprobe input locator');
       }
       
       final result = await Process.run('ffprobe', [
@@ -787,9 +723,7 @@ class SystemFFmpeg implements FFmpegInterface {
       ]);
 
       if (result.exitCode != 0) {
-        throw Exception(
-          'FFprobe failed with exit code ${result.exitCode}: ${result.stderr}',
-        );
+        throw Exception('FFprobe failed with exit code ${result.exitCode}');
       }
 
       // Parse JSON output
@@ -818,19 +752,18 @@ class SystemFFmpeg implements FFmpegInterface {
 
       if (kDebugMode) {
         print('Found ${subtitleTracks.length} subtitle tracks');
-        print(subtitleTracks);
       }
 
       return subtitleTracks;
-    } catch (e) {
+    } catch (_) {
       if (kDebugMode) {
-        print('Error getting subtitle tracks with system FFprobe: $e');
+        print('System FFprobe subtitle track analysis failed');
       }
       await logError(
-        'Failed to get subtitle tracks with system FFprobe: $e',
+        'Failed to get subtitle tracks with system FFprobe',
         context: 'SystemFFmpeg.getSubtitleTracks',
       );
-      rethrow;
+      throw Exception('Failed to get subtitle tracks. Check media access and retry.');
     }
   }
 
@@ -840,10 +773,9 @@ class SystemFFmpeg implements FFmpegInterface {
     String outputPath,
     int streamIndex,
   ) async {
+    await _checkAvailability();
+    _ensureAvailable();
     try {
-      await _checkAvailability();
-      _ensureAvailable();
-
       final videoFileName = FFmpegHelper.extractBaseFilename(videoPath);
       final outputFile = path.normalize(path.join(
         outputPath,
@@ -851,24 +783,21 @@ class SystemFFmpeg implements FFmpegInterface {
       ));
 
       if (kDebugMode) {
-        print('Extracting subtitle with system FFmpeg on ${Platform.operatingSystem} from: $videoPath');
+        print('Extracting subtitle with system FFmpeg on ${Platform.operatingSystem}');
         print('Stream index: $streamIndex');
-        print('Output file: $outputFile');
       }
 
       // Check if input file exists and is readable
       final videoFile = File(videoPath);
       if (!await videoFile.exists()) {
-        throw Exception('Input video file does not exist: $videoPath');
+        throw Exception('Input video file is unavailable');
       }
 
       // Check if output directory exists and is writable
       final outputDir = Directory(outputPath);
       if (!await outputDir.exists()) {
         if (kDebugMode) {
-          print(
-            'Output directory does not exist, attempting to create: $outputPath',
-          );
+          print('Output directory does not exist; attempting to create it');
         }
         await outputDir.create(recursive: true);
       }
@@ -881,11 +810,11 @@ class SystemFFmpeg implements FFmpegInterface {
         if (kDebugMode) {
           print('Successfully verified write permissions for output directory');
         }
-      } catch (e) {
+      } catch (_) {
         if (kDebugMode) {
-          print('Error writing to output directory: $e');
+          print('Output directory write check failed');
         }
-        throw Exception('Cannot write to output directory: $e');
+        throw Exception('Cannot write to output directory');
       }
 
       // Execute FFmpeg to extract subtitle
@@ -893,10 +822,7 @@ class SystemFFmpeg implements FFmpegInterface {
       final normalizedOutputFile = convertToFilePath(outputFile);
       
       if (kDebugMode) {
-        print('Original video path: $videoPath');
-        print('Normalized video path: $normalizedVideoPath');
-        print('Original output file: $outputFile');
-        print('Normalized output file: $normalizedOutputFile');
+        print('Prepared system FFmpeg input and output locators');
       }
       
       final result = await Process.run('ffmpeg', [
@@ -909,19 +835,13 @@ class SystemFFmpeg implements FFmpegInterface {
 
       if (result.exitCode != 0) {
         if (kDebugMode) {
-          print('FFmpeg stderr: ${result.stderr}');
-          print('FFmpeg stdout: ${result.stdout}');
+          print('FFmpeg extraction failed with exit code ${result.exitCode}');
         }
-        throw Exception(
-          'FFmpeg failed with exit code ${result.exitCode}: ${result.stderr}',
-        );
+        throw Exception('FFmpeg failed with exit code ${result.exitCode}');
       }
 
       if (kDebugMode) {
         print('FFmpeg completed successfully');
-        if (result.stdout.isNotEmpty) {
-          print('FFmpeg stdout: ${result.stdout}');
-        }
       }
 
       // Verify the output file exists and has content
@@ -931,35 +851,11 @@ class SystemFFmpeg implements FFmpegInterface {
 
       final outputFileObj = File(outputFile);
       if (kDebugMode) {
-        print('Checking if output file exists at: ${outputFileObj.absolute.path}');
-        print('Output file path (relative): $outputFile');
-        print('Output file path (absolute): ${outputFileObj.absolute.path}');
+        print('Checking whether FFmpeg created its output file');
       }
       
       if (!await outputFileObj.exists()) {
-        // Try to list files in the output directory to debug
-        try {
-          final outputDir = Directory(outputPath);
-          final files = await outputDir.list().toList();
-          if (kDebugMode) {
-            print('Files in output directory ($outputPath):');
-            for (var file in files) {
-              if (file.path.contains(videoFileName)) {
-                print('  MATCH: ${file.path}');
-              } else {
-                print('  ${file.path}');
-              }
-            }
-          }
-        } catch (e) {
-          if (kDebugMode) {
-            print('Error listing output directory: $e');
-          }
-        }
-        
-        throw Exception(
-          'Output file was not created after successful FFmpeg execution. Expected: ${outputFileObj.absolute.path}',
-        );
+        throw Exception('Output file was not created after successful FFmpeg execution');
       }
 
       final fileSize = await outputFileObj.length();
@@ -978,22 +874,19 @@ class SystemFFmpeg implements FFmpegInterface {
         if (kDebugMode) {
           print('Successfully read ${bytes.length} bytes from output file');
         }
-      } catch (e) {
+      } catch (_) {
         if (kDebugMode) {
-          print('Error reading from output file: $e');
+          print('Output file readability check failed');
         }
-        throw Exception('Output file exists but cannot be read: $e');
+        throw Exception('Output file exists but cannot be read');
       }
 
       return outputFile;
-    } catch (e) {
+    } catch (_) {
       if (kDebugMode) {
-        print('Error extracting subtitle with system FFmpeg: $e');
-        if (e is Exception) {
-          print('Exception details: ${e.toString()}');
-        }
+        print('System FFmpeg subtitle extraction failed');
       }
-      throw Exception('Failed to extract subtitle: $e');
+      throw Exception('Failed to extract subtitle. Check media access and retry.');
     }
   }
 
@@ -1004,10 +897,9 @@ class SystemFFmpeg implements FFmpegInterface {
     int streamIndex,
     Map<String, dynamic> trackInfo,
   ) async {
+    await _checkAvailability();
+    _ensureAvailable();
     try {
-      await _checkAvailability();
-      _ensureAvailable();
-
       // Extract filename properly by handling both forward and back slashes
       final videoFileName = FFmpegHelper.extractBaseFilename(videoPath);
       
@@ -1026,10 +918,8 @@ class SystemFFmpeg implements FFmpegInterface {
       final outputFile = path.join(outputPath, '$videoFileName.$trackIdentifier.srt');
 
       if (kDebugMode) {
-        print('Extracting subtitle with system FFmpeg on ${Platform.operatingSystem} from: $videoPath');
+        print('Extracting subtitle with system FFmpeg on ${Platform.operatingSystem}');
         print('Stream index: $streamIndex');
-        print('Track info: $trackInfo');
-        print('Output file: $outputFile');
       }
 
       // Normalize paths for cross-platform compatibility
@@ -1037,9 +927,7 @@ class SystemFFmpeg implements FFmpegInterface {
       final normalizedOutputFile = FFmpegHelper.normalizePath(outputFile);
 
       if (kDebugMode) {
-        print('Normalized video path: $normalizedVideoPath');
-        print('Original output file: $outputFile');
-        print('Normalized output file: $normalizedOutputFile');
+        print('Prepared system FFmpeg input and output locators');
       }
       
       final result = await Process.run('ffmpeg', [
@@ -1052,31 +940,26 @@ class SystemFFmpeg implements FFmpegInterface {
 
       if (kDebugMode) {
         print('FFmpeg exit code: ${result.exitCode}');
-        print('FFmpeg stdout: ${result.stdout}');
-        print('FFmpeg stderr: ${result.stderr}');
       }
 
       if (result.exitCode != 0) {
-        throw Exception('FFmpeg failed with exit code ${result.exitCode}: ${result.stderr}');
+        throw Exception('FFmpeg failed with exit code ${result.exitCode}');
       }
 
       // Verify output file exists
       if (!File(normalizedOutputFile).existsSync()) {
-        throw Exception('Output file does not exist: $normalizedOutputFile');
+        throw Exception('Output file was not created after FFmpeg execution');
       }
 
-      await logInfo('Successfully extracted subtitle with track info to: $normalizedOutputFile');
+      await logInfo('Successfully extracted subtitle with track information');
 
       return outputFile;
-    } catch (e) {
-      await logError('Failed to extract subtitle with system FFmpeg and track info: $e');
+    } catch (_) {
+      await logError('Failed to extract subtitle with system FFmpeg and track information');
       if (kDebugMode) {
-        print('Error extracting subtitle with system FFmpeg: $e');
-        if (e is Exception) {
-          print('Exception details: ${e.toString()}');
-        }
+        print('System FFmpeg subtitle extraction with track information failed');
       }
-      throw Exception('Failed to extract subtitle: $e');
+      throw Exception('Failed to extract subtitle. Check media access and retry.');
     }
   }
 
@@ -1087,21 +970,20 @@ class SystemFFmpeg implements FFmpegInterface {
       _ensureAvailable();
 
       if (kDebugMode) {
-        print('Getting framerate with system FFprobe on ${Platform.operatingSystem}: $videoPath');
+        print('Getting video framerate with system FFprobe on ${Platform.operatingSystem}');
       }
 
       // Verify input file exists
       final videoFile = File(videoPath);
       if (!await videoFile.exists()) {
-        throw Exception('Input video file does not exist: $videoPath');
+        throw Exception('Input video file is unavailable');
       }
 
       // Use ffprobe to get stream information in JSON format
       final normalizedVideoPath = convertToFilePath(videoPath);
       
       if (kDebugMode) {
-        print('Original video path: $videoPath');
-        print('Normalized video path: $normalizedVideoPath');
+        print('Prepared system FFprobe input locator');
       }
       
       final result = await Process.run('ffprobe', [
@@ -1114,9 +996,7 @@ class SystemFFmpeg implements FFmpegInterface {
       ]);
 
       if (result.exitCode != 0) {
-        throw Exception(
-          'FFprobe failed with exit code ${result.exitCode}: ${result.stderr}',
-        );
+        throw Exception('FFprobe failed with exit code ${result.exitCode}');
       }
 
       // Parse JSON output
@@ -1144,9 +1024,9 @@ class SystemFFmpeg implements FFmpegInterface {
                   return _normalizeFramerate(fps);
                 }
               }
-            } catch (e) {
+            } catch (_) {
               if (kDebugMode) {
-                print('Error parsing average framerate: $e');
+                print('Could not parse average framerate');
               }
             }
           }
@@ -1167,9 +1047,9 @@ class SystemFFmpeg implements FFmpegInterface {
                   return _normalizeFramerate(fps);
                 }
               }
-            } catch (e) {
+            } catch (_) {
               if (kDebugMode) {
-                print('Error parsing r_frame_rate: $e');
+                print('Could not parse r_frame_rate');
               }
             }
           }
@@ -1180,9 +1060,9 @@ class SystemFFmpeg implements FFmpegInterface {
         print('Could not determine framerate from video streams');
       }
       return null;
-    } catch (e) {
+    } catch (_) {
       if (kDebugMode) {
-        print('Error getting video framerate with system FFprobe: $e');
+        print('System FFprobe video framerate detection failed');
       }
       return null;
     }
@@ -1314,11 +1194,6 @@ class FFmpegHelper implements FFmpegInterface {
     
     // Clean up any remaining invalid characters for filename
     fileName = fileName.replaceAll(RegExp(r'[<>:"/\\|?*]'), '_');
-    
-    if (kDebugMode) {
-      print('Original video path: $videoPath');
-      print('Extracted filename: $fileName');
-    }
     
     return fileName.isNotEmpty ? fileName : 'video';
   }

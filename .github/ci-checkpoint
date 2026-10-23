@@ -437,3 +437,9 @@ CP92 R3 October 23 2026: replace the Edit Line unsaved changes bottom sheet
 with a modal AlertDialog; retain Save, Discard and Cancel semantics, prevent
 duplicate save requests and system dismissal mid-save. Add dialog widget tests.
 Run only Flutter dependency resolution, analysis and tests; no platform builds.
+
+CP92 R4 October 23 2026: redact FFmpeg/FFprobe helper command, raw native
+session/process output, media path and SAF locator diagnostics on mobile and
+desktop while preserving file access, output naming, extraction behavior and
+numeric error codes. Add focused privacy regressions and run Flutter pub get,
+analysis and the complete Flutter test suite on Linux; no native builds.

@@ -512,6 +512,16 @@ dialog presentation, cancel/discard, retry and pending saves.
 [R3 report](CHECKPOINT92_R3_EDIT_LINE_UNSAVED_POPUP_2026-10-23.md).
 **Verification:** [Linux 776 Flutter tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39919836452).
 
+**CP92 R4 (October 23, 2026):** Redact path, SAF parameter, full command,
+process stdout/stderr, native session logs and raw exception text from the
+shared FFmpeg/FFprobe helper diagnostics on mobile and desktop. Keep the
+actual command arguments, output filenames and subtitle operations unchanged.
+Retain numerical status and system-tool installation guidance. New source
+guards and a missing-desktop-media privacy regression cover the Dart helper
+boundary; separate waveform/native logging remains for a later scoped audit.
+[R4 report](CHECKPOINT92_R4_FFMPEG_DIAGNOSTIC_PRIVACY_2026-10-23.md).
+**Verification:** pending Linux Flutter-only CI gate.
+
 ### CP93 — Core refactor acceptance and handoff
 - Flutter analysis and full unit/widget/Isar integration tests in GitHub Actions (dependency resolution + tests only; **no platform builds in CI**).
 - Native builds and smoke tests on Android and desktop operating systems on user/local machines. Preserve fast Back/touch behavior, media lifecycle, file/SAF grants and `.msone` roundtrip.
