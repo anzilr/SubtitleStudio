@@ -47,8 +47,10 @@ files and playback engine are unchanged.
 ## Verification and physical acceptance
 
 - Local whitespace diff check: clean.
-- Linux GitHub Actions `flutter pub get`, `flutter analyze`, `flutter test`
-  to be filled after the next CI gate; **no platform builds in CI**.
+- [Linux Flutter CI 39968610443](https://github.com/anzilr/SubtitleStudio/actions/runs/39968610443):
+  **796 tests passed; zero analyzer issues**. Dependency resolution,
+  analysis and tests only; **no platform builds in CI**.
+- Verified code checkpoint: `b15da6c7b85c2addb74244f452befc0d46a3f30f`.
 - Native OnePlus profile retest: pending. With video paused, drag across
   dozens of waveform updates and confirm `previewSeeks=0`, one final seek,
   accurate stationary playhead and minimal additional `STATE_FLUSHED` logs.

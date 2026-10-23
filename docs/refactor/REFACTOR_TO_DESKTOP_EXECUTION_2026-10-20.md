@@ -612,7 +612,10 @@ clamped visual scroll. Add regression tests and privacy-safe profile counters.
 This is an isolated stable-waveform seeking fix, **not** a merge of the
 deferred CP86 progressive decoding experiment.
 [R4 report](CHECKPOINT93_R4_PAUSED_WAVEFORM_SCRUB_2026-10-23.md).
-CI and native OnePlus profile gesture acceptance are pending.
+**Verification:** [Linux Flutter gate 39968610443](https://github.com/anzilr/SubtitleStudio/actions/runs/39968610443),
+**796 tests passed, zero analyzer issues**. Native OnePlus profile gesture
+acceptance remains pending because the VS Code checkout has preexisting local
+modifications that correctly blocked the bridge's safe Git pull.
 
 ### Production Desktop Workspace Integration / UI [AFTER CP93]
 - The presentation shell may be designed and previewed now on the isolated branch. After CP93, connect it to the shared Riverpod, Isar, project, checkpoint, encoding and file-access core without duplicating domain logic.

@@ -6,7 +6,8 @@
 > wheel input is coalesced, native position reports cannot prematurely
 > recenter the active scroll, and boundary seek times use clamped positions.
 > [R4 report](CHECKPOINT93_R4_PAUSED_WAVEFORM_SCRUB_2026-10-23.md).
-> Automated and physical-device acceptance are still pending. This does not
+> [796 Flutter tests passed, zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39968610443).
+> Physical-device acceptance is still pending. This does not
 > resume the separately frozen CP86 progressive audio-decoding experiment.
 
 > **CURRENT CP92 STATUS — 2026-10-23:** CP92 R1–R7 cleanup, diagnostic
