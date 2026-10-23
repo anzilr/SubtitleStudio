@@ -20,10 +20,14 @@ class StudioDockBands {
     final minVideo = 200.0 * scale;
     final minWaveform = 96.0 * scale;
     final minTable = 180.0 * scale;
+    // At very short heights the scaled minimums fill the available pixels.
+    // A floating-point rounding difference can otherwise invert clamp bounds.
+    final maxVideo = math.max(minVideo, usable - minWaveform - minTable);
     final video = (usable * videoShare)
-        .clamp(minVideo, usable - minWaveform - minTable).toDouble();
+        .clamp(minVideo, maxVideo).toDouble();
+    final maxWaveform = math.max(minWaveform, usable - video - minTable);
     final waveform = (usable * waveformShare)
-        .clamp(minWaveform, usable - video - minTable).toDouble();
+        .clamp(minWaveform, maxWaveform).toDouble();
     return StudioDockBands(video: video, waveform: waveform,
         table: math.max(0.0, usable - video - waveform));
   }
