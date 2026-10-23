@@ -36,6 +36,9 @@ class WaveformWidget extends riverpod.ConsumerStatefulWidget {
   /// Opt-in minimal toolbar/zoom UI when embedded in a short desktop band.
   /// The full-sized mobile and classic waveform remains unchanged.
   final bool compact;
+  /// Keep waveform timing/add-cue edit gestures unavailable until the caller
+  /// supplies a checkpoint-backed persistence flow. Mobile defaults unchanged.
+  final bool enableTimeEditing;
   final int? subtitleCollectionId; // For database updates
   final int? sessionId; // For checkpoint creation
   final int? highlightedSubtitleIndex; // Index of currently highlighted subtitle (0-based)
@@ -55,6 +58,7 @@ class WaveformWidget extends riverpod.ConsumerStatefulWidget {
     this.onAddLineConfirmed,
     this.height = 180.0,
     this.compact = false,
+    this.enableTimeEditing = true,
     this.subtitleCollectionId,
     this.sessionId,
     this.highlightedSubtitleIndex,
