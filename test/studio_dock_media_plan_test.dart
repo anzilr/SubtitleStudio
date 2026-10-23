@@ -60,6 +60,35 @@ void main() {
     expect(mapped[1].text, isEmpty);
   });
 
+  testWidgets('standalone Studio Dock toolbar exposes New and Import',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    tester.view.physicalSize = const Size(1700, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    var imports = 0;
+    var newProjects = 0;
+    await tester.pumpWidget(MaterialApp(
+      home: DesktopWorkspacePreview(
+        liveReadOnly: true,
+        initialCues: const [
+          WorkspaceDemoCue(id: 1, start: '00:00:01,000',
+            end: '00:00:02,000', original: 'Source', edited: ''),
+        ],
+        onImportFile: () => imports++,
+        onNewProject: () => newProjects++,
+      ),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('studio-dock-toolbar-import')));
+    await tester.tap(find.byKey(const ValueKey('studio-dock-toolbar-new')));
+    await tester.pump();
+    expect(imports, 1);
+    expect(newProjects, 1);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('native player slot survives changing Studio Dock sections',
       (tester) async {
     SharedPreferences.setMockInitialValues({});
