@@ -493,3 +493,5 @@ DS3 R1 FINAL GATE 2026-10-23: live read-only real session route on native deskto
 DS3 R1 RERUN 2026-10-23: fix read-only widget analyzer check and unused test import; Flutter analyze and flutter test only, no builds.
 
 DS3 R1 FINAL PRESENTATION CHECK 2026-10-23: omit all fictional demo project metadata from real read-only Explorer, assert real session sidebar and no demo videos. Rerun Flutter-only CI, no native builds.
+
+DS3 R1.1 DESKTOP STARTUP 2026-10-23: make native desktop standard main.dart open Studio Dock with last edited session and project picker, not legacy Home. Preserve file-association import, mobile screen, and scoped hotkey lifetimes. Run flutter pub get/analyze/test only; no native builds.
