@@ -44,6 +44,8 @@ class DesktopWorkspacePreview extends StatefulWidget {
     this.projectTitle,
     this.encoding,
     this.onChooseProject,
+    this.onImportFile,
+    this.onNewProject,
     this.onApplyCueText,
     this.videoSurface,
     this.manageLiveHotkeys = false,
@@ -56,6 +58,8 @@ class DesktopWorkspacePreview extends StatefulWidget {
   final String? projectTitle;
   final String? encoding;
   final VoidCallback? onChooseProject;
+  final VoidCallback? onImportFile;
+  final VoidCallback? onNewProject;
   /// Non-null only when the production checkpoint-backed edit bridge is ready.
   final Future<bool> Function(int cueNumber, String editedText)? onApplyCueText;
   /// Optional existing native-player surface. Only the standalone desktop
@@ -641,6 +645,20 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
       Text(widget.onApplyCueText != null ? 'LIVE · TEXT EDIT' : (widget.liveReadOnly ? 'LIVE · READ ONLY' : 'DEMO WORKSPACE'),
         style: const TextStyle(
           color: _muted, letterSpacing: 1, fontSize: 10)),
+      if (widget.onImportFile != null)
+        IconButton(
+          key: const ValueKey('studio-dock-toolbar-import'),
+          icon: const Icon(Icons.file_open_outlined),
+          tooltip: 'Import subtitles or project',
+          onPressed: widget.onImportFile,
+        ),
+      if (widget.onNewProject != null)
+        IconButton(
+          key: const ValueKey('studio-dock-toolbar-new'),
+          icon: const Icon(Icons.add_box_outlined),
+          tooltip: 'New project',
+          onPressed: widget.onNewProject,
+        ),
       if (widget.onChooseProject != null)
         IconButton(
           key: const ValueKey('studio-dock-switch-project'),
