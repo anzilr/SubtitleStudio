@@ -582,6 +582,15 @@ must not be inferred from Linux CI.
 **Verification:** [Linux gate 39950148526](https://github.com/anzilr/SubtitleStudio/actions/runs/39950148526),
 **787 tests passed, zero analyzer issues**. Device evidence pending.
 
+**CP93 R2 (October 23, 2026):** Final review identified a stale saved-edit
+cursor on *replacement* imports. An archive with no `lastEditedIndex` previously
+inherited the previous session's cursor, even after its subtitle collection
+and history were replaced. Apply the incoming nullable position explicitly;
+add an isolated Isar regression for replacement with a legacy one-blank-cue
+archive, verifying the old cursor and history refs are cleared atomically.
+[R2 report](CHECKPOINT93_R2_REPLACEMENT_CURSOR_INTEGRITY_2026-10-23.md).
+**Verification:** Pending Linux Flutter gate; native acceptance pending.
+
 ### Production Desktop Workspace Integration / UI [AFTER CP93]
 - The presentation shell may be designed and previewed now on the isolated branch. After CP93, connect it to the shared Riverpod, Isar, project, checkpoint, encoding and file-access core without duplicating domain logic.
 - PC single-screen workflow: project navigator/history, video + waveform, cue editor/table, tools/sidebar; keyboard shortcuts, resizable panes and platform file dialogs.

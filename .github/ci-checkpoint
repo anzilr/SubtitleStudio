@@ -460,3 +460,8 @@ legacy import integration acceptance against real Isar. Preserve blank cues,
 encoding preferences, detached HEAD and named refs across codec/ID remap.
 Run full Flutter analyze and tests in Linux CI; native device smoke remains
 separate and pending, without any platform build in GitHub Actions.
+
+CP93 R2 October 23 2026: reset saved edit position when replacing a session
+with a legacy archive that has no lastEditedIndex. Test real Isar replacement
+clears previous project cursor, checkpoints and refs, keeps same IDs, and
+preserves imported empty subtitle. Flutter analyze/tests only in CI.

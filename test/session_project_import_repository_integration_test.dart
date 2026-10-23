@@ -363,4 +363,93 @@ void main() {
     );
   });
 
+  test('replacing with legacy project clears stale edit position and refs',
+      () async {
+    late Session previous;
+    late int originalCollectionId;
+    final now = DateTime.utc(2026, 10, 23);
+    await harness.isar.writeTxn(() async {
+      originalCollectionId = await harness.isar.subtitleCollections.put(
+        SubtitleCollection(
+          fileName: 'previous.srt',
+          encoding: 'UTF-8',
+          filePath: '/previous.srt',
+          lines: [_line(1, 'One'), _line(2, 'Two')]
+              .map((data) => SubtitleLine()
+                ..index = data.index
+                ..startTime = data.startTime
+                ..endTime = data.endTime
+                ..original = data.original)
+              .toList(),
+        ),
+      );
+      previous = Session(
+        fileName: 'previous.srt',
+        subtitleCollectionId: originalCollectionId,
+        lastEditedIndex: 2,
+        editMode: true,
+      );
+      await harness.isar.sessions.put(previous);
+      final oldCheckpoint = Checkpoint(
+        sessionId: previous.id,
+        subtitleCollectionId: originalCollectionId,
+        timestamp: now,
+        operationType: 'snapshot',
+        description: 'Previous edit',
+        isActive: true,
+        checkpointType: 'snapshot',
+        deltas: const [],
+        snapshot: const [],
+      );
+      await harness.isar.checkpoints.put(oldCheckpoint);
+      await harness.isar.historyRefs.put(HistoryRef(
+        sessionId: previous.id,
+        subtitleCollectionId: originalCollectionId,
+        name: 'HEAD',
+        kind: 'head',
+        targetCheckpointId: oldCheckpoint.id,
+        createdAt: now,
+        updatedAt: now,
+      ));
+    });
+
+    // The legacy archive contains one empty cue and has no saved edit cursor
+    // or history section. It must fully replace the previous session state.
+    final archive = ProjectDocumentCodec.decode('''
+      {
+        "version": "1.0",
+        "session": {"fileName": "replacement.srt", "editMode": false},
+        "subtitleCollection": {
+          "fileName": "replacement.srt",
+          "encoding": "UTF-8 BOM",
+          "lines": [
+            {"index": 1, "startTime": "00:00:01,000",
+             "endTime": "00:00:01,900", "original": "", "edited": ""}
+          ]
+        }
+      }
+    ''');
+    final updated = await repository.replaceSession(
+      session: previous,
+      projectDocument: archive,
+      srtFileInfo: const {'useImportingFile': 'true'},
+      originalProjectUri: '/projects/replacement.msone',
+    );
+    final savedSession = (await harness.isar.sessions.get(previous.id))!;
+    final savedCollection =
+        (await harness.isar.subtitleCollections.get(originalCollectionId))!;
+    expect(updated.id, previous.id);
+    expect(savedSession.subtitleCollectionId, originalCollectionId);
+    expect(savedSession.fileName, 'replacement.srt');
+    expect(savedSession.lastEditedIndex, isNull);
+    expect(savedSession.editMode, isFalse);
+    expect(savedSession.projectFilePath, '/projects/replacement.msone');
+    expect(savedCollection.encoding, 'UTF-8 BOM');
+    expect(savedCollection.lines, hasLength(1));
+    expect(savedCollection.lines.single.original, '');
+    expect(savedCollection.lines.single.edited, '');
+    expect(await harness.isar.checkpoints.count(), 0);
+    expect(await harness.isar.historyRefs.count(), 0);
+  });
+
 }

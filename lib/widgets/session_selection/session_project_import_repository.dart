@@ -234,9 +234,9 @@ class SessionProjectImportRepository {
           session.fileName;
     }
 
-    if (sessionData.lastEditedIndex != null) {
-      session.lastEditedIndex = sessionData.lastEditedIndex;
-    }
+    // A replacement archive may deliberately have no saved edit position.
+    // Do not carry a cursor from the previous, unrelated subtitle collection.
+    session.lastEditedIndex = sessionData.lastEditedIndex;
     if (sessionData.editMode != null) {
       session.editMode = sessionData.editMode!;
     }

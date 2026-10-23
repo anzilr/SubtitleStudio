@@ -19,6 +19,12 @@
 > Native Android/Windows acceptance remains pending. Keep the CP86 waveform
 > optimization experiment isolated and the desktop preview demo-only.
 
+> **CP93 R2 review in progress — 2026-10-23:** Found and corrected stale
+> `lastEditedIndex` during legacy `.msone` replacement: an absent cursor now
+> clears the old session's position when replacing a different subtitle
+> collection. Real Isar replacement regression added, Linux quality gate
+> pending. [R2 report](CHECKPOINT93_R2_REPLACEMENT_CURSOR_INTEGRITY_2026-10-23.md).
+
 > **PARALLEL DESKTOP WORK APPROVED — 2026-10-20:** User elected to **see and refine a desktop UI now while CP88–CP93 refactoring continues**. A separate [desktop preview branch](https://github.com/anzilr/SubtitleStudio/tree/feature/desktop-workspace-preview) contains a demo-data-only Flutter workspace shell and an independent Windows entrypoint; it does not open or modify projects. Continue CP88–CP93 here. Full desktop *data/media integration and production acceptance* remain gated on shared-core readiness/CP93. This updates and supersedes the earlier "only after CP93 begin PC workspace" instruction below without reopening deferred CP86 waveform work. [Current parallel execution plan](REFACTOR_TO_DESKTOP_EXECUTION_2026-10-20.md).
 
 
