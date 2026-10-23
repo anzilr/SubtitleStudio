@@ -26,6 +26,7 @@ class StudioDockReadOnlySessionView extends ConsumerStatefulWidget {
     this.onChooseProject,
     this.enableTextEditing = false,
     this.allowNativePlayback = false,
+    this.suppressParentEditorHotkeys = true,
   });
 
   final int sessionId;
@@ -36,6 +37,8 @@ class StudioDockReadOnlySessionView extends ConsumerStatefulWidget {
   /// Only true for the standalone native desktop Home. An Editor-hosted route
   /// leaves this false, avoiding a second player behind the classic Editor.
   final bool allowNativePlayback;
+  /// Enable only when opened *over* a still-mounted classic Editor route.
+  final bool suppressParentEditorHotkeys;
 
   @override
   ConsumerState<StudioDockReadOnlySessionView> createState() =>
@@ -75,14 +78,18 @@ class _StudioDockReadOnlySessionViewState
     super.initState();
     // Suppress the still-mounted Editor's native in-app hotkeys while this
     // read-only route is visible, then restore them on disposal.
-    MSoneHotkeyManager.instance.suspendCallbacks();
+    if (widget.suppressParentEditorHotkeys) {
+      MSoneHotkeyManager.instance.suspendCallbacks();
+    }
     _snapshot = _load();
     _videoPath = widget.allowNativePlayback ? _resolveVideoPath() : null;
   }
 
   @override
   void dispose() {
-    MSoneHotkeyManager.instance.resumeCallbacks();
+    if (widget.suppressParentEditorHotkeys) {
+      MSoneHotkeyManager.instance.resumeCallbacks();
+    }
     super.dispose();
   }
 
@@ -169,6 +176,7 @@ class _StudioDockReadOnlySessionViewState
         encoding: session.encoding,
         onChooseProject: widget.onChooseProject,
         onApplyCueText: widget.enableTextEditing ? _applyText : null,
+        manageLiveHotkeys: !widget.suppressParentEditorHotkeys,
         videoSurface: validVideoPath == null || !widget.allowNativePlayback
             ? null
             : StudioDockVideoSurface(
