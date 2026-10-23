@@ -589,7 +589,8 @@ and history were replaced. Apply the incoming nullable position explicitly;
 add an isolated Isar regression for replacement with a legacy one-blank-cue
 archive, verifying the old cursor and history refs are cleared atomically.
 [R2 report](CHECKPOINT93_R2_REPLACEMENT_CURSOR_INTEGRITY_2026-10-23.md).
-**Verification:** Pending Linux Flutter gate; native acceptance pending.
+**Verification:** [Linux Flutter gate 39952361531](https://github.com/anzilr/SubtitleStudio/actions/runs/39952361531),
+**788 tests passed, zero analyzer issues**; native acceptance pending.
 
 ### Production Desktop Workspace Integration / UI [AFTER CP93]
 - The presentation shell may be designed and previewed now on the isolated branch. After CP93, connect it to the shared Riverpod, Isar, project, checkpoint, encoding and file-access core without duplicating domain logic.

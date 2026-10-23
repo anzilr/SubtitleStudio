@@ -37,8 +37,10 @@ Existing imports with a non-null saved position continue to restore it.
 
 ## Verification
 
-- Repository diff check: pending local confirmation.
-- Full Linux Flutter analysis and tests: pending GitHub Actions.
+- `git diff --check`: clean locally.
+- [Linux Flutter gate 39952361531](https://github.com/anzilr/SubtitleStudio/actions/runs/39952361531):
+  **788 tests passed, zero analyzer issues**.
+- Verified code commit: `e3a6fa40783cde6010eb03b333cd775bf11d2e4c`.
 - Device-level Android/Windows replacement and playback smoke: pending CP93
   native acceptance. Do not infer it from the automated Linux gate.
 
