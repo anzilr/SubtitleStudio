@@ -18,3 +18,7 @@ Branch: feature/studio-dock-integration
 - Native Windows still needs media + audio test for waveform rendering, playhead accuracy, paused/play scrub and wheel seek, zoom and resizing, repeated project switching, and selected audio tracks.
 - DS4 R3 will refine audio-track metadata, duration, waveform sizing and native acceptance.
 - DS5 will implement add/delete/split cues, timing/style/notes and external Save/Export within Studio Dock. Never fall back to classic desktop UI.
+## First-run media attachment
+- Studio Dock toolbar now has **Attach or change video**. It uses the established FilePickerSAF and VideoRepository, retaining macOS security-scoped bookmark persistence.
+- Attach/change requires the same unsaved-edit Apply/Discard/Cancel confirmation as switching projects. Cancel or invalid media leaves the existing saved video in place. A successful pick persists the path and mounts the corresponding video and waveform surfaces under path-specific keys, avoiding stale player/audio buffers.
+- No classic Editor is necessary for associating a video with a newly imported subtitle session.
