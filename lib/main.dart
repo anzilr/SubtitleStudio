@@ -36,6 +36,7 @@ import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
 import 'package:subtitle_studio/services/file_picker_preferences_repository.dart';
 import 'package:subtitle_studio/utils/msone_hotkey_manager.dart'; // Keyboard shortcuts
 import 'package:subtitle_studio/widgets/splash_screen.dart'; // Initial splash screen
+import 'package:subtitle_studio/desktop/workspace/studio_dock_desktop_home.dart';
 import 'screens/screen_home.dart';                        // Main home screen
 import 'screens/screen_source_view.dart';                 // Source view screen
 import 'database/models/models.dart';                     // Database models
@@ -262,11 +263,15 @@ class MainApp extends ConsumerWidget {
 
   /// Get the appropriate initial screen based on platform
   Widget _getInitialScreen() {
-    // On desktop platforms (Windows, macOS, Linux), skip splash screen
-    if (defaultTargetPlatform == TargetPlatform.windows ||
+    // Desktop launches directly into Studio Dock, not the legacy mobile
+    // Home/Editor composition. Keep command-line file imports on the legacy
+    // path until the shared desktop import flow is connected in DS5.
+    if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.windows ||
         defaultTargetPlatform == TargetPlatform.macOS ||
-        defaultTargetPlatform == TargetPlatform.linux) {
-      return _buildHomeScreen();
+        defaultTargetPlatform == TargetPlatform.linux)) {
+      return initialFile == null
+          ? const StudioDockDesktopHome()
+          : _buildHomeScreen();
     }
     
     // On mobile platforms, show splash screen
