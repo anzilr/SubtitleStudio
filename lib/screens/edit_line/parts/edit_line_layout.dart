@@ -263,21 +263,17 @@ extension _EditLineLayout on EditSubtitleScreenState {
                                                       availableWidth < 400
                                                           ? 0.4
                                                           : 1.0; // Less padding for narrow screens
+                                                  final actionButtonConstraints =
+                                                      portraitMetrics.isCompactPortrait
+                                                          ? const BoxConstraints(minWidth: 48, minHeight: 48)
+                                                          : const BoxConstraints(minWidth: 24, maxWidth: 36);
 
-                                                  return Row(
-                                                    mainAxisAlignment:
-                                                        MainAxisAlignment
-                                                            .spaceEvenly,
-                                                    mainAxisSize:
-                                                        MainAxisSize.max,
-                                                    children: [
-                                                      Flexible(
+                                                  return EditLineActionStrip(
+                                                    compact: portraitMetrics.isCompactPortrait,
+                                                    previous: Flexible(
                                                         child: IconButton(
-                                                          constraints:
-                                                              BoxConstraints(
-                                                                minWidth: 24,
-                                                                maxWidth: 36,
-                                                              ),
+                                                          tooltip: 'Previous subtitle',
+                                                          constraints: actionButtonConstraints,
                                                           padding:
                                                               EdgeInsets.symmetric(
                                                                 horizontal:
@@ -303,7 +299,7 @@ extension _EditLineLayout on EditSubtitleScreenState {
                                                         ),
                                                       ),
                                                       // Dictionary popup menu button (moved here - always visible)
-                                                      Flexible(
+                                                      dictionary: Flexible(
                                                         child: PopupMenuButton<
                                                           String
                                                         >(
@@ -491,7 +487,7 @@ extension _EditLineLayout on EditSubtitleScreenState {
                                                               ],
                                                         ),
                                                       ),
-                                                      Flexible(
+                                                      formatting: Flexible(
                                                         child: FormattingMenu(
                                                           controller:
                                                               _editedController,
@@ -501,9 +497,9 @@ extension _EditLineLayout on EditSubtitleScreenState {
                                                               _saveColorHistory,
                                                         ),
                                                       ),
-                                                      if (_subtitleLine != null &&
-                                                          _subtitle != null)
-                                                        Flexible(
+                                                      subtitleActions: _subtitleLine != null &&
+                                                          _subtitle != null
+                                                        ? Flexible(
                                                           child: SubtitleActionsMenu(
                                                             editedController:
                                                                 _editedController,
@@ -539,14 +535,12 @@ extension _EditLineLayout on EditSubtitleScreenState {
                                                                 ? () => _videoPlayerKey.currentState!.getCurrentPosition()
                                                                 : null,
                                                           ),
-                                                        ),
-                                                      Flexible(
+                                                        )
+                                                        : null,
+                                                      save: Flexible(
                                                         child: IconButton(
-                                                          constraints:
-                                                              BoxConstraints(
-                                                                minWidth: 24,
-                                                                maxWidth: 36,
-                                                              ),
+                                                          tooltip: 'Save subtitle',
+                                                          constraints: actionButtonConstraints,
                                                           padding:
                                                               EdgeInsets.symmetric(
                                                                 horizontal:
@@ -576,19 +570,16 @@ extension _EditLineLayout on EditSubtitleScreenState {
                                                         ),
                                                       ),
                                                       // Play/Pause button for video
-                                                      if (_isVideoLoaded)
-                                                        Flexible(
+                                                      playPause: _isVideoLoaded
+                                                        ? Flexible(
                                                           child: IconButton(
+                                                            tooltip: _isVideoPlaying ? 'Pause video' : 'Play video',
                                                             padding:
                                                                 EdgeInsets.symmetric(
                                                                   horizontal:
                                                                       buttonPadding,
                                                                 ),
-                                                            constraints:
-                                                                BoxConstraints(
-                                                                  minWidth: 24,
-                                                                  maxWidth: 36,
-                                                                ),
+                                                            constraints: actionButtonConstraints,
                                                             icon: Icon(
                                                               _isVideoPlaying
                                                                   ? Icons.pause
@@ -614,15 +605,13 @@ extension _EditLineLayout on EditSubtitleScreenState {
                                                               }
                                                             },
                                                           ),
-                                                        ),
+                                                        )
+                                                        : null,
 
-                                                      Flexible(
+                                                      next: Flexible(
                                                         child: IconButton(
-                                                          constraints:
-                                                              BoxConstraints(
-                                                                minWidth: 24,
-                                                                maxWidth: 36,
-                                                              ),
+                                                          tooltip: 'Next subtitle',
+                                                          constraints: actionButtonConstraints,
                                                           padding:
                                                               EdgeInsets.symmetric(
                                                                 horizontal:
@@ -647,7 +636,6 @@ extension _EditLineLayout on EditSubtitleScreenState {
                                                           ),
                                                         ),
                                                       ),
-                                                    ],
                                                   );
                                                 },
                                               ),

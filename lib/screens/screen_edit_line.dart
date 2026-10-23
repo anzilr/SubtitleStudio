@@ -39,6 +39,7 @@ import 'package:subtitle_studio/screens/edit_line/edit_line_controller.dart';
 import 'package:subtitle_studio/screens/edit_line/edit_line_state.dart';
 import 'package:subtitle_studio/screens/edit_line/repositories/edit_line_repository.dart';
 import 'package:subtitle_studio/screens/edit_line/widgets/edit_text_field.dart';
+import 'package:subtitle_studio/screens/edit_line/widgets/edit_line_action_strip.dart';
 import 'package:subtitle_studio/screens/edit_line/widgets/edit_line_portrait_layout.dart';
 import 'package:subtitle_studio/screens/edit_line/widgets/time_component_field.dart';
 import 'package:subtitle_studio/screens/edit_line/widgets/edit_line_video_pane.dart';

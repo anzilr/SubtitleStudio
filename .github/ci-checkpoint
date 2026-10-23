@@ -380,3 +380,13 @@ available width is under 380px, retaining existing controllers, edit actions,
 Riverpod state, media lifecycle, skins and project format. Add widget tests
 for portrait metrics and narrow/wide time layouts. Run Flutter pub get,
 Flutter analyze and full flutter test on Linux only. No platform builds.
+
+CP91 R9 October 22 2026: compact portrait Edit Line action ergonomics.
+On narrow portrait screens, keep Previous, Save, Play/Pause (if loaded),
+Next and an expandable Tools toggle in a single easy-to-reach row.
+Dictionary, Formatting and Subtitle Actions move to a second row only while
+Tools is expanded. Ensure 48px minimum target dimensions for frequent actions
+in compact mode; retain the original full toolbar order and sizing on wider
+screens. Do not alter action callbacks, Riverpod controllers, media lifecycle,
+skins, timeline or persistence. Add compact/expanded/wide widget regressions.
+Flutter pub get, analyze and complete tests on Linux only; NO platform builds.
