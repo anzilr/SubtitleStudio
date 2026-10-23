@@ -11,7 +11,7 @@ void main() {
   Future<void> launch(WidgetTester tester,
       StudioDockSessionCatalog catalog, {
       Widget Function(Session, VoidCallback)? sessionBuilder,
-      WidgetBuilder? classicHomeBuilder,
+      Future<String?> Function(BuildContext)? pickFile,
     }) async {
     tester.view.physicalSize = const Size(1680, 1000);
     tester.view.devicePixelRatio = 1;
@@ -23,7 +23,7 @@ void main() {
           loadSessions: () async => catalog,
           // Test only the desktop startup and project-selection policy.
           // Separate Isar integration tests verify actual repository reads.
-          classicHomeBuilder: classicHomeBuilder,
+          pickFile: pickFile,
           sessionViewBuilder: sessionBuilder ?? (active, onChoose) => Scaffold(
             body: Column(children: [
               const Text('LIVE · TEXT EDIT'),
@@ -67,44 +67,34 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('classic import unmounts the desktop media owner until return',
+  testWidgets('project dialog contains only Studio Dock import/create flows',
       (tester) async {
-    var activeOwners = 0;
-    var totalMounts = 0;
-    await launch(
-      tester,
-      StudioDockSessionCatalog([session(1, 'Original.srt')], 1),
-      sessionBuilder: (selected, choose) => _TrackedSessionView(
-        title: selected.fileName,
-        onSwitch: choose,
-        onMount: () {
-          activeOwners++;
-          totalMounts++;
-        },
-        onDispose: () => activeOwners--,
-      ),
-      classicHomeBuilder: (classicContext) => Scaffold(
-        body: Center(child: TextButton(
-          key: const ValueKey('return-from-classic'),
-          onPressed: () => Navigator.of(classicContext).pop(),
-          child: const Text('Return from classic'),
-        )),
-      ),
-    );
-    expect(activeOwners, 1);
+    await launch(tester, StudioDockSessionCatalog(
+      [session(1, 'Original.srt')], 1), pickFile: (_) async => null);
     await tester.tap(find.byKey(const ValueKey('studio-dock-switch-project')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('studio-dock-classic-home')));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('return-from-classic')),
+    expect(find.byKey(const ValueKey('studio-dock-classic-home')),
+        findsNothing);
+    expect(find.byKey(const ValueKey('studio-dock-import-project')),
         findsOneWidget);
-    expect(activeOwners, 0,
-      reason: 'Root Studio Dock must release native player before classic Home');
-    await tester.tap(find.byKey(const ValueKey('return-from-classic')));
+    expect(find.byKey(const ValueKey('studio-dock-create-project')),
+        findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('studio-dock-import-project')));
     await tester.pumpAndSettle();
-    expect(activeOwners, 1);
-    expect(totalMounts, 2);
-    expect(find.text('Original.srt'), findsOneWidget);
+    expect(find.text('Original.srt'), findsOneWidget,
+      reason: 'Cancelling a file picker must leave current project unchanged');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('new project requires explicit Create; cancel does not persist',
+      (tester) async {
+    await launch(tester, const StudioDockSessionCatalog([], null));
+    await tester.tap(find.byKey(const ValueKey('studio-dock-create-first')));
+    await tester.pumpAndSettle();
+    expect(find.text('New Studio Dock project'), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(find.text('Welcome to Studio Dock'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -118,42 +108,3 @@ void main() {
   });
 }
 
-class _TrackedSessionView extends StatefulWidget {
-  const _TrackedSessionView({
-    required this.title,
-    required this.onSwitch,
-    required this.onMount,
-    required this.onDispose,
-  });
-  final String title;
-  final VoidCallback onSwitch;
-  final VoidCallback onMount;
-  final VoidCallback onDispose;
-
-  @override
-  State<_TrackedSessionView> createState() => _TrackedSessionViewState();
-}
-
-class _TrackedSessionViewState extends State<_TrackedSessionView> {
-  @override
-  void initState() {
-    super.initState();
-    widget.onMount();
-  }
-  @override
-  void dispose() {
-    widget.onDispose();
-    super.dispose();
-  }
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    body: Column(children: [
-      Text(widget.title),
-      TextButton(
-        key: const ValueKey('studio-dock-switch-project'),
-        onPressed: widget.onSwitch,
-        child: const Text('Switch project'),
-      ),
-    ]),
-  );
-}
