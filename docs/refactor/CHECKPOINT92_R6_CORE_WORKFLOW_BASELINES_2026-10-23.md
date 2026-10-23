@@ -39,9 +39,26 @@ repetition count, median and maximum elapsed milliseconds.
 ## Verification
 
 - `git diff --check` locally: clean.
-- Flutter-only GitHub CI: pending. Record measured numeric results only after
-  the full analyzer and regression gate completes successfully.
+- Initial Linux GitHub quality gate
+  [39946376552](https://github.com/anzilr/SubtitleStudio/actions/runs/39946376552)
+  completed **783 passing tests** and recorded the measurements below. It
+  reported one nonfatal unused-import analyzer warning in this new test. That
+  import was removed; the final clean analyzer gate is pending.
 - No Android/Windows/macOS/iOS application builds in GitHub Actions.
+
+## First Linux CI baseline (1,000 synthetic cues, three samples)
+
+| Stage | Median | Maximum |
+| --- | ---: | ---: |
+| Import, SRT → Isar | 49.94 ms | 149.82 ms |
+| Open, Isar collection read | 1.27 ms | 13.45 ms |
+| Save, encode and native overwrite | 5.47 ms | 16.86 ms |
+| Restore, reconstruct V2 history and transact | 33.82 ms | 57.53 ms |
+
+All values came from the synthetic benchmark's single aggregate log line.
+They describe a shared Linux Actions runner, not user-device wall time.
+The widest spread occurs in initial import/open iterations where host cache
+and JIT warmup affect timings. These are baseline observations only.
 
 ## Next
 
