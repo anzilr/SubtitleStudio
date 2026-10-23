@@ -38,7 +38,10 @@ void main() {
     expect(find.text('Edited live cue'), findsWidgets);
     expect(find.text('Encoding: UTF-8'), findsOneWidget);
     expect(
-      tester.widget<TextFormField>(find.byType(TextFormField)).readOnly,
+      tester.widget<EditableText>(find.descendant(
+        of: find.byKey(const ValueKey('desktop-edit-1')),
+        matching: find.byType(EditableText),
+      )).readOnly,
       isTrue,
     );
     expect(tester.widget<IconButton>(
