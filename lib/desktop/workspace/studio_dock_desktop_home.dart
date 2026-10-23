@@ -61,8 +61,8 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
     // The live read-only pane remains mounted behind the legacy route.
     // This is the standalone desktop host: no parent Editor callbacks are
     // suppressed. The legacy route may use the existing hotkeys normally.
-    // Unmount the Studio Dock player *before* classic Home can push an Editor
-    // route. Exactly one native player is allowed to own the session.
+    // Unmount the entire Studio Dock (player AND hotkey registrations) before
+    // classic Home can push an Editor. The two surfaces never share ownership.
     setState(() => _classicFlowActive = true);
     await WidgetsBinding.instance.endOfFrame;
     if (!mounted) return;
@@ -137,6 +137,11 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
 
   @override
   Widget build(BuildContext context) {
+    if (_classicFlowActive) {
+      return const Scaffold(
+        body: Center(child: Text('Studio Dock suspended for classic import')),
+      );
+    }
     return FutureBuilder<StudioDockSessionCatalog>(
       future: _sessionsFuture,
       builder: (context, state) {
@@ -179,7 +184,7 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
           collectionId: active.subtitleCollectionId,
           onChooseProject: choose,
           enableTextEditing: true,
-          allowNativePlayback: !_classicFlowActive,
+          allowNativePlayback: true,
           suppressParentEditorHotkeys: false,
         );
       },
