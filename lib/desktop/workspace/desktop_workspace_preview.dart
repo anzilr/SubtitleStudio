@@ -1260,7 +1260,9 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
           const SizedBox(height: 17),
           _fieldLabel(widget.onApplyCueText != null
               ? 'EDITED TEXT · UNSAVED UNTIL APPLIED'
-              : 'EDITED TEXT · DEMO ONLY'),
+              : (widget.liveReadOnly
+                  ? 'EDITED TEXT · READ ONLY'
+                  : 'EDITED TEXT · DEMO ONLY')),
           TextFormField(
             key: widget.onApplyCueText == null
                 ? ValueKey('desktop-edit-' + _selected.id.toString())
@@ -1268,7 +1270,8 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
                     '-' + _draftRevision.toString()),
             initialValue: _draftCueId == _selectedId && _draftText != null
                 ? _draftText : _selected.edited,
-            readOnly: widget.liveReadOnly && widget.onApplyCueText == null,
+            readOnly: _savingDraft ||
+                (widget.liveReadOnly && widget.onApplyCueText == null),
             minLines: 3, maxLines: 8,
             style: const TextStyle(fontSize: 13, height: 1.5),
             decoration: InputDecoration(
