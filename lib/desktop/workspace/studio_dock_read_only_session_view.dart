@@ -9,9 +9,9 @@ import 'studio_dock_session_loader.dart';
 import 'studio_dock_session_snapshot.dart';
 import 'studio_dock_text_edit_service.dart';
 
-/// DS3 R1 opt-in production-data view. It intentionally never opens a
-/// media player or exposes editing actions until the write/undo transaction
-/// boundary has been separately accepted.
+/// Shared live-session Studio Dock host. In DS3 R2 it can optionally expose
+/// text-only editing through the existing atomic history transaction.
+/// Media, timing changes and external file export remain disconnected.
 class StudioDockReadOnlySessionView extends ConsumerStatefulWidget {
   const StudioDockReadOnlySessionView({
     super.key,
