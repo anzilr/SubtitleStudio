@@ -665,3 +665,12 @@ launch still required.
 - Implement small, independent changes with focused tests and a checkpoint report; do not combine media-native experiments and architecture refactors in one commit.
 - Treat a successful analyzer/test run as **code-level** proof only, not Android/Windows native acceptance.
 - The waveform experiment can resume later from its isolated branch after a new explicit prioritization.
+
+### Studio Dock desktop-only decision — October 24, 2026
+
+**Locked desktop product architecture:** on native Windows/macOS/Linux, **Studio Dock is the default AND ONLY interface**. Do not reintroduce the legacy Home/Editor or an "Import/Create (classic)" escape hatch. Android/iOS keep their mobile Home/Editor.
+
+The Studio Dock-only implementation lives in `feature/studio-dock-integration`, with native startup and file associations routed to `StudioDockDesktopHome`. Current capabilities: session switcher; create empty project; import SRT/VTT/ASS/SSA and full `.msone` using existing encoding/parsing/import repositories; checkpoint-backed edited-text Apply; shared single media player when saved media is available; persistent Dock layout; existing desktop hotkeys. The classic editor hook and import fallback are removed.
+
+Source: [DS4 R1.1 desktop-only checkpoint](STUDIO_DOCK_DS4_R1_1_DESKTOP_ONLY_2026-10-24.md). New work must implement **missing features inside Studio Dock**: add/delete/split cues, waveform/seek, timing/style/notes, Save/Export and relinking, checkpoint/history and project operations. A successful Flutter test gate does not replace real Windows acceptance. No native builds in GitHub Actions.
+
