@@ -83,10 +83,10 @@ void main() {
         },
         onDispose: () => activeOwners--,
       ),
-      classicHomeBuilder: (_) => Scaffold(
+      classicHomeBuilder: (classicContext) => Scaffold(
         body: Center(child: TextButton(
           key: const ValueKey('return-from-classic'),
-          onPressed: () => Navigator.of(_).pop(),
+          onPressed: () => Navigator.of(classicContext).pop(),
           child: const Text('Return from classic'),
         )),
       ),
