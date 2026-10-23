@@ -480,6 +480,17 @@ remains isolated until CP93.
 - Scope logging by feature, avoid exposing source URIs or personal media filenames, reduce redundant hot-path logs, and benchmark critical import/open/save/restore workflows.
 - Update roadmap checkmarks using verified evidence, not only planned work.
 
+**CP92 R1 (October 23, 2026):** Remove repeated `logInfo` calls from
+Edit Line's mobile/desktop resize callbacks and layout-loading paths,
+including the obsolete desktop `_lastLoggedRatio` log throttle. The
+existing resize callbacks and debounced Riverpod/Isar preference writes
+remain unchanged. A 1,000-update controller regression verifies both final
+ratio values survive disposal without overwriting Editor's separate
+resize preference. This is a logging-work reduction, not a measured
+frame-time benchmark. No video lifecycle or UI layout changes.
+[R1 report](CHECKPOINT92_R1_RESIZE_LOGGING_CLEANUP_2026-10-23.md).
+**Verification:** [Linux 769 Flutter tests / zero analyzer issues](https://github.com/anzilr/SubtitleStudio/actions/runs/39915868638).
+
 ### CP93 — Core refactor acceptance and handoff
 - Flutter analysis and full unit/widget/Isar integration tests in GitHub Actions (dependency resolution + tests only; **no platform builds in CI**).
 - Native builds and smoke tests on Android and desktop operating systems on user/local machines. Preserve fast Back/touch behavior, media lifecycle, file/SAF grants and `.msone` roundtrip.
