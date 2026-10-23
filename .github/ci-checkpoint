@@ -497,3 +497,5 @@ DS3 R1 FINAL PRESENTATION CHECK 2026-10-23: omit all fictional demo project meta
 DS3 R1.1 DESKTOP STARTUP 2026-10-23: make native desktop standard main.dart open Studio Dock with last edited session and project picker, not legacy Home. Preserve file-association import, mobile screen, and scoped hotkey lifetimes. Run flutter pub get/analyze/test only; no native builds.
 
 DS3 R2 2026-10-24: enable real Studio Dock text edits via updateMultipleLinesWithHistory; optimistic stale baseline validation, Apply/Discard/Cancel draft handling, no timing/media/file export changes. GitHub Actions: flutter pub get/analyze/test only, NO platform builds.
+
+DS3 R2 FINAL 2026-10-24: checkpoint-backed editable inspector; tests for stale conflict and Apply/Discard/Cancel; honest disconnected media placeholders; native startup remains Studio Dock. Run flutter pub get, flutter analyze and flutter test ONLY, no platform builds. See docs/refactor/STUDIO_DOCK_DS3_R2_TEXT_EDIT_2026-10-24.md.
