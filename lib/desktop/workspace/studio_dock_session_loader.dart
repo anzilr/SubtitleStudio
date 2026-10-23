@@ -43,6 +43,9 @@ class StudioDockSessionLoader {
             original: line.original,
             edited: line.edited ?? '',
             marked: line.marked,
+            storedEdited: line.edited,
+            comment: line.comment,
+            resolved: line.resolved,
           ),
       ],
     );
