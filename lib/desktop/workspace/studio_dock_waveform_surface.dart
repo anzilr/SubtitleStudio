@@ -125,6 +125,7 @@ class _WaveformBodyState extends ConsumerState<_WaveformBody> {
           isVideoPlaying: () => widget.playback.playing.value,
           height: limits.maxHeight,
           compact: true,
+          enableTimeEditing: false,
           // Changes to timing and cue insertion must use a guarded history
           // transaction in a future checkpoint, never waveform direct writes.
           subtitleCollectionId: null,
