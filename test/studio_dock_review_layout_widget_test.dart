@@ -116,7 +116,7 @@ void main() {
       scrollable: find.descendant(
         of: find.byKey(const ValueKey('inspector-page-0')),
         matching: find.byType(Scrollable),
-      ),
+      ).first,
     );
     expect(find.byKey(const ValueKey('studio-timing-start-1-0')),
         findsOneWidget);
