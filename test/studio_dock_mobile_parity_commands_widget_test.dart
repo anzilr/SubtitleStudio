@@ -63,9 +63,13 @@ void main() {
     await launch(tester, fullscreen: () => toggles++, withVideo: false);
     await tester.tap(find.byKey(const ValueKey('studio-view-menu')));
     await tester.pumpAndSettle();
-    final item = tester.widget<PopupMenuItem>(
-      find.widgetWithText(PopupMenuItem, 'Toggle video fullscreen'));
-    expect(item.enabled, isFalse);
+    // The generic PopupMenuItem type is private to Studio Dock; locating it
+    // by the public Text child works reliably in Flutter widget tests.
+    final text = find.text('Toggle video fullscreen');
+    expect(text, findsOneWidget);
+    await tester.tap(text);
+    await tester.pumpAndSettle();
+    expect(toggles, 0);
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     expect(toggles, 0);
