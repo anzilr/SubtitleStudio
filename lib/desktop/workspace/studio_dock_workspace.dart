@@ -63,10 +63,14 @@ class StudioDockCueUpdate {
   const StudioDockCueUpdate({
     required this.cues,
     required this.selectedCueId,
+    this.selectedCueIds,
   });
 
   final List<StudioDockCue> cues;
   final int selectedCueId;
+  /// Optional multi-selection restored by a group operation. Legacy single-
+  /// cue edits continue selecting only [selectedCueId].
+  final List<int>? selectedCueIds;
 }
 
 enum _StudioDockFileMenuAction {
@@ -88,7 +92,9 @@ class StudioDockWorkspace extends StatefulWidget {
     this.onNewProject,
     this.onApplyCueText,
     this.onApplyCueTiming,
+    this.onApplyCueTextAndTiming,
     this.onApplyCueNotes,
+    this.onApplyBulkReview,
     this.onFindCues,
     this.onReplaceMatches,
     this.onShiftAllCues,
@@ -131,10 +137,16 @@ class StudioDockWorkspace extends StatefulWidget {
   /// text edits. Null when timing edits are unavailable.
   final Future<bool> Function(int cueNumber, String start, String end)?
       onApplyCueTiming;
+  /// Saves simultaneous Text-inspector changes as one optimistic checkpoint.
+  final Future<bool> Function(
+      int cueNumber, String editedText, String start, String end)?
+      onApplyCueTextAndTiming;
   /// One atomic review-note/mark/resolution commit through shared history.
   final Future<StudioDockCueUpdate?> Function(
       int cueNumber, String? comment, bool marked, bool resolved)?
       onApplyCueNotes;
+  final Future<StudioDockCueUpdate?> Function(
+      List<int> cueNumbers, bool marked, int preferredCue)? onApplyBulkReview;
   /// Read-only query from the authoritative loaded session snapshot.
   final List<StudioDockSearchHit> Function(
       String term, bool caseSensitive, bool wholeWord)? onFindCues;
@@ -285,6 +297,7 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       action == HotkeyAction.nextLine ||
       action == HotkeyAction.previousLine ||
       action == HotkeyAction.findReplace ||
+      action == HotkeyAction.markLine && widget.onApplyBulkReview != null ||
       action == HotkeyAction.splitLine && widget.onSplitCue != null ||
       action == HotkeyAction.mergeLine && widget.onMergeCue != null ||
       action == HotkeyAction.save && widget.onSaveFile != null ||
@@ -465,7 +478,11 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       case HotkeyAction.findReplace:
         unawaited(_openFind());
       case HotkeyAction.markLine:
-        _toggleMarkedSelection();
+        if (widget.onApplyBulkReview != null) {
+          unawaited(_toggleReviewSelection());
+        } else {
+          _toggleMarkedSelection();
+        }
       case HotkeyAction.splitLine:
         unawaited(_splitCueSafely());
       case HotkeyAction.mergeLine:
@@ -613,6 +630,71 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     });
   }
 
+  Future<void> _toggleReviewSelection() async {
+    final ids = _selectedIds.isNotEmpty
+        ? _selectedIds.toList()
+        : (_selectedId > 0 ? [_selectedId] : <int>[]);
+    if (ids.isEmpty) return;
+    final chosen = _cues.where((cue) => ids.contains(cue.id));
+    await _applyReviewSelection(ids, marked: !chosen.every((cue) => cue.marked));
+  }
+
+  Future<void> _applyReviewSelection(
+      List<int> cueNumbers, {required bool marked}) async {
+    final apply = widget.onApplyBulkReview;
+    if (apply == null || _changingStructure || _savingDraft ||
+        cueNumbers.isEmpty) return;
+    if (!await _confirmDraftBeforeLeaving() || !mounted) return;
+    final chosen = _cues.where((cue) => cueNumbers.contains(cue.id)).toList();
+    if (chosen.length != cueNumbers.toSet().length) return;
+    final clearsNotes = !marked && chosen.any((cue) =>
+        cue.comment?.isNotEmpty == true || cue.resolved);
+    if (cueNumbers.length > 1 || clearsNotes) {
+      final approved = await showDialog<bool>(
+        context: context,
+        builder: (dialog) => AlertDialog(
+          title: Text(marked ? 'Mark selected subtitles?' :
+              'Remove selected review marks?'),
+          content: Text(marked
+              ? 'Mark ${cueNumbers.length} selected subtitles for review? '
+                  'One history point will be saved.'
+              : 'Unmark ${cueNumbers.length} selected subtitles? '
+                  '${clearsNotes ? 'Their comments and resolved flags will also be cleared. ' : ''}'
+                  'One history point will be saved.'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialog, false),
+                child: const Text('Cancel')),
+            FilledButton(
+              key: const ValueKey('studio-bulk-review-confirm'),
+              onPressed: () => Navigator.pop(dialog, true),
+              child: Text(marked ? 'Mark' : 'Unmark'),
+            ),
+          ],
+        ),
+      );
+      if (approved != true || !mounted) return;
+    }
+    final selected = cueNumbers.contains(_selectedId)
+        ? _selectedId : cueNumbers.first;
+    setState(() => _changingStructure = true);
+    StudioDockCueUpdate? update;
+    try {
+      update = await apply(cueNumbers, marked, selected);
+    } catch (_) {
+      update = null;
+    }
+    if (!mounted) return;
+    setState(() => _changingStructure = false);
+    if (update == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Could not update review marks. The subtitles may '
+            'have changed elsewhere. Please refresh before retrying.'),
+      ));
+      return;
+    }
+    _acceptStructure(update);
+  }
+
   bool get _hasDirtyTextDraft => widget.onApplyCueText != null &&
       _draftCueId == _selectedId &&
       _draftText != null && _draftText != _selected.edited;
@@ -640,6 +722,13 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
 
   bool get _hasDirtyDraft => _hasDirtyTextDraft || _hasDirtyTimingDraft ||
       _hasDirtyNotesDraft;
+
+  bool get _canApplyContentDraft =>
+      (_hasDirtyTextDraft || _hasDirtyTimingDraft) &&
+      (!_hasDirtyTextDraft || !_hasDirtyTimingDraft ||
+          widget.onApplyCueTextAndTiming != null) &&
+      !_savingDraft && !_savingFile &&
+      (!_hasDirtyTimingDraft || _timingError == null);
 
   String get _timingStart => _draftTimingCueId == _selectedId
       ? _draftStart ?? _selected.start : _selected.start;
@@ -704,11 +793,13 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       if (_hasDirtyTextDraft || _hasDirtyTimingDraft) return false;
       return _applyNotesDraft();
     }
-    // Changing inspector pages first confirms the previous draft, so these
-    // cannot represent two independently committed edits to one cue.
-    if (_hasDirtyTextDraft && _hasDirtyTimingDraft) return false;
+    // Text and Timing share one inspector: if both changed, committing them
+    // separately would create a partial save and lose the draft boundary.
+    if (_hasDirtyTextDraft && _hasDirtyTimingDraft &&
+        widget.onApplyCueTextAndTiming == null) return false;
     final cueId = _selectedId;
     final timing = _hasDirtyTimingDraft;
+    final textChanged = _hasDirtyTextDraft;
     final text = _draftText;
     final start = _timingStart;
     final end = _timingEnd;
@@ -716,7 +807,10 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     setState(() => _savingDraft = true);
     bool applied;
     try {
-      if (timing) {
+      if (timing && textChanged) {
+        applied = await widget.onApplyCueTextAndTiming?.call(
+            cueId, text!, start, end) ?? false;
+      } else if (timing) {
         applied = await widget.onApplyCueTiming?.call(cueId, start, end) ?? false;
       } else {
         applied = await widget.onApplyCueText?.call(cueId, text!) ?? false;
@@ -730,9 +824,11 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       if (applied) {
         final i = _cues.indexWhere((cue) => cue.id == cueId);
         if (i >= 0) {
-          _cues[i] = timing
-              ? _cues[i].copyWith(start: start, end: end)
-              : _cues[i].copyWith(edited: text);
+          _cues[i] = _cues[i].copyWith(
+            edited: textChanged ? text : null,
+            start: timing ? start : null,
+            end: timing ? end : null,
+          );
         }
         _draftCueId = null;
         _draftText = null;
@@ -927,7 +1023,8 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       _selectionAnchor = _selectedId;
       _selectedIds
         ..clear()
-        ..addAll(_selectedId > 0 ? [_selectedId] : <int>[]);
+        ..addAll(update.selectedCueIds ??
+            (_selectedId > 0 ? [_selectedId] : <int>[]));
       _query = '';
       _tableSearch.clear();
       _draftCueId = null;
@@ -2240,6 +2337,19 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     Row(children: [
       Expanded(child: _paneHeader(Icons.view_list_outlined, 'SUBTITLE LINES',
         trailing: _visible.length.toString() + ' / ' + _cues.length.toString())),
+      if (widget.onApplyBulkReview != null)
+        PopupMenuButton<bool>(
+          key: const ValueKey('studio-bulk-review-menu'),
+          tooltip: 'Review selected subtitles',
+          enabled: _selectedIds.isNotEmpty && !_changingStructure,
+          icon: const Icon(Icons.bookmarks_outlined),
+          onSelected: (marked) => unawaited(_applyReviewSelection(
+              _selectedIds.toList(), marked: marked)),
+          itemBuilder: (_) => const [
+            PopupMenuItem(value: true, child: Text('Mark selected for review')),
+            PopupMenuItem(value: false, child: Text('Unmark selected')),
+          ],
+        ),
       if (widget.playback != null) IconButton(
         key: const ValueKey('studio-dock-follow-playback'),
         tooltip: _followPlayback ? 'Pause subtitle follow' : 'Follow playback',
@@ -2334,6 +2444,12 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       ),
       items: [
         const PopupMenuItem(value: 'select', child: Text('Select cue')),
+        if (widget.onApplyBulkReview != null) ...const [
+          PopupMenuItem(value: 'mark-selected',
+              child: Text('Mark selected for review')),
+          PopupMenuItem(value: 'unmark-selected',
+              child: Text('Unmark selected')),
+        ],
         if (!widget.isLiveSession)
           const PopupMenuItem(value: 'mark',
               child: Text('Toggle review mark')),
@@ -2347,6 +2463,16 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       case 'mark':
         _selectCue(cue.id);
         _toggleMarkedSelection();
+      case 'mark-selected':
+        unawaited(_applyReviewSelection(
+          _selectedIds.contains(cue.id) ? _selectedIds.toList() : [cue.id],
+          marked: true,
+        ));
+      case 'unmark-selected':
+        unawaited(_applyReviewSelection(
+          _selectedIds.contains(cue.id) ? _selectedIds.toList() : [cue.id],
+          marked: false,
+        ));
       case 'copy':
         await Clipboard.setData(
           ClipboardData(text: cue.start + ' --> ' + cue.end),
@@ -2379,17 +2505,20 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             if (!widget.isLiveSession)
               MapEntry('Toggle playback preview',
                   () => _dispatchManagedAction(HotkeyAction.playPause)),
-            if (!widget.isLiveSession)
+            if (widget.onApplyBulkReview != null) ...[
+              MapEntry('Mark selected for review', () => unawaited(
+                  _applyReviewSelection(_selectedIds.toList(), marked: true))),
+              MapEntry('Unmark selected subtitles', () => unawaited(
+                  _applyReviewSelection(_selectedIds.toList(), marked: false))),
+            ] else if (!widget.isLiveSession)
               MapEntry('Toggle review mark', _toggleMarkedSelection),
             MapEntry('Reset workspace layout', _resetLayout),
-            MapEntry('Show Inspector: Text', () =>
+            MapEntry('Show Inspector: Text and Timing', () =>
                 unawaited(_openInspectorTab(0))),
-            MapEntry('Show Inspector: Timing', () =>
-                unawaited(_openInspectorTab(1))),
             MapEntry('Show Inspector: Style', () =>
-                unawaited(_openInspectorTab(2))),
+                unawaited(_openInspectorTab(1))),
             MapEntry('Show Inspector: Notes', () =>
-                unawaited(_openInspectorTab(3))),
+                unawaited(_openInspectorTab(2))),
           ];
           final filter = _commandSearch.text.trim().toLowerCase();
           final visible = commands.where((item) =>
@@ -2475,7 +2604,7 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   }
 
   Widget _inspector() {
-    const tabs = <String>['Text', 'Timing', 'Style', 'Notes'];
+    const tabs = <String>['Text', 'Style', 'Notes'];
     return Container(
       color: Theme.of(context).colorScheme.surface,
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -2501,6 +2630,31 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           padding: const EdgeInsets.all(15),
           children: _inspectorFields(),
         )),
+        if (_inspectorTab == 0 &&
+            (widget.onApplyCueText != null ||
+                widget.onApplyCueTiming != null))
+          Container(
+            padding: const EdgeInsets.fromLTRB(12, 11, 12, 8),
+            decoration: BoxDecoration(border: Border(
+              top: BorderSide(color: _border),
+            )),
+            child: Row(children: [
+              Expanded(child: FilledButton.icon(
+                key: const ValueKey('studio-apply-cue'),
+                onPressed: _canApplyContentDraft
+                    ? () => unawaited(_applyDraft()) : null,
+                icon: const Icon(Icons.check, size: 16),
+                label: Text(_savingDraft ? 'Applying…' : 'Apply changes'),
+              )),
+              const SizedBox(width: 8),
+              OutlinedButton(
+                key: const ValueKey('studio-discard-cue'),
+                onPressed: (_hasDirtyTextDraft || _hasDirtyTimingDraft) &&
+                        !_savingDraft ? _discardDraft : null,
+                child: const Text('Discard'),
+              ),
+            ]),
+          ),
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
@@ -2566,25 +2720,6 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               }
             },
           ),
-          if (widget.onApplyCueText != null) ...[
-            const SizedBox(height: 12),
-            Row(children: [
-              Expanded(child: FilledButton.icon(
-                key: const ValueKey('studio-apply-cue'),
-                onPressed: _hasDirtyTextDraft && !_savingDraft
-                    ? () => unawaited(_applyDraft()) : null,
-                icon: const Icon(Icons.check, size: 16),
-                label: Text(_savingDraft ? 'Applying…' : 'Apply'),
-              )),
-              const SizedBox(width: 8),
-              OutlinedButton(
-                key: const ValueKey('studio-discard-cue'),
-                onPressed: _hasDirtyTextDraft && !_savingDraft
-                    ? _discardDraft : null,
-                child: const Text('Discard'),
-              ),
-            ]),
-          ],
           const SizedBox(height: 14),
           OutlinedButton.icon(
             onPressed: widget.isLiveSession ? null : () => _replaceCue(
@@ -2592,9 +2727,11 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             icon: const Icon(Icons.restore, size: 15),
             label: const Text('Reset to original'),
           ),
-        ];
-      case 1:
-        return [
+          const SizedBox(height: 22),
+          Divider(color: _border),
+          const SizedBox(height: 10),
+          _fieldLabel('TIMING'),
+          const SizedBox(height: 8),
           _fieldLabel('START TIMECODE'),
           if (widget.onApplyCueTiming == null)
             _readonlyField(_selected.start)
@@ -2638,38 +2775,17 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           _fieldLabel('DURATION'),
           _readonlyField(_cueDuration(_selected.copyWith(
             start: _timingStart, end: _timingEnd))),
-          const SizedBox(height: 16),
-          if (widget.onApplyCueTiming != null) ...[
-            if (_timingError != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Text(_timingError!,
-                  key: const ValueKey('studio-timing-error'),
-                  style: TextStyle(color: Theme.of(context).colorScheme.error,
-                      fontSize: 12)),
-              ),
-            Row(children: [
-              Expanded(child: FilledButton.icon(
-                key: const ValueKey('studio-apply-timing'),
-                onPressed: _hasDirtyTimingDraft && !_savingDraft &&
-                        _timingError == null
-                    ? () => unawaited(_applyDraft()) : null,
-                icon: const Icon(Icons.check, size: 16),
-                label: Text(_savingDraft ? 'Applying…' : 'Apply timing'),
-              )),
-              const SizedBox(width: 8),
-              OutlinedButton(
-                key: const ValueKey('studio-discard-timing'),
-                onPressed: _hasDirtyTimingDraft && !_savingDraft
-                    ? _discardDraft : null,
-                child: const Text('Discard'),
-              ),
-            ]),
-          ] else
-            Text('Timing is read-only in this preview.',
-              style: TextStyle(fontSize: 11, color: _muted)),
+          const SizedBox(height: 12),
+          if (widget.onApplyCueTiming != null && _timingError != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Text(_timingError!,
+                key: const ValueKey('studio-timing-error'),
+                style: TextStyle(color: Theme.of(context).colorScheme.error,
+                    fontSize: 12)),
+            ),
         ];
-      case 2:
+      case 1:
         return [
           _fieldLabel('TEXT FORMATTING'),
           Wrap(spacing: 7, runSpacing: 7, children: [

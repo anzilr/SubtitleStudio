@@ -50,12 +50,18 @@ class CheckpointHistoryLabels {
   }
 
   static final RegExp _edited = RegExp(r'^Edited line (\d+)$');
+  static final RegExp _textAndTiming =
+      RegExp(r'^Updated text and timing on line (\d+)$');
   static final RegExp _added = RegExp(r'^Added line at position (\d+)$');
   static final RegExp _deleted = RegExp(r'^Deleted line (\d+)$');
   static final RegExp _split = RegExp(r'^Split line (\d+)$');
   static final RegExp _merged = RegExp(r'^Merged lines (\d+) and (\d+)$');
   static final RegExp _marked = RegExp(r'^Marked line (\d+)$');
   static final RegExp _unmarked = RegExp(r'^Unmarked line (\d+)$');
+  static final RegExp _markedMany =
+      RegExp(r'^Marked (\d+) subtitles for review$');
+  static final RegExp _unmarkedMany =
+      RegExp(r'^Removed review marks from (\d+) subtitles$');
   static final RegExp _comment = RegExp(r'^Updated comment on line (\d+)$');
   static final RegExp _reviewNotes =
       RegExp(r'^Updated review notes on line (\d+)$');
@@ -73,16 +79,25 @@ class CheckpointHistoryLabels {
         : 'Combined subtitles ${match[1]} and ${match[2]}';
   }
 
+  static String? _matchMany(String title, RegExp pattern,
+      {required String action}) {
+    final match = pattern.firstMatch(title);
+    return match == null ? null : '$action ${match[1]} subtitles';
+  }
+
   static String? _matchAnnotation(String title) =>
       _matchOne(title, _marked, 'Marked subtitle',
           suffix: ' for review') ??
+      _matchMany(title, _markedMany, action: 'Marked') ??
       _matchOne(title, _unmarked, 'Removed review mark from subtitle') ??
+      _matchMany(title, _unmarkedMany, action: 'Unmarked') ??
       _matchOne(title, _comment, 'Updated note on subtitle') ??
       _matchOne(title, _reviewNotes, 'Updated review notes on subtitle') ??
       _matchOne(title, _resolved, 'Updated review status of subtitle');
 
   static String? _matchEdit(String title) =>
       _matchOne(title, _edited, 'Edited subtitle') ??
+      _matchOne(title, _textAndTiming, 'Updated text and time on subtitle') ??
       _matchAnnotation(title);
 
   /// Display-only title for an edit-history entry.

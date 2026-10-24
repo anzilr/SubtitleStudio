@@ -10,6 +10,7 @@ void main() {
     WidgetTester tester, {
     required Future<bool> Function(int, String) apply,
     Future<bool> Function(int, String, String)? applyTiming,
+    Future<bool> Function(int, String, String, String)? applyCombined,
   }) async {
     tester.view.physicalSize = const Size(1680, 1000);
     tester.view.devicePixelRatio = 1;
@@ -20,6 +21,7 @@ void main() {
         isLiveSession: true,
         onApplyCueText: apply,
         onApplyCueTiming: applyTiming,
+        onApplyCueTextAndTiming: applyCombined,
         initialCues: const [
           StudioDockCue(
             id: 1, start: '00:00:01,000', end: '00:00:02,000',
@@ -48,6 +50,7 @@ void main() {
       find.byKey(const ValueKey('studio-edit-1-0')), 'New draft');
     await tester.pumpAndSettle();
     expect(calls, isEmpty);
+    await tester.ensureVisible(find.byKey(const ValueKey('studio-apply-cue')));
     await tester.tap(find.byKey(const ValueKey('studio-apply-cue')));
     await tester.pumpAndSettle();
     expect(calls, ['1:New draft']);
@@ -129,6 +132,7 @@ void main() {
     await tester.enterText(
       find.byKey(const ValueKey('studio-edit-1-0')), 'Conflicted draft');
     await tester.pump();
+    await tester.ensureVisible(find.byKey(const ValueKey('studio-apply-cue')));
     await tester.tap(find.byKey(const ValueKey('studio-apply-cue')));
     // Inspect before the transient SnackBar auto-dismisses; pumpAndSettle
     // otherwise advances the full notification lifetime.
@@ -150,8 +154,8 @@ void main() {
         return true;
       },
     );
-    await tester.tap(find.byKey(const ValueKey('inspector-tab-Timing')));
-    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('inspector-tab-Timing')), findsNothing);
+    expect(find.byKey(const ValueKey('inspector-tab-Text')), findsOneWidget);
 
     await tester.enterText(
       find.byKey(const ValueKey('studio-timing-start-1-0')),
@@ -159,7 +163,7 @@ void main() {
     await tester.pump();
     expect(find.byKey(const ValueKey('studio-timing-error')), findsOneWidget);
     expect(tester.widget<FilledButton>(find.byKey(
-      const ValueKey('studio-apply-timing'))).onPressed, isNull);
+      const ValueKey('studio-apply-cue'))).onPressed, isNull);
     expect(changes, isEmpty);
 
     await tester.enterText(
@@ -168,14 +172,15 @@ void main() {
     await tester.pump();
     expect(find.byKey(const ValueKey('studio-timing-error')), findsNothing);
     expect(changes, isEmpty);
-    await tester.tap(find.byKey(const ValueKey('studio-apply-timing')));
+    await tester.ensureVisible(find.byKey(const ValueKey('studio-apply-cue')));
+    await tester.tap(find.byKey(const ValueKey('studio-apply-cue')));
     await tester.pumpAndSettle();
     expect(changes, ['1:00:00:03,000->00:00:04,000']);
     expect(find.text('00:00:04,000'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('leaving Timing with a draft requires Apply or Discard',
+  testWidgets('leaving Text with a timing draft requires Apply or Discard',
       (tester) async {
     final changes = <String>[];
     await launch(tester,
@@ -185,8 +190,6 @@ void main() {
         return true;
       },
     );
-    await tester.tap(find.byKey(const ValueKey('inspector-tab-Timing')));
-    await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const ValueKey('studio-timing-start-1-0')),
       '00:00:01,250');
@@ -208,6 +211,38 @@ void main() {
     await tester.pumpAndSettle();
     expect(changes, ['1:00:00:01,250:00:00:02,000']);
     expect(find.text('REVIEW NOTES'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Text and Timing changes share one Apply callback and history',
+      (tester) async {
+    final combined = <String>[];
+    var separateText = 0;
+    var separateTime = 0;
+    await launch(tester,
+      apply: (_, __) async { separateText++; return true; },
+      applyTiming: (_, __, ___) async { separateTime++; return true; },
+      applyCombined: (cue, text, start, end) async {
+        combined.add('$cue:$text:$start:$end');
+        return true;
+      },
+    );
+    expect(find.byKey(const ValueKey('inspector-tab-Timing')), findsNothing);
+    await tester.enterText(
+        find.byKey(const ValueKey('studio-edit-1-0')), 'Updated text');
+    await tester.pump();
+    await tester.enterText(
+        find.byKey(const ValueKey('studio-timing-start-1-0')),
+        '00:00:01,250');
+    await tester.pump();
+    final apply = find.byKey(const ValueKey('studio-apply-cue'));
+    await tester.ensureVisible(apply);
+    await tester.tap(apply);
+    await tester.pumpAndSettle();
+    expect(combined, ['1:Updated text:00:00:01,250:00:00:02,000']);
+    expect(separateText, 0);
+    expect(separateTime, 0);
+    expect(find.text('Updated text'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
 }

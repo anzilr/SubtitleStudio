@@ -29,6 +29,8 @@ import 'studio_dock_project_save_actions.dart';
 import 'studio_dock_history_service.dart';
 import 'studio_dock_source_view_service.dart';
 import 'studio_dock_notes_service.dart';
+import 'studio_dock_cue_edit_service.dart';
+import 'studio_dock_bulk_review_service.dart';
 import 'studio_dock_search_service.dart';
 import 'studio_dock_bulk_tools_service.dart';
 
@@ -157,6 +159,29 @@ class _StudioDockSessionViewState
     }
   }
 
+  Future<bool> _applyCueContent(
+      int cueNumber, String editedText, String start, String end) async {
+    final baseline = _latestBaseline;
+    if (baseline == null || !widget.enableEditing) return false;
+    try {
+      final updated = await StudioDockCueEditService(
+        ref.read(projectRepositoryProvider),
+        ref.read(subtitleRepositoryProvider),
+      ).apply(
+        baseline: baseline,
+        cueNumber: cueNumber,
+        editedText: editedText,
+        start: start,
+        end: end,
+      );
+      if (!mounted || updated == null) return false;
+      setState(() => _latestBaseline = updated);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   StudioDockSourceViewService get _sourceView => StudioDockSourceViewService(
     ref.read(projectRepositoryProvider),
     ref.read(subtitleRepositoryProvider),
@@ -207,6 +232,32 @@ class _StudioDockSessionViewState
       if (!mounted || updated == null) return null;
       setState(() => _latestBaseline = updated);
       return _snapshotUpdate(updated, cueNumber);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<StudioDockCueUpdate?> _applyBulkReview(
+      List<int> cueNumbers, bool marked, int preferredCue) async {
+    final baseline = _latestBaseline;
+    if (baseline == null || !widget.enableEditing) return null;
+    try {
+      final updated = await StudioDockBulkReviewService(
+        ref.read(projectRepositoryProvider),
+        ref.read(subtitleRepositoryProvider),
+      ).apply(
+        baseline: baseline,
+        cueNumbers: cueNumbers.toSet(),
+        marked: marked,
+      );
+      if (!mounted || updated == null) return null;
+      setState(() => _latestBaseline = updated);
+      final existing = updated.cues.map((cue) => cue.index).toSet();
+      return StudioDockCueUpdate(
+        cues: _snapshotUpdate(updated, preferredCue).cues,
+        selectedCueId: preferredCue,
+        selectedCueIds: cueNumbers.where(existing.contains).toList(),
+      );
     } catch (_) {
       return null;
     }
@@ -680,7 +731,11 @@ class _StudioDockSessionViewState
         onChooseVideo: widget.allowNativePlayback ? _chooseVideo : null,
         onApplyCueText: widget.enableEditing ? _applyText : null,
         onApplyCueTiming: widget.enableEditing ? _applyTiming : null,
+        onApplyCueTextAndTiming:
+            widget.enableEditing ? _applyCueContent : null,
         onApplyCueNotes: widget.enableEditing ? _applyNotes : null,
+        onApplyBulkReview:
+            widget.enableEditing ? _applyBulkReview : null,
         onFindCues: _findCues,
         onReplaceMatches: widget.enableEditing ? _replaceMatches : null,
         onShiftAllCues: widget.enableEditing ? _shiftAllCues : null,
