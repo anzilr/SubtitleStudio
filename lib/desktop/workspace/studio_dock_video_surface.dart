@@ -15,12 +15,18 @@ class StudioDockVideoSurface extends StatefulWidget {
     required this.videoPath,
     required this.subtitles,
     required this.playback,
+    this.secondarySubtitles = const <Subtitle>[],
+    this.onPlayerStateChanged,
   });
 
   final int collectionId;
   final String videoPath;
   final List<Subtitle> subtitles;
+  final List<Subtitle> secondarySubtitles;
   final StudioDockPlaybackLink playback;
+  /// Makes the existing player available to the shared secondary-track picker
+  /// (including video-embedded text tracks), without creating a second player.
+  final ValueChanged<VideoPlayerWidgetState?>? onPlayerStateChanged;
 
   @override
   State<StudioDockVideoSurface> createState() => _StudioDockVideoSurfaceState();
@@ -63,8 +69,10 @@ class _StudioDockVideoSurfaceState extends State<StudioDockVideoSurface> {
     super.initState();
     widget.playback.attach(_seek);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _audioRevision != 0) return;
+      if (!mounted) return;
       final state = _playerKey.currentState;
+      widget.onPlayerStateChanged?.call(state);
+      if (_audioRevision != 0) return;
       if (state != null) _onAudioTrackChanged(state.player.state.track.audio.id);
     });
   }
@@ -81,6 +89,7 @@ class _StudioDockVideoSurfaceState extends State<StudioDockVideoSurface> {
   @override
   void dispose() {
     _audioRevision++;
+    widget.onPlayerStateChanged?.call(null);
     widget.playback.detach();
     super.dispose();
   }
@@ -91,7 +100,7 @@ class _StudioDockVideoSurfaceState extends State<StudioDockVideoSurface> {
     subtitleCollectionId: widget.collectionId,
     videoPath: widget.videoPath,
     subtitles: widget.subtitles,
-    secondarySubtitles: const <Subtitle>[],
+    secondarySubtitles: widget.secondarySubtitles,
     subtitleVersion: 0,
     onPositionChanged: widget.playback.updatePosition,
     onPlayStateChanged: widget.playback.updatePlaying,

@@ -27,6 +27,7 @@ enum _StudioDockReviewFilter { all, marked, unresolved, resolved }
 enum _StudioDockMenuAction {
   undo, redo, find, copySelected, selectAll, addCue, deleteCue, splitCue, mergeCue, notes,
   timing, shiftTools, showTools, sourceView, history, submitMsone,
+  loadSecondary, toggleSecondary,
   explorer, inspector, settings, help,
 }
 
@@ -135,6 +136,9 @@ class StudioDockWorkspace extends StatefulWidget {
     this.onOpenAppSettings,
     this.onOpenHelp,
     this.onSubmitToMsone,
+    this.onLoadSecondarySubtitles,
+    this.onToggleSecondarySubtitles,
+    this.showSecondarySubtitles = true,
     this.manageLiveHotkeys = false,
   });
 
@@ -221,6 +225,11 @@ class StudioDockWorkspace extends StatefulWidget {
   /// Opens the established MSone submission flow after the current draft is
   /// resolved. The host checks the persisted MSone-features preference.
   final Future<void> Function()? onSubmitToMsone;
+  /// Uses the mobile secondary-track picker and persisted track preference.
+  final Future<void> Function()? onLoadSecondarySubtitles;
+  /// The host owns the current track; this is only a visibility toggle.
+  final VoidCallback? onToggleSecondarySubtitles;
+  final bool showSecondarySubtitles;
   /// Standalone desktop may manage hotkeys; an embedded host must not override
   /// callbacks owned by its parent.
   final bool manageLiveHotkeys;
@@ -264,6 +273,7 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   bool _runningTool = false;
   bool _openingMsoneSubmission = false;
   ModalRoute<dynamic>? _msoneMenuRoute;
+  ModalRoute<dynamic>? _secondaryMenuRoute;
   String? _findError;
   String? _toolsError;
   int _section = 0;
@@ -1094,6 +1104,14 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     }
   }
 
+  Future<void> _loadSecondarySafely({ModalRoute<dynamic>? afterMenu}) async {
+    final load = widget.onLoadSecondarySubtitles;
+    if (load == null) return;
+    // Let the popup barrier leave the Navigator before opening the picker.
+    if (afterMenu != null) await afterMenu.completed;
+    if (mounted) await load();
+  }
+
   void _acceptStructure(StudioDockCueUpdate update) {
     setState(() {
       _cues..clear()..addAll(update.cues);
@@ -1495,7 +1513,7 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.initialCues != null && _cues.isEmpty) {
+    if (_cues.isEmpty) {
       return Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
@@ -1774,6 +1792,17 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               child: Text('Find & Replace')),
           const PopupMenuItem(value: _StudioDockMenuAction.showTools,
               child: Text('Subtitle tools')),
+          if (widget.onLoadSecondarySubtitles != null)
+            PopupMenuItem(value: _StudioDockMenuAction.loadSecondary,
+              child: Builder(builder: (popupContext) {
+                _secondaryMenuRoute = ModalRoute.of(popupContext);
+                return const Text('Load secondary subtitles');
+              })),
+          if (widget.onToggleSecondarySubtitles != null)
+            PopupMenuItem(value: _StudioDockMenuAction.toggleSecondary,
+              child: Text(widget.showSecondarySubtitles
+                  ? 'Hide secondary subtitles'
+                  : 'Show secondary subtitles')),
           if (widget.onLoadSourceView != null)
             const PopupMenuItem(value: _StudioDockMenuAction.sourceView,
                 child: Text('Source View')),
@@ -1854,6 +1883,12 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         final menuRoute = _msoneMenuRoute;
         _msoneMenuRoute = null;
         unawaited(_submitMsoneSafely(afterMenu: menuRoute));
+      case _StudioDockMenuAction.loadSecondary:
+        final menuRoute = _secondaryMenuRoute;
+        _secondaryMenuRoute = null;
+        unawaited(_loadSecondarySafely(afterMenu: menuRoute));
+      case _StudioDockMenuAction.toggleSecondary:
+        widget.onToggleSecondarySubtitles?.call();
       case _StudioDockMenuAction.explorer:
         _toggleExplorerPanel();
       case _StudioDockMenuAction.inspector:

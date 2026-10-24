@@ -27,7 +27,7 @@ acceptance. A wired callback is not proof of a working native interaction.
 | Playback-follow subtitle highlight and seek | Wired through shared playback link | Native bidirectional seek/scroll/accuracy acceptance |
 | Waveform display and selected audio stream | Shared `WaveformWidget`/controller | Native zoom, regenerate, hide/show, audio/cache tests |
 | **Waveform gesture time edits and insertion** | **Missing in live Dock**: explicitly `enableTimeEditing: false` | Route gestures through existing guarded cue/history transactions, preserving mobile behavior |
-| **Secondary subtitles, visibility and saved selection** | **Missing in live Dock**: player receives empty secondary list | Reuse `EditorSecondarySubtitleService`/project settings and player callbacks |
+| Secondary subtitles, visibility and saved selection | Wired in DS5 R8 through the existing secondary sheet, `VideoRepository` preferences, and shared player; original-text overlay reprojects from current cues | Native external/video-track picker, original-text updates and selection persistence acceptance; Project Settings remains separate |
 | Edit text, start/end timing, formatting, nine-grid alignment | Wired to shared repositories and format tags | Native editor/controller interaction acceptance |
 | Cue insert, delete, split and combine | Wired, guarded, undoable | Compare edge cases and keyboard semantics with mobile |
 | History graph, checkpoints, undo/redo/forks | Wired to shared graph/repository | Native path/bookmark navigation acceptance |
@@ -59,9 +59,9 @@ acceptance. A wired callback is not proof of a working native interaction.
 
 ## Next acceptance order (not optional feature cuts)
 
-1. **P0:** Secondary subtitles and waveform edits/insertions, including
-   shared player callbacks and saved settings, because they are currently
-   missing from the native live playback surface.
+1. **P0:** Complete waveform edits/insertions through guarded history; run
+   native secondary-subtitle selection and playback acceptance because
+   the shared track picker is newly connected to Studio Dock.
 2. **P1:** Project Settings/encoding, sync, selected-cue batch edit/delete,
    import comments, Go To Line, hearing-impaired cleanup.
 3. **P2:** MSone-gated banners/normalization, fullscreen comment and

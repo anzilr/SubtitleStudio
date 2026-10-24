@@ -15,6 +15,10 @@ import 'package:subtitle_studio/services/checkpoint_history_graph.dart';
 import 'package:subtitle_studio/screens/screen_help.dart';
 import 'package:subtitle_studio/widgets/settings_sheet.dart';
 import 'package:subtitle_studio/screens/msone_submission_flow.dart';
+import 'package:subtitle_studio/screens/edit/services/editor_secondary_subtitle_service.dart';
+import 'package:subtitle_studio/utils/subtitle_parser.dart';
+import 'package:subtitle_studio/widgets/secondary_subtitle_sheet.dart';
+import 'package:subtitle_studio/widgets/video_player_widget.dart';
 
 import 'studio_dock_workspace.dart';
 import 'studio_dock_session_loader.dart';
@@ -80,6 +84,103 @@ class _StudioDockSessionViewState
   final StudioDockPlaybackLink _playback = StudioDockPlaybackLink();
   bool _msoneEnabled = false;
   int _msonePreferenceRevision = 0;
+  EditorSecondarySubtitleSource _secondarySource =
+      EditorSecondarySubtitleSource.none;
+  List<SimpleSubtitleLine> _externalSecondary = const [];
+  bool _showSecondary = true;
+  int _secondaryRevision = 0;
+  VideoPlayerWidgetState? _nativePlayerState;
+
+  VideoRepository get _videoRepository => VideoRepository(
+      EditorPreferencesRepository(ref.read(isarProvider)));
+
+  Future<void> _refreshSavedSecondary() async {
+    final revision = ++_secondaryRevision;
+    final collectionId = widget.collectionId;
+    final secondary = await _videoRepository.loadSavedSecondarySubtitle(collectionId);
+    if (!mounted || revision != _secondaryRevision ||
+        collectionId != widget.collectionId) return;
+    setState(() {
+      if (secondary == null) {
+        _secondarySource = EditorSecondarySubtitleSource.none;
+        _externalSecondary = const [];
+      } else if (secondary.useOriginal) {
+        _secondarySource = EditorSecondarySubtitleSource.originalText;
+        _externalSecondary = const [];
+      } else {
+        _secondarySource = EditorSecondarySubtitleSource.external;
+        _externalSecondary = List.unmodifiable(
+            secondary.subtitles ?? const <SimpleSubtitleLine>[]);
+      }
+      _showSecondary = true;
+    });
+  }
+
+  List<SubtitleLine> _primaryLines(StudioDockSessionSnapshot session) => [
+    for (final cue in session.cues)
+      SubtitleLine()
+        ..index = cue.index
+        ..startTime = cue.start
+        ..endTime = cue.end
+        ..original = cue.original
+        ..edited = cue.storedEdited,
+  ];
+
+  List<Subtitle> _secondaryOverlay(StudioDockSessionSnapshot session) {
+    if (!_showSecondary || _secondarySource == EditorSecondarySubtitleSource.none) {
+      return const <Subtitle>[];
+    }
+    final lines = _secondarySource == EditorSecondarySubtitleSource.originalText
+        ? EditorSecondarySubtitleService.fromOriginal(_primaryLines(session))
+        : _externalSecondary;
+    try {
+      return ref.read(subtitleRepositoryProvider).generateSimpleSubtitles(lines);
+    } catch (_) {
+      return const <Subtitle>[];
+    }
+  }
+
+  void _setSecondaryLocally(List<SimpleSubtitleLine> lines,
+      {required bool fromOriginal}) {
+    if (!mounted) return;
+    ++_secondaryRevision; // A completed picker wins over any pending load.
+    setState(() {
+      _secondarySource = fromOriginal
+          ? EditorSecondarySubtitleSource.originalText
+          : EditorSecondarySubtitleSource.external;
+      _externalSecondary = fromOriginal ? const [] : List.unmodifiable(lines);
+      _showSecondary = true;
+    });
+  }
+
+  void _toggleSecondaryVisibility() {
+    if (!mounted || _secondarySource == EditorSecondarySubtitleSource.none) return;
+    setState(() => _showSecondary = !_showSecondary);
+  }
+
+  Future<void> _openSecondaryPicker() async {
+    if (!mounted || _latestBaseline == null) return;
+    await showDialog<void>(
+      context: context,
+      builder: (dialog) => Dialog(
+        insetPadding: const EdgeInsets.all(24),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: 610,
+            maxHeight: MediaQuery.sizeOf(dialog).height - 64,
+          ),
+          child: SingleChildScrollView(
+            child: SecondarySubtitleSheet(
+              originalSubtitles: _primaryLines(_latestBaseline!),
+              subtitleCollectionId: widget.collectionId,
+              videoPlayerState: _nativePlayerState,
+              onSecondarySubtitlesLoaded: _setSecondaryLocally,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   Future<void> _refreshMsonePreference() async {
     final revision = ++_msonePreferenceRevision;
@@ -534,7 +635,7 @@ class _StudioDockSessionViewState
         ),
       );
       if (replace != true || !mounted) return StudioDockFileResult.canceled;
-      return actions.writeToPath(
+      return await actions.writeToPath(
         prepared: prepared, selectedPath: picked, replaceExisting: true);
     } catch (_) {
       return StudioDockFileResult.failed;
@@ -633,6 +734,7 @@ class _StudioDockSessionViewState
     _snapshot = _load();
     _videoPath = widget.allowNativePlayback ? _resolveVideoPath() : null;
     unawaited(_refreshMsonePreference());
+    unawaited(_refreshSavedSecondary());
   }
 
   @override
@@ -736,6 +838,11 @@ class _StudioDockSessionViewState
       _latestBaseline = null;
       _snapshot = _load();
       _videoPath = widget.allowNativePlayback ? _resolveVideoPath() : null;
+      _nativePlayerState = null;
+      _secondarySource = EditorSecondarySubtitleSource.none;
+      _externalSecondary = const [];
+      _showSecondary = true;
+      unawaited(_refreshSavedSecondary());
     }
   }
 
@@ -797,6 +904,11 @@ class _StudioDockSessionViewState
         onOpenAppSettings: _openAppSettings,
         onOpenHelp: _openHelp,
         onSubmitToMsone: _msoneEnabled ? _submitToMsone : null,
+        onLoadSecondarySubtitles: _openSecondaryPicker,
+        onToggleSecondarySubtitles:
+            _secondarySource == EditorSecondarySubtitleSource.none
+                ? null : _toggleSecondaryVisibility,
+        showSecondarySubtitles: _showSecondary,
         onApplyCueText: widget.enableEditing ? _applyText : null,
         onApplyCueTiming: widget.enableEditing ? _applyTiming : null,
         onApplyCueTextAndTiming:
@@ -835,6 +947,8 @@ class _StudioDockSessionViewState
                 collectionId: session.collectionId,
                 videoPath: validVideoPath,
                 subtitles: StudioDockMediaPlan.overlayCues(session),
+                secondarySubtitles: _secondaryOverlay(session),
+                onPlayerStateChanged: (player) => _nativePlayerState = player,
                 playback: _playback,
               ),
         waveformSurface: validVideoPath == null || !widget.allowNativePlayback

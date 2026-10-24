@@ -190,3 +190,5 @@ DS5 R6 HEADER TEST FIX 2026-10-24: constrain the translation-mode project header
 DS5 R7 FULL GATE 2026-10-24: include shared mobile MSone submission routing, feature flag, dirty-draft and popup-barrier tests for the desktop-only Studio Dock. Analyze and run complete Flutter tests; do not build platforms or contact the submission endpoint.
 
 DS5 R7 DISMISS FULL TEST FIX 2026-10-24: address ambiguous Discard finder in desktop MSone dirty-draft widget test; run Flutter analysis and full test suite only, without platform builds.
+
+DS5 R8 FULL GATE 2026-10-24: test desktop secondary-subtitle loading, saved source projection, existing shared player, and R7 analyzer warnings. Run Flutter pub get, analyze and all tests only, without native/platform builds.

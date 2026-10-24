@@ -73,3 +73,5 @@ DS5 R6 HEADER OVERFLOW FIX 2026-10-24: keep project mode badge flexible at narro
 DS5 R7 MSONE SUBMISSION 2026-10-24: gate Studio Dock submission on existing MSone Isar setting, reuse shared translator/fresher submission routes and Android back-gesture recovery, wait menu overlay completion, protect unsaved drafts. Analyze and focused Studio Dock tests only, no online submissions or platform builds.
 
 DS5 R7 DISMISS TEST FIX 2026-10-24: resolve Discard test tap ambiguity between dock inspector and unsaved-edits alert. Re-run analyzer and focused Studio Dock widget/integration tests only.
+
+DS5 R8 SECONDARY TRACKS 2026-10-24: restore existing mobile secondary-subtitle picker, persisted source, player overlays and show/hide in native Dock; eliminate two analyzer warnings from R7. Run analyzer and focused Studio Dock tests only; NO native builds.
