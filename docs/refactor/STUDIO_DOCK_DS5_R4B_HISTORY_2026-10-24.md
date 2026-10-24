@@ -30,4 +30,6 @@ Studio Dock remains the **only native desktop editor**. Mobile remains unchanged
 
 ## CI results
 
-Pending the focused and full GitHub Actions verification of this checkpoint.
+- [Focused Studio Dock quality #40069711061](https://github.com/anzilr/SubtitleStudio/actions/runs/40069711061): **PASS** — Flutter dependency resolution, analyzer and 101 passing focused tests, including DS5 R4b integration/widget cases.
+- [Full repository Flutter quality #40069840759](https://github.com/anzilr/SubtitleStudio/actions/runs/40069840759): **PASS** — analyzer and 944 passing test entries across the repository on Linux.
+- Both workflows ran `flutter pub get`, `flutter analyze` and `flutter test` only. No platform application builds were run; native desktop acceptance remains pending.
