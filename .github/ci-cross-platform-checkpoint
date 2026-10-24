@@ -30,3 +30,5 @@ CP90 R3 October 21 2026: Save As path handling, filename validation, encoded
 bytes, source-view refresh and desktop overwrite safety changed. Test export
 service and prior file/encoding regressions on Windows/macOS Flutter hosts,
 with simulated Android/iOS paths; no platform application builds in Actions.
+
+DS5 R3 2026-10-24: native-host Windows/macOS Flutter analyzer and file/encoding/SRT Save As/Export tests. No platform builds.
