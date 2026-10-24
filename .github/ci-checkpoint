@@ -174,3 +174,5 @@ DS5 R5a 2026-10-24: full Flutter analyzer/tests after guarded Studio Dock Source
 DS5 R5b FULL GATE 2026-10-24: production Style/Notes inspector, guarded review-note metadata/history, shared subtitle styling/color/position tags, draft protections and ListTile Material fix. Focused #40075098433 passed with 121 tests. Run flutter pub get, flutter analyze, full flutter test -j1 ONLY. No native/platform builds.
 
 DS5 R5c FULL GATE 2026-10-24: production Find/Replace, optimistic search matches using existing planner/history repository, bulk time shift and style-tag cleanup, command palette navigation, no native builds. Focused #40077700880 passed 131 tests. Run flutter pub get, flutter analyze and all Flutter tests only.
+
+DS5 R5d FULL GATE 2026-10-24: merge Timing into Text inspector, atomic combined cue checkpoint, grouped review marking and legacy widget assertions. Focused #40079814187 passed analyzer and 142 tests. Run flutter pub get, flutter analyze and full flutter test only. Never any platform builds.
