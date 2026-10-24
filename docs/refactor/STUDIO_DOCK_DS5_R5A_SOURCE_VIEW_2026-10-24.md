@@ -55,3 +55,9 @@ Predecessor: `STUDIO_DOCK_DS5_R4C_PRODUCTION_NAMING_2026-10-24.md`
    dialogs, encoding/file round-trip, `.msone` reopen/history; macOS/Linux
    native smoke checks. Android/iOS UI and shared persistence must remain
    unchanged except for the backward-compatible guarded repository method.
+
+## Accepted CI
+
+- [Focused Studio Dock #40073038430](https://github.com/anzilr/SubtitleStudio/actions/runs/40073038430): **PASS**, analyzer clean, **108 tests passed**. Initial run #40072787062 exposed three widget-test frame-timing failures; the tests now pump after entering raw text before tapping the newly enabled Apply button.
+- [Full Flutter repository #40073192564](https://github.com/anzilr/SubtitleStudio/actions/runs/40073192564): **PASS**, analyzer clean, **910 tests passed**.
+- GitHub Actions ran `flutter pub get`, `flutter analyze` and `flutter test` only, with no application/platform builds. Native desktop acceptance is pending.
