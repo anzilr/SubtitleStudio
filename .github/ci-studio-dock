@@ -119,3 +119,5 @@ DS5 R19 FOCUSED PARITY 2026-10-24: fullscreen menu/hotkey and Shift+Delete + mar
 DS5 R19 FOCUSED DISABLED MENU RETRY 2026-10-24: use public Text child to test unavailable player fullscreen menu instead of private typed popup item; Flutter analyze and focused tests only.
 
 DS5 R20 DIRECT WAVEFORM FOCUSED GATE 2026-10-24: waveform toolbar interaction tests on unchanged controller; Flutter analyze/focused tests only; no platform builds.
+
+DS5 R21 FLOATING PLAYBACK 2026-10-24: View-menu opt-in floating play/pause with shared playback link; no native player remount; widget tests only Flutter analysis + focused suite, NO platform builds.

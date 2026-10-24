@@ -236,3 +236,5 @@ DS5 R19 FULL PARITY AUDIT 2026-10-24: native Studio Dock View fullscreen action 
 DS5 R19 DISABLED FULLSCREEN FINDER RETRY 2026-10-24: fix generic PopupMenuItem finder in widget test for disabled fullscreen menu; Flutter analyze/full tests only, no builds.
 
 DS5 R20 DIRECT WAVEFORM FULL GATE 2026-10-24: Generate/Hide/Regenerate scoped desktop waveform, selected audio identity and waiting/busy guards; Flutter pub get/analyze/full tests ONLY. NO platform builds.
+
+DS5 R21 FLOATING PLAYBACK FULL GATE 2026-10-24: optional live transport overlay linked to existing media state, disabled on detach, guarded visible gating; Flutter pub get/analyze/full tests ONLY; no builds or live MSone submissions.

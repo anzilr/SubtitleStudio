@@ -31,7 +31,7 @@ enum _StudioDockMenuAction {
   loadSecondary, toggleSecondary,
   shiftSelected, deleteSelected, selectByIndex, rangeSelection, goToLine,
   importComments, removeHearingImpaired, insertMsoneBanners, normalizeMalayalam,
-  explorer, inspector, toggleFullscreen, settings, help,
+  explorer, inspector, toggleFullscreen, floatingPlayback, settings, help,
 }
 
 /// One subtitle row displayed in the Studio Dock workspace.
@@ -328,6 +328,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   bool _openingMsoneTools = false;
   ModalRoute<dynamic>? _msoneBannerMenuRoute;
   ModalRoute<dynamic>? _msoneNormalizeMenuRoute;
+  bool _floatingPlaybackVisible = false;
   bool _openingProjectSettings = false;
   bool _openingCommentImport = false;
   bool _openingHearingCleanup = false;
@@ -2195,6 +2196,14 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             PopupMenuItem(value: _StudioDockMenuAction.toggleFullscreen,
                 enabled: widget.videoSurface != null,
                 child: const Text('Toggle video fullscreen')),
+          if (widget.videoSurface != null &&
+              widget.onTogglePlayback != null && widget.playback != null)
+            PopupMenuItem(
+              value: _StudioDockMenuAction.floatingPlayback,
+              child: Text(_floatingPlaybackVisible
+                  ? 'Hide floating playback button'
+                  : 'Show floating playback button'),
+            ),
           if (widget.onOpenAppSettings != null)
             const PopupMenuItem(value: _StudioDockMenuAction.settings,
                 child: Text('Settings')),
@@ -2295,6 +2304,11 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         _toggleExplorerPanel();
       case _StudioDockMenuAction.inspector:
         _toggleInspectorPanel();
+      case _StudioDockMenuAction.floatingPlayback:
+        if (widget.videoSurface != null && widget.playback != null &&
+            widget.onTogglePlayback != null) {
+          setState(() => _floatingPlaybackVisible = !_floatingPlaybackVisible);
+        }
       case _StudioDockMenuAction.toggleFullscreen:
         if (widget.videoSurface != null) widget.onToggleFullscreen?.call();
       case _StudioDockMenuAction.settings:
@@ -3290,7 +3304,27 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           key: const ValueKey('dock-video-band'),
           height: bands.video,
           child: Column(children: [
-            Expanded(child: widget.videoSurface ?? _videoPanel()),
+            Expanded(child: Stack(children: [
+              Positioned.fill(child: widget.videoSurface ?? _videoPanel()),
+              if (_floatingPlaybackVisible &&
+                  widget.videoSurface != null &&
+                  widget.onTogglePlayback != null &&
+                  widget.playback != null)
+                Positioned(
+                  right: 18,
+                  bottom: 14,
+                  child: ValueListenableBuilder<bool>(
+                    valueListenable: widget.playback!.playing,
+                    builder: (context, playing, _) => IconButton.filled(
+                      key: const ValueKey('studio-floating-playback'),
+                      tooltip: playing ? 'Pause video' : 'Play video',
+                      onPressed: widget.playback!.isAttached
+                          ? widget.onTogglePlayback : null,
+                      icon: Icon(playing ? Icons.pause : Icons.play_arrow),
+                    ),
+                  ),
+                ),
+            ])),
             if (widget.videoSurface == null) _transport(),
           ]),
         ),
