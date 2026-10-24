@@ -141,6 +141,7 @@ class StudioDockWorkspace extends StatefulWidget {
     this.waveformSurface,
     this.playback,
     this.onChooseVideo,
+    this.onTogglePlayback,
     this.onOpenAppSettings,
     this.onOpenProjectSettings,
     this.onImportComments,
@@ -246,6 +247,8 @@ class StudioDockWorkspace extends StatefulWidget {
   final StudioDockPlaybackLink? playback;
   /// Select/change media with the existing native picker and video repository.
   final VoidCallback? onChooseVideo;
+  /// Toggle the already-mounted native player; never create another player.
+  final VoidCallback? onTogglePlayback;
   /// Opens the production shared SettingsSheet instead of a parallel desktop
   /// preferences implementation. The host owns provider-dependent UI.
   final Future<void> Function()? onOpenAppSettings;
@@ -398,18 +401,28 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     HotkeyAction.mergeLine,
     HotkeyAction.save,
     HotkeyAction.saveAs,
+    HotkeyAction.saveProject,
+    HotkeyAction.markLineAndComment,
+    HotkeyAction.help,
+    HotkeyAction.settings,
   ];
 
   bool _allowedLiveHotkey(HotkeyAction action) =>
       action == HotkeyAction.nextLine ||
       action == HotkeyAction.previousLine ||
+      action == HotkeyAction.playPause && widget.onTogglePlayback != null ||
       action == HotkeyAction.findReplace ||
       action == HotkeyAction.gotoLine ||
       action == HotkeyAction.markLine && widget.onApplyBulkReview != null ||
+      action == HotkeyAction.markLineAndComment &&
+          widget.onApplyCueNotes != null ||
       action == HotkeyAction.splitLine && widget.onSplitCue != null ||
       action == HotkeyAction.mergeLine && widget.onMergeCue != null ||
       action == HotkeyAction.save && widget.onSaveFile != null ||
-      action == HotkeyAction.saveAs && widget.onSaveAsFile != null;
+      action == HotkeyAction.saveAs && widget.onSaveAsFile != null ||
+      action == HotkeyAction.saveProject && widget.onSaveProject != null ||
+      action == HotkeyAction.help && widget.onOpenHelp != null ||
+      action == HotkeyAction.settings && widget.onOpenAppSettings != null;
 
   @override
   void initState() {
@@ -438,10 +451,17 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       if (widget.isLiveSession && !_allowedLiveHotkey(action)) continue;
       if (!mounted) return;
       await manager.registerCallback(action, () {
-        if (mounted && (!_isEditingText ||
-            action == HotkeyAction.save || action == HotkeyAction.saveAs)) {
-          _dispatchManagedAction(action);
+        // Only the topmost editor route may run an in-app shortcut.
+        // In particular, never save or change cues behind a modal sheet.
+        if (!mounted || !(ModalRoute.of(context)?.isCurrent ?? true)) return;
+        if (_isEditingText) {
+          // Native EditableText handles Copy, Undo and formatting itself.
+          // Save and Save As continue to work for a focused inspector.
+          if (action != HotkeyAction.save &&
+              action != HotkeyAction.saveAs &&
+              action != HotkeyAction.saveProject) return;
         }
+        _dispatchManagedAction(action);
       });
     }
   }
@@ -576,17 +596,23 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   void _dispatchManagedAction(HotkeyAction action) {
     switch (action) {
       case HotkeyAction.nextLine:
-        _selectRelative(1);
+        unawaited(_selectRelativeWithPlayback(1));
       case HotkeyAction.previousLine:
-        _selectRelative(-1);
+        unawaited(_selectRelativeWithPlayback(-1));
       case HotkeyAction.playPause:
-        if (!widget.isLiveSession) {
+        if (widget.isLiveSession) {
+          widget.onTogglePlayback?.call();
+        } else {
           setState(() => _playing = !_playing);
         }
       case HotkeyAction.findReplace:
         unawaited(_openFind());
       case HotkeyAction.gotoLine:
         unawaited(_goToLineSafely());
+      case HotkeyAction.markLineAndComment:
+        if (widget.onApplyCueNotes != null) {
+          unawaited(_openReviewNotesForHotkey());
+        }
       case HotkeyAction.markLine:
         if (widget.onApplyBulkReview != null) {
           unawaited(_toggleReviewSelection());
@@ -601,6 +627,13 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         unawaited(_saveFileSafely());
       case HotkeyAction.saveAs:
         unawaited(_saveAsFileSafely());
+      case HotkeyAction.saveProject:
+        unawaited(_saveProjectSafely());
+      case HotkeyAction.help:
+        final help = widget.onOpenHelp;
+        if (help != null) unawaited(help());
+      case HotkeyAction.settings:
+        unawaited(_switchSection(4));
       default:
         break;
     }
@@ -1684,6 +1717,36 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     setState(() => _cues[i] = updated);
   }
 
+  Future<void> _selectRelativeWithPlayback(int change) async {
+    if (_visible.isEmpty ||
+        !await _confirmDraftBeforeLeaving() || !mounted ||
+        _visible.isEmpty) return;
+    final index = _visible.indexWhere((cue) => cue.id == _selectedId);
+    final targetIndex = (index + change).clamp(0, _visible.length - 1);
+    final cue = _visible[targetIndex];
+    _applyCueSelection(cue.id);
+    final playback = widget.playback;
+    if (playback?.isAttached == true) {
+      playback!.seek(Duration(milliseconds:
+          TimeValidator.timeStringToMilliseconds(cue.start)));
+    }
+    _gridFocus.requestFocus();
+  }
+
+  Future<void> _openReviewNotesForHotkey() async {
+    if (_cues.isEmpty) return;
+    await _openInspectorTab(2);
+    if (mounted && _inspectorTab == 2 && !_noteMarked &&
+        widget.onApplyCueNotes != null) {
+      // Mobile Ctrl+Shift+M marks when the note is saved. A desktop draft
+      // should likewise only persist the mark when the user applies it.
+      setState(() {
+        _draftNotesCueId = _selectedId;
+        _draftMarked = true;
+      });
+    }
+  }
+
   void _selectRelative(int change) {
     if (_visible.isEmpty) return;
     final index = _visible.indexWhere((cue) => cue.id == _selectedId);
@@ -1800,6 +1863,13 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         // Undo/Redo stay in Flutter's focused shortcut tree, so the inner
         // EditableText retains its own native text-draft Undo/Redo. Other
         // desktop actions continue through MSoneHotkeyManager.
+        // Clipboard shortcuts stay in Flutter's focus tree: a native in-app
+        // Ctrl+C registration would consume Copy before EditableText receives
+        // it. Only the focused subtitle grid copies selected cues.
+        const SingleActivator(LogicalKeyboardKey.keyC, control: true):
+            () { if (!_isEditingText) unawaited(_copySelectedSubtitleText()); },
+        const SingleActivator(LogicalKeyboardKey.keyC, meta: true):
+            () { if (!_isEditingText) unawaited(_copySelectedSubtitleText()); },
         const SingleActivator(LogicalKeyboardKey.keyK, control: true):
             _showCommandPalette,
         const SingleActivator(LogicalKeyboardKey.keyK, meta: true):

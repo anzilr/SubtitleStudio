@@ -214,6 +214,16 @@ class _StudioDockSessionViewState
     }
   }
 
+  void _toggleExistingPlayback() {
+    final native = _nativePlayerState;
+    if (!widget.allowNativePlayback || native == null) return;
+    if (native.player.state.playing) {
+      unawaited(native.player.pause());
+    } else {
+      unawaited(native.player.play());
+    }
+  }
+
   Future<void> _submitToMsone() async {
     if (!mounted || !_msoneEnabled) return;
     // Reuse the production mobile choice sheet, form and route cleanup.
@@ -1336,6 +1346,8 @@ class _StudioDockSessionViewState
         onImportFile: widget.onImportFile,
         onNewProject: widget.onNewProject,
         onChooseVideo: widget.allowNativePlayback ? _chooseVideo : null,
+        onTogglePlayback:
+            widget.allowNativePlayback ? _toggleExistingPlayback : null,
         onOpenAppSettings: _openAppSettings,
         onOpenProjectSettings:
             widget.enableEditing && widget.allowNativePlayback

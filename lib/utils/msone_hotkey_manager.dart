@@ -102,6 +102,17 @@ class MSoneHotkeyManager {
 
   bool get callbacksSuspended => _callbackSuppressionDepth > 0;
 
+  /// Test the already-registered in-app callback routing without invoking
+  /// the native hotkey plugin. Honors the same parent-route suppression.
+  @visibleForTesting
+  bool dispatchForTesting(HotkeyAction action) {
+    if (callbacksSuspended) return false;
+    final callback = _callbacks[action];
+    if (callback == null) return false;
+    callback();
+    return true;
+  }
+
   /// Initialize the hotkey manager (call once at app startup)
   static Future<void> initialize() async {
     final manager = MSoneHotkeyManager.instance;

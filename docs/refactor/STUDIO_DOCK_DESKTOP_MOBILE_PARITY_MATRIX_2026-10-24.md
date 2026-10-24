@@ -44,7 +44,7 @@ acceptance. A wired callback is not proof of a working native interaction.
 | Project Settings (encoding, media, secondary subs) | Wired in DS5 R10 to existing `ProjectSettingsSheet`, repository models and live media/secondary/history refresh after close | Native encoding selection/Save As, media unlink/replace, secondary clear, project rename, marked lines and route-return acceptance |
 | App Settings, theme, typography, waveform limits, checkpoints | Wired to **existing** `SettingsSheet` in DS5 R5f | Verify immediate preference propagation and skin changes |
 | Help & Documentation | Wired to **existing** `HelpScreen` in DS5 R5f | Navigation/back-stack widget and native acceptance |
-| Desktop shortcuts | Partially wired to existing hotkey manager | Reconcile every mobile/action binding, preferences and conflicts |
+| Desktop shortcuts | DS5 R17 wires shared manager for live play/pause, cue navigation/seek, Go to Line, find, mark/mark-and-comment draft, split/combine, file Save/Save As, .msone project save, Help and Settings. Copy and Undo/Redo use Flutter's local focus tree to preserve normal text-editor shortcuts; modal route and dirty-draft guards enforced | Native Windows/macOS/Linux plugin chord registration, editor focus and hotkey lifecycle; remaining video/fullscreen/context actions audited separately |
 
 ## DS5 R5f implementation scope
 
@@ -64,8 +64,8 @@ acceptance. A wired callback is not proof of a working native interaction.
    persistence/playback on a native desktop before declaring playback parity.
 2. **P1:** Verify synchronization and import comments, Go to Line, selected-cue batch operations and the
    now-wired Project Settings on native desktop when available.
-3. **P2:** Verify native MSone-gated banners/normalization, fullscreen comment and
-   mark callbacks, hotkey parity, theme/accessibility and native media QA.
+3. **P2:** Verify native MSone banners/normalization, fullscreen comment
+   callbacks, desktop hotkey chords/conflicts, theme/accessibility and media QA.
 
 Keep this ledger current after each checkpoint. Studio Dock must not be called
 "feature-parity complete" while any missing/partial row remains.
