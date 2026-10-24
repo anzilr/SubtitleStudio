@@ -188,3 +188,5 @@ DS5 R6 FULL GATE 2026-10-24: preserve existing mobile scratch Edit Mode and tran
 DS5 R6 HEADER TEST FIX 2026-10-24: constrain the translation-mode project header badge and settle the new inspector widget test after input. Re-run full Flutter analyzer/tests only, no native builds.
 
 DS5 R7 FULL GATE 2026-10-24: include shared mobile MSone submission routing, feature flag, dirty-draft and popup-barrier tests for the desktop-only Studio Dock. Analyze and run complete Flutter tests; do not build platforms or contact the submission endpoint.
+
+DS5 R7 DISMISS FULL TEST FIX 2026-10-24: address ambiguous Discard finder in desktop MSone dirty-draft widget test; run Flutter analysis and full test suite only, without platform builds.

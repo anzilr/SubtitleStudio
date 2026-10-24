@@ -89,7 +89,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(submissions, 0);
     await chooseSubmission(tester);
-    await tester.tap(find.text('Discard'));
+    await tester.tap(find.descendant(
+      of: find.byType(AlertDialog),
+      matching: find.text('Discard'),
+    ));
     await tester.pumpAndSettle();
     expect(submissions, 1);
     expect(tester.takeException(), isNull);
