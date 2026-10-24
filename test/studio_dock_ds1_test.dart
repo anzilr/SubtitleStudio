@@ -42,7 +42,8 @@ void main() {
     expect((video - grid).abs(), lessThan(20));
     expect(find.text('ORIGINAL'), findsOneWidget);
     expect(find.text('EDITED'), findsOneWidget);
-    expect(find.text('DURATION'), findsOneWidget);
+    // The grid and the combined Text/Timing inspector both show duration.
+    expect(find.text('DURATION'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
 
@@ -58,7 +59,9 @@ void main() {
     await tester.enterText(
         find.byKey(const ValueKey('desktop-edit-5')), 'Draft survives tabs');
     await tester.pump();
-    for (final tab in ['Timing', 'Style', 'Notes', 'Text']) {
+    expect(find.byKey(const ValueKey('inspector-tab-Timing')), findsNothing);
+    expect(find.text('START TIMECODE'), findsOneWidget);
+    for (final tab in ['Style', 'Notes', 'Text']) {
       await tester.tap(find.byKey(ValueKey('inspector-tab-' + tab)));
       await tester.pumpAndSettle();
     }
