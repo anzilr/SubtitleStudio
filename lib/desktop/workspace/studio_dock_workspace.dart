@@ -27,7 +27,7 @@ enum _StudioDockReviewFilter { all, marked, unresolved, resolved }
 
 enum _StudioDockMenuAction {
   undo, redo, find, copySelected, selectAll, addCue, deleteCue, splitCue, mergeCue, notes,
-  timing, shiftTools, showTools, sourceView, history, submitMsone,
+  timing, shiftTools, showTools, syncSubtitles, sourceView, history, submitMsone,
   loadSecondary, toggleSecondary,
   shiftSelected, deleteSelected, selectByIndex, rangeSelection, goToLine,
   importComments, removeHearingImpaired,
@@ -118,6 +118,9 @@ class StudioDockWorkspace extends StatefulWidget {
     this.onFindCues,
     this.onReplaceMatches,
     this.onShiftAllCues,
+    this.onSyncAnchoredCues,
+    this.onConvertFramerate,
+    this.getVideoFramerate,
     this.onShiftSelectedCues,
     this.onDeleteSelectedCues,
     this.onClearAllFormatting,
@@ -190,6 +193,15 @@ class StudioDockWorkspace extends StatefulWidget {
       String replacement, bool caseSensitive)? onReplaceMatches;
   final Future<StudioDockCueUpdate?> Function(
       int selectedCueNumber, int deltaMilliseconds)? onShiftAllCues;
+  /// Mobile Sync Subtitles: first/last anchors, duration-preserving scaling.
+  final Future<StudioDockCueUpdate?> Function(
+      int selectedCueNumber, String newStart, String newEnd)? onSyncAnchoredCues;
+  /// Mobile framerate conversion: scale both cue boundaries by source/target.
+  final Future<StudioDockCueUpdate?> Function(
+      int selectedCueNumber, double sourceFps, double targetFps)?
+      onConvertFramerate;
+  /// Current native player frame rate when available, otherwise use 25 fps.
+  final double? Function()? getVideoFramerate;
   /// Selected time stretch uses the mobile first-start/last-end anchor model.
   final Future<StudioDockCueUpdate?> Function(
       List<int> cueNumbers, String newStart, String newEnd, int preferredCue)?
@@ -1955,6 +1967,9 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         _desktopMenu('Timing', const ValueKey('studio-timing-menu'), [
           const PopupMenuItem(value: _StudioDockMenuAction.timing,
               child: Text('Edit start and end time')),
+          if (widget.onSyncAnchoredCues != null)
+            const PopupMenuItem(value: _StudioDockMenuAction.syncSubtitles,
+                child: Text('Sync subtitles…')),
           if (widget.onShiftAllCues != null)
             const PopupMenuItem(value: _StudioDockMenuAction.shiftTools,
                 child: Text('Shift subtitle timecodes')),
@@ -2071,6 +2086,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       case _StudioDockMenuAction.timing:
         unawaited(_openInspectorTab(0));
       case _StudioDockMenuAction.shiftTools:
+      case _StudioDockMenuAction.syncSubtitles:
       case _StudioDockMenuAction.showTools:
         unawaited(_switchSection(3));
       case _StudioDockMenuAction.shiftSelected:
@@ -2783,6 +2799,150 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text('Replaced ${hits.length} occurrence(s) in subtitle history.'),
     ));
+  }
+
+  Future<void> _syncAnchoredSafely() async {
+    final sync = widget.onSyncAnchoredCues;
+    if (sync == null || _cues.isEmpty || _runningTool) return;
+    var start = _cues.first.start;
+    var end = _cues.last.end;
+    String? error;
+    final result = await showDialog<List<String>>(
+      context: context,
+      builder: (dialog) => StatefulBuilder(
+        builder: (dialog, refresh) => AlertDialog(
+          title: const Text('Sync subtitles using time anchors'),
+          content: SizedBox(width: 430, child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Set the new first subtitle start and last subtitle '
+                  'end. Relative cue starts scale; each duration is preserved.'),
+              const SizedBox(height: 16),
+              TextFormField(
+                key: const ValueKey('studio-sync-start'),
+                initialValue: start,
+                decoration: const InputDecoration(
+                    labelText: 'First subtitle start (HH:MM:SS,mmm)',
+                    border: OutlineInputBorder()),
+                onChanged: (v) => start = v,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                key: const ValueKey('studio-sync-end'),
+                initialValue: end,
+                decoration: const InputDecoration(
+                    labelText: 'Last subtitle end (HH:MM:SS,mmm)',
+                    border: OutlineInputBorder()),
+                onChanged: (v) => end = v,
+              ),
+              if (error != null) ...[
+                const SizedBox(height: 8),
+                Text(error!, style: TextStyle(
+                    color: Theme.of(dialog).colorScheme.error)),
+              ],
+            ],
+          )),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialog),
+                child: const Text('Cancel')),
+            FilledButton(
+              key: const ValueKey('studio-sync-anchor-next'),
+              onPressed: () {
+                final validation = StudioDockTimingEditService.validate(
+                    start.trim(), end.trim());
+                if (validation != null) {
+                  refresh(() => error = validation);
+                  return;
+                }
+                Navigator.pop(dialog, [start.trim(), end.trim()]);
+              },
+              child: const Text('Continue'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (result == null || !mounted) return;
+    await _runBulkTool(
+      title: 'Synchronize subtitle timecodes',
+      detail: 'Apply first/last anchors to ${_cues.length} subtitles '
+          'while preserving each duration?',
+      apply: () => sync(_selectedId, result[0], result[1]),
+    );
+  }
+
+  Future<void> _convertFramerateSafely() async {
+    final convert = widget.onConvertFramerate;
+    if (convert == null || widget.videoSurface == null ||
+        _cues.isEmpty || _runningTool) return;
+    var source = '23.976';
+    final detected = widget.getVideoFramerate?.call();
+    var target = detected != null && detected.isFinite && detected > 0
+        ? detected.toStringAsFixed(3) : '25.000';
+    String? error;
+    final result = await showDialog<List<double>>(
+      context: context,
+      builder: (dialog) => StatefulBuilder(
+        builder: (dialog, refresh) => AlertDialog(
+          title: const Text('Adjust subtitle framerate'),
+          content: SizedBox(width: 430, child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Convert all cue start and end times by the source '
+                  'framerate divided by the target framerate.'),
+              const SizedBox(height: 16),
+              TextFormField(
+                key: const ValueKey('studio-sync-source-fps'),
+                initialValue: source,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                    labelText: 'Source FPS', border: OutlineInputBorder()),
+                onChanged: (v) => source = v,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                key: const ValueKey('studio-sync-target-fps'),
+                initialValue: target,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                    labelText: 'Target FPS', border: OutlineInputBorder()),
+                onChanged: (v) => target = v,
+              ),
+              if (error != null) ...[
+                const SizedBox(height: 8),
+                Text(error!, style: TextStyle(
+                    color: Theme.of(dialog).colorScheme.error)),
+              ],
+            ],
+          )),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialog),
+                child: const Text('Cancel')),
+            FilledButton(
+              key: const ValueKey('studio-sync-fps-next'),
+              onPressed: () {
+                final a = double.tryParse(source.trim());
+                final b = double.tryParse(target.trim());
+                if (a == null || b == null || !a.isFinite || !b.isFinite ||
+                    a <= 0 || b <= 0) {
+                  refresh(() => error = 'Enter positive, finite framerates.');
+                  return;
+                }
+                Navigator.pop(dialog, [a, b]);
+              },
+              child: const Text('Continue'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (result == null || !mounted) return;
+    await _runBulkTool(
+      title: 'Convert subtitle framerate',
+      detail: 'Convert ${_cues.length} subtitles from '
+          '${result[0]} FPS to ${result[1]} FPS?',
+      apply: () => convert(_selectedId, result[0], result[1]),
+    );
   }
 
   Future<void> _runBulkTool({
@@ -4094,6 +4254,45 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             'They do not write the external SRT until you choose Save.',
             style: TextStyle(color: _muted, fontSize: 12)),
         const SizedBox(height: 18),
+        if (widget.onSyncAnchoredCues != null) ...[
+          Card(child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Subtitle Synchronization',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 7),
+                Text('Match the mobile first/last timecode anchors, or '
+                    'convert framerates when a video is loaded. Both use '
+                    'editing history and preserve subtitle text.',
+                    style: TextStyle(color: _muted, fontSize: 12)),
+                const SizedBox(height: 12),
+                Wrap(spacing: 10, runSpacing: 8, children: [
+                  FilledButton.icon(
+                    key: const ValueKey('studio-tool-sync-anchors'),
+                    onPressed: canEdit
+                        ? () => unawaited(_syncAnchoredSafely()) : null,
+                    icon: const Icon(Icons.sync, size: 17),
+                    label: const Text('Sync by first/last timecodes'),
+                  ),
+                  if (widget.onConvertFramerate != null)
+                    OutlinedButton.icon(
+                      key: const ValueKey('studio-tool-sync-fps'),
+                      onPressed: canEdit && widget.videoSurface != null
+                          ? () => unawaited(_convertFramerateSafely()) : null,
+                      icon: const Icon(Icons.speed, size: 17),
+                      label: const Text('Adjust framerate'),
+                    ),
+                ]),
+                if (widget.videoSurface == null)
+                  Padding(padding: const EdgeInsets.only(top: 8),
+                    child: Text('Attach a video to enable framerate conversion.',
+                        style: TextStyle(color: _muted, fontSize: 12))),
+              ],
+            ),
+          )),
+          const SizedBox(height: 12),
+        ],
         Card(child: Padding(
           padding: const EdgeInsets.all(18),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -4263,6 +4462,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               color: Theme.of(context).colorScheme.error)),
         ),
         if (widget.onShiftAllCues == null &&
+            widget.onSyncAnchoredCues == null &&
+            widget.onConvertFramerate == null &&
             widget.onClearAllFormatting == null &&
             widget.onImportComments == null &&
             widget.onRemoveHearingImpaired == null)

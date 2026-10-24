@@ -535,6 +535,36 @@ class _StudioDockSessionViewState
     }
   }
 
+  Future<StudioDockCueUpdate?> _syncAnchoredCues(
+      int selectedCueNumber, String newStart, String newEnd) async {
+    final baseline = _latestBaseline;
+    if (baseline == null || !widget.enableEditing) return null;
+    try {
+      final updated = await _bulkTools.syncAnchored(
+        baseline: baseline, newStart: newStart, newEnd: newEnd);
+      if (!mounted || updated == null) return null;
+      setState(() => _latestBaseline = updated);
+      return _snapshotUpdate(updated, selectedCueNumber);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<StudioDockCueUpdate?> _convertFramerateCues(
+      int selectedCueNumber, double sourceFps, double targetFps) async {
+    final baseline = _latestBaseline;
+    if (baseline == null || !widget.enableEditing) return null;
+    try {
+      final updated = await _bulkTools.convertFramerate(
+        baseline: baseline, sourceFps: sourceFps, targetFps: targetFps);
+      if (!mounted || updated == null) return null;
+      setState(() => _latestBaseline = updated);
+      return _snapshotUpdate(updated, selectedCueNumber);
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<StudioDockCueUpdate?> _shiftSelectedCues(
       List<int> cueNumbers, String newStart, String newEnd,
       int preferredCue) async {
@@ -1243,6 +1273,9 @@ class _StudioDockSessionViewState
         onFindCues: _findCues,
         onReplaceMatches: widget.enableEditing ? _replaceMatches : null,
         onShiftAllCues: widget.enableEditing ? _shiftAllCues : null,
+        onSyncAnchoredCues: widget.enableEditing ? _syncAnchoredCues : null,
+        onConvertFramerate: widget.enableEditing ? _convertFramerateCues : null,
+        getVideoFramerate: () => _nativePlayerState?.getFrameRate(),
         onShiftSelectedCues:
             widget.enableEditing ? _shiftSelectedCues : null,
         onDeleteSelectedCues:

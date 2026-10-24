@@ -119,6 +119,128 @@ class StudioDockBulkToolsService {
       ..endTime = nextEnd;
   }
 
+  /// Mobile Sync Subtitles uses first-start/last-end anchors. Relative cue
+  /// starts scale, while each cue keeps its original duration.
+  static List<SubtitleLine> planAnchoredSync(
+    StudioDockSessionSnapshot snapshot, String newStart, String newEnd,
+  ) {
+    if (snapshot.cues.isEmpty ||
+        StudioDockTimingEditService.validate(newStart, newEnd) != null) {
+      throw const FormatException('Select valid first and last timecodes.');
+    }
+    final first = snapshot.cues.first;
+    final last = snapshot.cues.last;
+    if (StudioDockTimingEditService.validate(first.start, first.end) != null ||
+        StudioDockTimingEditService.validate(last.start, last.end) != null) {
+      throw const FormatException('The subtitle anchors are invalid.');
+    }
+    final originalStart = TimeValidator.timeStringToMilliseconds(first.start);
+    final originalEnd = TimeValidator.timeStringToMilliseconds(last.end);
+    final originalSpan = originalEnd - originalStart;
+    if (originalSpan <= 0) {
+      throw const FormatException('Original subtitle span must be positive.');
+    }
+    final targetStart = TimeValidator.timeStringToMilliseconds(newStart);
+    final targetEnd = TimeValidator.timeStringToMilliseconds(newEnd);
+    final factor = (targetEnd - targetStart) / originalSpan;
+    return [
+      for (final cue in snapshot.cues)
+        _anchoredCue(cue, originalStart, targetStart, factor),
+    ];
+  }
+
+  static SubtitleLine _anchoredCue(
+      StudioDockLoadedCue cue, int originalStart, int targetStart,
+      double factor) {
+    if (StudioDockTimingEditService.validate(cue.start, cue.end) != null) {
+      throw FormatException('Invalid timecodes on subtitle ${cue.index}.');
+    }
+    final start = TimeValidator.timeStringToMilliseconds(cue.start);
+    final duration = TimeValidator.timeStringToMilliseconds(cue.end) - start;
+    final nextStart = targetStart + ((start - originalStart) * factor).round();
+    final nextStartText = formatMilliseconds(nextStart);
+    final nextEndText = formatMilliseconds(nextStart + duration);
+    if (StudioDockTimingEditService.validate(nextStartText, nextEndText) != null) {
+      throw FormatException('Invalid synchronized timing on subtitle ${cue.index}.');
+    }
+    return _copy(cue)
+      ..startTime = nextStartText
+      ..endTime = nextEndText;
+  }
+
+  /// Mobile framerate conversion scales both cue boundaries by source/target.
+  /// This is different from proportional anchor sync (which keeps durations).
+  static List<SubtitleLine> planFramerate(
+    StudioDockSessionSnapshot snapshot, double sourceFps, double targetFps,
+  ) {
+    if (snapshot.cues.isEmpty || !sourceFps.isFinite || !targetFps.isFinite ||
+        sourceFps <= 0 || targetFps <= 0) {
+      throw const FormatException('Both framerates must be positive and finite.');
+    }
+    final ratio = sourceFps / targetFps;
+    return [
+      for (final cue in snapshot.cues)
+        _framerateCue(cue, ratio),
+    ];
+  }
+
+  static SubtitleLine _framerateCue(StudioDockLoadedCue cue, double ratio) {
+    if (StudioDockTimingEditService.validate(cue.start, cue.end) != null) {
+      throw FormatException('Invalid timecodes on subtitle ${cue.index}.');
+    }
+    final start = (TimeValidator.timeStringToMilliseconds(cue.start) * ratio).round();
+    final end = (TimeValidator.timeStringToMilliseconds(cue.end) * ratio).round();
+    final startText = formatMilliseconds(start);
+    final endText = formatMilliseconds(end);
+    if (StudioDockTimingEditService.validate(startText, endText) != null) {
+      throw FormatException('Framerate conversion invalidates subtitle ${cue.index}.');
+    }
+    return _copy(cue)
+      ..startTime = startText
+      ..endTime = endText;
+  }
+
+  static bool _unchanged(
+      StudioDockSessionSnapshot snapshot, List<SubtitleLine> updated) =>
+      updated.every((line) {
+        final current = snapshot.cues.firstWhere((cue) => cue.index == line.index);
+        return current.start == line.startTime && current.end == line.endTime;
+      });
+
+  Future<StudioDockSessionSnapshot?> syncAnchored({
+    required StudioDockSessionSnapshot baseline,
+    required String newStart,
+    required String newEnd,
+  }) async {
+    try {
+      final updated = planAnchoredSync(baseline, newStart, newEnd);
+      if (_unchanged(baseline, updated)) return baseline;
+      return await _commit(
+        baseline: baseline, updated: updated, operationType: 'sync',
+        description: 'Synchronized subtitles using first/last timecodes',
+      );
+    } on FormatException {
+      return null;
+    }
+  }
+
+  Future<StudioDockSessionSnapshot?> convertFramerate({
+    required StudioDockSessionSnapshot baseline,
+    required double sourceFps,
+    required double targetFps,
+  }) async {
+    try {
+      final updated = planFramerate(baseline, sourceFps, targetFps);
+      if (_unchanged(baseline, updated)) return baseline;
+      return await _commit(
+        baseline: baseline, updated: updated, operationType: 'sync',
+        description: 'Adjusted subtitle framerate from $sourceFps to $targetFps',
+      );
+    } on FormatException {
+      return null;
+    }
+  }
+
   static List<SubtitleLine> planClearFormatting(
       StudioDockSessionSnapshot snapshot) => [
     for (final cue in snapshot.cues)

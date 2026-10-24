@@ -101,3 +101,5 @@ DS5 R14 EMPTY PROJECT TEST RETRY 2026-10-24: confirm cleanup action absent in em
 DS5 R14 FRESH WORKSPACE TEST 2026-10-24: avoid reusing populated widget State when testing empty project. Analyze/focused Flutter tests only; no builds.
 
 DS5 R14 EMPTY LANDING FINAL 2026-10-24: verify no Tools menu on freshly mounted empty landing, no hearing cleanup button; Flutter focused analysis/tests only, no platform builds.
+
+DS5 R15 SYNC FOCUSED GATE 2026-10-24: mobile-equivalent anchored sync and video-gated FPS conversion on sole desktop Studio Dock UI; unit and widget regressions. Flutter analyze/Studio Dock tests only, never native builds.
