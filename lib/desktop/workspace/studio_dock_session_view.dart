@@ -11,6 +11,8 @@ import 'package:subtitle_studio/screens/edit/providers/subtitle_repository_provi
 import 'package:subtitle_studio/utils/msone_hotkey_manager.dart';
 import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
 import 'package:subtitle_studio/services/checkpoint_history_graph.dart';
+import 'package:subtitle_studio/screens/screen_help.dart';
+import 'package:subtitle_studio/widgets/settings_sheet.dart';
 
 import 'studio_dock_workspace.dart';
 import 'studio_dock_session_loader.dart';
@@ -655,6 +657,31 @@ class _StudioDockSessionViewState
     }
   }
 
+  Future<void> _openAppSettings() async {
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (dialog) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        child: SizedBox(
+          width: 860,
+          height: (MediaQuery.sizeOf(dialog).height - 64)
+              .clamp(240.0, 840.0).toDouble(),
+          child: SettingsSheet(onSettingsChanged: () {
+            if (mounted) setState(() {});
+          }),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openHelp() async {
+    if (!mounted) return;
+    await Navigator.of(context).push<void>(MaterialPageRoute(
+      builder: (_) => const HelpScreen(),
+    ));
+  }
+
   Future<StudioDockSessionSnapshot> _load() {
     final loader = StudioDockSessionLoader(
       ref.read(projectRepositoryProvider),
@@ -730,6 +757,8 @@ class _StudioDockSessionViewState
         onImportFile: widget.onImportFile,
         onNewProject: widget.onNewProject,
         onChooseVideo: widget.allowNativePlayback ? _chooseVideo : null,
+        onOpenAppSettings: _openAppSettings,
+        onOpenHelp: _openHelp,
         onApplyCueText: widget.enableEditing ? _applyText : null,
         onApplyCueTiming: widget.enableEditing ? _applyTiming : null,
         onApplyCueTextAndTiming:

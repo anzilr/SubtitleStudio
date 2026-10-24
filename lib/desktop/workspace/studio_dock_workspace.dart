@@ -24,6 +24,12 @@ import '../../utils/msone_hotkey_manager.dart';
 
 enum _StudioDockReviewFilter { all, marked, unresolved, resolved }
 
+enum _StudioDockMenuAction {
+  undo, redo, find, copySelected, selectAll, addCue, deleteCue, splitCue, mergeCue, notes,
+  timing, shiftTools, showTools, sourceView, history,
+  explorer, inspector, settings, help,
+}
+
 /// One subtitle row displayed in the Studio Dock workspace.
 @immutable
 class StudioDockCue {
@@ -119,6 +125,8 @@ class StudioDockWorkspace extends StatefulWidget {
     this.waveformSurface,
     this.playback,
     this.onChooseVideo,
+    this.onOpenAppSettings,
+    this.onOpenHelp,
     this.manageLiveHotkeys = false,
   });
 
@@ -195,6 +203,11 @@ class StudioDockWorkspace extends StatefulWidget {
   final StudioDockPlaybackLink? playback;
   /// Select/change media with the existing native picker and video repository.
   final VoidCallback? onChooseVideo;
+  /// Opens the production shared SettingsSheet instead of a parallel desktop
+  /// preferences implementation. The host owns provider-dependent UI.
+  final Future<void> Function()? onOpenAppSettings;
+  /// Opens the existing HelpScreen, shared with the mobile editor.
+  final Future<void> Function()? onOpenHelp;
   /// Standalone desktop may manage hotkeys; an embedded host must not override
   /// callbacks owned by its parent.
   final bool manageLiveHotkeys;
@@ -1664,17 +1677,151 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             padding: EdgeInsets.only(right: 23),
             child: Text('File', style: TextStyle(fontSize: 11)),
           ),
-        for (final label in const [
-          'Edit', 'Subtitle', 'Timing', 'Tools', 'View', 'Help'
-        ])
-          Padding(
-            padding: const EdgeInsets.only(right: 23),
-            child: Text(label, style: TextStyle(
-              fontSize: 11, color: _muted)),
-          ),
+        _desktopMenu('Edit', const ValueKey('studio-edit-menu'), [
+          PopupMenuItem(value: _StudioDockMenuAction.undo,
+              enabled: !_historyNavigationBlocked &&
+                  _currentHistoryPoint?.parentCheckpointId != null,
+              child: const Text('Undo')),
+          PopupMenuItem(value: _StudioDockMenuAction.redo,
+              enabled: !_historyNavigationBlocked &&
+                  (_currentHistoryPoint?.childCheckpointIds.isNotEmpty ?? false),
+              child: const Text('Redo')),
+          const PopupMenuItem(value: _StudioDockMenuAction.find,
+              child: Text('Find & Replace')),
+          const PopupMenuItem(value: _StudioDockMenuAction.selectAll,
+              child: Text('Select all visible subtitles')),
+          PopupMenuItem(value: _StudioDockMenuAction.copySelected,
+              enabled: _selectedIds.isNotEmpty,
+              child: const Text('Copy selected subtitles')),
+        ]),
+        _desktopMenu('Subtitle', const ValueKey('studio-subtitle-menu'), [
+          if (widget.onInsertCue != null)
+            const PopupMenuItem(value: _StudioDockMenuAction.addCue,
+                child: Text('Add subtitle')),
+          if (widget.onDeleteCue != null)
+            const PopupMenuItem(value: _StudioDockMenuAction.deleteCue,
+                child: Text('Delete subtitle')),
+          if (widget.onSplitCue != null)
+            const PopupMenuItem(value: _StudioDockMenuAction.splitCue,
+                child: Text('Split subtitle')),
+          if (widget.onMergeCue != null)
+            const PopupMenuItem(value: _StudioDockMenuAction.mergeCue,
+                child: Text('Combine subtitles')),
+          const PopupMenuItem(value: _StudioDockMenuAction.notes,
+              child: Text('Review notes')),
+        ]),
+        _desktopMenu('Timing', const ValueKey('studio-timing-menu'), [
+          const PopupMenuItem(value: _StudioDockMenuAction.timing,
+              child: Text('Edit start and end time')),
+          if (widget.onShiftAllCues != null)
+            const PopupMenuItem(value: _StudioDockMenuAction.shiftTools,
+                child: Text('Shift subtitle timecodes')),
+        ]),
+        _desktopMenu('Tools', const ValueKey('studio-tools-menu'), [
+          const PopupMenuItem(value: _StudioDockMenuAction.find,
+              child: Text('Find & Replace')),
+          const PopupMenuItem(value: _StudioDockMenuAction.showTools,
+              child: Text('Subtitle tools')),
+          if (widget.onLoadSourceView != null)
+            const PopupMenuItem(value: _StudioDockMenuAction.sourceView,
+                child: Text('Source View')),
+          if (widget.onLoadHistory != null)
+            const PopupMenuItem(value: _StudioDockMenuAction.history,
+                child: Text('Edit history')),
+        ]),
+        _desktopMenu('View', const ValueKey('studio-view-menu'), [
+          const PopupMenuItem(value: _StudioDockMenuAction.explorer,
+              child: Text('Toggle project explorer')),
+          const PopupMenuItem(value: _StudioDockMenuAction.inspector,
+              child: Text('Toggle line inspector')),
+          if (widget.onOpenAppSettings != null)
+            const PopupMenuItem(value: _StudioDockMenuAction.settings,
+                child: Text('Settings')),
+        ]),
+        if (widget.onOpenHelp != null)
+          _desktopMenu('Help', const ValueKey('studio-help-menu'), const [
+            PopupMenuItem(value: _StudioDockMenuAction.help,
+                child: Text('Help & Documentation')),
+          ]),
       ]),
     ),
   );
+
+  Widget _desktopMenu(String title, Key key,
+      List<PopupMenuEntry<_StudioDockMenuAction>> items) =>
+      PopupMenuButton<_StudioDockMenuAction>(
+        key: key,
+        tooltip: '$title menu',
+        onSelected: _handleDesktopMenuAction,
+        itemBuilder: (_) => items,
+        child: Padding(
+          padding: const EdgeInsets.only(right: 23),
+          child: Text(title, style: const TextStyle(fontSize: 11)),
+        ),
+      );
+
+  void _handleDesktopMenuAction(_StudioDockMenuAction action) {
+    switch (action) {
+      case _StudioDockMenuAction.undo:
+        unawaited(_undoHistory());
+      case _StudioDockMenuAction.redo:
+        unawaited(_redoHistory());
+      case _StudioDockMenuAction.find:
+        unawaited(_openFind());
+      case _StudioDockMenuAction.selectAll:
+        _selectAllVisibleCues();
+      case _StudioDockMenuAction.copySelected:
+        unawaited(_copySelectedSubtitleText());
+      case _StudioDockMenuAction.addCue:
+        unawaited(_addCueSafely());
+      case _StudioDockMenuAction.deleteCue:
+        unawaited(_deleteCueSafely());
+      case _StudioDockMenuAction.splitCue:
+        unawaited(_splitCueSafely());
+      case _StudioDockMenuAction.mergeCue:
+        unawaited(_mergeCueSafely());
+      case _StudioDockMenuAction.notes:
+        unawaited(_openInspectorTab(2));
+      case _StudioDockMenuAction.timing:
+        unawaited(_openInspectorTab(0));
+      case _StudioDockMenuAction.shiftTools:
+      case _StudioDockMenuAction.showTools:
+        unawaited(_switchSection(3));
+      case _StudioDockMenuAction.sourceView:
+        unawaited(_switchSection(5));
+      case _StudioDockMenuAction.history:
+        unawaited(_switchSection(1));
+      case _StudioDockMenuAction.explorer:
+        _toggleExplorerPanel();
+      case _StudioDockMenuAction.inspector:
+        _toggleInspectorPanel();
+      case _StudioDockMenuAction.settings:
+        unawaited(_switchSection(4));
+      case _StudioDockMenuAction.help:
+        final open = widget.onOpenHelp;
+        if (open != null) unawaited(open());
+    }
+  }
+
+  void _selectAllVisibleCues() {
+    if (_visible.isEmpty) return;
+    setState(() => _selectedIds
+      ..clear()
+      ..addAll(_visible.map((cue) => cue.id)));
+  }
+
+  Future<void> _copySelectedSubtitleText({Set<int>? cueIds}) async {
+    final ids = cueIds ?? _selectedIds;
+    final selected = _cues.where((cue) => ids.contains(cue.id));
+    final contents = selected.map((cue) => cue.edited.trim())
+        .join('\n\n').trim();
+    if (contents.isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: contents));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('Copied ${ids.length} subtitles to clipboard'),
+    ));
+  }
 
 
   Widget _topBar() => Container(
@@ -1800,34 +1947,14 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         key: const ValueKey('toggle-explorer'),
         icon: const Icon(Icons.folder_open_outlined),
         tooltip: 'Toggle project explorer',
-        onPressed: () {
-          if (MediaQuery.sizeOf(context).width < 1600) {
-            setState(() {
-              _explorerOverlayOpen = !_explorerOverlayOpen;
-              _inspectorOverlayOpen = false;
-            });
-          } else {
-            setState(() => _explorerOpen = !_explorerOpen);
-            _queueLayoutSave(now: true);
-          }
-        },
+        onPressed: _toggleExplorerPanel,
       ),
       IconButton(
         key: const ValueKey('toggle-inspector'),
         icon: Icon(_inspectorOpen
             ? Icons.view_sidebar_outlined : Icons.view_sidebar),
         tooltip: 'Toggle inspector',
-        onPressed: () {
-          if (MediaQuery.sizeOf(context).width < 1250) {
-            setState(() {
-              _inspectorOverlayOpen = !_inspectorOverlayOpen;
-              _explorerOverlayOpen = false;
-            });
-          } else {
-            setState(() => _inspectorOpen = !_inspectorOpen);
-            _queueLayoutSave(now: true);
-          }
-        },
+        onPressed: _toggleInspectorPanel,
       ),
       const SizedBox(width: 7),
       Icon(Icons.circle, size: 9, color: _accent),
@@ -1836,6 +1963,30 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           style: const TextStyle(fontSize: 12)),
     ]),
   );
+
+  void _toggleExplorerPanel() {
+    if (MediaQuery.sizeOf(context).width < 1600) {
+      setState(() {
+        _explorerOverlayOpen = !_explorerOverlayOpen;
+        _inspectorOverlayOpen = false;
+      });
+    } else {
+      setState(() => _explorerOpen = !_explorerOpen);
+      _queueLayoutSave(now: true);
+    }
+  }
+
+  void _toggleInspectorPanel() {
+    if (MediaQuery.sizeOf(context).width < 1250) {
+      setState(() {
+        _inspectorOverlayOpen = !_inspectorOverlayOpen;
+        _explorerOverlayOpen = false;
+      });
+    } else {
+      setState(() => _inspectorOpen = !_inspectorOpen);
+      _queueLayoutSave(now: true);
+    }
+  }
 
   Widget _navigationRail() => Container(
     width: 61,
@@ -1876,6 +2027,11 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   );
 
   Future<void> _switchSection(int index) async {
+    if (index == 4 && widget.onOpenAppSettings != null) {
+      // Settings is a modal over the editor: never discard a subtitle draft.
+      await widget.onOpenAppSettings!();
+      return;
+    }
     if (index == _section) return;
     if (!await _confirmDraftBeforeLeaving() || !mounted) return;
     if (index == 5) {
@@ -1922,8 +2078,9 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     if (!mounted || _inspectorTab != tab) return;
     setState(() {
       _inspectorOpen = true;
-      _inspectorOverlayOpen = true;
+      _inspectorOverlayOpen = MediaQuery.sizeOf(context).width < 1250;
     });
+    if (!_inspectorOverlayOpen) _queueLayoutSave(now: true);
   }
 
   void _invalidateFind() => setState(() {
@@ -2512,6 +2669,8 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         if (!widget.isLiveSession)
           const PopupMenuItem(value: 'mark',
               child: Text('Toggle review mark')),
+        const PopupMenuItem(value: 'copy-selected',
+            child: Text('Copy selected subtitle text')),
         const PopupMenuItem(value: 'copy', child: Text('Copy timecodes')),
       ],
     );
@@ -2546,6 +2705,10 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         await Clipboard.setData(
           ClipboardData(text: cue.start + ' --> ' + cue.end),
         );
+      case 'copy-selected':
+        // A right-click on a non-selected row acts on that row only.
+        await _copySelectedSubtitleText(cueIds: _selectedIds.contains(cue.id)
+            ? null : {cue.id});
       default:
         break;
     }
@@ -2564,6 +2727,10 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                 unawaited(_switchSection(3))),
             MapEntry('Next cue', () => _selectRelative(1)),
             MapEntry('Previous cue', () => _selectRelative(-1)),
+            MapEntry('Select all visible subtitles', _selectAllVisibleCues),
+            if (_selectedIds.isNotEmpty)
+              MapEntry('Copy selected subtitles', () =>
+                  unawaited(_copySelectedSubtitleText())),
             if (_currentHistoryPoint?.parentCheckpointId != null)
               MapEntry('Undo subtitle edit', () => unawaited(_undoHistory())),
             if (_currentHistoryPoint?.childCheckpointIds.isNotEmpty ?? false)
@@ -2590,6 +2757,11 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             ] else if (!widget.isLiveSession)
               MapEntry('Toggle review mark', _toggleMarkedSelection),
             MapEntry('Reset workspace layout', _resetLayout),
+            if (widget.onOpenAppSettings != null)
+              MapEntry('Settings', () => unawaited(_switchSection(4))),
+            if (widget.onOpenHelp != null)
+              MapEntry('Help and documentation', () =>
+                  unawaited(widget.onOpenHelp!())),
             MapEntry('Show Inspector: Text and Timing', () =>
                 unawaited(_openInspectorTab(0))),
             MapEntry('Show Inspector: Style', () =>
