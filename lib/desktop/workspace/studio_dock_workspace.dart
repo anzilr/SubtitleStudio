@@ -18,6 +18,7 @@ import 'studio_dock_split_cue_dialog.dart';
 import 'studio_dock_file_actions.dart';
 import 'studio_dock_style_actions.dart';
 import 'studio_dock_style_color_dialog.dart';
+import 'studio_dock_search_service.dart';
 import '../../utils/msone_hotkey_manager.dart';
 
 /// One subtitle row displayed in the Studio Dock workspace.
@@ -88,6 +89,10 @@ class StudioDockWorkspace extends StatefulWidget {
     this.onApplyCueText,
     this.onApplyCueTiming,
     this.onApplyCueNotes,
+    this.onFindCues,
+    this.onReplaceMatches,
+    this.onShiftAllCues,
+    this.onClearAllFormatting,
     this.onInsertCue,
     this.onDeleteCue,
     this.onSplitCue,
@@ -130,6 +135,17 @@ class StudioDockWorkspace extends StatefulWidget {
   final Future<StudioDockCueUpdate?> Function(
       int cueNumber, String? comment, bool marked, bool resolved)?
       onApplyCueNotes;
+  /// Read-only query from the authoritative loaded session snapshot.
+  final List<StudioDockSearchHit> Function(
+      String term, bool caseSensitive, bool wholeWord)? onFindCues;
+  /// Atomic, guarded replacement of selected search-time match snapshots.
+  final Future<StudioDockCueUpdate?> Function(
+      List<StudioDockSearchHit> matches, String term,
+      String replacement, bool caseSensitive)? onReplaceMatches;
+  final Future<StudioDockCueUpdate?> Function(
+      int selectedCueNumber, int deltaMilliseconds)? onShiftAllCues;
+  final Future<StudioDockCueUpdate?> Function(
+      int selectedCueNumber)? onClearAllFormatting;
   final Future<StudioDockCueUpdate?> Function(
       int? afterCueNumber, StudioDockNewCueDraft draft)? onInsertCue;
   final Future<StudioDockCueUpdate?> Function(int cueNumber)? onDeleteCue;
@@ -190,8 +206,22 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   final List<Color> _styleColorHistory = [];
   final FocusNode _gridFocus = FocusNode(debugLabel: 'Studio Dock grid');
   final FocusNode _searchFocus = FocusNode(debugLabel: 'Studio Dock search');
+  final FocusNode _findFocus = FocusNode(debugLabel: 'Studio Dock Find');
   final TextEditingController _commandSearch = TextEditingController();
   final TextEditingController _tableSearch = TextEditingController();
+  final TextEditingController _findInput = TextEditingController();
+  final TextEditingController _replaceInput = TextEditingController();
+  final TextEditingController _shiftMillisecondsInput =
+      TextEditingController(text: '1000');
+  List<StudioDockSearchHit> _findResults = const [];
+  final Set<int> _selectedFindResults = {};
+  bool _findCaseSensitive = false;
+  bool _findWholeWord = false;
+  bool _searched = false;
+  bool _replacingMatches = false;
+  bool _runningTool = false;
+  String? _findError;
+  String? _toolsError;
   int _section = 0;
   bool _playing = false;
   bool _inspectorOpen = true;
@@ -346,8 +376,12 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     }
     _commandSearch.dispose();
     _tableSearch.dispose();
+    _findInput.dispose();
+    _replaceInput.dispose();
+    _shiftMillisecondsInput.dispose();
     _gridFocus.dispose();
     _searchFocus.dispose();
+    _findFocus.dispose();
     super.dispose();
   }
 
@@ -429,7 +463,7 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           setState(() => _playing = !_playing);
         }
       case HotkeyAction.findReplace:
-        _searchFocus.requestFocus();
+        unawaited(_openFind());
       case HotkeyAction.markLine:
         _toggleMarkedSelection();
       case HotkeyAction.splitLine:
@@ -1750,6 +1784,157 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     });
   }
 
+  Future<void> _openFind() async {
+    await _switchSection(2);
+    if (mounted && _section == 2) _findFocus.requestFocus();
+  }
+
+  Future<void> _openInspectorTab(int tab) async {
+    await _switchSection(0);
+    if (!mounted || _section != 0) return;
+    await _changeInspectorTab(tab);
+    if (!mounted || _inspectorTab != tab) return;
+    setState(() {
+      _inspectorOpen = true;
+      _inspectorOverlayOpen = true;
+    });
+  }
+
+  void _invalidateFind() => setState(() {
+    _searched = false;
+    _findResults = const [];
+    _selectedFindResults.clear();
+    _findError = null;
+  });
+
+  void _runFind() {
+    final term = _findInput.text.trim();
+    if (term.isEmpty) {
+      _invalidateFind();
+      return;
+    }
+    try {
+      final found = widget.onFindCues?.call(
+          term, _findCaseSensitive, _findWholeWord) ?? const <StudioDockSearchHit>[];
+      setState(() {
+        _searched = true;
+        _findResults = found;
+        _selectedFindResults.clear();
+        _findError = null;
+      });
+    } catch (_) {
+      setState(() {
+        _searched = true;
+        _findResults = const [];
+        _selectedFindResults.clear();
+        _findError = 'Could not search this subtitle session.';
+      });
+    }
+  }
+
+  Future<void> _openSearchHit(StudioDockSearchHit hit) async {
+    await _switchSection(0);
+    if (!mounted || _section != 0) return;
+    if (_query.isNotEmpty) {
+      _tableSearch.clear();
+      setState(() => _query = '');
+    }
+    _selectCue(hit.cueNumber);
+    final cue = _cues.where((line) => line.id == hit.cueNumber).firstOrNull;
+    if (cue != null) widget.playback?.seek(Duration(
+        milliseconds: TimeValidator.timeStringToMilliseconds(cue.start)));
+  }
+
+  Future<void> _replaceFound({required bool selectedOnly}) async {
+    final apply = widget.onReplaceMatches;
+    if (apply == null || _replacingMatches || _changingStructure ||
+        _findResults.isEmpty) return;
+    final hits = [
+      for (var i = 0; i < _findResults.length; i++)
+        if (!selectedOnly || _selectedFindResults.contains(i)) _findResults[i],
+    ];
+    if (hits.isEmpty) return;
+    final term = _findInput.text.trim();
+    final replacement = _replaceInput.text;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: const Text('Replace subtitle text?'),
+        content: Text('Replace ${hits.length} occurrence(s) of "$term" '
+            'with "$replacement"? This will create one saved history point.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialog, false),
+              child: const Text('Cancel')),
+          FilledButton(key: const ValueKey('studio-replace-confirm'),
+              onPressed: () => Navigator.pop(dialog, true),
+              child: const Text('Replace')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _replacingMatches = true);
+    StudioDockCueUpdate? update;
+    try {
+      update = await apply(hits, term, replacement, _findCaseSensitive);
+    } catch (_) {
+      update = null;
+    }
+    if (!mounted) return;
+    setState(() => _replacingMatches = false);
+    if (update == null) {
+      setState(() => _findError = 'Could not replace these matches. '
+          'The subtitles may have changed; run Find again.');
+      return;
+    }
+    _acceptStructure(update);
+    _runFind();
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('Replaced ${hits.length} occurrence(s) in subtitle history.'),
+    ));
+  }
+
+  Future<void> _runBulkTool({
+    required String title,
+    required String detail,
+    required Future<StudioDockCueUpdate?> Function() apply,
+  }) async {
+    if (_runningTool || _changingStructure || _savingDraft) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: Text(title),
+        content: Text('$detail One saved history point will be created. '
+            'The original subtitle file will not be overwritten.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialog, false),
+              child: const Text('Cancel')),
+          FilledButton(key: const ValueKey('studio-tool-confirm'),
+              onPressed: () => Navigator.pop(dialog, true),
+              child: const Text('Apply')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() { _runningTool = true; _toolsError = null; });
+    StudioDockCueUpdate? updated;
+    try {
+      updated = await apply();
+    } catch (_) {
+      updated = null;
+    }
+    if (!mounted) return;
+    setState(() => _runningTool = false);
+    if (updated == null) {
+      setState(() => _toolsError = 'Could not apply this tool. '
+          'Check the time range or refresh a subtitle edited elsewhere.');
+      return;
+    }
+    _acceptStructure(updated);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('$title completed in project history.'),
+    ));
+  }
+
   Widget _projectSidebar() => widget.isLiveSession
       ? _readOnlyProjectSidebar()
       : Container(
@@ -2178,7 +2363,10 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, refresh) {
           final commands = <MapEntry<String, VoidCallback>>[
-            MapEntry('Find subtitle', () => _searchFocus.requestFocus()),
+            MapEntry('Find subtitle', () => unawaited(_openFind())),
+            MapEntry('Replace subtitle text', () => unawaited(_openFind())),
+            MapEntry('Subtitle tools', () =>
+                unawaited(_switchSection(3))),
             MapEntry('Next cue', () => _selectRelative(1)),
             MapEntry('Previous cue', () => _selectRelative(-1)),
             if (_currentHistoryPoint?.parentCheckpointId != null)
@@ -2194,16 +2382,14 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             if (!widget.isLiveSession)
               MapEntry('Toggle review mark', _toggleMarkedSelection),
             MapEntry('Reset workspace layout', _resetLayout),
-            MapEntry('Show Inspector: Text', () => setState(() {
-              _inspectorTab = 0;
-              _inspectorOpen = true;
-              _inspectorOverlayOpen = true;
-            })),
-            MapEntry('Show Inspector: Timing', () => setState(() {
-              _inspectorTab = 1;
-              _inspectorOpen = true;
-              _inspectorOverlayOpen = true;
-            })),
+            MapEntry('Show Inspector: Text', () =>
+                unawaited(_openInspectorTab(0))),
+            MapEntry('Show Inspector: Timing', () =>
+                unawaited(_openInspectorTab(1))),
+            MapEntry('Show Inspector: Style', () =>
+                unawaited(_openInspectorTab(2))),
+            MapEntry('Show Inspector: Notes', () =>
+                unawaited(_openInspectorTab(3))),
           ];
           final filter = _commandSearch.text.trim().toLowerCase();
           final visible = commands.where((item) =>
@@ -2715,6 +2901,8 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     if (_section == 1 && widget.onLoadHistory != null) {
       return _historySection();
     }
+    if (_section == 2) return _findSection();
+    if (_section == 3) return _toolsSection();
     const screens = ['Editor', 'Version history', 'Search', 'Tools', 'Settings'];
     const descriptions = [
       '',
@@ -2740,6 +2928,245 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             unawaited(_switchSection(0)), child: const Text('Back to editor')),
       ]),
     ));
+  }
+
+  Widget _findSection() => Padding(
+    key: const ValueKey('studio-find-section'),
+    padding: const EdgeInsets.fromLTRB(24, 18, 24, 16),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Row(children: [
+        Icon(Icons.search, color: _accent),
+        const SizedBox(width: 11),
+        const Text('Find and replace', style: TextStyle(
+            fontSize: 21, fontWeight: FontWeight.w600)),
+        const Spacer(),
+        Text('${_findResults.length} matches',
+            style: TextStyle(color: _muted, fontSize: 12)),
+      ]),
+      const SizedBox(height: 6),
+      Text('Search the effective subtitle text in this project. '
+          'Replacement is saved as one undoable history point.',
+          style: TextStyle(color: _muted, fontSize: 12)),
+      const SizedBox(height: 13),
+      TextField(
+        key: const ValueKey('studio-find-input'),
+        controller: _findInput,
+        focusNode: _findFocus,
+        decoration: const InputDecoration(
+          prefixIcon: Icon(Icons.search), labelText: 'Find text',
+          border: OutlineInputBorder(), isDense: true,
+        ),
+        onChanged: (_) => _invalidateFind(),
+        onSubmitted: (_) => _runFind(),
+      ),
+      const SizedBox(height: 9),
+      Wrap(spacing: 12, crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+        FilterChip(
+          key: const ValueKey('studio-find-case'),
+          label: const Text('Case sensitive'),
+          selected: _findCaseSensitive,
+          onSelected: (value) {
+            setState(() => _findCaseSensitive = value);
+            _invalidateFind();
+          },
+        ),
+        FilterChip(
+          key: const ValueKey('studio-find-word'),
+          label: const Text('Whole word'),
+          selected: _findWholeWord,
+          onSelected: (value) {
+            setState(() => _findWholeWord = value);
+            _invalidateFind();
+          },
+        ),
+        FilledButton.icon(
+          key: const ValueKey('studio-find-run'),
+          onPressed: _findInput.text.trim().isNotEmpty && !_replacingMatches
+              ? _runFind : null,
+          icon: const Icon(Icons.search, size: 17),
+          label: const Text('Find'),
+        ),
+      ]),
+      const SizedBox(height: 11),
+      if (widget.onReplaceMatches != null) ...[
+        TextField(
+          key: const ValueKey('studio-replace-input'),
+          controller: _replaceInput,
+          decoration: const InputDecoration(
+            prefixIcon: Icon(Icons.find_replace), labelText: 'Replace with',
+            border: OutlineInputBorder(), isDense: true,
+          ),
+        ),
+        const SizedBox(height: 9),
+        Wrap(spacing: 10, runSpacing: 8, children: [
+          OutlinedButton.icon(
+            key: const ValueKey('studio-replace-selected'),
+            onPressed: _selectedFindResults.isNotEmpty && !_replacingMatches
+                ? () => unawaited(_replaceFound(selectedOnly: true)) : null,
+            icon: const Icon(Icons.checklist, size: 17),
+            label: Text('Replace selected (${_selectedFindResults.length})'),
+          ),
+          FilledButton.icon(
+            key: const ValueKey('studio-replace-all'),
+            onPressed: _findResults.isNotEmpty && !_replacingMatches
+                ? () => unawaited(_replaceFound(selectedOnly: false)) : null,
+            icon: const Icon(Icons.done_all, size: 17),
+            label: const Text('Replace all matches'),
+          ),
+        ]),
+      ],
+      if (_replacingMatches) const LinearProgressIndicator(),
+      if (_findError != null) Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Text(_findError!, style: TextStyle(
+            color: Theme.of(context).colorScheme.error)),
+      ),
+      const SizedBox(height: 12),
+      Expanded(child: Card(
+        clipBehavior: Clip.antiAlias,
+        child: !_searched
+            ? Center(child: Text(widget.onFindCues == null
+                ? 'Open a subtitle project to search its contents.'
+                : 'Enter text and choose Find to see matching subtitles.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: _muted)))
+            : _findResults.isEmpty
+                ? Center(child: Text('No matching subtitles.',
+                    style: TextStyle(color: _muted)))
+                : ListView.builder(
+                    key: const ValueKey('studio-find-results'),
+                    itemCount: _findResults.length,
+                    itemBuilder: (context, index) {
+                      final hit = _findResults[index];
+                      return ListTile(
+                        key: ValueKey('studio-find-hit-$index'),
+                        dense: true,
+                        leading: widget.onReplaceMatches == null
+                            ? const Icon(Icons.subtitles_outlined)
+                            : Checkbox(
+                                key: ValueKey('studio-find-select-$index'),
+                                value: _selectedFindResults.contains(index),
+                                onChanged: _replacingMatches ? null : (checked) =>
+                                    setState(() {
+                                      if (checked == true) {
+                                        _selectedFindResults.add(index);
+                                      } else {
+                                        _selectedFindResults.remove(index);
+                                      }
+                                    }),
+                              ),
+                        title: Text('Subtitle #${hit.cueNumber} '
+                            '· characters ${hit.start + 1}–${hit.end}'),
+                        subtitle: Text(hit.content.replaceAll('\n', ' ↵ '),
+                            maxLines: 2, overflow: TextOverflow.ellipsis),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 13),
+                        onTap: () => unawaited(_openSearchHit(hit)),
+                      );
+                    },
+                  ),
+      )),
+    ]),
+  );
+
+  Widget _toolsSection() {
+    final delta = int.tryParse(_shiftMillisecondsInput.text.trim()) ?? 0;
+    final canEdit = !_runningTool && _cues.isNotEmpty;
+    return Padding(
+      key: const ValueKey('studio-tools-section'),
+      padding: const EdgeInsets.fromLTRB(24, 18, 24, 16),
+      child: ListView(children: [
+        Row(children: [
+          Icon(Icons.tune_rounded, color: _accent),
+          const SizedBox(width: 11),
+          const Text('Subtitle tools', style: TextStyle(
+              fontSize: 21, fontWeight: FontWeight.w600)),
+        ]),
+        const SizedBox(height: 6),
+        Text('Batch operations use the project’s shared checkpoint history. '
+            'They do not write the external SRT until you choose Save.',
+            style: TextStyle(color: _muted, fontSize: 12)),
+        const SizedBox(height: 18),
+        Card(child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Shift all subtitle timecodes', style: TextStyle(
+                fontSize: 16, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 7),
+            Text('Positive milliseconds delay every subtitle; negative '
+                'milliseconds move them earlier. Durations stay unchanged.',
+                style: TextStyle(color: _muted, fontSize: 12)),
+            const SizedBox(height: 12),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 330),
+              child: TextField(
+                key: const ValueKey('studio-tool-shift-input'),
+                controller: _shiftMillisecondsInput,
+                keyboardType: const TextInputType.numberWithOptions(
+                    signed: true),
+                decoration: const InputDecoration(
+                  labelText: 'Milliseconds (+ or −)',
+                  border: OutlineInputBorder(), isDense: true,
+                ),
+                onChanged: (_) => setState(() => _toolsError = null),
+              ),
+            ),
+            const SizedBox(height: 11),
+            FilledButton.icon(
+              key: const ValueKey('studio-tool-shift'),
+              onPressed: widget.onShiftAllCues != null && canEdit &&
+                      delta != 0
+                  ? () => unawaited(_runBulkTool(
+                      title: 'Shift all subtitles',
+                      detail: 'Shift ${_cues.length} subtitles by '
+                          '$delta milliseconds?',
+                      apply: () => widget.onShiftAllCues!(_selectedId, delta)))
+                  : null,
+              icon: const Icon(Icons.more_time, size: 17),
+              label: const Text('Apply time shift'),
+            ),
+          ]),
+        )),
+        const SizedBox(height: 12),
+        Card(child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Clear supported subtitle formatting',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 7),
+            Text('Remove bold, italic, underline, font color and nine-grid '
+                'alignment tags. Original text and review notes are kept.',
+                style: TextStyle(color: _muted, fontSize: 12)),
+            const SizedBox(height: 11),
+            OutlinedButton.icon(
+              key: const ValueKey('studio-tool-clear-formatting'),
+              onPressed: widget.onClearAllFormatting != null && canEdit
+                  ? () => unawaited(_runBulkTool(
+                      title: 'Clear subtitle formatting',
+                      detail: 'Remove supported style tags from this '
+                          'project’s edited subtitles?',
+                      apply: () => widget.onClearAllFormatting!(_selectedId)))
+                  : null,
+              icon: const Icon(Icons.format_clear, size: 17),
+              label: const Text('Clear formatting tags'),
+            ),
+          ]),
+        )),
+        if (_runningTool) const LinearProgressIndicator(),
+        if (_toolsError != null) Padding(
+          padding: const EdgeInsets.all(12),
+          child: Text(_toolsError!, style: TextStyle(
+              color: Theme.of(context).colorScheme.error)),
+        ),
+        if (widget.onShiftAllCues == null &&
+            widget.onClearAllFormatting == null)
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Text('Tools are read-only for this session.',
+                style: TextStyle(color: _muted)),
+          ),
+      ]),
+    );
   }
 
   Widget _sourceViewSection() => Padding(

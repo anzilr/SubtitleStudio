@@ -29,6 +29,8 @@ import 'studio_dock_project_save_actions.dart';
 import 'studio_dock_history_service.dart';
 import 'studio_dock_source_view_service.dart';
 import 'studio_dock_notes_service.dart';
+import 'studio_dock_search_service.dart';
+import 'studio_dock_bulk_tools_service.dart';
 
 /// Live Studio Dock host backed by the shared project, subtitle, history,
 /// native media and file services.
@@ -205,6 +207,78 @@ class _StudioDockSessionViewState
       if (!mounted || updated == null) return null;
       setState(() => _latestBaseline = updated);
       return _snapshotUpdate(updated, cueNumber);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  StudioDockSearchService get _search => StudioDockSearchService(
+    ref.read(projectRepositoryProvider),
+    ref.read(subtitleRepositoryProvider),
+  );
+
+  List<StudioDockSearchHit> _findCues(
+      String term, bool caseSensitive, bool wholeWord) {
+    final baseline = _latestBaseline;
+    if (baseline == null) return const [];
+    return StudioDockSearchService.findSnapshot(
+      snapshot: baseline,
+      term: term,
+      caseSensitive: caseSensitive,
+      wholeWord: wholeWord,
+    );
+  }
+
+  Future<StudioDockCueUpdate?> _replaceMatches(
+      List<StudioDockSearchHit> hits, String searchTerm,
+      String replacement, bool caseSensitive) async {
+    final baseline = _latestBaseline;
+    if (baseline == null || !widget.enableEditing) return null;
+    try {
+      final updated = await _search.replace(
+        baseline: baseline,
+        matches: hits,
+        searchTerm: searchTerm,
+        replacement: replacement,
+        caseSensitive: caseSensitive,
+      );
+      if (!mounted || updated == null) return null;
+      setState(() => _latestBaseline = updated);
+      return _snapshotUpdate(updated, hits.first.cueNumber);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  StudioDockBulkToolsService get _bulkTools => StudioDockBulkToolsService(
+    ref.read(projectRepositoryProvider),
+    ref.read(subtitleRepositoryProvider),
+  );
+
+  Future<StudioDockCueUpdate?> _shiftAllCues(
+      int selectedCueNumber, int deltaMilliseconds) async {
+    final baseline = _latestBaseline;
+    if (baseline == null || !widget.enableEditing) return null;
+    try {
+      final updated = await _bulkTools.shiftAll(
+        baseline: baseline, deltaMilliseconds: deltaMilliseconds);
+      if (!mounted || updated == null) return null;
+      setState(() => _latestBaseline = updated);
+      return _snapshotUpdate(updated, selectedCueNumber);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<StudioDockCueUpdate?> _clearAllFormatting(
+      int selectedCueNumber) async {
+    final baseline = _latestBaseline;
+    if (baseline == null || !widget.enableEditing) return null;
+    try {
+      final updated = await _bulkTools.clearFormatting(baseline: baseline);
+      if (!mounted || updated == null) return null;
+      setState(() => _latestBaseline = updated);
+      return _snapshotUpdate(updated, selectedCueNumber);
     } catch (_) {
       return null;
     }
@@ -607,6 +681,11 @@ class _StudioDockSessionViewState
         onApplyCueText: widget.enableEditing ? _applyText : null,
         onApplyCueTiming: widget.enableEditing ? _applyTiming : null,
         onApplyCueNotes: widget.enableEditing ? _applyNotes : null,
+        onFindCues: _findCues,
+        onReplaceMatches: widget.enableEditing ? _replaceMatches : null,
+        onShiftAllCues: widget.enableEditing ? _shiftAllCues : null,
+        onClearAllFormatting:
+            widget.enableEditing ? _clearAllFormatting : null,
         onInsertCue: widget.enableEditing ? _insertCue : null,
         onDeleteCue: widget.enableEditing ? _deleteCue : null,
         onSplitCue: widget.enableEditing ? _splitCue : null,
