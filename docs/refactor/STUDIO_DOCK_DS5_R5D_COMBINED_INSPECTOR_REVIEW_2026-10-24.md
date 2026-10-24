@@ -52,4 +52,6 @@ Predecessor: `STUDIO_DOCK_DS5_R5C_SEARCH_TOOLS_2026-10-24.md`
 
 ## CI
 
-Pending.
+- **Focused Studio Dock quality: PASS** — [run 40079814187](https://github.com/anzilr/SubtitleStudio/actions/runs/40079814187), `flutter analyze` successful, **142 focused tests passed**. Earlier focused run caught three obsolete inspector-layout assertions; these were corrected before acceptance.
+- **Full migration quality: PASS** — [run 40080002082](https://github.com/anzilr/SubtitleStudio/actions/runs/40080002082), `flutter analyze` successful, **944 Flutter tests passed**.
+- No native/platform builds executed; native desktop acceptance remains deferred until a Windows machine is available.
