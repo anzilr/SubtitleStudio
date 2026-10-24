@@ -63,3 +63,5 @@ DS5 R5e 2026-10-24: implement guarded bulk Resolve/Reopen alongside Mark/Unmark;
 DS5 R5f 2026-10-24: desktop-only UI parity foundation: replace inert editor menus with actual commands, host shared SettingsSheet and HelpScreen, selected subtitle text copying, corrected inspector overlay, audit missing mobile features in parity ledger. Run flutter pub get/analyze and focused Studio Dock widget/integration tests only. No native platform builds.
 
 DS5 R5f TEST HARNESS CORRECTION 2026-10-24: initial run passed analyzer and 149 Studio Dock tests, failed live key lookup and waited 10 minutes on unmocked clipboard getData. Use live studio-edit key and mock Clipboard.setData; run focused Flutter analyzer/tests only, no platform builds.
+
+DS5 R5f NULLABLE EDITED PARITY 2026-10-24: retain persisted null vs explicitly empty edited cue in Studio Dock projection, use mobile clipboard fallback semantics; test mixed edited/original/blank cues. Flutter analyzer and focused tests only; no native builds.
