@@ -53,4 +53,6 @@ is available.
 
 ## CI
 
-Pending.
+- **Focused Studio Dock PASS:** [run 40084792597](https://github.com/anzilr/SubtitleStudio/actions/runs/40084792597), `flutter analyze` successful, **151 tests passed**. Earlier run passed 149 tests but identified a wrong live-edit key and an unmocked clipboard platform channel in the new widget tests; both were corrected.
+- **Full Flutter PASS:** [run 40084983040](https://github.com/anzilr/SubtitleStudio/actions/runs/40084983040), `flutter analyze` successful, **954 tests passed**, including the nullable edited-text projection correction.
+- No native/platform builds executed. Windows live acceptance remains deferred.
