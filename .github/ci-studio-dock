@@ -97,3 +97,5 @@ DS5 R13 IMPORT COMMENTS 2026-10-24: expose the shared mobile .msone comments imp
 DS5 R14 HEARING CLEANUP 2026-10-24: expose shared cleanup in Studio Dock Tools/menu; guard dirty draft, confirm deletion, check stale snapshot, test UI and existing service plan. Flutter analysis and focused tests only; NO platform builds.
 
 DS5 R14 EMPTY PROJECT TEST RETRY 2026-10-24: confirm cleanup action absent in empty project Tools popup, not whole menu. Flutter analyze and focused tests only.
+
+DS5 R14 FRESH WORKSPACE TEST 2026-10-24: avoid reusing populated widget State when testing empty project. Analyze/focused Flutter tests only; no builds.

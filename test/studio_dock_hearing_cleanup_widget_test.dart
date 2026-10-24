@@ -51,6 +51,10 @@ void main() {
         findsNothing);
     expect(tester.takeException(), isNull);
 
+    // A new project mounts a fresh workspace State; do not reuse the
+    // previous populated project's local cue projection in this widget test.
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
     await launch(tester, empty: true,
         cleanup: (_) async => null);
     await tester.tap(find.byKey(const ValueKey('studio-tools-menu')));
