@@ -31,7 +31,7 @@ enum _StudioDockMenuAction {
   loadSecondary, toggleSecondary,
   shiftSelected, deleteSelected, selectByIndex, rangeSelection, goToLine,
   importComments, removeHearingImpaired, insertMsoneBanners, normalizeMalayalam,
-  explorer, inspector, settings, help,
+  explorer, inspector, toggleFullscreen, settings, help,
 }
 
 /// One subtitle row displayed in the Studio Dock workspace.
@@ -142,6 +142,7 @@ class StudioDockWorkspace extends StatefulWidget {
     this.playback,
     this.onChooseVideo,
     this.onTogglePlayback,
+    this.onToggleFullscreen,
     this.onOpenAppSettings,
     this.onOpenProjectSettings,
     this.onImportComments,
@@ -249,6 +250,8 @@ class StudioDockWorkspace extends StatefulWidget {
   final VoidCallback? onChooseVideo;
   /// Toggle the already-mounted native player; never create another player.
   final VoidCallback? onTogglePlayback;
+  /// Toggle fullscreen on the same mounted native video player.
+  final VoidCallback? onToggleFullscreen;
   /// Opens the production shared SettingsSheet instead of a parallel desktop
   /// preferences implementation. The host owns provider-dependent UI.
   final Future<void> Function()? onOpenAppSettings;
@@ -394,6 +397,10 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     HotkeyAction.nextLine,
     HotkeyAction.previousLine,
     HotkeyAction.playPause,
+    HotkeyAction.toggleFullscreen,
+    HotkeyAction.delete,
+    HotkeyAction.editCurrentLine,
+    HotkeyAction.showMarkedLines,
     HotkeyAction.findReplace,
     HotkeyAction.gotoLine,
     HotkeyAction.markLine,
@@ -411,6 +418,13 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       action == HotkeyAction.nextLine ||
       action == HotkeyAction.previousLine ||
       action == HotkeyAction.playPause && widget.onTogglePlayback != null ||
+      action == HotkeyAction.toggleFullscreen &&
+          widget.onToggleFullscreen != null ||
+      action == HotkeyAction.delete &&
+          (widget.onDeleteSelectedCues != null || widget.onDeleteCue != null) ||
+      action == HotkeyAction.editCurrentLine &&
+          widget.onApplyCueText != null ||
+      action == HotkeyAction.showMarkedLines && _cues.isNotEmpty ||
       action == HotkeyAction.findReplace ||
       action == HotkeyAction.gotoLine ||
       action == HotkeyAction.markLine && widget.onApplyBulkReview != null ||
@@ -605,6 +619,22 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         } else {
           setState(() => _playing = !_playing);
         }
+      case HotkeyAction.toggleFullscreen:
+        widget.onToggleFullscreen?.call();
+      case HotkeyAction.delete:
+        if (_selectedIds.length > 1 && widget.onDeleteSelectedCues != null) {
+          unawaited(_deleteSelectedSafely());
+        } else if (widget.onDeleteCue != null) {
+          unawaited(_deleteCueSafely());
+        } else if (widget.onDeleteSelectedCues != null) {
+          unawaited(_deleteSelectedSafely());
+        }
+      case HotkeyAction.editCurrentLine:
+        if (widget.onApplyCueText != null && _cues.isNotEmpty) {
+          unawaited(_openInspectorTab(0));
+        }
+      case HotkeyAction.showMarkedLines:
+        unawaited(_showMarkedLinesFromShortcut());
       case HotkeyAction.findReplace:
         unawaited(_openFind());
       case HotkeyAction.gotoLine:
@@ -1733,6 +1763,23 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     _gridFocus.requestFocus();
   }
 
+  Future<void> _showMarkedLinesFromShortcut() async {
+    if (_cues.isEmpty || !await _confirmDraftBeforeLeaving() || !mounted) return;
+    await _switchSection(0);
+    if (!mounted || _section != 0) return;
+    setState(() {
+      _reviewFilter = _StudioDockReviewFilter.marked;
+      _query = '';
+      _tableSearch.clear();
+      final matches = _visible;
+      if (matches.isNotEmpty && !matches.any((cue) => cue.id == _selectedId)) {
+        _selectedId = matches.first.id;
+        _selectionAnchor = _selectedId;
+        _selectedIds..clear()..add(_selectedId);
+      }
+    });
+  }
+
   Future<void> _openReviewNotesForHotkey() async {
     if (_cues.isEmpty) return;
     await _openInspectorTab(2);
@@ -2144,6 +2191,10 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               child: Text('Toggle project explorer')),
           const PopupMenuItem(value: _StudioDockMenuAction.inspector,
               child: Text('Toggle line inspector')),
+          if (widget.onToggleFullscreen != null)
+            PopupMenuItem(value: _StudioDockMenuAction.toggleFullscreen,
+                enabled: widget.videoSurface != null,
+                child: const Text('Toggle video fullscreen')),
           if (widget.onOpenAppSettings != null)
             const PopupMenuItem(value: _StudioDockMenuAction.settings,
                 child: Text('Settings')),
@@ -2244,6 +2295,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         _toggleExplorerPanel();
       case _StudioDockMenuAction.inspector:
         _toggleInspectorPanel();
+      case _StudioDockMenuAction.toggleFullscreen:
+        if (widget.videoSurface != null) widget.onToggleFullscreen?.call();
       case _StudioDockMenuAction.settings:
         unawaited(_switchSection(4));
       case _StudioDockMenuAction.help:

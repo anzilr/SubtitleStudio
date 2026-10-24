@@ -23,9 +23,9 @@ acceptance. A wired callback is not proof of a working native interaction.
 | Create/open project, SRT/VTT/ASS/.msone import | Wired via desktop Home | Verify native file associations and reopened projects |
 | Save, Save As, SRT export, complete .msone project save | Wired to shared services | Native filename/encoding/round-trip acceptance |
 | Edit Mode (create subtitles from scratch) vs Translation Mode | Wired in DS5 R6 | Native mode-dependent inspector, cue insert/split, Source View and SRT export acceptance |
-| Video attach and video playback | Shared `VideoPlayerSection` / `VideoPlayerWidget` | Native controls and persistence acceptance |
+| Video attach, playback, fullscreen | DS5 R19 adds View → Toggle video fullscreen and the existing F11/Cmd+F manager action on the mounted player, on top of shared `VideoPlayerSection` / `VideoPlayerWidget`; Shift+Delete and Marked Lines also restored to desktop hotkeys | Native fullscreen keyboard/menu, attach/unload/replace, playback/seek, OS hotkey conflict and dialog acceptance |
 | Playback-follow subtitle highlight and seek | Wired through shared playback link | Native bidirectional seek/scroll/accuracy acceptance |
-| Waveform display and selected audio stream | Shared `WaveformWidget`/controller | Native zoom, regenerate, hide/show, audio/cache tests |
+| Waveform display and selected audio stream | Shared `WaveformWidget`/controller supports zoom and audio selection; **partial direct-menu parity**: mobile Generate/Regenerate/Hide Waveform and Toggle Floating Controls still require a desktop interaction audit | Expose only missing commands through the shared waveform controller, and run native zoom, regenerate, hide/show, audio/cache acceptance |
 | Waveform gesture time edits and insertion | Wired in DS5 R9: shared waveform gestures and compact controls call guarded Studio Dock timing/insert services; successful edits reconcile the grid/player and history | Native drag precision, magnet/overlap behavior, cue creation, undo, media stability and synchronized scrolling acceptance |
 | Secondary subtitles, visibility and saved selection | Wired in DS5 R8 through the existing secondary sheet, `VideoRepository` preferences, and shared player; original-text overlay reprojects from current cues | Native external/video-track picker, original-text updates and selection persistence acceptance; Project Settings remains separate |
 | Edit text, start/end timing, formatting, nine-grid alignment | Wired to shared repositories and format tags | Native editor/controller interaction acceptance |
@@ -44,7 +44,30 @@ acceptance. A wired callback is not proof of a working native interaction.
 | Project Settings (encoding, media, secondary subs) | Wired in DS5 R10 to existing `ProjectSettingsSheet`, repository models and live media/secondary/history refresh after close | Native encoding selection/Save As, media unlink/replace, secondary clear, project rename, marked lines and route-return acceptance |
 | App Settings, theme, typography, waveform limits, checkpoints | Wired to **existing** `SettingsSheet` in DS5 R5f | Verify immediate preference propagation and skin changes |
 | Help & Documentation | Wired to **existing** `HelpScreen` in DS5 R5f | Navigation/back-stack widget and native acceptance |
-| Desktop shortcuts | DS5 R17 wires shared manager for live play/pause, cue navigation/seek, Go to Line, find, mark/mark-and-comment draft, split/combine, file Save/Save As, .msone project save, Help and Settings. Copy and Undo/Redo use Flutter's local focus tree to preserve normal text-editor shortcuts; modal route and dirty-draft guards enforced | Native Windows/macOS/Linux plugin chord registration, editor focus and hotkey lifecycle; remaining video/fullscreen/context actions audited separately |
+| Desktop shortcuts | DS5 R17 manager: play/pause, previous/next cue+seek, Go to Line, find, mark/comment draft, split/combine, Save/Save As/Project, Help/Settings. DS5 R19: fullscreen, guarded Shift+Delete, Edit current cue, Show Marked Lines. Copy, Undo/Redo use focus-aware Flutter shortcuts | **Partial remaining hotkey parity:** line-format Bold/Italic, color picker, dictionaries, repeat/range playback, paste original; actual native chord registration, editor focus and conflicting OS bindings |
+
+## DS5 R19 source-level difference audit
+
+Compared the mobile main/selection menu and hotkey actions against Studio
+Dock's native menubar, shared services, and player controls:
+
+- **Wired (UI action parity)**: save/Save As/.msone, import/open/new, Edit
+  Mode/Translation Mode, Project and App Settings, history, Source View,
+  Go to Line, find/replace, marked/review filters, comments import, sync,
+  MSone tools and submission, hearing-impaired cleanup, secondary subtitle
+  controls, selected cue actions, waveform editing, media seek/playback,
+  subtitle fullscreen, and Help.
+- **Alternative route requiring native acceptance**: mobile Unload Video uses
+  Project Settings for media unlink; mobile Show Marked Lines is a dedicated
+  sheet while Studio Dock uses the grid review filters and shortcut. This is
+  an interaction difference, not verified identical behavior.
+- **Open implementation audit**: direct Generate/Regenerate/Hide Waveform,
+  floating playback controls, video repeat/range controls and corresponding
+  hotkeys, line-format/dictionary/paste-original hotkeys, and context menu
+  feature visibility. Do **not** silently mark these complete.
+- **Platform-only remaining**: native fullscreen media focus, video/track
+  picker behavior, timecode/encoding round trips, player/waveform stability,
+  keyboard chord conflicts and all documented platform acceptance checks.
 
 ## DS5 R5f implementation scope
 
@@ -59,7 +82,9 @@ acceptance. A wired callback is not proof of a working native interaction.
 
 ## Next acceptance order (not optional feature cuts)
 
-1. **P0 native acceptance:** Validate waveform time drags, cue creation,
+1. **P0 implementation + native acceptance:** Close R19's remaining direct
+   waveform, repeat/dictionary/format shortcut and floating controls gaps;
+   validate waveform time drags, cue creation,
    magnet snap, overlap, selected-cue scrolling and secondary-subtitle
    persistence/playback on a native desktop before declaring playback parity.
 2. **P1:** Verify synchronization and import comments, Go to Line, selected-cue batch operations and the

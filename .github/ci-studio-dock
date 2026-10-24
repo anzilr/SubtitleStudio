@@ -113,3 +113,5 @@ DS5 R17 HOTKEYS FOCUSED GATE 2026-10-24: shared manager callbacks, live media se
 DS5 R17 FOCUS RETRY 2026-10-24: focused hotkey regression removes platform clipboard channel hang; asserts Ctrl/Cmd+C is Flutter-local and manager ignores cue navigation in EditableText. Analyze/test only.
 
 DS5 R18 FULLSCREEN REVIEW FOCUSED GATE 2026-10-24: studio fullscreen metadata, optional atomic desktop callbacks, unchanged mobile defaults; flutter analyze and studio_dock tests only, no native builds.
+
+DS5 R19 FOCUSED PARITY 2026-10-24: fullscreen menu/hotkey and Shift+Delete + marked review filter widget tests, focus/modal gate; Flutter analyze/focused tests only. No platform builds.

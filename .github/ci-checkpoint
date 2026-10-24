@@ -230,3 +230,5 @@ DS5 R17 HOTKEYS FULL GATE 2026-10-24: shared manager parity for live playback, g
 DS5 R17 FOCUS RETRY 2026-10-24: replace Linux unmocked Clipboard.setData/getData test (10m timeout) with local ShortcutActivator presence plus manager focus/seek suppression. Run Flutter pub get/analyze/full tests only, NO builds.
 
 DS5 R18 FULLSCREEN REVIEW FULL GATE 2026-10-24: shared player callbacks for mark, comment (atomic), resolve/reopen; overlays observe comment/resolved, optimistic Notes history, test compile and full Flutter suite; NO platform builds.
+
+DS5 R19 FULL PARITY AUDIT 2026-10-24: native Studio Dock View fullscreen action and shared hotkey, Shift+Delete, edit-current/marked-lines shortcuts; preserve media player and mobile code. Flutter pub get/analyze/full tests only; NO native platform builds.

@@ -225,6 +225,13 @@ class _StudioDockSessionViewState
     }
   }
 
+  void _toggleExistingFullscreen() {
+    if (!widget.allowNativePlayback) return;
+    // Reuse the mounted player and its fullscreen OverlayEntry; do not build
+    // another Video or detach the waveform's shared playback coordinator.
+    _nativePlayerState?.toggleCustomFullscreen();
+  }
+
   Future<void> _submitToMsone() async {
     if (!mounted || !_msoneEnabled) return;
     // Reuse the production mobile choice sheet, form and route cleanup.
@@ -1414,6 +1421,8 @@ class _StudioDockSessionViewState
         onChooseVideo: widget.allowNativePlayback ? _chooseVideo : null,
         onTogglePlayback:
             widget.allowNativePlayback ? _toggleExistingPlayback : null,
+        onToggleFullscreen:
+            widget.allowNativePlayback ? _toggleExistingFullscreen : null,
         onOpenAppSettings: _openAppSettings,
         onOpenProjectSettings:
             widget.enableEditing && widget.allowNativePlayback
