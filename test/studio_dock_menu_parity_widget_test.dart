@@ -47,7 +47,7 @@ void main() {
     var opens = 0;
     await launch(tester, settings: () async { opens++; });
     await tester.enterText(
-        find.byKey(const ValueKey('desktop-edit-1')), 'Unsaved draft');
+        find.byKey(const ValueKey('studio-edit-1-0')), 'Unsaved draft');
     await tester.pump();
     await tester.tap(find.byKey(const ValueKey('rail-4')));
     await tester.pumpAndSettle();
@@ -86,11 +86,21 @@ void main() {
 
   testWidgets('Edit menu reuses mobile text-copy selection semantics',
       (tester) async {
+    String? copied;
+    final messenger = TestDefaultBinaryMessengerBinding.instance
+        .defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'Clipboard.setData') {
+        copied = (call.arguments as Map)['text'] as String?;
+      }
+      return null;
+    });
+    addTearDown(() => messenger.setMockMethodCallHandler(
+        SystemChannels.platform, null));
     await launch(tester);
     await choose(tester, 'studio-edit-menu', 'Select all visible subtitles');
     await choose(tester, 'studio-edit-menu', 'Copy selected subtitles');
-    expect((await Clipboard.getData('text/plain'))?.text,
-        'Edited line\n\nEdited second');
+    expect(copied, 'Edited line\n\nEdited second');
     expect(tester.takeException(), isNull);
   });
 }
