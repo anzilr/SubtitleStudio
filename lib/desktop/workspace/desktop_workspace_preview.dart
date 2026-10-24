@@ -757,10 +757,10 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
         body: Center(child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.subtitles_outlined, size: 58, color: _muted),
+            Icon(Icons.subtitles_outlined, size: 58, color: _muted),
             const SizedBox(height: 12),
             const Text('This project has no subtitle cues yet.'),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             Text(widget.onInsertCue != null
                 ? 'Insert the first cue or import a subtitle file.'
                 : 'Cue insertion is unavailable in this preview.',
@@ -870,7 +870,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   Widget _menuBar() => Container(
     height: 27,
     padding: const EdgeInsets.symmetric(horizontal: 15),
-    decoration: const BoxDecoration(
+    decoration: BoxDecoration(
       border: Border(bottom: BorderSide(color: _border)),
     ),
     child: SingleChildScrollView(
@@ -881,7 +881,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
         ])
           Padding(
             padding: const EdgeInsets.only(right: 23),
-            child: Text(label, style: const TextStyle(
+            child: Text(label, style: TextStyle(
               fontSize: 11, color: _muted)),
           ),
       ]),
@@ -892,24 +892,24 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   Widget _topBar() => Container(
     height: 55,
     padding: const EdgeInsets.symmetric(horizontal: 17),
-    decoration: const BoxDecoration(border:
+    decoration: BoxDecoration(border:
         Border(bottom: BorderSide(color: _border))),
     child: Row(children: [
-      const Icon(Icons.subtitles_rounded, color: _accent, size: 22),
+      Icon(Icons.subtitles_rounded, color: _accent, size: 22),
       const SizedBox(width: 10),
       const Text('SubtitleStudio', style:
           TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-      const SizedBox(width: 16),
+      SizedBox(width: 16),
       Container(width: 1, height: 23, color: _border),
       const SizedBox(width: 15),
       Flexible(child: Text(
         widget.projectTitle ?? 'Night Drive  /  Main subtitles',
         maxLines: 1, overflow: TextOverflow.ellipsis,
-        style: const TextStyle(color: _muted, fontSize: 12),
+        style: TextStyle(color: _muted, fontSize: 12),
       )),
       const Spacer(),
       Text(widget.onApplyCueText != null ? 'LIVE · TEXT EDIT' : (widget.liveReadOnly ? 'LIVE · READ ONLY' : 'DEMO WORKSPACE'),
-        style: const TextStyle(
+        style: TextStyle(
           color: _muted, letterSpacing: 1, fontSize: 10)),
       if (widget.onChooseVideo != null)
         IconButton(
@@ -997,7 +997,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
         },
       ),
       const SizedBox(width: 7),
-      const Icon(Icons.circle, size: 9, color: _accent),
+      Icon(Icons.circle, size: 9, color: _accent),
       const SizedBox(width: 7),
       Text(widget.onApplyCueText != null ? 'Text editing' : (widget.liveReadOnly ? 'Read-only' : 'Preview'),
           style: const TextStyle(fontSize: 12)),
@@ -1006,7 +1006,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
 
   Widget _navigationRail() => Container(
     width: 61,
-    decoration: const BoxDecoration(border:
+    decoration: BoxDecoration(border:
       Border(right: BorderSide(color: _border))),
     child: Column(children: [
       const SizedBox(height: 13),
@@ -1023,7 +1023,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   Widget _railItem(int index, IconData icon, String title) => Tooltip(
     message: title,
     child: Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: EdgeInsets.symmetric(vertical: 4),
       child: Material(
         color: _section == index ? _accent.withValues(alpha: .18)
             : Colors.transparent,
@@ -1047,14 +1047,14 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   Widget _projectSidebar() => widget.liveReadOnly
       ? _readOnlyProjectSidebar()
       : Container(
-    decoration: const BoxDecoration(border:
+    decoration: BoxDecoration(border:
         Border(right: BorderSide(color: _border))),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _paneHeader(Icons.folder_open_rounded, 'PROJECT', trailing: 'DEMO'),
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
         _sidebarRow(Icons.folder_rounded, 'Night Drive', selected: true),
-        const Padding(padding: EdgeInsets.fromLTRB(17, 20, 12, 7),
+        Padding(padding: EdgeInsets.fromLTRB(17, 20, 12, 7),
           child: Text('PROJECT FILES', style:
             TextStyle(fontSize: 10, color: _muted, letterSpacing: 1.2))),
         _sidebarRow(Icons.subtitles_rounded, 'Main subtitles.srt',
@@ -1062,13 +1062,13 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
         _sidebarRow(Icons.subtitles_outlined, 'Secondary subtitles',
             indent: 15),
         _sidebarRow(Icons.movie_outlined, 'Night Drive.mp4', indent: 15),
-        const Padding(padding: EdgeInsets.fromLTRB(17, 23, 12, 7),
+        Padding(padding: EdgeInsets.fromLTRB(17, 23, 12, 7),
           child: Text('VERSIONS', style:
             TextStyle(fontSize: 10, color: _muted, letterSpacing: 1.2))),
         _sidebarRow(Icons.fork_right_rounded, 'Current version'),
         _sidebarRow(Icons.bookmark_border_rounded, 'Pinned versions'),
         const Spacer(),
-        const Padding(
+        Padding(
           padding: EdgeInsets.all(14),
           child: Text('Preview project\nNo local files are opened.',
             style: TextStyle(fontSize: 11, color: _muted, height: 1.5)),
@@ -1078,7 +1078,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   );
 
   Widget _readOnlyProjectSidebar() => Container(
-    decoration: const BoxDecoration(
+    decoration: BoxDecoration(
       border: Border(right: BorderSide(color: _border))),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       _paneHeader(Icons.folder_open_rounded, 'PROJECT',
@@ -1087,7 +1087,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
       _sidebarRow(Icons.subtitles_rounded,
           widget.projectTitle ?? 'Subtitle session',
           selected: true),
-      const Padding(
+      Padding(
         padding: EdgeInsets.all(16),
         child: Text(
           'Showing the current subtitle snapshot. Media, attachments, '
@@ -1103,14 +1103,14 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
     Padding(
       padding: EdgeInsets.fromLTRB(8 + indent, 2, 8, 2),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 9),
         decoration: BoxDecoration(
           color: selected ? _accent.withValues(alpha: .12) : null,
           borderRadius: BorderRadius.circular(7),
         ),
         child: Row(children: [
           Icon(icon, size: 16, color: selected ? _accent : _muted),
-          const SizedBox(width: 9),
+          SizedBox(width: 9),
           Expanded(child: Text(label, overflow: TextOverflow.ellipsis,
               style: TextStyle(fontSize: 12,
                   color: selected ? Colors.white : _muted))),
@@ -1127,7 +1127,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
             _queueLayoutSave();
           },
           onHorizontalDragEnd: (_) => _queueLayoutSave(now: true),
-          child: const SizedBox(width: 5,
+          child: SizedBox(width: 5,
               child: ColoredBox(color: _border)),
         ),
       );
@@ -1135,8 +1135,8 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   Widget _paneHeader(IconData icon, String title, {String? trailing}) =>
       Container(
         height: 43,
-        padding: const EdgeInsets.symmetric(horizontal: 13),
-        decoration: const BoxDecoration(
+        padding: EdgeInsets.symmetric(horizontal: 13),
+        decoration: BoxDecoration(
           border: Border(bottom: BorderSide(color: _border))),
         child: Row(children: [
           Icon(icon, size: 15, color: _muted),
@@ -1145,7 +1145,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
               fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: .7)),
           const Spacer(),
           if (trailing != null) Text(trailing,
-              style: const TextStyle(color: _muted, fontSize: 10)),
+              style: TextStyle(color: _muted, fontSize: 10)),
         ]),
       );
 
@@ -1220,7 +1220,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
         onReset();
         _queueLayoutSave(now: true);
       },
-      child: const SizedBox(
+      child: SizedBox(
         height: StudioDockBands.splitter,
         child: ColoredBox(color: _border),
       ),
@@ -1232,17 +1232,17 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
     color: Theme.of(context).colorScheme.surface,
     child: Column(children: [
       Row(children: [
-        const Icon(Icons.videocam_outlined, size: 16, color: _muted),
+        Icon(Icons.videocam_outlined, size: 16, color: _muted),
         const SizedBox(width: 9),
         const Text('VIDEO PREVIEW',
             style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
         const Spacer(),
-        const Icon(Icons.aspect_ratio, size: 15, color: _muted),
+        Icon(Icons.aspect_ratio, size: 15, color: _muted),
         const SizedBox(width: 8),
         Text(widget.liveReadOnly ? 'Media not connected' : '16:9 · Demo clip',
-            style: const TextStyle(fontSize: 11, color: _muted)),
+            style: TextStyle(fontSize: 11, color: _muted)),
       ]),
-      const SizedBox(height: 10),
+      SizedBox(height: 10),
       Expanded(
         child: Center(child: AspectRatio(
           aspectRatio: 16 / 9,
@@ -1272,7 +1272,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
                         ? _selected.original : _selected.edited)
                     : _selected.edited,
                   maxLines: 2, textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16, height: 1.4, fontWeight: FontWeight.w600,
                     shadows: [Shadow(color: Colors.black, blurRadius: 6)],
                   )),
@@ -1286,13 +1286,13 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
 
   Widget _transport() => Container(
     height: 45,
-    decoration: const BoxDecoration(border: Border(
+    decoration: BoxDecoration(border: Border(
       top: BorderSide(color: _border),
       bottom: BorderSide(color: _border),
     )),
     padding: const EdgeInsets.symmetric(horizontal: 14),
     child: Row(children: [
-      IconButton(icon: const Icon(Icons.skip_previous_rounded, size: 19),
+      IconButton(icon: Icon(Icons.skip_previous_rounded, size: 19),
         tooltip: 'Previous cue',
         onPressed: () => _selectRelative(-1)),
       IconButton(
@@ -1310,11 +1310,11 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
       Text(_selected.start, style: const TextStyle(
           fontSize: 12, fontFeatures: [FontFeature.tabularFigures()])),
       Text(widget.liveReadOnly ? ' / no media' : ' / 00:12:45',
-        style: const TextStyle(color: _muted, fontSize: 12)),
+        style: TextStyle(color: _muted, fontSize: 12)),
       const Spacer(),
-      const Text('1.0×', style: TextStyle(color: _muted, fontSize: 11)),
+      Text('1.0×', style: TextStyle(color: _muted, fontSize: 11)),
       const SizedBox(width: 12),
-      const Icon(Icons.volume_up_outlined, size: 17, color: _muted),
+      Icon(Icons.volume_up_outlined, size: 17, color: _muted),
     ]),
   );
 
@@ -1323,21 +1323,21 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
     color: Theme.of(context).colorScheme.surfaceContainerLow,
     child: Column(children: [
       Row(children: [
-        const Icon(Icons.graphic_eq, size: 15, color: _accent),
+        Icon(Icons.graphic_eq, size: 15, color: _accent),
         const SizedBox(width: 8),
         const Text('WAVEFORM', style: TextStyle(
             fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: .8)),
         const SizedBox(width: 10),
         Text(widget.waveformSurface != null ? 'Synced with video' :
             (widget.liveReadOnly ? 'Audio not connected' : 'Audio track: Auto'),
-            style: const TextStyle(fontSize: 10, color: _muted)),
+            style: TextStyle(fontSize: 10, color: _muted)),
         const Spacer(),
-        const Text('–  00:30  +', style:
+        Text('–  00:30  +', style:
             TextStyle(color: _muted, fontSize: 10)),
       ]),
-      const SizedBox(height: 7),
+      SizedBox(height: 7),
       Expanded(child: widget.waveformSurface ?? (widget.liveReadOnly
-          ? const Center(child: Text('Waveform integration pending',
+          ? Center(child: Text('Waveform integration pending',
               style: TextStyle(color: _muted, fontSize: 11)))
           : SizedBox.expand(
               child: CustomPaint(painter: _DemoWaveformPainter(
@@ -1385,14 +1385,14 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
             Container(
               height: 33,
               color: const Color(0xFF21262B),
-              padding: const EdgeInsets.symmetric(horizontal: 13),
+              padding: EdgeInsets.symmetric(horizontal: 13),
               child: _gridCells(null),
             ),
             Expanded(child: Focus(
               focusNode: _gridFocus,
               onKeyEvent: _handleGridKey,
               child: _visible.isEmpty
-              ? const Center(child: Text('No matching subtitle lines',
+              ? Center(child: Text('No matching subtitle lines',
                   style: TextStyle(color: _muted)))
               : ListView.builder(
                   controller: _cueScroll,
@@ -1413,7 +1413,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
                         onSecondaryTapDown: (details) =>
                             _showCueContextMenu(cue, details.globalPosition),
                         child: Container(
-                          decoration: const BoxDecoration(border: Border(
+                          decoration: BoxDecoration(border: Border(
                             bottom: BorderSide(color: _border, width: .4),
                           )),
                           padding: const EdgeInsets.symmetric(horizontal: 13),
@@ -1603,7 +1603,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
         )),
         Container(
           padding: const EdgeInsets.all(12),
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             border: Border(top: BorderSide(color: _border)),
           ),
           child: Text(widget.onApplyCueText != null ||
@@ -1613,7 +1613,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
                   ? 'Read-only session · no changes are saved'
                   : 'Demo only · changes are not saved to files'),
             textAlign: TextAlign.center,
-            style: const TextStyle(color: _muted, fontSize: 11)),
+            style: TextStyle(color: _muted, fontSize: 11)),
         ),
       ]),
     );
@@ -1625,7 +1625,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
         return [
           _fieldLabel('ORIGINAL TEXT'),
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: EdgeInsets.all(12),
             decoration: BoxDecoration(
               border: Border.all(color: _border),
               borderRadius: BorderRadius.circular(7),
@@ -1766,17 +1766,17 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
               ),
             ]),
           ] else
-            const Text('Timing is read-only in this preview.',
+            Text('Timing is read-only in this preview.',
               style: TextStyle(fontSize: 11, color: _muted)),
         ];
       case 2:
         return [
           _fieldLabel('SUBTITLE STYLE'),
-          const Text('Color, alignment, placement and formatting '
+          Text('Color, alignment, placement and formatting '
               'will reuse existing SubtitleStudio actions.',
               style: TextStyle(fontSize: 12, color: _muted, height: 1.5)),
           const SizedBox(height: 12),
-          const Text('Preview only · no simulated formatting saves',
+          Text('Preview only · no simulated formatting saves',
               style: TextStyle(fontSize: 11, color: _muted)),
         ];
       default:
@@ -1796,7 +1796,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
             label: Text(_selected.marked ? 'Unmark' : 'Mark for review'),
           ),
           const SizedBox(height: 15),
-          const Text('Project comments will connect to shared '
+          Text('Project comments will connect to shared '
               'checkpoint and comment services.',
               style: TextStyle(fontSize: 11, color: _muted, height: 1.5)),
         ];
@@ -1805,12 +1805,12 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
 
   Widget _fieldLabel(String text) => Padding(
     padding: const EdgeInsets.only(bottom: 7),
-    child: Text(text, style: const TextStyle(
+    child: Text(text, style: TextStyle(
       color: _muted, fontSize: 10, letterSpacing: .8,
       fontWeight: FontWeight.w600)),
   );
   Widget _readonlyField(String text) => Container(
-    padding: const EdgeInsets.all(11),
+    padding: EdgeInsets.all(11),
     decoration: BoxDecoration(
       color: const Color(0xFF121518),
       border: Border.all(color: _border),
@@ -1840,7 +1840,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
             fontSize: 22, fontWeight: FontWeight.w600)),
         const SizedBox(height: 9),
         Text(descriptions[_section], textAlign: TextAlign.center,
-          style: const TextStyle(color: _muted, height: 1.6)),
+          style: TextStyle(color: _muted, height: 1.6)),
         const SizedBox(height: 20),
         OutlinedButton(onPressed: () =>
             setState(() => _section = 0), child: const Text('Back to editor')),
@@ -1851,21 +1851,21 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   Widget _statusBar() => Container(
     height: 28,
     padding: const EdgeInsets.symmetric(horizontal: 15),
-    decoration: const BoxDecoration(border:
+    decoration: BoxDecoration(border:
         Border(top: BorderSide(color: _border))),
     child: Row(children: [
-      const Icon(Icons.info_outline, color: _accent, size: 13),
+      Icon(Icons.info_outline, color: _accent, size: 13),
       const SizedBox(width: 8),
       Expanded(child: Text(widget.onApplyCueText != null
           ? 'Real session · text edits require Apply · checkpoint-backed'
           : (widget.liveReadOnly
               ? 'Real session · read only · no database changes'
               : 'Demo workspace · no files are modified'),
-        style: const TextStyle(color: _muted, fontSize: 10))),
+        style: TextStyle(color: _muted, fontSize: 10))),
       Text(widget.encoding == null
           ? 'Desktop prototype  •  Windows / macOS / Linux'
           : 'Encoding: ' + widget.encoding!,
-        style: const TextStyle(color: _muted, fontSize: 10)),
+        style: TextStyle(color: _muted, fontSize: 10)),
     ]),
   );
 }
