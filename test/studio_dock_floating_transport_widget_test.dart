@@ -100,6 +100,13 @@ void main() {
     await select(tester, 'Show floating playback button');
     final finder = find.byKey(const ValueKey('studio-floating-playback'));
     expect(tester.widget<IconButton>(finder).onPressed, isNotNull);
+    // Detaching an *already-paused* player must also disable the button.
+    playback.detach();
+    await tester.pump();
+    expect(tester.widget<IconButton>(finder).onPressed, isNull);
+    playback.attach((_) {});
+    await tester.pump();
+    expect(tester.widget<IconButton>(finder).onPressed, isNotNull);
     playback.updatePlaying(true);
     playback.detach();
     await tester.pump();

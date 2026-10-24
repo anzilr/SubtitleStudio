@@ -3314,13 +3314,16 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                   right: 18,
                   bottom: 14,
                   child: ValueListenableBuilder<bool>(
-                    valueListenable: widget.playback!.playing,
-                    builder: (context, playing, _) => IconButton.filled(
-                      key: const ValueKey('studio-floating-playback'),
-                      tooltip: playing ? 'Pause video' : 'Play video',
-                      onPressed: widget.playback!.isAttached
-                          ? widget.onTogglePlayback : null,
-                      icon: Icon(playing ? Icons.pause : Icons.play_arrow),
+                    valueListenable: widget.playback!.attached,
+                    builder: (context, attached, _) =>
+                        ValueListenableBuilder<bool>(
+                      valueListenable: widget.playback!.playing,
+                      builder: (context, playing, _) => IconButton.filled(
+                        key: const ValueKey('studio-floating-playback'),
+                        tooltip: playing ? 'Pause video' : 'Play video',
+                        onPressed: attached ? widget.onTogglePlayback : null,
+                        icon: Icon(playing ? Icons.pause : Icons.play_arrow),
+                      ),
                     ),
                   ),
                 ),

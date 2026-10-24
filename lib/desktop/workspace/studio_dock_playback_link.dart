@@ -30,6 +30,9 @@ class StudioDockAudioSource {
 class StudioDockPlaybackLink {
   final ValueNotifier<Duration> position = ValueNotifier(Duration.zero);
   final ValueNotifier<bool> playing = ValueNotifier(false);
+  /// Explicit attachment signal: a paused player can detach without changing
+  /// the playing notifier, but floating controls must still disable.
+  final ValueNotifier<bool> attached = ValueNotifier(false);
   final ValueNotifier<StudioDockAudioSource> audio =
       ValueNotifier(const StudioDockAudioSource.waiting());
 
@@ -42,11 +45,13 @@ class StudioDockPlaybackLink {
   void attach(void Function(Duration) seek) {
     if (_disposed) return;
     _seek = seek;
+    attached.value = true;
   }
 
   void detach() {
     _seek = null;
     if (!_disposed) {
+      attached.value = false;
       playing.value = false;
       audio.value = const StudioDockAudioSource.waiting();
     }
@@ -98,6 +103,7 @@ class StudioDockPlaybackLink {
     _seek = null;
     position.dispose();
     playing.dispose();
+    attached.dispose();
     audio.dispose();
   }
 }

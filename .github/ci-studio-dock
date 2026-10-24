@@ -121,3 +121,5 @@ DS5 R19 FOCUSED DISABLED MENU RETRY 2026-10-24: use public Text child to test un
 DS5 R20 DIRECT WAVEFORM FOCUSED GATE 2026-10-24: waveform toolbar interaction tests on unchanged controller; Flutter analyze/focused tests only; no platform builds.
 
 DS5 R21 FLOATING PLAYBACK 2026-10-24: View-menu opt-in floating play/pause with shared playback link; no native player remount; widget tests only Flutter analysis + focused suite, NO platform builds.
+
+DS5 R21 PAUSED DETACH FOCUSED RETRY 2026-10-24: paused detach/reattach floating transport widget regression; Flutter analysis/focused tests only; NO native builds.

@@ -46,3 +46,7 @@ in GitHub Actions, submit test data to MSone, or imply Windows acceptance.
 - Remaining context menus and complete mobile/desktop regression review
 
 The platform remains **not yet certified feature-parity complete**.
+
+## Paused-detach refinement
+
+The shared playback link now exposes an explicit attachment notifier. An already-paused player can detach without changing the `playing` value; the floating button listens to both values so it disables immediately and re-enables when a native player attaches again. A widget test verifies paused detach and reattach.
