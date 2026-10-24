@@ -37,3 +37,5 @@ DS5 R3 2026-10-24: verify guarded native desktop SRT Save / Save As / Export, fi
 DS5 R3 widget-test selector fix 2026-10-24: re-run analyzer and Studio Dock tests after disambiguating dialog Apply; Flutter-only, no builds.
 
 DS5 R3 Isar test bootstrap correction 2026-10-24: rerun focused Flutter analyze/test without widget-binding network interception. No builds.
+
+DS5 R4a 2026-10-24: verify guarded complete .msone Save and Save As, checkpoint/ref snapshot, Studio Dock File menu with Flutter analyzer and focused widget/integration tests only.
