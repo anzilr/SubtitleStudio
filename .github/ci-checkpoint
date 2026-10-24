@@ -212,3 +212,5 @@ DS5 R12 VALIDATION FULL RETRY 2026-10-24: keep typed invalid negative and malfor
 DS5 R13 FULL GATE 2026-10-24: restore the shared Import Comments .msone flow in Studio Dock using existing provider/import repository and one undoable checkpoint, with desktop modal and refresh tests; run Flutter pub get/analyze/full suite only. NO native builds.
 
 DS5 R14 FULL GATE 2026-10-24: reuse checkpoint-backed hearing-impaired cleanup, protect unsaved desktop drafts, refresh surviving cues and history; pub get/analyze/all flutter tests only, NO native builds.
+
+DS5 R14 EMPTY PROJECT TEST RETRY 2026-10-24: correct Tools menu expectation for zero-cue projects; Flutter analyze and full tests only. No native builds.

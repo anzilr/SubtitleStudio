@@ -53,7 +53,11 @@ void main() {
 
     await launch(tester, empty: true,
         cleanup: (_) async => null);
-    expect(find.byKey(const ValueKey('studio-tools-menu')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('studio-tools-menu')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Remove Hearing Impaired'), findsNothing);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
 
