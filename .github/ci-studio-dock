@@ -49,3 +49,5 @@ DS5 R5a 2026-10-24: guarded desktop raw Source View using shared SRT parser/reco
 DS5 R5a widget test timing correction: pump after entering raw SRT before tapping newly enabled Apply button; rerun analyzer and focused tests only, no builds.
 
 DS5 R5b 2026-10-24: atomic Notes metadata review/history, shared Style tags, color and 9-grid controls, tab draft confirmation, notes+style widget and persistence tests. Run flutter pub get/analyze and focused Studio Dock tests ONLY; no platform builds.
+
+DS5 R5b inspector Material fix: wrap review switches in own transparent Material to satisfy Flutter ListTile ink assertions. Re-run analyze and focused widget/integration tests only; no platform builds.
