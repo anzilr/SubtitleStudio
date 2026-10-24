@@ -66,7 +66,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('inspector-tab-Notes')));
     await tester.pumpAndSettle();
-    expect(find.text('This subtitle is marked for review.'), findsOneWidget);
+    expect(find.text('Review unresolved · this subtitle needs attention.'),
+        findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('desktop-cue-5')));
     await tester.pumpAndSettle();
     expect(find.text('No review mark on this subtitle.'), findsOneWidget);

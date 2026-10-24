@@ -121,4 +121,15 @@ void main() {
     expect(body, contains('New edits continue from this point'));
     expect(body, contains('editing paths and bookmarks stay available'));
   });
+
+  test('grouped review resolution has readable history titles', () {
+    expect(CheckpointHistoryLabels.entryTitle(
+        operationType: 'annotation',
+        description: 'Resolved reviews on 3 subtitles'),
+        'Resolved reviews on 3 subtitles');
+    expect(CheckpointHistoryLabels.entryTitle(
+        operationType: 'annotation',
+        description: 'Reopened reviews on 2 subtitles'),
+        'Reopened reviews on 2 subtitles');
+  });
 }

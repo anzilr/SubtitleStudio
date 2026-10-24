@@ -238,7 +238,8 @@ class _StudioDockSessionViewState
   }
 
   Future<StudioDockCueUpdate?> _applyBulkReview(
-      List<int> cueNumbers, bool marked, int preferredCue) async {
+      List<int> cueNumbers, StudioDockReviewAction action,
+      int preferredCue) async {
     final baseline = _latestBaseline;
     if (baseline == null || !widget.enableEditing) return null;
     try {
@@ -248,7 +249,7 @@ class _StudioDockSessionViewState
       ).apply(
         baseline: baseline,
         cueNumbers: cueNumbers.toSet(),
-        marked: marked,
+        action: action,
       );
       if (!mounted || updated == null) return null;
       setState(() => _latestBaseline = updated);

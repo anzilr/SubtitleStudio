@@ -53,7 +53,8 @@ void main() {
     final baseline = await loader.load(
         sessionId: ids.sessionId, collectionId: ids.collectionId);
     final updated = await review.apply(
-        baseline: baseline, cueNumbers: {1, 2}, marked: true);
+        baseline: baseline, cueNumbers: {1, 2},
+        action: StudioDockReviewAction.mark);
     expect(updated, isNotNull);
     expect(updated!.cues.every((cue) => cue.marked), isTrue);
     expect(updated.cues.first.comment, 'Existing note');
@@ -69,13 +70,82 @@ void main() {
     final baseline = await loader.load(
         sessionId: ids.sessionId, collectionId: ids.collectionId);
     final updated = await review.apply(
-        baseline: baseline, cueNumbers: {1, 2}, marked: false);
+        baseline: baseline, cueNumbers: {1, 2},
+        action: StudioDockReviewAction.unmark);
     expect(updated, isNotNull);
     expect(updated!.cues.first.marked, isFalse);
     expect(updated.cues.first.comment, isNull);
     expect(updated.cues.first.resolved, isFalse);
     expect(updated.cues.last.marked, isFalse);
     expect(await db.isar.checkpoints.count(), 2);
+  });
+
+  test('resolve and reopen preserve marks, comments and text', () async {
+    final ids = await seed();
+    final baseline = await loader.load(
+        sessionId: ids.sessionId, collectionId: ids.collectionId);
+    final resolved = await review.apply(
+        baseline: baseline, cueNumbers: {1, 2},
+        action: StudioDockReviewAction.resolve);
+    expect(resolved, isNotNull);
+    expect(resolved!.cues.every((cue) => cue.marked && cue.resolved), isTrue);
+    expect(resolved.cues.first.comment, 'Existing note');
+    expect(resolved.cues.last.edited, 'Edited 2');
+    expect(await db.isar.checkpoints.count(), 2);
+
+    final reopened = await review.apply(
+        baseline: resolved, cueNumbers: {1, 2},
+        action: StudioDockReviewAction.reopen);
+    expect(reopened, isNotNull);
+    expect(reopened!.cues.every((cue) => cue.marked && !cue.resolved), isTrue);
+    expect(reopened.cues.first.comment, 'Existing note');
+    expect(await db.isar.checkpoints.count(), 3);
+  });
+
+  test('reopening an unmarked cue does not mark it', () async {
+    final ids = await seed();
+    final baseline = await loader.load(
+        sessionId: ids.sessionId, collectionId: ids.collectionId);
+    expect(await review.apply(
+        baseline: baseline, cueNumbers: {2},
+        action: StudioDockReviewAction.reopen), same(baseline));
+    expect(await db.isar.checkpoints.count(), 0);
+  });
+
+  test('unchanged selected cues are guarded during a mixed batch', () async {
+    final ids = await seed();
+    final baseline = await loader.load(
+        sessionId: ids.sessionId, collectionId: ids.collectionId);
+    await db.isar.writeTxn(() async {
+      final collection =
+          (await db.isar.subtitleCollections.get(ids.collectionId))!;
+      // Cue 1 is already resolved, but its annotation must still be guarded.
+      collection.lines.first.comment = 'Concurrent review edit';
+      await db.isar.subtitleCollections.put(collection);
+    });
+    expect(await review.apply(
+        baseline: baseline, cueNumbers: {1, 2},
+        action: StudioDockReviewAction.resolve), isNull);
+    final persisted = (await db.isar.subtitleCollections.get(ids.collectionId))!;
+    expect(persisted.lines.first.comment, 'Concurrent review edit');
+    expect(persisted.lines.last.resolved, isFalse);
+    expect(await db.isar.checkpoints.count(), 0);
+  });
+
+  test('unchanged review action also rejects stale state', () async {
+    final ids = await seed();
+    final baseline = await loader.load(
+        sessionId: ids.sessionId, collectionId: ids.collectionId);
+    await db.isar.writeTxn(() async {
+      final collection =
+          (await db.isar.subtitleCollections.get(ids.collectionId))!;
+      collection.lines.first.edited = 'Concurrent text edit';
+      await db.isar.subtitleCollections.put(collection);
+    });
+    expect(await review.apply(
+        baseline: baseline, cueNumbers: {1},
+        action: StudioDockReviewAction.resolve), isNull);
+    expect(await db.isar.checkpoints.count(), 0);
   });
 
   test('a concurrent note change rejects the group without partial changes',
@@ -90,7 +160,8 @@ void main() {
       await db.isar.subtitleCollections.put(collection);
     });
     expect(await review.apply(
-        baseline: baseline, cueNumbers: {1, 2}, marked: true), isNull);
+        baseline: baseline, cueNumbers: {1, 2},
+        action: StudioDockReviewAction.mark), isNull);
     final persisted = (await db.isar.subtitleCollections.get(ids.collectionId))!;
     expect(persisted.lines.last.marked, isFalse);
     expect(persisted.lines.last.comment, 'New note in other window');
@@ -102,9 +173,11 @@ void main() {
     final baseline = await loader.load(
         sessionId: ids.sessionId, collectionId: ids.collectionId);
     expect(await review.apply(
-        baseline: baseline, cueNumbers: {99}, marked: true), isNull);
+        baseline: baseline, cueNumbers: {99},
+        action: StudioDockReviewAction.mark), isNull);
     expect(await review.apply(
-        baseline: baseline, cueNumbers: {}, marked: true), isNull);
+        baseline: baseline, cueNumbers: {},
+        action: StudioDockReviewAction.mark), isNull);
     expect(await db.isar.checkpoints.count(), 0);
   });
 }

@@ -19,7 +19,10 @@ import 'studio_dock_file_actions.dart';
 import 'studio_dock_style_actions.dart';
 import 'studio_dock_style_color_dialog.dart';
 import 'studio_dock_search_service.dart';
+import 'studio_dock_bulk_review_service.dart';
 import '../../utils/msone_hotkey_manager.dart';
+
+enum _StudioDockReviewFilter { all, marked, unresolved, resolved }
 
 /// One subtitle row displayed in the Studio Dock workspace.
 @immutable
@@ -146,7 +149,8 @@ class StudioDockWorkspace extends StatefulWidget {
       int cueNumber, String? comment, bool marked, bool resolved)?
       onApplyCueNotes;
   final Future<StudioDockCueUpdate?> Function(
-      List<int> cueNumbers, bool marked, int preferredCue)? onApplyBulkReview;
+      List<int> cueNumbers, StudioDockReviewAction action,
+      int preferredCue)? onApplyBulkReview;
   /// Read-only query from the authoritative loaded session snapshot.
   final List<StudioDockSearchHit> Function(
       String term, bool caseSensitive, bool wholeWord)? onFindCues;
@@ -244,6 +248,7 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   double _videoShare = .38;
   double _waveformShare = .24;
   String _query = '';
+  _StudioDockReviewFilter _reviewFilter = _StudioDockReviewFilter.all;
   int? _draftCueId;
   String? _draftText;
   int? _draftTimingCueId;
@@ -274,6 +279,13 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   StudioDockCue get _selected =>
       _cues.firstWhere((cue) => cue.id == _selectedId);
   List<StudioDockCue> get _visible => _cues.where((cue) {
+    final included = switch (_reviewFilter) {
+      _StudioDockReviewFilter.all => true,
+      _StudioDockReviewFilter.marked => cue.marked,
+      _StudioDockReviewFilter.unresolved => cue.marked && !cue.resolved,
+      _StudioDockReviewFilter.resolved => cue.marked && cue.resolved,
+    };
+    if (!included) return false;
     final q = _query.trim().toLowerCase();
     return q.isEmpty || cue.original.toLowerCase().contains(q) ||
         cue.edited.toLowerCase().contains(q) ||
@@ -636,38 +648,55 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         : (_selectedId > 0 ? [_selectedId] : <int>[]);
     if (ids.isEmpty) return;
     final chosen = _cues.where((cue) => ids.contains(cue.id));
-    await _applyReviewSelection(ids, marked: !chosen.every((cue) => cue.marked));
+    await _applyReviewSelection(ids, action: chosen.every((cue) => cue.marked)
+        ? StudioDockReviewAction.unmark : StudioDockReviewAction.mark);
   }
 
   Future<void> _applyReviewSelection(
-      List<int> cueNumbers, {required bool marked}) async {
+      List<int> cueNumbers, {required StudioDockReviewAction action}) async {
     final apply = widget.onApplyBulkReview;
     if (apply == null || _changingStructure || _savingDraft ||
         cueNumbers.isEmpty) return;
     if (!await _confirmDraftBeforeLeaving() || !mounted) return;
     final chosen = _cues.where((cue) => cueNumbers.contains(cue.id)).toList();
     if (chosen.length != cueNumbers.toSet().length) return;
-    final clearsNotes = !marked && chosen.any((cue) =>
+    final clearsNotes = action == StudioDockReviewAction.unmark && chosen.any((cue) =>
         cue.comment?.isNotEmpty == true || cue.resolved);
-    if (cueNumbers.length > 1 || clearsNotes) {
+    final marksUnmarked = action == StudioDockReviewAction.resolve &&
+        chosen.any((cue) => !cue.marked);
+    final name = switch (action) {
+      StudioDockReviewAction.mark => 'Mark',
+      StudioDockReviewAction.unmark => 'Unmark',
+      StudioDockReviewAction.resolve => 'Resolve',
+      StudioDockReviewAction.reopen => 'Reopen',
+    };
+    final prompt = switch (action) {
+      StudioDockReviewAction.mark =>
+        'Mark ${cueNumbers.length} selected subtitles for review?',
+      StudioDockReviewAction.unmark =>
+        'Remove review marks from ${cueNumbers.length} subtitles? '
+        '${clearsNotes ? 'Their comments and resolved flags will also be cleared.' : ''}',
+      StudioDockReviewAction.resolve =>
+        'Resolve ${cueNumbers.length} selected subtitles? '
+        '${marksUnmarked ? 'Unmarked subtitles will also be marked for review. ' : ''}'
+        'Comments will be kept.',
+      StudioDockReviewAction.reopen =>
+        'Reopen ${cueNumbers.length} selected reviews? '
+        'Marks and comments will be kept.',
+    };
+    if (cueNumbers.length > 1 || clearsNotes || marksUnmarked) {
       final approved = await showDialog<bool>(
         context: context,
         builder: (dialog) => AlertDialog(
-          title: Text(marked ? 'Mark selected subtitles?' :
-              'Remove selected review marks?'),
-          content: Text(marked
-              ? 'Mark ${cueNumbers.length} selected subtitles for review? '
-                  'One history point will be saved.'
-              : 'Unmark ${cueNumbers.length} selected subtitles? '
-                  '${clearsNotes ? 'Their comments and resolved flags will also be cleared. ' : ''}'
-                  'One history point will be saved.'),
+          title: Text('$name selected subtitles?'),
+          content: Text('$prompt One history point will be saved.'),
           actions: [
             TextButton(onPressed: () => Navigator.pop(dialog, false),
                 child: const Text('Cancel')),
             FilledButton(
               key: const ValueKey('studio-bulk-review-confirm'),
               onPressed: () => Navigator.pop(dialog, true),
-              child: Text(marked ? 'Mark' : 'Unmark'),
+              child: Text(name),
             ),
           ],
         ),
@@ -679,7 +708,7 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     setState(() => _changingStructure = true);
     StudioDockCueUpdate? update;
     try {
-      update = await apply(cueNumbers, marked, selected);
+      update = await apply(cueNumbers, action, selected);
     } catch (_) {
       update = null;
     }
@@ -687,7 +716,7 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     setState(() => _changingStructure = false);
     if (update == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Could not update review marks. The subtitles may '
+        content: Text('Could not update reviews. The subtitles may '
             'have changed elsewhere. Please refresh before retrying.'),
       ));
       return;
@@ -2337,17 +2366,43 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     Row(children: [
       Expanded(child: _paneHeader(Icons.view_list_outlined, 'SUBTITLE LINES',
         trailing: _visible.length.toString() + ' / ' + _cues.length.toString())),
+      DropdownButtonHideUnderline(child: DropdownButton<_StudioDockReviewFilter>(
+        key: const ValueKey('studio-review-filter'),
+        value: _reviewFilter,
+        isDense: true,
+        style: TextStyle(fontSize: 11,
+            color: Theme.of(context).colorScheme.onSurface),
+        items: const [
+          DropdownMenuItem(value: _StudioDockReviewFilter.all,
+              child: Text('All lines')),
+          DropdownMenuItem(value: _StudioDockReviewFilter.marked,
+              child: Text('Marked')),
+          DropdownMenuItem(value: _StudioDockReviewFilter.unresolved,
+              child: Text('Unresolved')),
+          DropdownMenuItem(value: _StudioDockReviewFilter.resolved,
+              child: Text('Resolved')),
+        ],
+        onChanged: (filter) {
+          if (filter != null) setState(() => _reviewFilter = filter);
+        },
+      )),
       if (widget.onApplyBulkReview != null)
-        PopupMenuButton<bool>(
+        PopupMenuButton<StudioDockReviewAction>(
           key: const ValueKey('studio-bulk-review-menu'),
           tooltip: 'Review selected subtitles',
           enabled: _selectedIds.isNotEmpty && !_changingStructure,
           icon: const Icon(Icons.bookmarks_outlined),
-          onSelected: (marked) => unawaited(_applyReviewSelection(
-              _selectedIds.toList(), marked: marked)),
+          onSelected: (action) => unawaited(_applyReviewSelection(
+              _selectedIds.toList(), action: action)),
           itemBuilder: (_) => const [
-            PopupMenuItem(value: true, child: Text('Mark selected for review')),
-            PopupMenuItem(value: false, child: Text('Unmark selected')),
+            PopupMenuItem(value: StudioDockReviewAction.mark,
+                child: Text('Mark selected for review')),
+            PopupMenuItem(value: StudioDockReviewAction.unmark,
+                child: Text('Unmark selected')),
+            PopupMenuItem(value: StudioDockReviewAction.resolve,
+                child: Text('Resolve selected')),
+            PopupMenuItem(value: StudioDockReviewAction.reopen,
+                child: Text('Reopen selected')),
           ],
         ),
       if (widget.playback != null) IconButton(
@@ -2449,6 +2504,10 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               child: Text('Mark selected for review')),
           PopupMenuItem(value: 'unmark-selected',
               child: Text('Unmark selected')),
+          PopupMenuItem(value: 'resolve-selected',
+              child: Text('Resolve selected')),
+          PopupMenuItem(value: 'reopen-selected',
+              child: Text('Reopen selected')),
         ],
         if (!widget.isLiveSession)
           const PopupMenuItem(value: 'mark',
@@ -2466,12 +2525,22 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       case 'mark-selected':
         unawaited(_applyReviewSelection(
           _selectedIds.contains(cue.id) ? _selectedIds.toList() : [cue.id],
-          marked: true,
+          action: StudioDockReviewAction.mark,
         ));
       case 'unmark-selected':
         unawaited(_applyReviewSelection(
           _selectedIds.contains(cue.id) ? _selectedIds.toList() : [cue.id],
-          marked: false,
+          action: StudioDockReviewAction.unmark,
+        ));
+      case 'resolve-selected':
+        unawaited(_applyReviewSelection(
+          _selectedIds.contains(cue.id) ? _selectedIds.toList() : [cue.id],
+          action: StudioDockReviewAction.resolve,
+        ));
+      case 'reopen-selected':
+        unawaited(_applyReviewSelection(
+          _selectedIds.contains(cue.id) ? _selectedIds.toList() : [cue.id],
+          action: StudioDockReviewAction.reopen,
         ));
       case 'copy':
         await Clipboard.setData(
@@ -2507,9 +2576,17 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                   () => _dispatchManagedAction(HotkeyAction.playPause)),
             if (widget.onApplyBulkReview != null) ...[
               MapEntry('Mark selected for review', () => unawaited(
-                  _applyReviewSelection(_selectedIds.toList(), marked: true))),
+                  _applyReviewSelection(_selectedIds.toList(),
+                      action: StudioDockReviewAction.mark))),
               MapEntry('Unmark selected subtitles', () => unawaited(
-                  _applyReviewSelection(_selectedIds.toList(), marked: false))),
+                  _applyReviewSelection(_selectedIds.toList(),
+                      action: StudioDockReviewAction.unmark))),
+              MapEntry('Resolve selected reviews', () => unawaited(
+                  _applyReviewSelection(_selectedIds.toList(),
+                      action: StudioDockReviewAction.resolve))),
+              MapEntry('Reopen selected reviews', () => unawaited(
+                  _applyReviewSelection(_selectedIds.toList(),
+                      action: StudioDockReviewAction.reopen))),
             ] else if (!widget.isLiveSession)
               MapEntry('Toggle review mark', _toggleMarkedSelection),
             MapEntry('Reset workspace layout', _resetLayout),
@@ -2583,9 +2660,16 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       )),
       SizedBox(width: 55, child: heading
           ? cell('STATUS')
-          : cue.marked
-              ? const Icon(Icons.bookmark, color: Color(0xFFE9C46A),
-                  size: 14)
+          : cue.resolved
+              ? Tooltip(message: 'Review resolved', child: Icon(
+                  Icons.check_circle_outline, color: _accent, size: 16))
+              : cue.marked
+              ? Tooltip(message: 'Needs review', child: Icon(
+                  Icons.bookmark_outline,
+                  color: Theme.of(context).colorScheme.tertiary, size: 16))
+              : cue.comment?.trim().isNotEmpty == true
+              ? Tooltip(message: 'Comment without review mark', child: Icon(
+                  Icons.chat_bubble_outline, color: _muted, size: 16))
               : const SizedBox.shrink()),
     ]);
   }
@@ -2899,7 +2983,9 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         return [
           _fieldLabel('REVIEW NOTES'),
           Text(_noteMarked
-              ? 'This subtitle is marked for review.'
+              ? (_noteResolved
+                  ? 'Review resolved · mark and comments are kept.'
+                  : 'Review unresolved · this subtitle needs attention.')
               : 'No review mark on this subtitle.',
               style: const TextStyle(fontSize: 12)),
           const SizedBox(height: 12),

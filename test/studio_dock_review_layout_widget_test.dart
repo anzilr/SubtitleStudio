@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:subtitle_studio/desktop/workspace/studio_dock_bulk_review_service.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_workspace.dart';
 
 void main() {
@@ -9,7 +10,8 @@ void main() {
 
   Future<void> launch(WidgetTester tester, {
     Size size = const Size(1680, 1000),
-    Future<StudioDockCueUpdate?> Function(List<int>, bool, int)? review,
+    Future<StudioDockCueUpdate?> Function(
+        List<int>, StudioDockReviewAction, int)? review,
     Future<bool> Function(int, String)? applyText,
     Future<bool> Function(int, String, String)? applyTiming,
   }) async {
@@ -39,9 +41,10 @@ void main() {
 
   testWidgets('multi-cue mark/unmark confirms and retains selection',
       (tester) async {
-    final calls = <(List<int>, bool, int)>[];
-    await launch(tester, review: (ids, marked, selected) async {
-      calls.add((List<int>.from(ids), marked, selected));
+    final calls = <(List<int>, StudioDockReviewAction, int)>[];
+    await launch(tester, review: (ids, action, selected) async {
+      calls.add((List<int>.from(ids), action, selected));
+      final marked = action == StudioDockReviewAction.mark;
       return StudioDockCueUpdate(
         selectedCueId: selected,
         selectedCueIds: ids,
@@ -81,7 +84,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(calls, hasLength(1));
     expect(calls.first.$1, [1, 2]);
-    expect(calls.first.$2, isTrue);
+    expect(calls.first.$2, StudioDockReviewAction.mark);
 
     await tester.tap(find.byKey(const ValueKey('studio-bulk-review-menu')));
     await tester.pumpAndSettle();
@@ -93,7 +96,64 @@ void main() {
     await tester.pumpAndSettle();
     expect(calls, hasLength(2));
     expect(calls.last.$1, [1, 2]);
-    expect(calls.last.$2, isFalse);
+    expect(calls.last.$2, StudioDockReviewAction.unmark);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('resolve and reopen selected reviews keep marks and notes',
+      (tester) async {
+    final calls = <StudioDockReviewAction>[];
+    var resolved = false;
+    await launch(tester, review: (ids, action, selected) async {
+      calls.add(action);
+      resolved = action == StudioDockReviewAction.resolve;
+      return StudioDockCueUpdate(
+        selectedCueId: selected,
+        selectedCueIds: ids,
+        cues: [
+          StudioDockCue(id: 1, start: '00:00:01,000',
+            end: '00:00:02,000', original: 'First original',
+            edited: 'First edited', marked: true,
+            comment: 'Needs review', resolved: resolved),
+          StudioDockCue(id: 2, start: '00:00:03,000',
+            end: '00:00:04,000', original: 'Second original',
+            edited: 'Second edited', marked: true, resolved: resolved),
+        ],
+      );
+    });
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.tap(find.byKey(const ValueKey('desktop-cue-2')));
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('studio-bulk-review-menu')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Resolve selected'));
+    await tester.pumpAndSettle();
+    expect(find.text('Resolve selected subtitles?'), findsOneWidget);
+    expect(find.textContaining('Unmarked subtitles will also be marked'),
+        findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('studio-bulk-review-confirm')));
+    await tester.pumpAndSettle();
+    expect(calls, [StudioDockReviewAction.resolve]);
+    expect(find.byTooltip('Review resolved'), findsNWidgets(2));
+
+    await tester.tap(find.byKey(const ValueKey('studio-review-filter')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Unresolved').last);
+    await tester.pumpAndSettle();
+    expect(find.text('No matching subtitle lines'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('studio-bulk-review-menu')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Reopen selected'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('studio-bulk-review-confirm')));
+    await tester.pumpAndSettle();
+    expect(calls, [StudioDockReviewAction.resolve,
+        StudioDockReviewAction.reopen]);
+    expect(find.byTooltip('Needs review'), findsNWidgets(2));
+    expect(find.byKey(const ValueKey('desktop-cue-1')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

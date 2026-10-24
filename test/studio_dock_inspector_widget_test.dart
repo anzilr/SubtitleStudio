@@ -55,7 +55,8 @@ void main() {
     await tester.tap(apply);
     await tester.pumpAndSettle();
     expect(calls, [(1, 'Review this text', true, true)]);
-    expect(find.text('This subtitle is marked for review.'), findsOneWidget);
+    expect(find.text('Review resolved · mark and comments are kept.'),
+        findsOneWidget);
     expect(tester.widget<FilledButton>(apply).onPressed, isNull);
     expect(tester.takeException(), isNull);
   });

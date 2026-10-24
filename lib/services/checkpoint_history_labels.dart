@@ -62,6 +62,10 @@ class CheckpointHistoryLabels {
       RegExp(r'^Marked (\d+) subtitles for review$');
   static final RegExp _unmarkedMany =
       RegExp(r'^Removed review marks from (\d+) subtitles$');
+  static final RegExp _resolvedMany =
+      RegExp(r'^Resolved reviews on (\d+) subtitles$');
+  static final RegExp _reopenedMany =
+      RegExp(r'^Reopened reviews on (\d+) subtitles$');
   static final RegExp _comment = RegExp(r'^Updated comment on line (\d+)$');
   static final RegExp _reviewNotes =
       RegExp(r'^Updated review notes on line (\d+)$');
@@ -91,6 +95,8 @@ class CheckpointHistoryLabels {
       _matchMany(title, _markedMany, action: 'Marked') ??
       _matchOne(title, _unmarked, 'Removed review mark from subtitle') ??
       _matchMany(title, _unmarkedMany, action: 'Unmarked') ??
+      _matchMany(title, _resolvedMany, action: 'Resolved reviews on') ??
+      _matchMany(title, _reopenedMany, action: 'Reopened reviews on') ??
       _matchOne(title, _comment, 'Updated note on subtitle') ??
       _matchOne(title, _reviewNotes, 'Updated review notes on subtitle') ??
       _matchOne(title, _resolved, 'Updated review status of subtitle');
