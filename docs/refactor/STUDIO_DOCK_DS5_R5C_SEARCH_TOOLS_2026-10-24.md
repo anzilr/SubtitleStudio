@@ -53,4 +53,6 @@ Predecessor: `STUDIO_DOCK_DS5_R5B_STYLE_NOTES_2026-10-24.md`
 
 ## CI
 
-Pending.
+- [Focused Studio Dock #40077700880](https://github.com/anzilr/SubtitleStudio/actions/runs/40077700880): **PASS**, analyzer clean, **131 tests passed**.
+- [Full Flutter repository #40077892971](https://github.com/anzilr/SubtitleStudio/actions/runs/40077892971): **PASS**, analyzer clean, **933 tests passed**.
+- Only `flutter pub get`, `flutter analyze` and Flutter tests ran in GitHub Actions. Native Windows/media acceptance remains intentionally deferred until the user has the machine.
