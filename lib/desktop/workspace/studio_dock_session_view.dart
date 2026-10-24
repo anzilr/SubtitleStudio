@@ -12,7 +12,7 @@ import 'package:subtitle_studio/utils/msone_hotkey_manager.dart';
 import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
 import 'package:subtitle_studio/services/checkpoint_history_graph.dart';
 
-import 'desktop_workspace_preview.dart';
+import 'studio_dock_workspace.dart';
 import 'studio_dock_session_loader.dart';
 import 'studio_dock_session_snapshot.dart';
 import 'studio_dock_text_edit_service.dart';
@@ -28,18 +28,17 @@ import 'studio_dock_file_actions.dart';
 import 'studio_dock_project_save_actions.dart';
 import 'studio_dock_history_service.dart';
 
-/// Shared live-session Studio Dock host. In DS3 R2 it can optionally expose
-/// text-only editing through the existing atomic history transaction.
-/// Media, timing changes and external file export remain disconnected.
-class StudioDockReadOnlySessionView extends ConsumerStatefulWidget {
-  const StudioDockReadOnlySessionView({
+/// Live Studio Dock host backed by the shared project, subtitle, history,
+/// native media and file services.
+class StudioDockSessionView extends ConsumerStatefulWidget {
+  const StudioDockSessionView({
     super.key,
     required this.sessionId,
     required this.collectionId,
     this.onChooseProject,
     this.onImportFile,
     this.onNewProject,
-    this.enableTextEditing = false,
+    this.enableEditing = false,
     this.allowNativePlayback = false,
     this.suppressParentEditorHotkeys = true,
   });
@@ -49,8 +48,8 @@ class StudioDockReadOnlySessionView extends ConsumerStatefulWidget {
   final VoidCallback? onChooseProject;
   final VoidCallback? onImportFile;
   final VoidCallback? onNewProject;
-  /// Opt in to checkpoint-backed text edits; the old Editor preview stays read-only.
-  final bool enableTextEditing;
+  /// Opt in to checkpoint-backed edits for an existing session.
+  final bool enableEditing;
   /// Only true for the standalone native desktop Home. An Editor-hosted route
   /// leaves this false, avoiding a second player behind the classic Editor.
   final bool allowNativePlayback;
@@ -58,12 +57,12 @@ class StudioDockReadOnlySessionView extends ConsumerStatefulWidget {
   final bool suppressParentEditorHotkeys;
 
   @override
-  ConsumerState<StudioDockReadOnlySessionView> createState() =>
-      _StudioDockReadOnlySessionViewState();
+  ConsumerState<StudioDockSessionView> createState() =>
+      _StudioDockSessionViewState();
 }
 
-class _StudioDockReadOnlySessionViewState
-    extends ConsumerState<StudioDockReadOnlySessionView> {
+class _StudioDockSessionViewState
+    extends ConsumerState<StudioDockSessionView> {
   late Future<StudioDockSessionSnapshot> _snapshot;
   Future<String?>? _videoPath;
   bool _selectingVideo = false;
@@ -79,11 +78,11 @@ class _StudioDockReadOnlySessionViewState
   Future<CheckpointHistoryGraph> _loadHistory() =>
       _history.load(widget.sessionId);
 
-  Future<WorkspaceCueUpdate?> _restoreHistory(
+  Future<StudioDockCueUpdate?> _restoreHistory(
     int targetCheckpointId, int expectedHeadId, int preferredCueId,
   ) async {
     final baseline = _latestBaseline;
-    if (baseline == null || !widget.enableTextEditing) return null;
+    if (baseline == null || !widget.enableEditing) return null;
     try {
       final transition = await _history.checkout(
         baseline: baseline, expectedHeadId: expectedHeadId,
@@ -95,10 +94,10 @@ class _StudioDockReadOnlySessionViewState
           ? preferredCueId
           : restored.cues.isEmpty ? -1 : restored.cues.last.index;
       setState(() => _latestBaseline = restored);
-      return WorkspaceCueUpdate(
+      return StudioDockCueUpdate(
         cues: [
           for (final cue in restored.cues)
-            WorkspaceDemoCue(
+            StudioDockCue(
               id: cue.index, start: cue.start, end: cue.end,
               original: cue.original, edited: cue.edited, marked: cue.marked,
             ),
@@ -112,7 +111,7 @@ class _StudioDockReadOnlySessionViewState
 
   Future<bool> _applyText(int cueNumber, String editedText) async {
     final baseline = _latestBaseline;
-    if (baseline == null || !widget.enableTextEditing) return false;
+    if (baseline == null || !widget.enableEditing) return false;
     final service = StudioDockTextEditService(
       ref.read(projectRepositoryProvider),
       ref.read(subtitleRepositoryProvider),
@@ -133,7 +132,7 @@ class _StudioDockReadOnlySessionViewState
 
   Future<bool> _applyTiming(int cueNumber, String start, String end) async {
     final baseline = _latestBaseline;
-    if (baseline == null || !widget.enableTextEditing) return false;
+    if (baseline == null || !widget.enableEditing) return false;
     final service = StudioDockTimingEditService(
       ref.read(projectRepositoryProvider),
       ref.read(subtitleRepositoryProvider),
@@ -158,11 +157,11 @@ class _StudioDockReadOnlySessionViewState
     ref.read(subtitleRepositoryProvider),
   );
 
-  WorkspaceCueUpdate _toWorkspaceUpdate(StudioDockStructureChange change) =>
-      WorkspaceCueUpdate(
+  StudioDockCueUpdate _toWorkspaceUpdate(StudioDockStructureChange change) =>
+      StudioDockCueUpdate(
         cues: [
           for (final cue in change.snapshot.cues)
-            WorkspaceDemoCue(
+            StudioDockCue(
               id: cue.index,
               start: cue.start,
               end: cue.end,
@@ -174,12 +173,12 @@ class _StudioDockReadOnlySessionViewState
         selectedCueId: change.selectedCueNumber,
       );
 
-  Future<WorkspaceCueUpdate?> _insertCue(
+  Future<StudioDockCueUpdate?> _insertCue(
     int? afterCueNumber,
     StudioDockNewCueDraft draft,
   ) async {
     final baseline = _latestBaseline;
-    if (baseline == null || !widget.enableTextEditing) return null;
+    if (baseline == null || !widget.enableEditing) return null;
     try {
       final change = await _structure.insert(
         baseline: baseline,
@@ -197,9 +196,9 @@ class _StudioDockReadOnlySessionViewState
     }
   }
 
-  Future<WorkspaceCueUpdate?> _deleteCue(int cueNumber) async {
+  Future<StudioDockCueUpdate?> _deleteCue(int cueNumber) async {
     final baseline = _latestBaseline;
-    if (baseline == null || !widget.enableTextEditing) return null;
+    if (baseline == null || !widget.enableEditing) return null;
     try {
       final change = await _structure.delete(
         baseline: baseline, cueNumber: cueNumber);
@@ -211,11 +210,11 @@ class _StudioDockReadOnlySessionViewState
     }
   }
 
-  Future<WorkspaceCueUpdate?> _splitCue(
+  Future<StudioDockCueUpdate?> _splitCue(
     int cueNumber, StudioDockSplitCueDraft draft,
   ) async {
     final baseline = _latestBaseline;
-    if (baseline == null || !widget.enableTextEditing) return null;
+    if (baseline == null || !widget.enableEditing) return null;
     try {
       final change = await _structure.split(
         baseline: baseline,
@@ -234,11 +233,11 @@ class _StudioDockReadOnlySessionViewState
     }
   }
 
-  Future<WorkspaceCueUpdate?> _mergeCue(
+  Future<StudioDockCueUpdate?> _mergeCue(
     int cueNumber, bool withPrevious,
   ) async {
     final baseline = _latestBaseline;
-    if (baseline == null || !widget.enableTextEditing) return null;
+    if (baseline == null || !widget.enableEditing) return null;
     try {
       final change = await _structure.merge(
         baseline: baseline, cueNumber: cueNumber,
@@ -405,7 +404,7 @@ class _StudioDockReadOnlySessionViewState
   void initState() {
     super.initState();
     // Suppress the still-mounted Editor's native in-app hotkeys while this
-    // read-only route is visible, then restore them on disposal.
+    // embedded route is visible, then restore them on disposal.
     if (widget.suppressParentEditorHotkeys) {
       MSoneHotkeyManager.instance.suspendCallbacks();
     }
@@ -478,7 +477,7 @@ class _StudioDockReadOnlySessionViewState
   }
 
   @override
-  void didUpdateWidget(covariant StudioDockReadOnlySessionView oldWidget) {
+  void didUpdateWidget(covariant StudioDockSessionView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.sessionId != oldWidget.sessionId ||
         widget.collectionId != oldWidget.collectionId) {
@@ -519,7 +518,7 @@ class _StudioDockReadOnlySessionViewState
       final session = _latestBaseline!;
       final cues = [
         for (final line in session.cues)
-          WorkspaceDemoCue(
+          StudioDockCue(
             id: line.index,
             start: line.start,
             end: line.end,
@@ -528,34 +527,34 @@ class _StudioDockReadOnlySessionViewState
             marked: line.marked,
           ),
       ];
-      Widget buildDock(String? validVideoPath) => DesktopWorkspacePreview(
+      Widget buildDock(String? validVideoPath) => StudioDockWorkspace(
         key: ValueKey('studio-dock-session-${session.sessionId}'),
         initialCues: cues,
         playback: widget.allowNativePlayback ? _playback : null,
-        liveReadOnly: true,
+        isLiveSession: true,
         projectTitle: session.fileName,
         encoding: session.encoding,
         onChooseProject: widget.onChooseProject,
         onImportFile: widget.onImportFile,
         onNewProject: widget.onNewProject,
         onChooseVideo: widget.allowNativePlayback ? _chooseVideo : null,
-        onApplyCueText: widget.enableTextEditing ? _applyText : null,
-        onApplyCueTiming: widget.enableTextEditing ? _applyTiming : null,
-        onInsertCue: widget.enableTextEditing ? _insertCue : null,
-        onDeleteCue: widget.enableTextEditing ? _deleteCue : null,
-        onSplitCue: widget.enableTextEditing ? _splitCue : null,
-        onMergeCue: widget.enableTextEditing ? _mergeCue : null,
-        onLoadHistory: widget.enableTextEditing ? _loadHistory : null,
-        onRestoreHistory: widget.enableTextEditing ? _restoreHistory : null,
-        onSaveFile: widget.enableTextEditing && widget.allowNativePlayback
+        onApplyCueText: widget.enableEditing ? _applyText : null,
+        onApplyCueTiming: widget.enableEditing ? _applyTiming : null,
+        onInsertCue: widget.enableEditing ? _insertCue : null,
+        onDeleteCue: widget.enableEditing ? _deleteCue : null,
+        onSplitCue: widget.enableEditing ? _splitCue : null,
+        onMergeCue: widget.enableEditing ? _mergeCue : null,
+        onLoadHistory: widget.enableEditing ? _loadHistory : null,
+        onRestoreHistory: widget.enableEditing ? _restoreHistory : null,
+        onSaveFile: widget.enableEditing && widget.allowNativePlayback
             ? _saveSubtitleFile : null,
-        onSaveAsFile: widget.enableTextEditing && widget.allowNativePlayback
+        onSaveAsFile: widget.enableEditing && widget.allowNativePlayback
             ? _saveAsSubtitleFile : null,
-        onExportFile: widget.enableTextEditing && widget.allowNativePlayback
+        onExportFile: widget.enableEditing && widget.allowNativePlayback
             ? _exportSubtitleFile : null,
-        onSaveProject: widget.enableTextEditing && widget.allowNativePlayback
+        onSaveProject: widget.enableEditing && widget.allowNativePlayback
             ? _saveProjectDocument : null,
-        onSaveProjectAs: widget.enableTextEditing && widget.allowNativePlayback
+        onSaveProjectAs: widget.enableEditing && widget.allowNativePlayback
             ? _saveProjectDocumentAs : null,
         manageLiveHotkeys: !widget.suppressParentEditorHotkeys,
         videoSurface: validVideoPath == null || !widget.allowNativePlayback

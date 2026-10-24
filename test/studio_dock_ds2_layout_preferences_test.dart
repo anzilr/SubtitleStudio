@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_layout_preferences.dart';
-import 'package:subtitle_studio/main_desktop_preview.dart';
+import '../tool/studio_dock_demo.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -57,7 +57,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(const DesktopWorkspacePreviewApp());
+    await tester.pumpWidget(const StudioDockDemoApp());
     await tester.pumpAndSettle();
 
     expect(find.text('PROJECT'), findsNothing);

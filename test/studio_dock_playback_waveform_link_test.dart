@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:subtitle_studio/desktop/workspace/desktop_workspace_preview.dart';
+import 'package:subtitle_studio/desktop/workspace/studio_dock_workspace.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_playback_link.dart';
 
 void main() {
@@ -62,10 +62,10 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     var opens = 0;
     await tester.pumpWidget(MaterialApp(
-      home: DesktopWorkspacePreview(
-        liveReadOnly: true,
+      home: StudioDockWorkspace(
+        isLiveSession: true,
         initialCues: const [
-          WorkspaceDemoCue(id: 1, start: '00:00:01,000',
+          StudioDockCue(id: 1, start: '00:00:01,000',
             end: '00:00:02,000', original: 'Source', edited: 'Old edit'),
         ],
         onApplyCueText: (_, __) async => true,
@@ -103,10 +103,10 @@ void main() {
     var waveformDisposals = 0;
 
     await tester.pumpWidget(MaterialApp(
-      home: DesktopWorkspacePreview(
-        liveReadOnly: true,
+      home: StudioDockWorkspace(
+        isLiveSession: true,
         initialCues: const [
-          WorkspaceDemoCue(
+          StudioDockCue(
             id: 1, start: '00:00:01,000',
             end: '00:00:02,000', original: 'Original', edited: ''),
         ],

@@ -8,7 +8,7 @@ import 'package:subtitle_studio/widgets/session_selection/session_project_import
 
 import 'studio_dock_project_actions.dart';
 
-import 'studio_dock_read_only_session_view.dart';
+import 'studio_dock_session_view.dart';
 
 /// Exclusive native desktop shell for Windows, Linux and macOS.
 /// Projects, imports, text editing and media remain in Studio Dock; the
@@ -252,14 +252,14 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
           return widget.sessionViewBuilder!(active, choose);
         }
         return Stack(children: [
-          StudioDockReadOnlySessionView(
+          StudioDockSessionView(
           key: ValueKey('studio-dock-active-session-$activeId-$_reloadRevision'),
           sessionId: active.id,
           collectionId: active.subtitleCollectionId,
           onChooseProject: choose,
           onImportFile: () => _importFile(),
           onNewProject: _createProject,
-          enableTextEditing: true,
+          enableEditing: true,
           allowNativePlayback: true,
           suppressParentEditorHotkeys: false,
         ),

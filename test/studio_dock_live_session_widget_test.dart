@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:subtitle_studio/desktop/workspace/desktop_workspace_preview.dart';
+import 'package:subtitle_studio/desktop/workspace/studio_dock_workspace.dart';
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
@@ -14,12 +14,12 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(const MaterialApp(
-      home: DesktopWorkspacePreview(
-        liveReadOnly: true,
+      home: StudioDockWorkspace(
+        isLiveSession: true,
         projectTitle: 'Live project.srt',
         encoding: 'UTF-8',
         initialCues: [
-          WorkspaceDemoCue(
+          StudioDockCue(
             id: 1,
             start: '00:00:00,000',
             end: '00:00:02,300',
@@ -58,9 +58,9 @@ void main() {
   testWidgets('empty live session does not invent a subtitle cue',
       (tester) async {
     await tester.pumpWidget(const MaterialApp(
-      home: DesktopWorkspacePreview(
+      home: StudioDockWorkspace(
         initialCues: [],
-        liveReadOnly: true,
+        isLiveSession: true,
       ),
     ));
     await tester.pumpAndSettle();

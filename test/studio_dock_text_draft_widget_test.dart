@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:subtitle_studio/desktop/workspace/desktop_workspace_preview.dart';
+import 'package:subtitle_studio/desktop/workspace/studio_dock_workspace.dart';
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
@@ -16,16 +16,16 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(MaterialApp(
-      home: DesktopWorkspacePreview(
-        liveReadOnly: true,
+      home: StudioDockWorkspace(
+        isLiveSession: true,
         onApplyCueText: apply,
         onApplyCueTiming: applyTiming,
         initialCues: const [
-          WorkspaceDemoCue(
+          StudioDockCue(
             id: 1, start: '00:00:01,000', end: '00:00:02,000',
             original: 'Original 1', edited: 'Earlier edit',
           ),
-          WorkspaceDemoCue(
+          StudioDockCue(
             id: 2, start: '00:00:03,000', end: '00:00:04,000',
             original: 'Original 2', edited: '',
           ),
@@ -91,12 +91,12 @@ void main() {
     var imports = 0;
     var creates = 0;
     await tester.pumpWidget(MaterialApp(
-      home: DesktopWorkspacePreview(
-        liveReadOnly: true,
+      home: StudioDockWorkspace(
+        isLiveSession: true,
         onApplyCueText: (_, __) async => true,
         onImportFile: () => imports++,
         onNewProject: () => creates++,
-        initialCues: const [WorkspaceDemoCue(
+        initialCues: const [StudioDockCue(
           id: 1, start: '00:00:01,000', end: '00:00:02,000',
           original: 'Original', edited: 'Earlier edit')],
       ),

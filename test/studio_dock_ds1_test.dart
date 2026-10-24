@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_geometry.dart';
-import 'package:subtitle_studio/main_desktop_preview.dart';
+import '../tool/studio_dock_demo.dart';
 
 void main() {
   test('balanced dock geometry uses 38/24/38 proportions', () {
@@ -28,7 +28,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(const DesktopWorkspacePreviewApp());
+    await tester.pumpWidget(const StudioDockDemoApp());
     await tester.pumpAndSettle();
 
     final video = tester.getSize(
@@ -52,7 +52,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(const DesktopWorkspacePreviewApp());
+    await tester.pumpWidget(const StudioDockDemoApp());
     await tester.pumpAndSettle();
 
     await tester.enterText(
@@ -72,7 +72,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(const DesktopWorkspacePreviewApp());
+    await tester.pumpWidget(const StudioDockDemoApp());
     await tester.pumpAndSettle();
 
     expect(find.text('LINE INSPECTOR'), findsNothing);

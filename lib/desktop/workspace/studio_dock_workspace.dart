@@ -15,10 +15,10 @@ import 'studio_dock_split_cue_dialog.dart';
 import 'studio_dock_file_actions.dart';
 import '../../utils/msone_hotkey_manager.dart';
 
-/// Demo-only cue; this screen intentionally does not persist any user data.
+/// One subtitle row displayed in the Studio Dock workspace.
 @immutable
-class WorkspaceDemoCue {
-  const WorkspaceDemoCue({
+class StudioDockCue {
+  const StudioDockCue({
     required this.id,
     required this.start,
     required this.end,
@@ -34,10 +34,10 @@ class WorkspaceDemoCue {
   final String edited;
   final bool marked;
 
-  WorkspaceDemoCue copyWith({
+  StudioDockCue copyWith({
     String? start, String? end, String? edited, bool? marked,
   }) =>
-      WorkspaceDemoCue(
+      StudioDockCue(
         id: id, start: start ?? this.start, end: end ?? this.end,
         original: original,
         edited: edited ?? this.edited, marked: marked ?? this.marked,
@@ -46,13 +46,13 @@ class WorkspaceDemoCue {
 
 /// Complete refreshed cue list after a structural history transaction.
 /// Structural commands can renumber every later cue; never patch just one row.
-class WorkspaceCueUpdate {
-  const WorkspaceCueUpdate({
+class StudioDockCueUpdate {
+  const StudioDockCueUpdate({
     required this.cues,
     required this.selectedCueId,
   });
 
-  final List<WorkspaceDemoCue> cues;
+  final List<StudioDockCue> cues;
   final int selectedCueId;
 }
 
@@ -60,14 +60,14 @@ enum _StudioDockFileMenuAction {
   save, saveAs, export, saveProject, saveProjectAs,
 }
 
-/// Desktop-first, data-isolated workspace design. Domain logic is intentionally
-/// absent: shared Editor, Isar, checkpoints, media and file-access providers
-/// remain authoritative in the refactoring branch.
-class DesktopWorkspacePreview extends StatefulWidget {
-  const DesktopWorkspacePreview({
+/// Desktop workspace UI. Persisted changes are handled by injected callbacks
+/// to the shared editor, history, media and file services.
+class StudioDockWorkspace extends StatefulWidget {
+  const StudioDockWorkspace({
     super.key,
-    this.initialCues,
-    this.liveReadOnly = false,
+    required this.initialCues,
+    this.initialSelectedCueId,
+    this.isLiveSession = false,
     this.projectTitle,
     this.encoding,
     this.onChooseProject,
@@ -93,10 +93,13 @@ class DesktopWorkspacePreview extends StatefulWidget {
     this.manageLiveHotkeys = false,
   });
 
-  /// Supplied only by the DS3 real-session loader. Demo mode still owns its
-  /// original sample cues and never touches a database.
-  final List<WorkspaceDemoCue>? initialCues;
-  final bool liveReadOnly;
+  /// The real session supplies its persisted cues; a development harness can
+  /// inject explicit sample cues. The production widget contains no fixture.
+  final List<StudioDockCue> initialCues;
+  /// Initial selection if present in [initialCues]; otherwise the first cue.
+  final int? initialSelectedCueId;
+  /// Distinguishes a session connected to shared services from a local demo.
+  final bool isLiveSession;
   final String? projectTitle;
   final String? encoding;
   final VoidCallback? onChooseProject;
@@ -105,22 +108,22 @@ class DesktopWorkspacePreview extends StatefulWidget {
   /// Non-null only when the production checkpoint-backed edit bridge is ready.
   final Future<bool> Function(int cueNumber, String editedText)? onApplyCueText;
   /// Production timing changes use the same optimistic history boundary as
-  /// text edits. Null in demo or read-only previews.
+  /// text edits. Null when timing edits are unavailable.
   final Future<bool> Function(int cueNumber, String start, String end)?
       onApplyCueTiming;
-  final Future<WorkspaceCueUpdate?> Function(
+  final Future<StudioDockCueUpdate?> Function(
       int? afterCueNumber, StudioDockNewCueDraft draft)? onInsertCue;
-  final Future<WorkspaceCueUpdate?> Function(int cueNumber)? onDeleteCue;
-  final Future<WorkspaceCueUpdate?> Function(
+  final Future<StudioDockCueUpdate?> Function(int cueNumber)? onDeleteCue;
+  final Future<StudioDockCueUpdate?> Function(
       int cueNumber, StudioDockSplitCueDraft draft)? onSplitCue;
-  final Future<WorkspaceCueUpdate?> Function(
+  final Future<StudioDockCueUpdate?> Function(
       int cueNumber, bool withPrevious)? onMergeCue;
   /// The shared checkpoint graph is authoritative; never infer Undo/Redo
-  /// availability from the local preview's cue list.
+  /// availability from the workspace's local cue list.
   final Future<CheckpointHistoryGraph> Function()? onLoadHistory;
   /// Restores a saved point with the HEAD observed by this window. Returns
   /// complete persisted cues, not a partial UI-only edit.
-  final Future<WorkspaceCueUpdate?> Function(
+  final Future<StudioDockCueUpdate?> Function(
       int targetCheckpointId, int expectedHeadId, int preferredCueId)?
       onRestoreHistory;
   /// File Save is separate from the already checkpoint-backed inspector Apply.
@@ -130,70 +133,31 @@ class DesktopWorkspacePreview extends StatefulWidget {
   /// Complete .msone document with checkpoint graph, separate from SRT Save.
   final Future<StudioDockFileResult> Function()? onSaveProject;
   final Future<StudioDockFileResult> Function()? onSaveProjectAs;
-  /// Optional existing native-player surface. Only the standalone desktop
-  /// host may provide it; the classic Editor preview must leave it null.
+  /// Optional existing native-player surface, supplied by the session host.
   final Widget? videoSurface;
   /// The real production waveform shares a seek/position link with video.
   final Widget? waveformSurface;
   final StudioDockPlaybackLink? playback;
   /// Select/change media with the existing native picker and video repository.
   final VoidCallback? onChooseVideo;
-  /// Standalone desktop is allowed to own shared application callbacks;
-  /// an overlay on the classic Editor must not override its registrations.
+  /// Standalone desktop may manage hotkeys; an embedded host must not override
+  /// callbacks owned by its parent.
   final bool manageLiveHotkeys;
 
   @override
-  State<DesktopWorkspacePreview> createState() =>
-      _DesktopWorkspacePreviewState();
+  State<StudioDockWorkspace> createState() =>
+      _StudioDockWorkspaceState();
 }
 
-class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
+class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   Color get _accent => Theme.of(context).colorScheme.primary;
   Color get _border => Theme.of(context).colorScheme.outlineVariant;
   Color get _muted => Theme.of(context).colorScheme.onSurfaceVariant;
 
-  static const List<WorkspaceDemoCue> _demoCues = [
-    const WorkspaceDemoCue(id: 1, start: '00:00:08,200', end: '00:00:11,400',
-      original: 'The city always looks different at night.',
-      edited: 'The city always looks different at night.'),
-    const WorkspaceDemoCue(id: 2, start: '00:00:12,100', end: '00:00:15,800',
-      original: 'Especially when there is nowhere to go.',
-      edited: 'Especially when there is nowhere to go.'),
-    const WorkspaceDemoCue(id: 3, start: '00:00:17,300', end: '00:00:20,500',
-      original: 'I thought we had more time.',
-      edited: 'I thought we had more time.'),
-    const WorkspaceDemoCue(id: 4, start: '00:00:21,800', end: '00:00:24,700',
-      original: 'The last train left an hour ago.',
-      edited: 'The last train left an hour ago.'),
-    const WorkspaceDemoCue(id: 5, start: '00:00:26,100', end: '00:00:29,300',
-      original: 'Meet me where the lights end.',
-      edited: 'Meet me where the lights end.', marked: true),
-    const WorkspaceDemoCue(id: 6, start: '00:00:30,000', end: '00:00:33,900',
-      original: 'Every road leads somewhere.',
-      edited: 'Every road leads somewhere.'),
-    const WorkspaceDemoCue(id: 7, start: '00:00:35,500', end: '00:00:38,600',
-      original: 'Not every story has an ending.',
-      edited: 'Not every story has an ending.'),
-    const WorkspaceDemoCue(id: 8, start: '00:00:40,200', end: '00:00:43,700',
-      original: 'We could begin again.',
-      edited: 'We could begin again.'),
-    const WorkspaceDemoCue(id: 9, start: '00:00:44,900', end: '00:00:48,000',
-      original: 'Are you coming with me?',
-      edited: 'Are you coming with me?'),
-    const WorkspaceDemoCue(id: 10, start: '00:00:50,500', end: '00:00:53,600',
-      original: 'Only if we take the long way.',
-      edited: 'Only if we take the long way.'),
-    const WorkspaceDemoCue(id: 11, start: '00:00:56,900', end: '00:01:00,000',
-      original: 'It is almost midnight.',
-      edited: 'It is almost midnight.'),
-    const WorkspaceDemoCue(id: 12, start: '00:01:01,200', end: '00:01:04,700',
-      original: 'Then let us not waste another minute.',
-      edited: 'Then let us not waste another minute.'),
-  ];
-  late final List<WorkspaceDemoCue> _cues;
-  int _selectedId = 5;
-  int _selectionAnchor = 5;
-  final Set<int> _selectedIds = {5};
+  late final List<StudioDockCue> _cues;
+  int _selectedId = -1;
+  int _selectionAnchor = -1;
+  final Set<int> _selectedIds = {};
   final StudioDockLayoutPreferences _layoutPreferences = StudioDockLayoutPreferences();
   Timer? _layoutSaveTimer;
   bool _layoutChangedSinceMount = false;
@@ -231,9 +195,9 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   double _sidebarWidth = 240;
   double _inspectorWidth = 320;
 
-  WorkspaceDemoCue get _selected =>
+  StudioDockCue get _selected =>
       _cues.firstWhere((cue) => cue.id == _selectedId);
-  List<WorkspaceDemoCue> get _visible => _cues.where((cue) {
+  List<StudioDockCue> get _visible => _cues.where((cue) {
     final q = _query.trim().toLowerCase();
     return q.isEmpty || cue.original.toLowerCase().contains(q) ||
         cue.edited.toLowerCase().contains(q) ||
@@ -265,20 +229,17 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   @override
   void initState() {
     super.initState();
-    _cues = List<WorkspaceDemoCue>.from(
-        widget.initialCues ?? _demoCues);
-    if (widget.initialCues != null) {
-      _selectedId = _cues.isEmpty ? -1 : _cues.first.id;
-      _selectionAnchor = _selectedId;
-      _selectedIds
-        ..clear()
-        ..addAll(_selectedId > 0 ? [_selectedId] : <int>[]);
-    }
+    _cues = List<StudioDockCue>.from(widget.initialCues);
+    _selectedId = _cues.isEmpty ? -1 :
+        _cues.any((cue) => cue.id == widget.initialSelectedCueId)
+            ? widget.initialSelectedCueId! : _cues.first.id;
+    _selectionAnchor = _selectedId;
+    _selectedIds.addAll(_selectedId > 0 ? [_selectedId] : <int>[]);
     // Desktop entrypoint initializes the application's existing hotkey manager.
-    // Direct widget previews do not initialize native plugins.
-    // The live read-only viewer may be nested in an already-running Editor.
+    // Direct widget tests do not initialize native plugins.
+    // An embedded host may be nested in an already-running Editor.
     // Never override its registered MSoneHotkeyManager callbacks.
-    if (!widget.liveReadOnly || widget.manageLiveHotkeys) {
+    if (!widget.isLiveSession || widget.manageLiveHotkeys) {
       unawaited(_installManagedHotkeys());
     }
     widget.playback?.position.addListener(_onPlaybackPosition);
@@ -289,7 +250,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   Future<void> _installManagedHotkeys() async {
     final manager = MSoneHotkeyManager.instance;
     for (final action in _managedActions) {
-      if (widget.liveReadOnly && !_allowedLiveHotkey(action)) continue;
+      if (widget.isLiveSession && !_allowedLiveHotkey(action)) continue;
       if (!mounted) return;
       await manager.registerCallback(action, () {
         if (mounted && (!_isEditingText ||
@@ -301,7 +262,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   }
 
   @override
-  void didUpdateWidget(covariant DesktopWorkspacePreview oldWidget) {
+  void didUpdateWidget(covariant StudioDockWorkspace oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.playback != widget.playback) {
       oldWidget.playback?.position.removeListener(_onPlaybackPosition);
@@ -343,9 +304,9 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
     _cueScroll.dispose();
     _layoutSaveTimer?.cancel();
     if (_layoutChangedSinceMount) unawaited(_persistLayout());
-    if (!widget.liveReadOnly || widget.manageLiveHotkeys) {
+    if (!widget.isLiveSession || widget.manageLiveHotkeys) {
       for (final action in _managedActions) {
-        if (widget.liveReadOnly && !_allowedLiveHotkey(action)) continue;
+        if (widget.isLiveSession && !_allowedLiveHotkey(action)) continue;
         unawaited(MSoneHotkeyManager.instance.unregisterCallback(action));
       }
     }
@@ -430,7 +391,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
       case HotkeyAction.previousLine:
         _selectRelative(-1);
       case HotkeyAction.playPause:
-        if (!widget.liveReadOnly) {
+        if (!widget.isLiveSession) {
           setState(() => _playing = !_playing);
         }
       case HotkeyAction.findReplace:
@@ -501,7 +462,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
         expectedHead == targetCheckpointId || _historyNavigationBlocked) return;
     if (!await _confirmDraftBeforeLeaving() || !mounted) return;
     setState(() => _historyBusy = true);
-    WorkspaceCueUpdate? update;
+    StudioDockCueUpdate? update;
     try {
       update = await restore(targetCheckpointId, expectedHead, _selectedId);
     } catch (_) {
@@ -573,7 +534,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   }
 
   void _toggleMarkedSelection() {
-    if (widget.liveReadOnly || _selectedIds.isEmpty) return;
+    if (widget.isLiveSession || _selectedIds.isEmpty) return;
     setState(() {
       for (var i = 0; i < _cues.length; i++) {
         final cue = _cues[i];
@@ -726,7 +687,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
     }
   }
 
-  void _acceptStructure(WorkspaceCueUpdate update) {
+  void _acceptStructure(StudioDockCueUpdate update) {
     setState(() {
       _cues..clear()..addAll(update.cues);
       _selectedId = update.selectedCueId;
@@ -1097,8 +1058,8 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
     return KeyEventResult.handled;
   }
 
-  void _replaceCue(WorkspaceDemoCue updated) {
-    if (widget.liveReadOnly) return;
+  void _replaceCue(StudioDockCue updated) {
+    if (widget.isLiveSession) return;
     final i = _cues.indexWhere((cue) => cue.id == updated.id);
     if (i < 0) return;
     setState(() => _cues[i] = updated);
@@ -1401,7 +1362,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
               ? null : () => unawaited(_redoHistory()),
         ),
       ],
-      Text(widget.onApplyCueText != null ? 'LIVE · TEXT EDIT' : (widget.liveReadOnly ? 'LIVE · READ ONLY' : 'DEMO WORKSPACE'),
+      Text(widget.onApplyCueText != null ? 'LIVE · TEXT EDIT' : (widget.isLiveSession ? 'LIVE · READ ONLY' : 'DEMO WORKSPACE'),
         style: TextStyle(
           color: _muted, letterSpacing: 1, fontSize: 10)),
       if (widget.onChooseVideo != null)
@@ -1508,7 +1469,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
       const SizedBox(width: 7),
       Icon(Icons.circle, size: 9, color: _accent),
       const SizedBox(width: 7),
-      Text(widget.onApplyCueText != null ? 'Text editing' : (widget.liveReadOnly ? 'Read-only' : 'Preview'),
+      Text(widget.onApplyCueText != null ? 'Text editing' : (widget.isLiveSession ? 'Read-only' : 'Preview'),
           style: const TextStyle(fontSize: 12)),
     ]),
   );
@@ -1553,7 +1514,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
     ),
   );
 
-  Widget _projectSidebar() => widget.liveReadOnly
+  Widget _projectSidebar() => widget.isLiveSession
       ? _readOnlyProjectSidebar()
       : Container(
     decoration: BoxDecoration(border:
@@ -1748,7 +1709,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
         const Spacer(),
         Icon(Icons.aspect_ratio, size: 15, color: _muted),
         const SizedBox(width: 8),
-        Text(widget.liveReadOnly ? 'Media not connected' : '16:9 · Demo clip',
+        Text(widget.isLiveSession ? 'Media not connected' : '16:9 · Demo clip',
             style: TextStyle(fontSize: 11, color: _muted)),
       ]),
       SizedBox(height: 10),
@@ -1769,14 +1730,14 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
               Positioned.fill(child: CustomPaint(
                 painter: const _DemoHorizonPainter())),
               Positioned(left: 17, top: 13,
-                child: Text(widget.liveReadOnly
+                child: Text(widget.isLiveSession
                     ? 'REAL CUES · VIDEO NOT CONNECTED'
                     : 'DEMO VIDEO · PLACEHOLDER',
                   style: const TextStyle(fontSize: 10,
                     color: Color(0xFFACB6BD), letterSpacing: 1))),
               Center(child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Text(widget.liveReadOnly
+                child: Text(widget.isLiveSession
                     ? (_selected.edited.isEmpty
                         ? _selected.original : _selected.edited)
                     : _selected.edited,
@@ -1808,17 +1769,17 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
         key: const ValueKey('preview-play'),
         icon: Icon(_playing ? Icons.pause_circle_filled_rounded
             : Icons.play_circle_fill_rounded, color: _accent, size: 25),
-        tooltip: widget.liveReadOnly
+        tooltip: widget.isLiveSession
             ? 'Media playback is not connected in this preview'
             : 'Toggle simulated playback',
-        onPressed: widget.liveReadOnly ? null
+        onPressed: widget.isLiveSession ? null
             : () => _dispatchManagedAction(HotkeyAction.playPause)),
       IconButton(icon: const Icon(Icons.skip_next_rounded, size: 19),
         tooltip: 'Next cue', onPressed: () => _selectRelative(1)),
       const SizedBox(width: 14),
       Text(_selected.start, style: const TextStyle(
           fontSize: 12, fontFeatures: [FontFeature.tabularFigures()])),
-      Text(widget.liveReadOnly ? ' / no media' : ' / 00:12:45',
+      Text(widget.isLiveSession ? ' / no media' : ' / 00:12:45',
         style: TextStyle(color: _muted, fontSize: 12)),
       const Spacer(),
       Text('1.0×', style: TextStyle(color: _muted, fontSize: 11)),
@@ -1838,14 +1799,14 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
             fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: .8)),
         const SizedBox(width: 10),
         Text(widget.waveformSurface != null ? 'Synced with video' :
-            (widget.liveReadOnly ? 'Audio not connected' : 'Audio track: Auto'),
+            (widget.isLiveSession ? 'Audio not connected' : 'Audio track: Auto'),
             style: TextStyle(fontSize: 10, color: _muted)),
         const Spacer(),
         Text('–  00:30  +', style:
             TextStyle(color: _muted, fontSize: 10)),
       ]),
       SizedBox(height: 7),
-      Expanded(child: widget.waveformSurface ?? (widget.liveReadOnly
+      Expanded(child: widget.waveformSurface ?? (widget.isLiveSession
           ? Center(child: Text('Waveform integration pending',
               style: TextStyle(color: _muted, fontSize: 11)))
           : SizedBox.expand(
@@ -1941,7 +1902,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
 
 
   Future<void> _showCueContextMenu(
-      WorkspaceDemoCue cue, Offset position) async {
+      StudioDockCue cue, Offset position) async {
     final renderObject = Overlay.of(context).context.findRenderObject();
     if (renderObject is! RenderBox) return;
     final result = await showMenu<String>(
@@ -1952,7 +1913,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
       ),
       items: [
         const PopupMenuItem(value: 'select', child: Text('Select cue')),
-        if (!widget.liveReadOnly)
+        if (!widget.isLiveSession)
           const PopupMenuItem(value: 'mark',
               child: Text('Toggle review mark')),
         const PopupMenuItem(value: 'copy', child: Text('Copy timecodes')),
@@ -1991,10 +1952,10 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
             if (widget.onLoadHistory != null)
               MapEntry('Show editing history', () =>
                   setState(() => _section = 1)),
-            if (!widget.liveReadOnly)
+            if (!widget.isLiveSession)
               MapEntry('Toggle playback preview',
                   () => _dispatchManagedAction(HotkeyAction.playPause)),
-            if (!widget.liveReadOnly)
+            if (!widget.isLiveSession)
               MapEntry('Toggle review mark', _toggleMarkedSelection),
             MapEntry('Reset workspace layout', _resetLayout),
             MapEntry('Show Inspector: Text', () => setState(() {
@@ -2047,7 +2008,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
     );
   }
 
-  Widget _gridCells(WorkspaceDemoCue? cue) {
+  Widget _gridCells(StudioDockCue? cue) {
     final heading = cue == null;
     Text cell(String value, {bool primary = false}) => Text(
       value, maxLines: 1, overflow: TextOverflow.ellipsis,
@@ -2077,7 +2038,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
     ]);
   }
 
-  String _cueDuration(WorkspaceDemoCue cue) {
+  String _cueDuration(StudioDockCue cue) {
     int parse(String value) {
       final parts = value.split(RegExp('[:,]'));
       if (parts.length != 4) return 0;
@@ -2125,7 +2086,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
           child: Text(widget.onApplyCueText != null ||
                   widget.onApplyCueTiming != null
               ? 'Apply updates the local project with checkpoint history'
-              : (widget.liveReadOnly
+              : (widget.isLiveSession
                   ? 'Read-only session · no changes are saved'
                   : 'Demo only · changes are not saved to files'),
             textAlign: TextAlign.center,
@@ -2152,7 +2113,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
           const SizedBox(height: 17),
           _fieldLabel(widget.onApplyCueText != null
               ? 'EDITED TEXT · UNSAVED UNTIL APPLIED'
-              : (widget.liveReadOnly
+              : (widget.isLiveSession
                   ? 'EDITED TEXT · READ ONLY'
                   : 'EDITED TEXT · DEMO ONLY')),
           TextFormField(
@@ -2163,7 +2124,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
             initialValue: _draftCueId == _selectedId && _draftText != null
                 ? _draftText : _selected.edited,
             readOnly: _savingDraft ||
-                (widget.liveReadOnly && widget.onApplyCueText == null),
+                (widget.isLiveSession && widget.onApplyCueText == null),
             minLines: 3, maxLines: 8,
             style: const TextStyle(fontSize: 13, height: 1.5),
             decoration: InputDecoration(
@@ -2203,7 +2164,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
           ],
           const SizedBox(height: 14),
           OutlinedButton.icon(
-            onPressed: widget.liveReadOnly ? null : () => _replaceCue(
+            onPressed: widget.isLiveSession ? null : () => _replaceCue(
                 _selected.copyWith(edited: _selected.original)),
             icon: const Icon(Icons.restore, size: 15),
             label: const Text('Reset to original'),
@@ -2305,7 +2266,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
           const SizedBox(height: 15),
           OutlinedButton.icon(
             key: const ValueKey('desktop-mark-cue'),
-            onPressed: widget.liveReadOnly ? null : () => _replaceCue(_selected.copyWith(
+            onPressed: widget.isLiveSession ? null : () => _replaceCue(_selected.copyWith(
                 marked: !_selected.marked)),
             icon: Icon(_selected.marked
                 ? Icons.bookmark : Icons.bookmark_outline, size: 15),
@@ -2469,7 +2430,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
       const SizedBox(width: 8),
       Expanded(child: Text(widget.onApplyCueText != null
           ? 'Real session · text edits require Apply · checkpoint-backed'
-          : (widget.liveReadOnly
+          : (widget.isLiveSession
               ? 'Real session · read only · no database changes'
               : 'Demo workspace · no files are modified'),
         style: TextStyle(color: _muted, fontSize: 10))),

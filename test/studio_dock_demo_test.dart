@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:subtitle_studio/main_desktop_preview.dart';
+import '../tool/studio_dock_demo.dart';
 
 void main() {
   setUp(() {
@@ -18,7 +18,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(const DesktopWorkspacePreviewApp());
+    await tester.pumpWidget(const StudioDockDemoApp());
     await tester.pumpAndSettle();
 
     expect(find.text('SubtitleStudio'), findsOneWidget);
@@ -37,7 +37,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(const DesktopWorkspacePreviewApp());
+    await tester.pumpWidget(const StudioDockDemoApp());
     await tester.enterText(
         find.byKey(const ValueKey('desktop-cue-search')), 'midnight');
     await tester.pumpAndSettle();
@@ -59,7 +59,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(const DesktopWorkspacePreviewApp());
+    await tester.pumpWidget(const StudioDockDemoApp());
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const ValueKey('toggle-inspector')));
@@ -84,7 +84,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(const DesktopWorkspacePreviewApp());
+    await tester.pumpWidget(const StudioDockDemoApp());
     await tester.pumpAndSettle();
     expect(find.text('PROJECT'), findsNothing);
     expect(find.text('LINE INSPECTOR'), findsNothing);

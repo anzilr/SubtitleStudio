@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:subtitle_studio/desktop/workspace/desktop_workspace_preview.dart';
+import 'package:subtitle_studio/desktop/workspace/studio_dock_workspace.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_insert_cue_dialog.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_split_cue_dialog.dart';
 
-const _first = WorkspaceDemoCue(
+const _first = StudioDockCue(
   id: 1,
   start: '00:00:01,000', end: '00:00:02,000',
   original: 'Original 1', edited: 'Edit 1',
 );
-const _second = WorkspaceDemoCue(
+const _second = StudioDockCue(
   id: 2,
   start: '00:00:03,000', end: '00:00:04,000',
   original: 'Original 2', edited: 'Edit 2',
@@ -21,11 +21,11 @@ void main() {
 
   Future<void> launch(
     WidgetTester tester, {
-    List<WorkspaceDemoCue> cues = const [_first],
-    Future<WorkspaceCueUpdate?> Function(int?, StudioDockNewCueDraft)? insert,
-    Future<WorkspaceCueUpdate?> Function(int)? delete,
-    Future<WorkspaceCueUpdate?> Function(int, StudioDockSplitCueDraft)? split,
-    Future<WorkspaceCueUpdate?> Function(int, bool)? merge,
+    List<StudioDockCue> cues = const [_first],
+    Future<StudioDockCueUpdate?> Function(int?, StudioDockNewCueDraft)? insert,
+    Future<StudioDockCueUpdate?> Function(int)? delete,
+    Future<StudioDockCueUpdate?> Function(int, StudioDockSplitCueDraft)? split,
+    Future<StudioDockCueUpdate?> Function(int, bool)? merge,
     Future<bool> Function(int, String)? applyText,
   }) async {
     tester.view.physicalSize = const Size(1680, 1000);
@@ -33,8 +33,8 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(MaterialApp(
-      home: DesktopWorkspacePreview(
-        liveReadOnly: true,
+      home: StudioDockWorkspace(
+        isLiveSession: true,
         initialCues: cues,
         onInsertCue: insert,
         onDeleteCue: delete,
@@ -51,7 +51,7 @@ void main() {
     final attempts = <String>[];
     await launch(tester, insert: (after, draft) async {
       attempts.add('$after:${draft.start}:${draft.original}');
-      return const WorkspaceCueUpdate(
+      return const StudioDockCueUpdate(
         cues: [_first, _second], selectedCueId: 2);
     });
     await tester.tap(find.byKey(const ValueKey('studio-dock-insert-cue')));
@@ -88,7 +88,7 @@ void main() {
       attempts++;
       if (attempts == 1) return null;
       expect(draft.original, 'Retained draft');
-      return const WorkspaceCueUpdate(
+      return const StudioDockCueUpdate(
         cues: [_first, _second], selectedCueId: 2);
     });
     await tester.tap(find.byKey(const ValueKey('studio-dock-insert-cue')));
@@ -114,8 +114,8 @@ void main() {
       delete: (cue) async {
         deletions++;
         expect(cue, 1);
-        return const WorkspaceCueUpdate(
-          cues: [WorkspaceDemoCue(
+        return const StudioDockCueUpdate(
+          cues: [StudioDockCue(
             id: 1, start: '00:00:03,000', end: '00:00:04,000',
             original: 'Original 2', edited: 'Edit 2',
           )], selectedCueId: 1);
@@ -145,7 +145,7 @@ void main() {
       cues: const [],
       insert: (after, draft) async {
         anchor = after;
-        return const WorkspaceCueUpdate(cues: [_first], selectedCueId: 1);
+        return const StudioDockCueUpdate(cues: [_first], selectedCueId: 1);
       },
     );
     expect(find.text('This project has no subtitle cues yet.'), findsOneWidget);
@@ -187,7 +187,7 @@ void main() {
       expect(number, 1);
       attempts.add(draft);
       if (attempts.length == 1) return null;
-      return const WorkspaceCueUpdate(cues: [_first, _second], selectedCueId: 1);
+      return const StudioDockCueUpdate(cues: [_first, _second], selectedCueId: 1);
     });
     await tester.tap(find.byKey(const ValueKey('studio-dock-split-cue')));
     await tester.pumpAndSettle();
@@ -237,8 +237,8 @@ void main() {
       cues: const [_first, _second],
       merge: (cue, previous) async {
         requests.add('$cue:$previous');
-        return const WorkspaceCueUpdate(
-          cues: [WorkspaceDemoCue(
+        return const StudioDockCueUpdate(
+          cues: [StudioDockCue(
             id: 1, start: '00:00:01,000', end: '00:00:04,000',
             original: 'Original 1\nOriginal 2', edited: 'Edit 1\nEdit 2',
           )], selectedCueId: 1);

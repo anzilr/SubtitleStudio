@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:subtitle_studio/desktop/workspace/desktop_workspace_preview.dart';
+import 'package:subtitle_studio/desktop/workspace/studio_dock_workspace.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_media_plan.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_session_snapshot.dart';
 
@@ -70,10 +70,10 @@ void main() {
     var imports = 0;
     var newProjects = 0;
     await tester.pumpWidget(MaterialApp(
-      home: DesktopWorkspacePreview(
-        liveReadOnly: true,
+      home: StudioDockWorkspace(
+        isLiveSession: true,
         initialCues: const [
-          WorkspaceDemoCue(id: 1, start: '00:00:01,000',
+          StudioDockCue(id: 1, start: '00:00:01,000',
             end: '00:00:02,000', original: 'Source', edited: ''),
         ],
         onImportFile: () => imports++,
@@ -100,13 +100,13 @@ void main() {
     var mounted = 0;
     var disposed = 0;
     await tester.pumpWidget(MaterialApp(
-      home: DesktopWorkspacePreview(
+      home: StudioDockWorkspace(
         initialCues: const [
-          WorkspaceDemoCue(
+          StudioDockCue(
             id: 1, start: '00:00:01,000', end: '00:00:02,000',
             original: 'Actual cue', edited: 'Edited cue'),
         ],
-        liveReadOnly: true,
+        isLiveSession: true,
         videoSurface: _TestVideoSlot(
           onMount: () => mounted++,
           onDispose: () => disposed++,

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:subtitle_studio/database/models/models.dart';
-import 'package:subtitle_studio/desktop/workspace/desktop_workspace_preview.dart';
+import 'package:subtitle_studio/desktop/workspace/studio_dock_workspace.dart';
 import 'package:subtitle_studio/services/checkpoint_history_graph.dart';
 
 CheckpointHistoryGraph graph(int head, {bool fork = false}) {
@@ -38,7 +38,7 @@ CheckpointHistoryGraph graph(int head, {bool fork = false}) {
   );
 }
 
-const first = WorkspaceDemoCue(
+const first = StudioDockCue(
   id: 1, start: '00:00:01,000', end: '00:00:02,000',
   original: 'Original text', edited: 'Edited text',
 );
@@ -49,15 +49,15 @@ void main() {
   Future<void> launch(
     WidgetTester tester, {
     required Future<CheckpointHistoryGraph> Function() load,
-    required Future<WorkspaceCueUpdate?> Function(int, int, int) restore,
+    required Future<StudioDockCueUpdate?> Function(int, int, int) restore,
     Future<bool> Function(int, String)? applyText,
   }) async {
     tester.view.physicalSize = const Size(1680, 1000);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(MaterialApp(home: DesktopWorkspacePreview(
-      liveReadOnly: true, initialCues: const [first],
+    await tester.pumpWidget(MaterialApp(home: StudioDockWorkspace(
+      isLiveSession: true, initialCues: const [first],
       onLoadHistory: load, onRestoreHistory: restore,
       onApplyCueText: applyText,
     )));
@@ -73,7 +73,7 @@ void main() {
       restore: (target, expected, selected) async {
         moves.add('$target:$expected:$selected');
         head = target;
-        return WorkspaceCueUpdate(
+        return StudioDockCueUpdate(
           cues: [first.copyWith(edited:
               target == 1 ? 'Edited text' : 'Restored version')],
           selectedCueId: 1,
@@ -108,7 +108,7 @@ void main() {
         expect(expected, 1);
         moves.add(target);
         head = target;
-        return const WorkspaceCueUpdate(cues: [first], selectedCueId: 1);
+        return const StudioDockCueUpdate(cues: [first], selectedCueId: 1);
       },
     );
     await tester.tap(find.byKey(const ValueKey('studio-dock-redo')));

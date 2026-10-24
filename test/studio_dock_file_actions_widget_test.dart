@@ -3,10 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:subtitle_studio/desktop/workspace/desktop_workspace_preview.dart';
+import 'package:subtitle_studio/desktop/workspace/studio_dock_workspace.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_file_actions.dart';
 
-const _cue = WorkspaceDemoCue(
+const _cue = StudioDockCue(
   id: 1, start: '00:00:01,000', end: '00:00:02,000',
   original: 'Original', edited: 'Old edit',
 );
@@ -27,8 +27,8 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(MaterialApp(home: DesktopWorkspacePreview(
-      liveReadOnly: true,
+    await tester.pumpWidget(MaterialApp(home: StudioDockWorkspace(
+      isLiveSession: true,
       initialCues: const [_cue],
       onSaveFile: save,
       onSaveAsFile: saveAs,
