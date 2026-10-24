@@ -35,3 +35,5 @@ DS5 R2b guarded split/combine 2026-10-24: run analyzer and Studio Dock widget/in
 DS5 R3 2026-10-24: verify guarded native desktop SRT Save / Save As / Export, file relinking, stale output snapshots, cancellation, overwrite confirmation, macOS bookmark, menu and hotkeys. flutter pub get/analyze/test only; no platform builds.
 
 DS5 R3 widget-test selector fix 2026-10-24: re-run analyzer and Studio Dock tests after disambiguating dialog Apply; Flutter-only, no builds.
+
+DS5 R3 Isar test bootstrap correction 2026-10-24: rerun focused Flutter analyze/test without widget-binding network interception. No builds.
