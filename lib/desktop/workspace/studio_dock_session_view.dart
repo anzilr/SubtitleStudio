@@ -14,6 +14,7 @@ import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
 import 'package:subtitle_studio/services/checkpoint_history_graph.dart';
 import 'package:subtitle_studio/screens/screen_help.dart';
 import 'package:subtitle_studio/widgets/settings_sheet.dart';
+import 'package:subtitle_studio/widgets/project_settings_sheet.dart';
 import 'package:subtitle_studio/screens/msone_submission_flow.dart';
 import 'package:subtitle_studio/screens/edit/services/editor_secondary_subtitle_service.dart';
 import 'package:subtitle_studio/utils/subtitle_parser.dart';
@@ -160,6 +161,16 @@ class _StudioDockSessionViewState
   void _toggleSecondaryVisibility() {
     if (!mounted || _secondarySource == EditorSecondarySubtitleSource.none) return;
     setState(() => _showSecondary = !_showSecondary);
+  }
+
+  void _clearSecondaryLocally() {
+    if (!mounted) return;
+    ++_secondaryRevision;
+    setState(() {
+      _secondarySource = EditorSecondarySubtitleSource.none;
+      _externalSecondary = const [];
+      _showSecondary = false;
+    });
   }
 
   Future<void> _openSecondaryPicker() async {
@@ -880,6 +891,98 @@ class _StudioDockSessionViewState
     if (mounted) await _refreshMsonePreference();
   }
 
+  Future<void> _saveProjectFromSettings() async {
+    var result = await _saveProjectDocument();
+    if (result == StudioDockFileResult.needsLocation) {
+      result = await _saveProjectDocumentAs();
+    }
+    if (!mounted || result == StudioDockFileResult.canceled) return;
+    final message = switch (result) {
+      StudioDockFileResult.saved => 'Project file saved successfully.',
+      StudioDockFileResult.savedButUnlinked =>
+        'Project file written, but the project path could not be linked.',
+      StudioDockFileResult.stale =>
+        'The project changed during Save. Refresh and try again.',
+      _ => 'Could not save the project file. Please try again.',
+    };
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _refreshAfterProjectSettings() async {
+    final preferredCue = _dockKey.currentState?.selectedCueNumber ?? -1;
+    try {
+      final refreshed = await _load();
+      final resolvedVideo = widget.allowNativePlayback
+          ? await _resolveVideoPath() : null;
+      String? oldVideo;
+      try {
+        oldVideo = await _videoPath;
+      } catch (_) {
+        // An unavailable previous media link should not block project reload.
+      }
+      if (!mounted) return;
+      setState(() {
+        _latestBaseline = refreshed;
+        // Keep the initial FutureBuilder completed: replacing its Future
+        // would briefly remount the whole Dock and native media surface.
+        if (widget.allowNativePlayback && resolvedVideo != oldVideo) {
+          _videoPath = Future<String?>.value(resolvedVideo);
+        }
+      });
+      final selected = refreshed.cues.any((cue) => cue.index == preferredCue)
+          ? preferredCue
+          : refreshed.cues.isEmpty ? -1 : refreshed.cues.first.index;
+      _dockKey.currentState?.acceptExternalCueUpdate(
+          _snapshotUpdate(refreshed, selected));
+      await _refreshSavedSecondary();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Could not refresh Project Settings. Reopen the project before editing.'),
+        ));
+      }
+    }
+  }
+
+  Future<void> _openProjectSettings() async {
+    if (!mounted) return;
+    final session = await ref.read(projectRepositoryProvider)
+        .getSession(widget.sessionId);
+    final collection = await ref.read(subtitleRepositoryProvider)
+        .fetchSubtitleCollection(widget.collectionId);
+    if (!mounted) return;
+    if (session == null || collection == null ||
+        session.subtitleCollectionId != collection.id) {
+      throw StateError('The active subtitle project is unavailable.');
+    }
+    try {
+      await showDialog<void>(
+        context: context,
+        builder: (dialog) => Dialog(
+          insetPadding: const EdgeInsets.all(24),
+          child: SizedBox(
+            width: 880,
+            height: (MediaQuery.sizeOf(dialog).height - 64)
+                .clamp(240.0, 840.0).toDouble(),
+            child: ProjectSettingsSheet(
+              session: session,
+              subtitleCollection: collection,
+              // The sheet persists changes; reconcile the live Dock after the
+              // route closes so no stale cue/encoding/media state remains.
+              onProjectUpdated: () {},
+              onSecondarySubtitlesLoaded: _setSecondaryLocally,
+              onSecondarySubtitlesCleared: _clearSecondaryLocally,
+              onSaveProject: _saveProjectFromSettings,
+              onLoadVideo: _chooseVideo,
+            ),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) await _refreshAfterProjectSettings();
+    }
+  }
+
   Future<void> _openHelp() async {
     if (!mounted) return;
     await Navigator.of(context).push<void>(MaterialPageRoute(
@@ -971,6 +1074,9 @@ class _StudioDockSessionViewState
         onNewProject: widget.onNewProject,
         onChooseVideo: widget.allowNativePlayback ? _chooseVideo : null,
         onOpenAppSettings: _openAppSettings,
+        onOpenProjectSettings:
+            widget.enableEditing && widget.allowNativePlayback
+                ? _openProjectSettings : null,
         onOpenHelp: _openHelp,
         onSubmitToMsone: _msoneEnabled ? _submitToMsone : null,
         onLoadSecondarySubtitles: _openSecondaryPicker,

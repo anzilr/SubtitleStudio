@@ -196,3 +196,5 @@ DS5 R8 FULL GATE 2026-10-24: test desktop secondary-subtitle loading, saved sour
 DS5 R9 FULL GATE 2026-10-24: re-enable waveform timing edits and cue insertion for native Studio Dock using checkpoint-backed services; add compact toolbar and draft guard regressions. Run Flutter pub get, analyze and all Flutter tests only; NO native builds.
 
 DS5 R9 TOOLBAR FULL RETRY 2026-10-24: fix compact waveform rendering syntax and future handling caught by Flutter analyzer. Re-run analyzer and all tests only; no native builds.
+
+DS5 R10 FULL GATE 2026-10-24: validate native Studio Dock Project Settings wiring and shared repository lifecycle with popup, dirty-draft and empty-editor regressions. Run Flutter dependency resolution, analysis and complete test suite only; NO platform builds.

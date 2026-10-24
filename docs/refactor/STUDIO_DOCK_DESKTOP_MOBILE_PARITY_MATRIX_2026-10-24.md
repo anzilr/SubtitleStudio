@@ -41,7 +41,7 @@ acceptance. A wired callback is not proof of a working native interaction.
 | **Remove hearing-impaired annotations** | **Not yet exposed** | Reuse `HearingImpairedCleanupService` with history guard |
 | MSone submission (Existing Translator/Fresher, .msone or SRT pair) | Wired in DS5 R7 to the existing submission flow; shown only when MSone features are enabled | Native picker, completed form and route-return acceptance; never submit test data to the live endpoint |
 | **MSone banners and Malayalam Normalize** | **Not yet exposed** | Reuse mobile MSone feature gating and shared editing/history actions |
-| **Project Settings (encoding, media, secondary subs)** | **Not yet exposed** | Host existing `ProjectSettingsSheet` with fully connected callbacks |
+| Project Settings (encoding, media, secondary subs) | Wired in DS5 R10 to existing `ProjectSettingsSheet`, repository models and live media/secondary/history refresh after close | Native encoding selection/Save As, media unlink/replace, secondary clear, project rename, marked lines and route-return acceptance |
 | App Settings, theme, typography, waveform limits, checkpoints | Wired to **existing** `SettingsSheet` in DS5 R5f | Verify immediate preference propagation and skin changes |
 | Help & Documentation | Wired to **existing** `HelpScreen` in DS5 R5f | Navigation/back-stack widget and native acceptance |
 | Desktop shortcuts | Partially wired to existing hotkey manager | Reconcile every mobile/action binding, preferences and conflicts |
@@ -62,8 +62,9 @@ acceptance. A wired callback is not proof of a working native interaction.
 1. **P0 native acceptance:** Validate waveform time drags, cue creation,
    magnet snap, overlap, selected-cue scrolling and secondary-subtitle
    persistence/playback on a native desktop before declaring playback parity.
-2. **P1:** Project Settings/encoding, sync, selected-cue batch edit/delete,
-   import comments, Go To Line, hearing-impaired cleanup.
+2. **P1:** Sync, selected-cue batch edit/delete, import comments, Go To
+   Line and hearing-impaired cleanup; verify the now-wired Project Settings
+   on native desktop when available.
 3. **P2:** MSone-gated banners/normalization, fullscreen comment and
    mark callbacks, hotkey parity, theme/accessibility and native media QA.
 

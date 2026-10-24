@@ -90,7 +90,7 @@ class StudioDockCueUpdate {
 }
 
 enum _StudioDockFileMenuAction {
-  save, saveAs, export, saveProject, saveProjectAs,
+  save, saveAs, export, saveProject, saveProjectAs, projectSettings,
 }
 
 /// Desktop workspace UI. Persisted changes are handled by injected callbacks
@@ -134,6 +134,7 @@ class StudioDockWorkspace extends StatefulWidget {
     this.playback,
     this.onChooseVideo,
     this.onOpenAppSettings,
+    this.onOpenProjectSettings,
     this.onOpenHelp,
     this.onSubmitToMsone,
     this.onLoadSecondarySubtitles,
@@ -220,6 +221,9 @@ class StudioDockWorkspace extends StatefulWidget {
   /// Opens the production shared SettingsSheet instead of a parallel desktop
   /// preferences implementation. The host owns provider-dependent UI.
   final Future<void> Function()? onOpenAppSettings;
+  /// Hosts the existing ProjectSettingsSheet on native desktop. The live
+  /// session refreshes paths, encoding, cues and history when it closes.
+  final Future<void> Function()? onOpenProjectSettings;
   /// Opens the existing HelpScreen, shared with the mobile editor.
   final Future<void> Function()? onOpenHelp;
   /// Opens the established MSone submission flow after the current draft is
@@ -239,6 +243,8 @@ class StudioDockWorkspace extends StatefulWidget {
 }
 
 class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
+  int get selectedCueNumber => _selectedId;
+
   Color get _accent => Theme.of(context).colorScheme.primary;
   Color get _border => Theme.of(context).colorScheme.outlineVariant;
   Color get _muted => Theme.of(context).colorScheme.onSurfaceVariant;
@@ -271,8 +277,10 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   bool _replacingMatches = false;
   bool _runningTool = false;
   bool _openingMsoneSubmission = false;
+  bool _openingProjectSettings = false;
   ModalRoute<dynamic>? _msoneMenuRoute;
   ModalRoute<dynamic>? _secondaryMenuRoute;
+  ModalRoute<dynamic>? _projectSettingsMenuRoute;
   String? _findError;
   String? _toolsError;
   int _section = 0;
@@ -1103,6 +1111,26 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     }
   }
 
+  Future<void> _openProjectSettingsSafely({ModalRoute<dynamic>? afterMenu}) async {
+    final open = widget.onOpenProjectSettings;
+    if (open == null || _openingProjectSettings) return;
+    setState(() => _openingProjectSettings = true);
+    try {
+      // Keep the shared settings route clear of the outgoing File popup.
+      if (afterMenu != null) await afterMenu.completed;
+      if (!mounted || !await _confirmDraftBeforeLeaving() || !mounted) return;
+      await open();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Could not open Project Settings. Please try again.'),
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _openingProjectSettings = false);
+    }
+  }
+
   Future<void> _loadSecondarySafely({ModalRoute<dynamic>? afterMenu}) async {
     final load = widget.onLoadSecondarySubtitles;
     if (load == null) return;
@@ -1581,6 +1609,14 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                 onPressed: _openingMsoneSubmission ? null :
                     () => unawaited(_submitMsoneSafely()),
               ),
+            if (widget.onOpenProjectSettings != null)
+              IconButton(
+                key: const ValueKey('studio-empty-project-settings'),
+                icon: const Icon(Icons.settings_applications_outlined),
+                tooltip: 'Project Settings',
+                onPressed: _openingProjectSettings ? null :
+                    () => unawaited(_openProjectSettingsSafely()),
+              ),
             if (widget.onChooseProject != null)
               IconButton(
                 key: const ValueKey('studio-dock-switch-project'),
@@ -1728,11 +1764,13 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     child: SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(children: [
-        if (widget.onSaveFile != null || widget.onSaveProject != null)
+        if (widget.onSaveFile != null || widget.onSaveProject != null ||
+            widget.onOpenProjectSettings != null)
           PopupMenuButton<_StudioDockFileMenuAction>(
             key: const ValueKey('studio-file-menu'),
             tooltip: 'File actions',
-            enabled: !_savingFile && !_changingStructure,
+            enabled: !_savingFile && !_changingStructure &&
+                !_openingProjectSettings,
             onSelected: (action) {
               switch (action) {
                 case _StudioDockFileMenuAction.save:
@@ -1745,6 +1783,10 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                   unawaited(_saveProjectSafely());
                 case _StudioDockFileMenuAction.saveProjectAs:
                   unawaited(_saveProjectAsSafely());
+                case _StudioDockFileMenuAction.projectSettings:
+                  final menuRoute = _projectSettingsMenuRoute;
+                  _projectSettingsMenuRoute = null;
+                  unawaited(_openProjectSettingsSafely(afterMenu: menuRoute));
               }
             },
             itemBuilder: (_) => [
@@ -1762,6 +1804,16 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                   child: Text('Save project (.msone)')),
                 PopupMenuItem(value: _StudioDockFileMenuAction.saveProjectAs,
                   child: Text('Save project as…')),
+              ],
+              if (widget.onOpenProjectSettings != null) ...[
+                const PopupMenuDivider(),
+                PopupMenuItem(
+                  value: _StudioDockFileMenuAction.projectSettings,
+                  child: Builder(builder: (popupContext) {
+                    _projectSettingsMenuRoute = ModalRoute.of(popupContext);
+                    return const Text('Project Settings');
+                  }),
+                ),
               ],
             ],
             child: const Padding(
@@ -2010,6 +2062,14 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           icon: const Icon(Icons.video_file_outlined),
           tooltip: 'Attach or change video',
           onPressed: () => unawaited(_chooseVideoSafely()),
+        ),
+      if (widget.onOpenProjectSettings != null)
+        IconButton(
+          key: const ValueKey('studio-toolbar-project-settings'),
+          icon: const Icon(Icons.settings_applications_outlined),
+          tooltip: 'Project Settings',
+          onPressed: _openingProjectSettings ? null :
+              () => unawaited(_openProjectSettingsSafely()),
         ),
       if (widget.onInsertCue != null)
         IconButton(
