@@ -26,7 +26,7 @@ enum _StudioDockReviewFilter { all, marked, unresolved, resolved }
 
 enum _StudioDockMenuAction {
   undo, redo, find, copySelected, selectAll, addCue, deleteCue, splitCue, mergeCue, notes,
-  timing, shiftTools, showTools, sourceView, history,
+  timing, shiftTools, showTools, sourceView, history, submitMsone,
   explorer, inspector, settings, help,
 }
 
@@ -134,6 +134,7 @@ class StudioDockWorkspace extends StatefulWidget {
     this.onChooseVideo,
     this.onOpenAppSettings,
     this.onOpenHelp,
+    this.onSubmitToMsone,
     this.manageLiveHotkeys = false,
   });
 
@@ -217,6 +218,9 @@ class StudioDockWorkspace extends StatefulWidget {
   final Future<void> Function()? onOpenAppSettings;
   /// Opens the existing HelpScreen, shared with the mobile editor.
   final Future<void> Function()? onOpenHelp;
+  /// Opens the established MSone submission flow after the current draft is
+  /// resolved. The host checks the persisted MSone-features preference.
+  final Future<void> Function()? onSubmitToMsone;
   /// Standalone desktop may manage hotkeys; an embedded host must not override
   /// callbacks owned by its parent.
   final bool manageLiveHotkeys;
@@ -258,6 +262,8 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   bool _searched = false;
   bool _replacingMatches = false;
   bool _runningTool = false;
+  bool _openingMsoneSubmission = false;
+  ModalRoute<dynamic>? _msoneMenuRoute;
   String? _findError;
   String? _toolsError;
   int _section = 0;
@@ -1067,6 +1073,27 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     }
   }
 
+  Future<void> _submitMsoneSafely({ModalRoute<dynamic>? afterMenu}) async {
+    final submit = widget.onSubmitToMsone;
+    if (submit == null || _openingMsoneSubmission) return;
+    setState(() => _openingMsoneSubmission = true);
+    try {
+      // Match the mobile fix: a popup's barrier must be gone before the
+      // choice sheet and submission route enter the same Navigator overlay.
+      if (afterMenu != null) await afterMenu.completed;
+      if (!mounted || !await _confirmDraftBeforeLeaving() || !mounted) return;
+      await submit();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Could not open MSone submission. Please try again.'),
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _openingMsoneSubmission = false);
+    }
+  }
+
   void _acceptStructure(StudioDockCueUpdate update) {
     setState(() {
       _cues..clear()..addAll(update.cues);
@@ -1501,6 +1528,14 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                 onPressed: _changingStructure ? null :
                     () => unawaited(_addCueSafely()),
               ),
+            if (widget.onSubmitToMsone != null)
+              IconButton(
+                key: const ValueKey('studio-empty-submit-msone'),
+                icon: const Icon(Icons.cloud_upload_outlined),
+                tooltip: 'Submit to MSone',
+                onPressed: _openingMsoneSubmission ? null :
+                    () => unawaited(_submitMsoneSafely()),
+              ),
             if (widget.onChooseProject != null)
               IconButton(
                 key: const ValueKey('studio-dock-switch-project'),
@@ -1745,6 +1780,13 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           if (widget.onLoadHistory != null)
             const PopupMenuItem(value: _StudioDockMenuAction.history,
                 child: Text('Edit history')),
+          if (widget.onSubmitToMsone != null)
+            PopupMenuItem(value: _StudioDockMenuAction.submitMsone,
+              enabled: !_openingMsoneSubmission,
+              child: Builder(builder: (popupContext) {
+                _msoneMenuRoute = ModalRoute.of(popupContext);
+                return const Text('Submit to MSone');
+              })),
         ]),
         _desktopMenu('View', const ValueKey('studio-view-menu'), [
           const PopupMenuItem(value: _StudioDockMenuAction.explorer,
@@ -1808,6 +1850,10 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         unawaited(_switchSection(5));
       case _StudioDockMenuAction.history:
         unawaited(_switchSection(1));
+      case _StudioDockMenuAction.submitMsone:
+        final menuRoute = _msoneMenuRoute;
+        _msoneMenuRoute = null;
+        unawaited(_submitMsoneSafely(afterMenu: menuRoute));
       case _StudioDockMenuAction.explorer:
         _toggleExplorerPanel();
       case _StudioDockMenuAction.inspector:

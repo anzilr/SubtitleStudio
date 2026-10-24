@@ -69,3 +69,5 @@ DS5 R5f NULLABLE EDITED PARITY 2026-10-24: retain persisted null vs explicitly e
 DS5 R6 EDIT MODE PARITY 2026-10-24: retain session editMode in Studio Dock, expose scratch subtitle text only for insert/split/inspector/grid/export, and reconcile Source View into edited text in Edit Mode. Flutter analyzer and focused tests only; no native builds.
 
 DS5 R6 HEADER OVERFLOW FIX 2026-10-24: keep project mode badge flexible at narrow sidebar widths after CI exposed RenderFlex overflow across widget tests; settle inspector input before Apply assertion. Re-run focused analyzer/tests only.
+
+DS5 R7 MSONE SUBMISSION 2026-10-24: gate Studio Dock submission on existing MSone Isar setting, reuse shared translator/fresher submission routes and Android back-gesture recovery, wait menu overlay completion, protect unsaved drafts. Analyze and focused Studio Dock tests only, no online submissions or platform builds.

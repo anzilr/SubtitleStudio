@@ -22,6 +22,7 @@ acceptance. A wired callback is not proof of a working native interaction.
 | --- | --- | --- |
 | Create/open project, SRT/VTT/ASS/.msone import | Wired via desktop Home | Verify native file associations and reopened projects |
 | Save, Save As, SRT export, complete .msone project save | Wired to shared services | Native filename/encoding/round-trip acceptance |
+| Edit Mode (create subtitles from scratch) vs Translation Mode | Wired in DS5 R6 | Native mode-dependent inspector, cue insert/split, Source View and SRT export acceptance |
 | Video attach and video playback | Shared `VideoPlayerSection` / `VideoPlayerWidget` | Native controls and persistence acceptance |
 | Playback-follow subtitle highlight and seek | Wired through shared playback link | Native bidirectional seek/scroll/accuracy acceptance |
 | Waveform display and selected audio stream | Shared `WaveformWidget`/controller | Native zoom, regenerate, hide/show, audio/cache tests |
@@ -38,7 +39,8 @@ acceptance. A wired callback is not proof of a working native interaction.
 | **Import comments from external files** | **Not yet exposed** | Reuse mobile import and merge/history service |
 | **Subtitle sync editor** | **Partial**: whole-file fixed shift only | Reuse shared sync planners and UI behavior |
 | **Remove hearing-impaired annotations** | **Not yet exposed** | Reuse `HearingImpairedCleanupService` with history guard |
-| **MSone banners, Malayalam Normalize, Submit to Msone** | **Not yet exposed** | Preserve MSone feature gating and shared flows |
+| MSone submission (Existing Translator/Fresher, .msone or SRT pair) | Wired in DS5 R7 to the existing submission flow; shown only when MSone features are enabled | Native picker, completed form and route-return acceptance; never submit test data to the live endpoint |
+| **MSone banners and Malayalam Normalize** | **Not yet exposed** | Reuse mobile MSone feature gating and shared editing/history actions |
 | **Project Settings (encoding, media, secondary subs)** | **Not yet exposed** | Host existing `ProjectSettingsSheet` with fully connected callbacks |
 | App Settings, theme, typography, waveform limits, checkpoints | Wired to **existing** `SettingsSheet` in DS5 R5f | Verify immediate preference propagation and skin changes |
 | Help & Documentation | Wired to **existing** `HelpScreen` in DS5 R5f | Navigation/back-stack widget and native acceptance |
@@ -62,7 +64,7 @@ acceptance. A wired callback is not proof of a working native interaction.
    missing from the native live playback surface.
 2. **P1:** Project Settings/encoding, sync, selected-cue batch edit/delete,
    import comments, Go To Line, hearing-impaired cleanup.
-3. **P2:** MSone-gated banners/normalization/submit, fullscreen comment and
+3. **P2:** MSone-gated banners/normalization, fullscreen comment and
    mark callbacks, hotkey parity, theme/accessibility and native media QA.
 
 Keep this ledger current after each checkpoint. Studio Dock must not be called

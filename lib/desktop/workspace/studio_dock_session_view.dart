@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 
 import 'package:file_picker/file_picker.dart' as fp;
 import 'package:flutter/material.dart';
@@ -13,6 +14,7 @@ import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
 import 'package:subtitle_studio/services/checkpoint_history_graph.dart';
 import 'package:subtitle_studio/screens/screen_help.dart';
 import 'package:subtitle_studio/widgets/settings_sheet.dart';
+import 'package:subtitle_studio/screens/msone_submission_flow.dart';
 
 import 'studio_dock_workspace.dart';
 import 'studio_dock_session_loader.dart';
@@ -76,6 +78,32 @@ class _StudioDockSessionViewState
   bool _selectingVideo = false;
   StudioDockSessionSnapshot? _latestBaseline;
   final StudioDockPlaybackLink _playback = StudioDockPlaybackLink();
+  bool _msoneEnabled = false;
+  int _msonePreferenceRevision = 0;
+
+  Future<void> _refreshMsonePreference() async {
+    final revision = ++_msonePreferenceRevision;
+    var enabled = false;
+    try {
+      enabled = await EditorPreferencesRepository(
+        ref.read(isarProvider)).getMsoneEnabled();
+    } catch (_) {
+      // A missing settings database must never expose a submission action.
+    }
+    if (mounted && revision == _msonePreferenceRevision) {
+      setState(() => _msoneEnabled = enabled);
+    }
+  }
+
+  Future<void> _submitToMsone() async {
+    if (!mounted || !_msoneEnabled) return;
+    // Reuse the production mobile choice sheet, form and route cleanup.
+    // Submission itself requires explicit confirmation in that form.
+    await showMsoneSubmissionFlow(
+      context: context,
+      subtitleCollectionId: widget.collectionId,
+    );
+  }
 
   StudioDockHistoryService get _history => StudioDockHistoryService(
     StudioDockSessionLoader(
@@ -604,6 +632,7 @@ class _StudioDockSessionViewState
     }
     _snapshot = _load();
     _videoPath = widget.allowNativePlayback ? _resolveVideoPath() : null;
+    unawaited(_refreshMsonePreference());
   }
 
   @override
@@ -670,11 +699,15 @@ class _StudioDockSessionViewState
           height: (MediaQuery.sizeOf(dialog).height - 64)
               .clamp(240.0, 840.0).toDouble(),
           child: SettingsSheet(onSettingsChanged: () {
-            if (mounted) setState(() {});
+            if (mounted) {
+              setState(() {});
+              unawaited(_refreshMsonePreference());
+            }
           }),
         ),
       ),
     );
+    if (mounted) await _refreshMsonePreference();
   }
 
   Future<void> _openHelp() async {
@@ -763,6 +796,7 @@ class _StudioDockSessionViewState
         onChooseVideo: widget.allowNativePlayback ? _chooseVideo : null,
         onOpenAppSettings: _openAppSettings,
         onOpenHelp: _openHelp,
+        onSubmitToMsone: _msoneEnabled ? _submitToMsone : null,
         onApplyCueText: widget.enableEditing ? _applyText : null,
         onApplyCueTiming: widget.enableEditing ? _applyTiming : null,
         onApplyCueTextAndTiming:
