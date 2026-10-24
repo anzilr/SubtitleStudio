@@ -41,3 +41,5 @@ DS5 R3 Isar test bootstrap correction 2026-10-24: rerun focused Flutter analyze/
 DS5 R4a 2026-10-24: verify guarded complete .msone Save and Save As, checkpoint/ref snapshot, Studio Dock File menu with Flutter analyzer and focused widget/integration tests only.
 
 DS5 R4b 2026-10-24: connect Studio Dock Undo/Redo, fork choice, saved History rail and guarded shared checkpoint checkout with full cue refresh. Run analyzer and focused Studio Dock tests only; no native/platform builds.
+
+DS5 R4c 2026-10-24: production filename and public type cleanup; demo fixtures moved under tool; require explicit live session cues and preserve demo selection. Run flutter pub get, flutter analyze and Studio Dock tests ONLY, never platform builds.
