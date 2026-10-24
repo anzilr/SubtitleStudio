@@ -3,7 +3,6 @@ import 'package:subtitle_studio/desktop/workspace/studio_dock_media_plan.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_playback_link.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_session_snapshot.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_video_surface.dart';
-import 'package:subtitle_studio/widgets/video/subtitle.dart';
 import 'package:subtitle_studio/widgets/video_player_widget.dart';
 
 void main() {

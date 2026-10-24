@@ -50,3 +50,7 @@ The platform remains **not yet certified feature-parity complete**.
 ## Paused-detach refinement
 
 The shared playback link now exposes an explicit attachment notifier. An already-paused player can detach without changing the `playing` value; the floating button listens to both values so it disables immediately and re-enables when a native player attaches again. A widget test verifies paused detach and reattach.
+
+## Final analyzer clean-up
+
+Removed an unnecessary import in the existing fullscreen review callback test. This was reported as one informational analyzer issue in the first passing R21 focused suite, not a runtime or widget failure.
