@@ -318,4 +318,108 @@ void main() {
       original: 'Foreign', edited: ''), isNull);
     expect(await db.isar.checkpoints.count(), 0);
   });
+
+  test('Split preserves nullable edit, first-cue review data and history',
+      () async {
+    final ids = await seed();
+    final baseline = await loader.load(
+      sessionId: ids.sessionId, collectionId: ids.collectionId);
+    final change = await structure.split(
+      baseline: baseline, cueNumber: 1, splitAt: '00:00:01,500',
+      firstOriginal: 'Original', secondOriginal: 'retained',
+      firstEdited: '', secondEdited: '');
+    expect(change, isNotNull);
+    expect(change!.selectedCueNumber, 1);
+    expect(change.snapshot.cues.map((cue) => cue.index), [1, 2, 3]);
+    final stored = (await db.isar.subtitleCollections.get(ids.collectionId))!;
+    expect(stored.lines[0].startTime, '00:00:01,000');
+    expect(stored.lines[0].endTime, '00:00:01,500');
+    expect(stored.lines[0].edited, isNull);
+    expect(stored.lines[0].marked, isTrue);
+    expect(stored.lines[0].comment, 'Existing note');
+    expect(stored.lines[1].startTime, '00:00:01,500');
+    expect(stored.lines[1].endTime, '00:00:02,100');
+    expect(stored.lines[1].edited, isNull);
+    expect(stored.lines[1].marked, isFalse);
+    expect(stored.lines[1].comment, isNull);
+    expect(stored.lines[2].original, isEmpty);
+    expect(await db.isar.checkpoints.count(), greaterThanOrEqualTo(2));
+
+    final merged = await structure.merge(
+      baseline: change.snapshot, cueNumber: 2, withPrevious: true);
+    expect(merged, isNotNull);
+    expect(merged!.selectedCueNumber, 1);
+    expect(merged.snapshot.cues[0].original, 'Original\nretained');
+    expect(merged.snapshot.cues[0].storedEdited, isNull);
+    expect(merged.snapshot.cues[0].comment, 'Existing note');
+    expect(merged.snapshot.cues[0].marked, isTrue);
+    expect(merged.snapshot.cues.length, 2);
+  });
+
+  test('Merge keeps both notes, effective edited text and full time span',
+      () async {
+    final ids = await seed();
+    await db.isar.writeTxn(() async {
+      final collection =
+          (await db.isar.subtitleCollections.get(ids.collectionId))!;
+      collection.lines[0].edited = 'Edited one';
+      collection.lines[0].resolved = true;
+      collection.lines[1].original = 'Second source';
+      collection.lines[1].comment = 'Second note';
+      collection.lines[1].endTime = '00:00:05,000';
+      await db.isar.subtitleCollections.put(collection);
+    });
+    final baseline = await loader.load(
+      sessionId: ids.sessionId, collectionId: ids.collectionId);
+    final merged = await structure.merge(
+      baseline: baseline, cueNumber: 1, withPrevious: false);
+    expect(merged, isNotNull);
+    expect(merged!.snapshot.cues.single.original,
+      'Original\nretained\nSecond source');
+    expect(merged.snapshot.cues.single.storedEdited,
+      'Edited one\n'); // Intentional persisted empty edited field.
+    expect(merged.snapshot.cues.single.comment,
+      'Existing note\nSecond note');
+    expect(merged.snapshot.cues.single.end, '00:00:05,000');
+    expect(merged.snapshot.cues.single.resolved, isFalse);
+  });
+
+  test('Split and merge reject invalid time, neighbors, owner and stale cues',
+      () async {
+    final ids = await seed();
+    final baseline = await loader.load(
+      sessionId: ids.sessionId, collectionId: ids.collectionId);
+    Future<StudioDockStructureChange?> splitAt(String at) => structure.split(
+      baseline: baseline, cueNumber: 1, splitAt: at,
+      firstOriginal: 'A', secondOriginal: 'B',
+      firstEdited: '', secondEdited: '');
+    expect(await splitAt('00:00:01,000'), isNull);
+    expect(await splitAt('00:00:02,100'), isNull);
+    expect(await splitAt('00:00:01.500'), isNull);
+    expect(await structure.merge(
+      baseline: baseline, cueNumber: 1, withPrevious: true), isNull);
+    expect(await structure.merge(
+      baseline: baseline, cueNumber: 2, withPrevious: false), isNull);
+    expect(await structure.merge(
+      baseline: baseline, cueNumber: 90, withPrevious: false), isNull);
+    expect(await db.isar.checkpoints.count(), 0);
+
+    final updated = await editor.apply(
+      baseline: baseline, cueNumber: 1, editedText: 'Newer');
+    expect(updated, isNotNull);
+    expect(await splitAt('00:00:01,500'), isNull);
+    expect(await structure.merge(
+      baseline: baseline, cueNumber: 1, withPrevious: false), isNull);
+    final stored = (await db.isar.subtitleCollections.get(ids.collectionId))!;
+    expect(stored.lines.length, 2);
+    expect(stored.lines.first.edited, 'Newer');
+
+    await db.isar.writeTxn(() async => db.isar.sessions.delete(ids.sessionId));
+    expect(await structure.merge(
+      baseline: updated!, cueNumber: 1, withPrevious: false), isNull);
+    expect(await structure.split(
+      baseline: updated, cueNumber: 1, splitAt: '00:00:01,500',
+      firstOriginal: 'A', secondOriginal: 'B',
+      firstEdited: '', secondEdited: ''), isNull);
+  });
 }

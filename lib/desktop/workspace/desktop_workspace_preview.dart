@@ -9,6 +9,7 @@ import 'studio_dock_playback_link.dart';
 import 'studio_dock_layout_preferences.dart';
 import 'studio_dock_timing_edit_service.dart';
 import 'studio_dock_insert_cue_dialog.dart';
+import 'studio_dock_split_cue_dialog.dart';
 import '../../utils/msone_hotkey_manager.dart';
 
 /// Demo-only cue; this screen intentionally does not persist any user data.
@@ -41,7 +42,7 @@ class WorkspaceDemoCue {
 }
 
 /// Complete refreshed cue list after a structural history transaction.
-/// Insertion/deletion can renumber every later cue; never patch just one row.
+/// Structural commands can renumber every later cue; never patch just one row.
 class WorkspaceCueUpdate {
   const WorkspaceCueUpdate({
     required this.cues,
@@ -69,6 +70,8 @@ class DesktopWorkspacePreview extends StatefulWidget {
     this.onApplyCueTiming,
     this.onInsertCue,
     this.onDeleteCue,
+    this.onSplitCue,
+    this.onMergeCue,
     this.videoSurface,
     this.waveformSurface,
     this.playback,
@@ -94,6 +97,10 @@ class DesktopWorkspacePreview extends StatefulWidget {
   final Future<WorkspaceCueUpdate?> Function(
       int? afterCueNumber, StudioDockNewCueDraft draft)? onInsertCue;
   final Future<WorkspaceCueUpdate?> Function(int cueNumber)? onDeleteCue;
+  final Future<WorkspaceCueUpdate?> Function(
+      int cueNumber, StudioDockSplitCueDraft draft)? onSplitCue;
+  final Future<WorkspaceCueUpdate?> Function(
+      int cueNumber, bool withPrevious)? onMergeCue;
   /// Optional existing native-player surface. Only the standalone desktop
   /// host may provide it; the classic Editor preview must leave it null.
   final Widget? videoSurface;
@@ -205,7 +212,16 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
     HotkeyAction.playPause,
     HotkeyAction.findReplace,
     HotkeyAction.markLine,
+    HotkeyAction.splitLine,
+    HotkeyAction.mergeLine,
   ];
+
+  bool _allowedLiveHotkey(HotkeyAction action) =>
+      action == HotkeyAction.nextLine ||
+      action == HotkeyAction.previousLine ||
+      action == HotkeyAction.findReplace ||
+      action == HotkeyAction.splitLine && widget.onSplitCue != null ||
+      action == HotkeyAction.mergeLine && widget.onMergeCue != null;
 
   @override
   void initState() {
@@ -233,10 +249,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   Future<void> _installManagedHotkeys() async {
     final manager = MSoneHotkeyManager.instance;
     for (final action in _managedActions) {
-      if (widget.liveReadOnly &&
-          action != HotkeyAction.nextLine &&
-          action != HotkeyAction.previousLine &&
-          action != HotkeyAction.findReplace) continue;
+      if (widget.liveReadOnly && !_allowedLiveHotkey(action)) continue;
       if (!mounted) return;
       await manager.registerCallback(action, () {
         if (mounted && !_isEditingText) _dispatchManagedAction(action);
@@ -285,10 +298,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
     if (_layoutChangedSinceMount) unawaited(_persistLayout());
     if (!widget.liveReadOnly || widget.manageLiveHotkeys) {
       for (final action in _managedActions) {
-        if (widget.liveReadOnly &&
-            action != HotkeyAction.nextLine &&
-            action != HotkeyAction.previousLine &&
-            action != HotkeyAction.findReplace) continue;
+        if (widget.liveReadOnly && !_allowedLiveHotkey(action)) continue;
         unawaited(MSoneHotkeyManager.instance.unregisterCallback(action));
       }
     }
@@ -380,6 +390,10 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
         _searchFocus.requestFocus();
       case HotkeyAction.markLine:
         _toggleMarkedSelection();
+      case HotkeyAction.splitLine:
+        unawaited(_splitCueSafely());
+      case HotkeyAction.mergeLine:
+        unawaited(_mergeCueSafely());
       default:
         break;
     }
@@ -634,6 +648,83 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Could not delete this cue. The project may have '
               'changed elsewhere. No line was removed.'),
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _changingStructure = false);
+    }
+  }
+
+  Future<void> _splitCueSafely() async {
+    if (widget.onSplitCue == null || _cues.isEmpty || _changingStructure ||
+        !await _confirmDraftBeforeLeaving() || !mounted) return;
+    final cue = _selected;
+    setState(() => _changingStructure = true);
+    try {
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => StudioDockSplitCueDialog(
+          cueNumber: cue.id,
+          start: cue.start,
+          end: cue.end,
+          original: cue.original,
+          edited: cue.edited,
+          onSubmit: (draft) async {
+            final update = await widget.onSplitCue?.call(cue.id, draft);
+            if (!mounted || update == null) return false;
+            _acceptStructure(update);
+            return true;
+          },
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _changingStructure = false);
+    }
+  }
+
+  Future<void> _mergeCueSafely() async {
+    if (widget.onMergeCue == null || _cues.length < 2 || _changingStructure ||
+        !await _confirmDraftBeforeLeaving() || !mounted) return;
+    final cueNumber = _selectedId;
+    final index = _cues.indexWhere((cue) => cue.id == cueNumber);
+    final withPrevious = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: Text('Combine subtitle cue #$cueNumber'),
+        content: const Text('Choose an adjacent cue to combine. '
+            'Original and edited lines, timing, and review notes will be '
+            'combined in one checkpoint.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialog),
+            child: const Text('Cancel'),
+          ),
+          OutlinedButton(
+            key: const ValueKey('studio-merge-previous'),
+            onPressed: index > 0 ? () => Navigator.pop(dialog, true) : null,
+            child: const Text('With previous'),
+          ),
+          FilledButton(
+            key: const ValueKey('studio-merge-next'),
+            onPressed: index < _cues.length - 1
+                ? () => Navigator.pop(dialog, false) : null,
+            child: const Text('With next'),
+          ),
+        ],
+      ),
+    );
+    if (withPrevious == null || !mounted) return;
+    setState(() => _changingStructure = true);
+    try {
+      final update = await widget.onMergeCue?.call(cueNumber, withPrevious);
+      if (!mounted) return;
+      if (update != null) {
+        _acceptStructure(update);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Could not combine the cues. The project may have '
+              'changed elsewhere. No lines were removed.'),
         ));
       }
     } finally {
@@ -933,6 +1024,22 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
           tooltip: 'Delete selected subtitle cue',
           onPressed: _changingStructure || _cues.isEmpty ? null :
               () => unawaited(_deleteCueSafely()),
+        ),
+      if (widget.onSplitCue != null)
+        IconButton(
+          key: const ValueKey('studio-dock-split-cue'),
+          icon: const Icon(Icons.call_split_outlined),
+          tooltip: 'Split selected subtitle cue',
+          onPressed: _changingStructure || _cues.isEmpty ? null :
+              () => unawaited(_splitCueSafely()),
+        ),
+      if (widget.onMergeCue != null)
+        IconButton(
+          key: const ValueKey('studio-dock-merge-cue'),
+          icon: const Icon(Icons.merge_outlined),
+          tooltip: 'Combine selected cue with adjacent cue',
+          onPressed: _changingStructure || _cues.length < 2 ? null :
+              () => unawaited(_mergeCueSafely()),
         ),
       if (widget.onImportFile != null)
         IconButton(

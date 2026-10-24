@@ -17,6 +17,7 @@ import 'studio_dock_text_edit_service.dart';
 import 'studio_dock_timing_edit_service.dart';
 import 'studio_dock_cue_structure_service.dart';
 import 'studio_dock_insert_cue_dialog.dart';
+import 'studio_dock_split_cue_dialog.dart';
 import 'studio_dock_media_plan.dart';
 import 'studio_dock_video_surface.dart';
 import 'studio_dock_waveform_surface.dart';
@@ -157,6 +158,47 @@ class _StudioDockReadOnlySessionViewState
     try {
       final change = await _structure.delete(
         baseline: baseline, cueNumber: cueNumber);
+      if (!mounted || change == null) return null;
+      setState(() => _latestBaseline = change.snapshot);
+      return _toWorkspaceUpdate(change);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<WorkspaceCueUpdate?> _splitCue(
+    int cueNumber, StudioDockSplitCueDraft draft,
+  ) async {
+    final baseline = _latestBaseline;
+    if (baseline == null || !widget.enableTextEditing) return null;
+    try {
+      final change = await _structure.split(
+        baseline: baseline,
+        cueNumber: cueNumber,
+        splitAt: draft.splitAt,
+        firstOriginal: draft.firstOriginal,
+        secondOriginal: draft.secondOriginal,
+        firstEdited: draft.firstEdited,
+        secondEdited: draft.secondEdited,
+      );
+      if (!mounted || change == null) return null;
+      setState(() => _latestBaseline = change.snapshot);
+      return _toWorkspaceUpdate(change);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<WorkspaceCueUpdate?> _mergeCue(
+    int cueNumber, bool withPrevious,
+  ) async {
+    final baseline = _latestBaseline;
+    if (baseline == null || !widget.enableTextEditing) return null;
+    try {
+      final change = await _structure.merge(
+        baseline: baseline, cueNumber: cueNumber,
+        withPrevious: withPrevious,
+      );
       if (!mounted || change == null) return null;
       setState(() => _latestBaseline = change.snapshot);
       return _toWorkspaceUpdate(change);
@@ -308,6 +350,8 @@ class _StudioDockReadOnlySessionViewState
         onApplyCueTiming: widget.enableTextEditing ? _applyTiming : null,
         onInsertCue: widget.enableTextEditing ? _insertCue : null,
         onDeleteCue: widget.enableTextEditing ? _deleteCue : null,
+        onSplitCue: widget.enableTextEditing ? _splitCue : null,
+        onMergeCue: widget.enableTextEditing ? _mergeCue : null,
         manageLiveHotkeys: !widget.suppressParentEditorHotkeys,
         videoSurface: validVideoPath == null || !widget.allowNativePlayback
             ? null

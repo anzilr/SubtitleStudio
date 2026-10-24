@@ -619,6 +619,117 @@ class SubtitleRepository {
     }
   }
 
+  /// Splits a cue only if *every* persisted cue still matches the desktop
+  /// snapshot. Both halves and their history are committed in one transaction.
+  Future<int?> splitLineFromSnapshotWithHistory({
+    required int collectionId,
+    required int sessionId,
+    required List<SubtitleLine> expectedLines,
+    required int index,
+    required SubtitleLine firstPart,
+    required SubtitleLine secondPart,
+  }) async {
+    final expected = CheckpointStateReducer.copyLines(expectedLines);
+    if (index < 0 || index >= expected.length) return null;
+    int? selectedNumber;
+    try {
+      await _historyTransaction.commit(
+        sessionId: sessionId,
+        subtitleCollectionId: collectionId,
+        operationType: 'split',
+        description: 'Split line ${index + 1}',
+        buildMutation: (currentLines) {
+          if (!_sameDisplayedLines(currentLines, expected)) {
+            throw StateError('Subtitle collection changed since preview.');
+          }
+          final before = CheckpointStateReducer.copyLine(currentLines[index]);
+          final first = CheckpointStateReducer.copyLine(firstPart);
+          final second = CheckpointStateReducer.copyLine(secondPart);
+          final next = CheckpointStateReducer.copyLines(currentLines)
+            ..[index] = first
+            ..insert(index + 1, second);
+          final sorted = sortAndReindexSubtitleLines(next);
+          selectedNumber = sorted.indexOf(first) + 1;
+          return CheckpointMutationPlan(
+            nextLines: sorted,
+            deltas: [
+              SubtitleLineDelta()
+                ..changeType = 'modify'
+                ..lineIndex = index
+                ..beforeState = before
+                ..afterState = CheckpointStateReducer.copyLine(first),
+              SubtitleLineDelta()
+                ..changeType = 'add'
+                ..lineIndex = index + 1
+                ..beforeState = null
+                ..afterState = CheckpointStateReducer.copyLine(second),
+            ],
+            forceSnapshot: true,
+          );
+        },
+      );
+      return selectedNumber;
+    } catch (error) {
+      logError('SubtitleRepository: Guarded split rejected: $error');
+      return null;
+    }
+  }
+
+  /// Merges two adjacent displayed cues; stale or non-adjacent positions are
+  /// rejected within the transaction, never applied to a shifted neighbor.
+  Future<int?> mergeAdjacentLinesFromSnapshotWithHistory({
+    required int collectionId,
+    required int sessionId,
+    required List<SubtitleLine> expectedLines,
+    required int firstIndex,
+    required SubtitleLine mergedLine,
+  }) async {
+    final expected = CheckpointStateReducer.copyLines(expectedLines);
+    if (firstIndex < 0 || firstIndex + 1 >= expected.length) return null;
+    int? selectedNumber;
+    try {
+      await _historyTransaction.commit(
+        sessionId: sessionId,
+        subtitleCollectionId: collectionId,
+        operationType: 'merge',
+        description: 'Merged lines ${firstIndex + 1} and ${firstIndex + 2}',
+        buildMutation: (currentLines) {
+          if (!_sameDisplayedLines(currentLines, expected)) {
+            throw StateError('Subtitle collection changed since preview.');
+          }
+          final firstBefore = CheckpointStateReducer.copyLine(currentLines[firstIndex]);
+          final secondBefore = CheckpointStateReducer.copyLine(currentLines[firstIndex + 1]);
+          final merged = CheckpointStateReducer.copyLine(mergedLine);
+          final next = CheckpointStateReducer.copyLines(currentLines)
+            ..removeAt(firstIndex + 1)
+            ..[firstIndex] = merged;
+          final sorted = sortAndReindexSubtitleLines(next);
+          selectedNumber = sorted.indexOf(merged) + 1;
+          return CheckpointMutationPlan(
+            nextLines: sorted,
+            deltas: [
+              SubtitleLineDelta()
+                ..changeType = 'modify'
+                ..lineIndex = firstIndex
+                ..beforeState = firstBefore
+                ..afterState = CheckpointStateReducer.copyLine(merged),
+              SubtitleLineDelta()
+                ..changeType = 'delete'
+                ..lineIndex = firstIndex + 1
+                ..beforeState = secondBefore
+                ..afterState = null,
+            ],
+            forceSnapshot: true,
+          );
+        },
+      );
+      return selectedNumber;
+    } catch (error) {
+      logError('SubtitleRepository: Guarded merge rejected: $error');
+      return null;
+    }
+  }
+
   Future<bool> addLineWithHistory({
     required int collectionId,
     required SubtitleLine line,
