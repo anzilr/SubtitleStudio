@@ -9,6 +9,7 @@ import 'package:subtitle_studio/desktop/workspace/studio_dock_file_actions.dart'
 import 'package:subtitle_studio/desktop/workspace/studio_dock_session_loader.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_text_edit_service.dart';
 import 'package:subtitle_studio/screens/edit/repositories/subtitle_repository.dart';
+import 'package:subtitle_studio/screens/edit/services/editor_direct_save_service.dart';
 import 'package:subtitle_studio/services/checkpoint_repository.dart';
 
 import 'support/test_isar_harness.dart';
@@ -24,7 +25,11 @@ void main() {
     db = await TestIsarHarness.open();
     projects = ProjectRepository(db.isar);
     subtitles = SubtitleRepository(db.isar, CheckpointRepository(db.isar));
-    actions = StudioDockFileActions(projects, subtitles);
+    // Common file I/O tests are platform-neutral. Security-scoped bookmarks
+    // have their own injected macOS cases below, not native plugin calls in
+    // a headless Flutter test runner.
+    actions = StudioDockFileActions(projects, subtitles,
+      isMacOS: false, directSave: EditorDirectSaveService(isMacOS: false));
     temp = await Directory.systemTemp.createTemp('studio_dock_file_');
   });
   tearDown(() async {
