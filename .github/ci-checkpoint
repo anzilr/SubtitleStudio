@@ -206,3 +206,5 @@ DS5 R11 DIALOG FULL RETRY 2026-10-24: correct TextField controller disposal duri
 DS5 R11 RANGE FULL RETRY 2026-10-24: follow up on focused CI with corrected range-input expectations, editor-first pointer range UX and inspector unsaved-draft menu coverage; Flutter analysis and full tests only, no native builds.
 
 DS5 R12 FULL GATE 2026-10-24: native Go to Line navigation preserves unsaved edits, switches to visible cue, scrolls long subtitle lists and seeks shared video start+50ms; run Flutter pub get/analyze/full suite only with NO platform builds.
+
+DS5 R12 VALIDATION FULL RETRY 2026-10-24: keep typed invalid negative and malformed line numbers observable and rejectable in Go to Line dialog; Flutter pub get, analyze and all tests only. No platform builds.

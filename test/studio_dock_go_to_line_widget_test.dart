@@ -85,6 +85,10 @@ void main() {
     await openDialog(tester);
     await chooseLine(tester, '0');
     expect(find.textContaining('between 1 and 3'), findsOneWidget);
+    await chooseLine(tester, '-1');
+    expect(find.textContaining('between 1 and 3'), findsOneWidget);
+    await chooseLine(tester, 'not-a-number');
+    expect(find.textContaining('between 1 and 3'), findsOneWidget);
     await chooseLine(tester, '4');
     expect(find.textContaining('between 1 and 3'), findsOneWidget);
     await tester.tap(find.text('Cancel'));

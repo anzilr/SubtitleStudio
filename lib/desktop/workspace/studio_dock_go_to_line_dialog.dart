@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 /// Desktop presentation of the mobile Go to Line command. The dialog owns
 /// its text controller so route-dismissal animations never outlive the input.
@@ -60,7 +59,6 @@ class _StudioDockGoToLineDialogState extends State<StudioDockGoToLineDialog> {
           controller: _input,
           autofocus: true,
           keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           decoration: InputDecoration(
             labelText: 'Subtitle line (1–${widget.lineCount})',
             border: const OutlineInputBorder(),
