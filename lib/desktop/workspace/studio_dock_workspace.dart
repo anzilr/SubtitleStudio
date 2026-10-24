@@ -28,6 +28,7 @@ enum _StudioDockMenuAction {
   undo, redo, find, copySelected, selectAll, addCue, deleteCue, splitCue, mergeCue, notes,
   timing, shiftTools, showTools, sourceView, history, submitMsone,
   loadSecondary, toggleSecondary,
+  shiftSelected, deleteSelected, selectByIndex, rangeSelection,
   explorer, inspector, settings, help,
 }
 
@@ -115,6 +116,8 @@ class StudioDockWorkspace extends StatefulWidget {
     this.onFindCues,
     this.onReplaceMatches,
     this.onShiftAllCues,
+    this.onShiftSelectedCues,
+    this.onDeleteSelectedCues,
     this.onClearAllFormatting,
     this.onInsertCue,
     this.onDeleteCue,
@@ -183,6 +186,13 @@ class StudioDockWorkspace extends StatefulWidget {
       String replacement, bool caseSensitive)? onReplaceMatches;
   final Future<StudioDockCueUpdate?> Function(
       int selectedCueNumber, int deltaMilliseconds)? onShiftAllCues;
+  /// Selected time stretch uses the mobile first-start/last-end anchor model.
+  final Future<StudioDockCueUpdate?> Function(
+      List<int> cueNumbers, String newStart, String newEnd, int preferredCue)?
+      onShiftSelectedCues;
+  /// Guarded, atomic multi-delete; returns complete reindexed cue state.
+  final Future<StudioDockCueUpdate?> Function(
+      List<int> cueNumbers, int preferredCue)? onDeleteSelectedCues;
   final Future<StudioDockCueUpdate?> Function(
       int selectedCueNumber)? onClearAllFormatting;
   final Future<StudioDockCueUpdate?> Function(
@@ -253,6 +263,9 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   int _selectedId = -1;
   int _selectionAnchor = -1;
   final Set<int> _selectedIds = {};
+  bool _rangeSelectionMode = false;
+  int? _rangeStartCueId;
+  bool _runningSelectedBatch = false;
   final StudioDockLayoutPreferences _layoutPreferences = StudioDockLayoutPreferences();
   Timer? _layoutSaveTimer;
   bool _layoutChangedSinceMount = false;
@@ -1148,6 +1161,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         ..clear()
         ..addAll(update.selectedCueIds ??
             (_selectedId > 0 ? [_selectedId] : <int>[]));
+      _rangeSelectionMode = false;
+      _rangeStartCueId = null;
       _query = '';
       _tableSearch.clear();
       _draftCueId = null;
@@ -1523,6 +1538,11 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   }
 
   void _selectFromPointer(int id) {
+    if (_rangeSelectionMode) {
+      unawaited(_selectRangePointerSafely(id));
+      _gridFocus.requestFocus();
+      return;
+    }
     final keyboard = HardwareKeyboard.instance;
     _selectCue(id,
         range: keyboard.isShiftPressed,
@@ -1839,6 +1859,11 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               child: Text('Find & Replace')),
           const PopupMenuItem(value: _StudioDockMenuAction.selectAll,
               child: Text('Select all visible subtitles')),
+          const PopupMenuItem(value: _StudioDockMenuAction.selectByIndex,
+              child: Text('Select subtitles by index…')),
+          PopupMenuItem(value: _StudioDockMenuAction.rangeSelection,
+              child: Text(_rangeSelectionMode
+                  ? 'Cancel range selection' : 'Select subtitle range')),
           PopupMenuItem(value: _StudioDockMenuAction.copySelected,
               enabled: _selectedIds.isNotEmpty,
               child: const Text('Copy selected subtitles')),
@@ -1850,6 +1875,10 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           if (widget.onDeleteCue != null)
             const PopupMenuItem(value: _StudioDockMenuAction.deleteCue,
                 child: Text('Delete subtitle')),
+          if (widget.onDeleteSelectedCues != null)
+            PopupMenuItem(value: _StudioDockMenuAction.deleteSelected,
+                enabled: _selectedIds.isNotEmpty && !_runningSelectedBatch,
+                child: Text('Delete selected subtitles (${_selectedIds.length})')),
           if (widget.onSplitCue != null)
             const PopupMenuItem(value: _StudioDockMenuAction.splitCue,
                 child: Text('Split subtitle')),
@@ -1865,6 +1894,10 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           if (widget.onShiftAllCues != null)
             const PopupMenuItem(value: _StudioDockMenuAction.shiftTools,
                 child: Text('Shift subtitle timecodes')),
+          if (widget.onShiftSelectedCues != null)
+            PopupMenuItem(value: _StudioDockMenuAction.shiftSelected,
+                enabled: _selectedIds.isNotEmpty && !_runningSelectedBatch,
+                child: Text('Shift selected subtitles (${_selectedIds.length})')),
         ]),
         _desktopMenu('Tools', const ValueKey('studio-tools-menu'), [
           const PopupMenuItem(value: _StudioDockMenuAction.find,
@@ -1937,12 +1970,18 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         unawaited(_openFind());
       case _StudioDockMenuAction.selectAll:
         _selectAllVisibleCues();
+      case _StudioDockMenuAction.selectByIndex:
+        unawaited(_selectByIndexSafely());
+      case _StudioDockMenuAction.rangeSelection:
+        _toggleRangeSelectionMode();
       case _StudioDockMenuAction.copySelected:
         unawaited(_copySelectedSubtitleText());
       case _StudioDockMenuAction.addCue:
         unawaited(_addCueSafely());
       case _StudioDockMenuAction.deleteCue:
         unawaited(_deleteCueSafely());
+      case _StudioDockMenuAction.deleteSelected:
+        unawaited(_deleteSelectedSafely());
       case _StudioDockMenuAction.splitCue:
         unawaited(_splitCueSafely());
       case _StudioDockMenuAction.mergeCue:
@@ -1954,6 +1993,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       case _StudioDockMenuAction.shiftTools:
       case _StudioDockMenuAction.showTools:
         unawaited(_switchSection(3));
+      case _StudioDockMenuAction.shiftSelected:
+        unawaited(_shiftSelectedSafely());
       case _StudioDockMenuAction.sourceView:
         unawaited(_switchSection(5));
       case _StudioDockMenuAction.history:
@@ -1985,6 +2026,244 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     setState(() => _selectedIds
       ..clear()
       ..addAll(_visible.map((cue) => cue.id)));
+  }
+
+  void _applyIndexRange(int start, int end) {
+    if (start < 1 || end < start || end > _cues.length) return;
+    setState(() {
+      // The mobile index dialog selects underlying project rows, not only
+      // those left visible by a search or review filter.
+      _reviewFilter = _StudioDockReviewFilter.all;
+      _query = '';
+      _tableSearch.clear();
+      _selectedIds
+        ..clear()
+        ..addAll(_cues.sublist(start - 1, end).map((cue) => cue.id));
+      _selectedId = _cues[end - 1].id;
+      _selectionAnchor = _cues[start - 1].id;
+      _rangeSelectionMode = false;
+      _rangeStartCueId = null;
+    });
+  }
+
+  Future<void> _selectByIndexSafely() async {
+    if (_cues.isEmpty || !await _confirmDraftBeforeLeaving() || !mounted) return;
+    final startInput = TextEditingController(text: '1');
+    final endInput = TextEditingController(text: '${_cues.length}');
+    String? error;
+    final chosen = await showDialog<List<int>>(
+      context: context,
+      builder: (dialog) => StatefulBuilder(builder: (dialog, refresh) => AlertDialog(
+        title: const Text('Select subtitles by index'),
+        content: SizedBox(width: 390, child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Select an inclusive range from 1 to ${_cues.length}.'),
+            const SizedBox(height: 14),
+            TextField(
+              key: const ValueKey('studio-range-start'),
+              controller: startInput,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'First line', border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              key: const ValueKey('studio-range-end'),
+              controller: endInput,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Last line', border: OutlineInputBorder()),
+            ),
+            if (error != null) Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Text(error!, style: TextStyle(
+                color: Theme.of(dialog).colorScheme.error)),
+            ),
+          ],
+        )),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialog),
+              child: const Text('Cancel')),
+          FilledButton(
+            key: const ValueKey('studio-range-confirm'),
+            onPressed: () {
+              final start = int.tryParse(startInput.text.trim());
+              final end = int.tryParse(endInput.text.trim());
+              if (start == null || end == null || start < 1 ||
+                  end < start || end > _cues.length) {
+                refresh(() => error = 'Enter indices between 1 and ${_cues.length} in order.');
+                return;
+              }
+              Navigator.pop(dialog, <int>[start, end]);
+            },
+            child: const Text('Select range'),
+          ),
+        ],
+      )),
+    );
+    startInput.dispose();
+    endInput.dispose();
+    if (chosen == null || !mounted) return;
+    _applyIndexRange(chosen[0], chosen[1]);
+  }
+
+  void _toggleRangeSelectionMode() {
+    setState(() {
+      _rangeSelectionMode = !_rangeSelectionMode;
+      _rangeStartCueId = null;
+    });
+    if (_rangeSelectionMode) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Select the first subtitle, then the last subtitle in the range.'),
+      ));
+    }
+  }
+
+  Future<void> _selectRangePointerSafely(int cueId) async {
+    if (!await _confirmDraftBeforeLeaving() || !mounted ||
+        !_rangeSelectionMode) return;
+    if (_rangeStartCueId == null) {
+      setState(() {
+        _rangeStartCueId = cueId;
+        _selectedId = cueId;
+        _selectedIds..clear()..add(cueId);
+      });
+      return;
+    }
+    final first = _cues.indexWhere((cue) => cue.id == _rangeStartCueId);
+    final last = _cues.indexWhere((cue) => cue.id == cueId);
+    if (first < 0 || last < 0) return;
+    _applyIndexRange(math.min(first, last) + 1, math.max(first, last) + 1);
+  }
+
+  Future<void> _shiftSelectedSafely() async {
+    final apply = widget.onShiftSelectedCues;
+    if (apply == null || _selectedIds.isEmpty || _runningSelectedBatch ||
+        !await _confirmDraftBeforeLeaving() || !mounted) return;
+    final selected = [for (final cue in _cues)
+      if (_selectedIds.contains(cue.id)) cue];
+    if (selected.isEmpty) return;
+    final cueNumbers = selected.map((cue) => cue.id).toList();
+    final startInput = TextEditingController(text: selected.first.start);
+    final endInput = TextEditingController(text: selected.last.end);
+    var saving = false;
+    String? error;
+    await showDialog<void>(
+      context: context,
+      builder: (dialog) => StatefulBuilder(builder: (dialog, refresh) => PopScope(
+        canPop: !saving,
+        child: AlertDialog(
+          title: Text('Shift ${selected.length} selected subtitles'),
+          content: SizedBox(width: 420, child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Set a new start for the first selected cue and an end '
+                  'anchor for the last. Relative starts scale; durations stay unchanged.'),
+              const SizedBox(height: 14),
+              TextField(
+                key: const ValueKey('studio-selected-start'),
+                controller: startInput,
+                enabled: !saving,
+                decoration: const InputDecoration(
+                  labelText: 'First selected start', border: OutlineInputBorder()),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                key: const ValueKey('studio-selected-end'),
+                controller: endInput,
+                enabled: !saving,
+                decoration: const InputDecoration(
+                  labelText: 'Last selected end anchor', border: OutlineInputBorder()),
+              ),
+              if (error != null) Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Text(error!, style: TextStyle(
+                  color: Theme.of(dialog).colorScheme.error)),
+              ),
+            ],
+          )),
+          actions: [
+            TextButton(onPressed: saving ? null : () => Navigator.pop(dialog),
+                child: const Text('Cancel')),
+            FilledButton(
+              key: const ValueKey('studio-selected-shift-apply'),
+              onPressed: saving ? null : () async {
+                final start = startInput.text.trim();
+                final end = endInput.text.trim();
+                final validation = StudioDockTimingEditService.validate(start, end);
+                if (validation != null) {
+                  refresh(() => error = validation);
+                  return;
+                }
+                refresh(() { saving = true; error = null; });
+                StudioDockCueUpdate? updated;
+                try {
+                  updated = await apply(cueNumbers, start, end, _selectedId);
+                } catch (_) {
+                  updated = null;
+                }
+                if (!mounted || !dialog.mounted) return;
+                if (updated == null) {
+                  refresh(() {
+                    saving = false;
+                    error = 'The time shift could not be saved. The project may '
+                        'have changed or a cue would exceed the SRT time range.';
+                  });
+                  return;
+                }
+                Navigator.pop(dialog);
+                _acceptStructure(updated);
+              },
+              child: Text(saving ? 'Applying…' : 'Apply selected shift'),
+            ),
+          ],
+        ),
+      )),
+    );
+    startInput.dispose();
+    endInput.dispose();
+  }
+
+  Future<void> _deleteSelectedSafely() async {
+    final remove = widget.onDeleteSelectedCues;
+    if (remove == null || _selectedIds.isEmpty || _runningSelectedBatch ||
+        !await _confirmDraftBeforeLeaving() || !mounted) return;
+    final ids = [for (final cue in _cues)
+      if (_selectedIds.contains(cue.id)) cue.id];
+    if (ids.isEmpty) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: Text('Delete ${ids.length} selected subtitles?'),
+        content: const Text('This removes all selected cues in one undoable '
+            'checkpoint. You can restore them using Undo.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialog, false),
+              child: const Text('Cancel')),
+          FilledButton(
+            key: const ValueKey('studio-confirm-delete-selected'),
+            onPressed: () => Navigator.pop(dialog, true),
+            child: const Text('Delete selected'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _runningSelectedBatch = true);
+    try {
+      final updated = await remove(ids, _selectedId);
+      if (!mounted) return;
+      if (updated != null) {
+        _acceptStructure(updated);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Selected subtitles were not deleted. Refresh the project and retry.'),
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _runningSelectedBatch = false);
+    }
   }
 
   Future<void> _copySelectedSubtitleText({Set<int>? cueIds}) async {
@@ -3729,6 +4008,51 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               icon: const Icon(Icons.format_clear, size: 17),
               label: const Text('Clear formatting tags'),
             ),
+          ]),
+        )),
+        const SizedBox(height: 12),
+        Card(child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Selected subtitle operations', style: TextStyle(
+                fontSize: 16, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 7),
+            Text('${_selectedIds.length} of ${_cues.length} subtitles selected. '
+                'Use Ctrl/Cmd-click, Shift-click, indices or range selection.',
+                style: TextStyle(color: _muted, fontSize: 12)),
+            const SizedBox(height: 12),
+            Wrap(spacing: 8, runSpacing: 8, children: [
+              OutlinedButton.icon(
+                key: const ValueKey('studio-tool-select-indices'),
+                onPressed: _cues.isEmpty ? null :
+                    () => unawaited(_selectByIndexSafely()),
+                icon: const Icon(Icons.format_list_numbered, size: 17),
+                label: const Text('Select by index'),
+              ),
+              OutlinedButton.icon(
+                key: const ValueKey('studio-tool-select-range'),
+                onPressed: _cues.isEmpty ? null : _toggleRangeSelectionMode,
+                icon: const Icon(Icons.select_all, size: 17),
+                label: Text(_rangeSelectionMode
+                    ? 'Cancel range selection' : 'Range selection'),
+              ),
+              if (widget.onShiftSelectedCues != null)
+                FilledButton.icon(
+                  key: const ValueKey('studio-tool-shift-selected'),
+                  onPressed: _selectedIds.isEmpty || _runningSelectedBatch
+                      ? null : () => unawaited(_shiftSelectedSafely()),
+                  icon: const Icon(Icons.more_time, size: 17),
+                  label: const Text('Shift selected'),
+                ),
+              if (widget.onDeleteSelectedCues != null)
+                OutlinedButton.icon(
+                  key: const ValueKey('studio-tool-delete-selected'),
+                  onPressed: _selectedIds.isEmpty || _runningSelectedBatch
+                      ? null : () => unawaited(_deleteSelectedSafely()),
+                  icon: const Icon(Icons.delete_outline, size: 17),
+                  label: const Text('Delete selected'),
+                ),
+            ]),
           ]),
         )),
         if (_runningTool) const LinearProgressIndicator(),

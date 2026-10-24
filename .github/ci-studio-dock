@@ -81,3 +81,5 @@ DS5 R9 WAVEFORM HISTORY 2026-10-24: enable compact waveform edit/add controls an
 DS5 R9 TOOLBAR ANALYZER FIX 2026-10-24: remove a duplicated LayoutBuilder terminator and use the existing async callback invocation style. Re-run analyzer and focused Flutter tests; no platform builds.
 
 DS5 R10 PROJECT SETTINGS 2026-10-24: use the existing shared ProjectSettingsSheet from live native Dock, wait File popup dismissal, guard unsaved drafts, and refresh authoritative encoding/media/secondary/history. Run analyzer and focused Flutter tests only; NO builds.
+
+DS5 R11 SELECTED BATCH 2026-10-24: desktop index/pointer range selection, mobile-equivalent selected time-stretch, optimistic one-checkpoint selected deletion and widget/integration regression tests. Run Flutter analyzer and focused Studio Dock tests only; NO builds.

@@ -48,6 +48,63 @@ class StudioDockBulkToolsService {
     ];
   }
 
+  /// Match the mobile selected-sync planner: new first-start/last-end anchor
+  /// scales relative cue starts while retaining each selected cue's duration.
+  /// Reject out-of-SRT values *before* entering the shared history writer.
+  static List<SubtitleLine> planShiftSelected(
+    StudioDockSessionSnapshot snapshot,
+    Set<int> cueNumbers,
+    String newStart,
+    String newEnd,
+  ) {
+    if (cueNumbers.isEmpty ||
+        StudioDockTimingEditService.validate(newStart, newEnd) != null) {
+      throw const FormatException('Select cues and valid start/end timecodes.');
+    }
+    final selected = [
+      for (final cue in snapshot.cues)
+        if (cueNumbers.contains(cue.index)) cue,
+    ];
+    if (selected.length != cueNumbers.length) {
+      throw const FormatException('The subtitle selection is out of date.');
+    }
+    for (final cue in selected) {
+      if (StudioDockTimingEditService.validate(cue.start, cue.end) != null) {
+        throw FormatException('Invalid timecodes on subtitle ${cue.index}.');
+      }
+    }
+    final originalStart =
+        TimeValidator.timeStringToMilliseconds(selected.first.start);
+    final originalEnd =
+        TimeValidator.timeStringToMilliseconds(selected.last.end);
+    final originalSpan = originalEnd - originalStart;
+    if (originalSpan <= 0) {
+      throw const FormatException('Selected subtitles have an invalid time span.');
+    }
+    final newStartMs = TimeValidator.timeStringToMilliseconds(newStart);
+    final newEndMs = TimeValidator.timeStringToMilliseconds(newEnd);
+    final factor = (newEndMs - newStartMs) / originalSpan;
+    return [
+      for (final cue in selected)
+        _shiftSelectedCue(cue, originalStart, newStartMs, factor),
+    ];
+  }
+
+  static SubtitleLine _shiftSelectedCue(
+      StudioDockLoadedCue cue, int originalStart, int newStart, double factor) {
+    final cueStart = TimeValidator.timeStringToMilliseconds(cue.start);
+    final duration = TimeValidator.timeStringToMilliseconds(cue.end) - cueStart;
+    final shiftedStart = newStart + ((cueStart - originalStart) * factor).round();
+    final startText = formatMilliseconds(shiftedStart);
+    final endText = formatMilliseconds(shiftedStart + duration);
+    if (StudioDockTimingEditService.validate(startText, endText) != null) {
+      throw FormatException('Selected subtitle ${cue.index} would have invalid timing.');
+    }
+    return _copy(cue)
+      ..startTime = startText
+      ..endTime = endText;
+  }
+
   static SubtitleLine _shiftCue(
       StudioDockLoadedCue cue, int deltaMilliseconds) {
     if (StudioDockTimingEditService.validate(cue.start, cue.end) != null) {
@@ -84,6 +141,56 @@ class StudioDockBulkToolsService {
       operationType: 'sync',
       description: 'Shifted ${updated.length} subtitle timecodes by '
           '$deltaMilliseconds milliseconds',
+    );
+  }
+
+  Future<StudioDockSessionSnapshot?> shiftSelected({
+    required StudioDockSessionSnapshot baseline,
+    required Set<int> cueNumbers,
+    required String newStart,
+    required String newEnd,
+  }) async {
+    try {
+      final updated = planShiftSelected(baseline, cueNumbers, newStart, newEnd);
+      if (updated.every((line) {
+        final cue = baseline.cues.firstWhere((cue) => cue.index == line.index);
+        return cue.start == line.startTime && cue.end == line.endTime;
+      })) return baseline;
+      return _commit(
+        baseline: baseline,
+        updated: updated,
+        operationType: 'sync',
+        description: 'Shifted ${updated.length} selected subtitle timecodes',
+      );
+    } on FormatException {
+      return null;
+    }
+  }
+
+  Future<StudioDockSessionSnapshot?> deleteSelected({
+    required StudioDockSessionSnapshot baseline,
+    required Set<int> cueNumbers,
+  }) async {
+    if (cueNumbers.isEmpty) return null;
+    final session = await _projects.getSession(baseline.sessionId);
+    if (session == null || session.subtitleCollectionId != baseline.collectionId) {
+      return null;
+    }
+    final positions = <int>[
+      for (var index = 0; index < baseline.cues.length; index++)
+        if (cueNumbers.contains(baseline.cues[index].index)) index,
+    ];
+    if (positions.length != cueNumbers.length) return null;
+    final deleted = await _subtitles.deleteSelectedLinesFromSnapshotWithHistory(
+      collectionId: baseline.collectionId,
+      sessionId: baseline.sessionId,
+      expectedLines: [for (final cue in baseline.cues) _copy(cue)],
+      selectedIndices: positions,
+    );
+    if (!deleted) return null;
+    return StudioDockSessionLoader(_projects, _subtitles).load(
+      sessionId: baseline.sessionId,
+      collectionId: baseline.collectionId,
     );
   }
 

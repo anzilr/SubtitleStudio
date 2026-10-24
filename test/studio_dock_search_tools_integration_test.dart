@@ -160,6 +160,85 @@ void main() {
     expect(await db.isar.checkpoints.count(), 0);
   });
 
+  test('Selected stretch keeps durations, unrelated cues and one checkpoint',
+      () async {
+    final ids = await seed();
+    final baseline = await loader.load(
+        sessionId: ids.sessionId, collectionId: ids.collectionId);
+    final stretched = await tools.shiftSelected(
+      baseline: baseline,
+      cueNumbers: {1, 2},
+      newStart: '00:00:02,000',
+      newEnd: '00:00:08,000',
+    );
+    expect(stretched, isNotNull);
+    expect(stretched!.cues.first.start, '00:00:02,000');
+    expect(stretched.cues.first.end, '00:00:03,000');
+    expect(stretched.cues.last.start, '00:00:06,000');
+    expect(stretched.cues.last.end, '00:00:07,000');
+    expect(stretched.cues.first.comment, 'Keep review note');
+    expect(stretched.cues.first.storedEdited, isNull);
+    expect(stretched.cues.last.storedEdited, 'Fish and fish');
+    expect(await db.isar.checkpoints.count(), 2);
+  });
+
+  test('Selected shift rejects stale and out-of-day edits before history',
+      () async {
+    final ids = await seed();
+    final baseline = await loader.load(
+        sessionId: ids.sessionId, collectionId: ids.collectionId);
+    expect(() => StudioDockBulkToolsService.planShiftSelected(
+      baseline, {1}, '23:59:59,500', '23:59:59,900'),
+      throwsFormatException);
+    expect(await db.isar.checkpoints.count(), 0);
+    await db.isar.writeTxn(() async {
+      final collection =
+          (await db.isar.subtitleCollections.get(ids.collectionId))!;
+      collection.lines.first.comment = 'Newer review work';
+      await db.isar.subtitleCollections.put(collection);
+    });
+    expect(await tools.shiftSelected(
+      baseline: baseline, cueNumbers: {1},
+      newStart: '00:00:02,000', newEnd: '00:00:03,000'), isNull);
+    final stored = (await db.isar.subtitleCollections.get(ids.collectionId))!;
+    expect(stored.lines.first.startTime, '00:00:01,000');
+    expect(stored.lines.first.comment, 'Newer review work');
+    expect(await db.isar.checkpoints.count(), 0);
+  });
+
+  test('Selected deletion reindexes once and creates one history checkpoint',
+      () async {
+    final ids = await seed();
+    final baseline = await loader.load(
+        sessionId: ids.sessionId, collectionId: ids.collectionId);
+    final reduced = await tools.deleteSelected(
+      baseline: baseline, cueNumbers: {1});
+    expect(reduced, isNotNull);
+    expect(reduced!.cues, hasLength(1));
+    expect(reduced.cues.single.index, 1);
+    expect(reduced.cues.single.storedEdited, 'Fish and fish');
+    expect(await db.isar.checkpoints.count(), 2);
+  });
+
+  test('Selected deletion rejects a stale full snapshot and removes no cues',
+      () async {
+    final ids = await seed();
+    final baseline = await loader.load(
+        sessionId: ids.sessionId, collectionId: ids.collectionId);
+    await db.isar.writeTxn(() async {
+      final collection =
+          (await db.isar.subtitleCollections.get(ids.collectionId))!;
+      collection.lines.last.comment = 'Newer unrelated note';
+      await db.isar.subtitleCollections.put(collection);
+    });
+    expect(await tools.deleteSelected(
+      baseline: baseline, cueNumbers: {1}), isNull);
+    final stored = (await db.isar.subtitleCollections.get(ids.collectionId))!;
+    expect(stored.lines, hasLength(2));
+    expect(stored.lines.last.comment, 'Newer unrelated note');
+    expect(await db.isar.checkpoints.count(), 0);
+  });
+
   test('Clear formatting changes only supported tags and keeps original',
       () async {
     final ids = await seed();

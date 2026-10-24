@@ -619,6 +619,56 @@ class SubtitleRepository {
     }
   }
 
+  /// Desktop bulk deletion uses the same full-snapshot guard as single-cue
+  /// deletion. Never apply an old set of positional indices to newer rows.
+  /// All selected removals and reindexing form exactly one V2 checkpoint.
+  Future<bool> deleteSelectedLinesFromSnapshotWithHistory({
+    required int collectionId,
+    required int sessionId,
+    required List<SubtitleLine> expectedLines,
+    required List<int> selectedIndices,
+  }) async {
+    final expected = CheckpointStateReducer.copyLines(expectedLines);
+    final selected = selectedIndices.toSet().toList()
+      ..sort((a, b) => b.compareTo(a));
+    if (selected.isEmpty || selected.length != selectedIndices.length ||
+        selected.any((index) => index < 0 || index >= expected.length)) {
+      return false;
+    }
+    try {
+      await _historyTransaction.commit(
+        sessionId: sessionId,
+        subtitleCollectionId: collectionId,
+        operationType: 'delete',
+        description: 'Deleted ${selected.length} selected subtitles',
+        buildMutation: (currentLines) {
+          if (!_sameDisplayedLines(currentLines, expected)) {
+            throw StateError('Subtitle collection changed since selection.');
+          }
+          final nextLines = CheckpointStateReducer.copyLines(currentLines);
+          final deltas = <SubtitleLineDelta>[];
+          for (final index in selected) {
+            deltas.add(SubtitleLineDelta()
+              ..changeType = 'delete'
+              ..lineIndex = index
+              ..beforeState = CheckpointStateReducer.copyLine(nextLines[index])
+              ..afterState = null);
+            nextLines.removeAt(index);
+          }
+          return CheckpointMutationPlan(
+            nextLines: sortAndReindexSubtitleLines(nextLines),
+            deltas: deltas,
+            forceSnapshot: true,
+          );
+        },
+      );
+      return true;
+    } catch (error) {
+      logError('SubtitleRepository: Guarded selected delete rejected: $error');
+      return false;
+    }
+  }
+
   /// Splits a cue only if *every* persisted cue still matches the desktop
   /// snapshot. Both halves and their history are committed in one transaction.
   Future<int?> splitLineFromSnapshotWithHistory({

@@ -533,6 +533,56 @@ class _StudioDockSessionViewState
     }
   }
 
+  Future<StudioDockCueUpdate?> _shiftSelectedCues(
+      List<int> cueNumbers, String newStart, String newEnd,
+      int preferredCue) async {
+    final baseline = _latestBaseline;
+    if (baseline == null || !widget.enableEditing || cueNumbers.isEmpty) {
+      return null;
+    }
+    try {
+      final updated = await _bulkTools.shiftSelected(
+        baseline: baseline,
+        cueNumbers: cueNumbers.toSet(),
+        newStart: newStart,
+        newEnd: newEnd,
+      );
+      if (!mounted || updated == null) return null;
+      setState(() => _latestBaseline = updated);
+      return StudioDockCueUpdate(
+        cues: _snapshotUpdate(updated, preferredCue).cues,
+        selectedCueId: preferredCue,
+        selectedCueIds: cueNumbers,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<StudioDockCueUpdate?> _deleteSelectedCues(
+      List<int> cueNumbers, int preferredCue) async {
+    final baseline = _latestBaseline;
+    if (baseline == null || !widget.enableEditing || cueNumbers.isEmpty) {
+      return null;
+    }
+    try {
+      final position = baseline.cues.indexWhere(
+          (cue) => cue.index == preferredCue);
+      final updated = await _bulkTools.deleteSelected(
+        baseline: baseline,
+        cueNumbers: cueNumbers.toSet(),
+      );
+      if (!mounted || updated == null) return null;
+      setState(() => _latestBaseline = updated);
+      final surviving = updated.cues;
+      final nextSelected = surviving.isEmpty ? -1 :
+          surviving[position.clamp(0, surviving.length - 1).toInt()].index;
+      return _snapshotUpdate(updated, nextSelected);
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<StudioDockCueUpdate?> _clearAllFormatting(
       int selectedCueNumber) async {
     final baseline = _latestBaseline;
@@ -1094,6 +1144,10 @@ class _StudioDockSessionViewState
         onFindCues: _findCues,
         onReplaceMatches: widget.enableEditing ? _replaceMatches : null,
         onShiftAllCues: widget.enableEditing ? _shiftAllCues : null,
+        onShiftSelectedCues:
+            widget.enableEditing ? _shiftSelectedCues : null,
+        onDeleteSelectedCues:
+            widget.enableEditing ? _deleteSelectedCues : null,
         onClearAllFormatting:
             widget.enableEditing ? _clearAllFormatting : null,
         onInsertCue: widget.enableEditing ? _insertCue : null,
