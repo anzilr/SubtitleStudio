@@ -73,4 +73,6 @@ jobs:
             test/edit_line_file_save_service_test.dart \
             test/editor_direct_save_service_test.dart \
             test/editor_export_service_test.dart \
-            test/studio_dock_file_actions_test.dart
+            test/studio_dock_file_actions_test.dart \
+            test/studio_dock_project_actions_test.dart \
+            test/studio_dock_project_save_actions_test.dart
