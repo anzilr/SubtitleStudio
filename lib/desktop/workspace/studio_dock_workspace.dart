@@ -30,7 +30,7 @@ enum _StudioDockMenuAction {
   timing, shiftTools, showTools, syncSubtitles, sourceView, history, submitMsone,
   loadSecondary, toggleSecondary,
   shiftSelected, deleteSelected, selectByIndex, rangeSelection, goToLine,
-  importComments, removeHearingImpaired,
+  importComments, removeHearingImpaired, insertMsoneBanners, normalizeMalayalam,
   explorer, inspector, settings, help,
 }
 
@@ -147,6 +147,8 @@ class StudioDockWorkspace extends StatefulWidget {
     this.onRemoveHearingImpaired,
     this.onOpenHelp,
     this.onSubmitToMsone,
+    this.onInsertMsoneBanners,
+    this.onNormalizeMalayalam,
     this.onLoadSecondarySubtitles,
     this.onToggleSecondarySubtitles,
     this.showSecondarySubtitles = true,
@@ -261,6 +263,10 @@ class StudioDockWorkspace extends StatefulWidget {
   /// Opens the established MSone submission flow after the current draft is
   /// resolved. The host checks the persisted MSone-features preference.
   final Future<void> Function()? onSubmitToMsone;
+  /// Existing mobile MSone banner configuration/history service.
+  final Future<void> Function()? onInsertMsoneBanners;
+  /// Existing mobile Malayalam normalizer preview/history service.
+  final Future<void> Function()? onNormalizeMalayalam;
   /// Uses the mobile secondary-track picker and persisted track preference.
   final Future<void> Function()? onLoadSecondarySubtitles;
   /// The host owns the current track; this is only a visibility toggle.
@@ -313,6 +319,9 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   bool _replacingMatches = false;
   bool _runningTool = false;
   bool _openingMsoneSubmission = false;
+  bool _openingMsoneTools = false;
+  ModalRoute<dynamic>? _msoneBannerMenuRoute;
+  ModalRoute<dynamic>? _msoneNormalizeMenuRoute;
   bool _openingProjectSettings = false;
   bool _openingCommentImport = false;
   bool _openingHearingCleanup = false;
@@ -1152,6 +1161,30 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       }
     } finally {
       if (mounted) setState(() => _openingMsoneSubmission = false);
+    }
+  }
+
+  Future<void> _openMsoneToolSafely(
+      Future<void> Function()? open, {
+      required String name,
+      ModalRoute<dynamic>? afterMenu,
+  }) async {
+    if (open == null || _openingMsoneTools || _cues.isEmpty) return;
+    setState(() => _openingMsoneTools = true);
+    try {
+      // Dismiss the Tools popup before opening a real modal bottom sheet,
+      // and never abandon an inspector/Source View draft silently.
+      if (afterMenu != null) await afterMenu.completed;
+      if (!mounted || !await _confirmDraftBeforeLeaving() || !mounted) return;
+      await open();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Could not open $name. Please try again.'),
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _openingMsoneTools = false);
     }
   }
 
@@ -2014,6 +2047,20 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           if (widget.onLoadHistory != null)
             const PopupMenuItem(value: _StudioDockMenuAction.history,
                 child: Text('Edit history')),
+          if (widget.onInsertMsoneBanners != null)
+            PopupMenuItem(value: _StudioDockMenuAction.insertMsoneBanners,
+              enabled: !_openingMsoneTools && _cues.isNotEmpty,
+              child: Builder(builder: (popupContext) {
+                _msoneBannerMenuRoute = ModalRoute.of(popupContext);
+                return const Text('Insert MSone Banners…');
+              })),
+          if (widget.onNormalizeMalayalam != null)
+            PopupMenuItem(value: _StudioDockMenuAction.normalizeMalayalam,
+              enabled: !_openingMsoneTools && _cues.isNotEmpty,
+              child: Builder(builder: (popupContext) {
+                _msoneNormalizeMenuRoute = ModalRoute.of(popupContext);
+                return const Text('Malayalam Normalize…');
+              })),
           if (widget.onSubmitToMsone != null)
             PopupMenuItem(value: _StudioDockMenuAction.submitMsone,
               enabled: !_openingMsoneSubmission,
@@ -2103,6 +2150,16 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         final menuRoute = _commentsMenuRoute;
         _commentsMenuRoute = null;
         unawaited(_importCommentsSafely(afterMenu: menuRoute));
+      case _StudioDockMenuAction.insertMsoneBanners:
+        final route = _msoneBannerMenuRoute;
+        _msoneBannerMenuRoute = null;
+        unawaited(_openMsoneToolSafely(widget.onInsertMsoneBanners,
+          name: 'MSone banner configuration', afterMenu: route));
+      case _StudioDockMenuAction.normalizeMalayalam:
+        final route = _msoneNormalizeMenuRoute;
+        _msoneNormalizeMenuRoute = null;
+        unawaited(_openMsoneToolSafely(widget.onNormalizeMalayalam,
+          name: 'Malayalam normalization', afterMenu: route));
       case _StudioDockMenuAction.submitMsone:
         final menuRoute = _msoneMenuRoute;
         _msoneMenuRoute = null;
@@ -4455,6 +4512,46 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             ),
           )),
         ],
+        if (widget.onInsertMsoneBanners != null ||
+            widget.onNormalizeMalayalam != null) ...[
+          const SizedBox(height: 12),
+          Card(child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('MSone subtitle tools',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 7),
+                Text('Use the original mobile banner editor and Malayalam '
+                    'normalization preview. Both preserve checkpoint history.',
+                    style: TextStyle(color: _muted, fontSize: 12)),
+                const SizedBox(height: 12),
+                Wrap(spacing: 10, runSpacing: 8, children: [
+                  if (widget.onInsertMsoneBanners != null)
+                    OutlinedButton.icon(
+                      key: const ValueKey('studio-tool-msone-banners'),
+                      onPressed: _openingMsoneTools || _cues.isEmpty
+                          ? null : () => unawaited(_openMsoneToolSafely(
+                              widget.onInsertMsoneBanners,
+                              name: 'MSone banner configuration')),
+                      icon: const Icon(Icons.bookmark_add_outlined, size: 17),
+                      label: const Text('Insert Banners'),
+                    ),
+                  if (widget.onNormalizeMalayalam != null)
+                    OutlinedButton.icon(
+                      key: const ValueKey('studio-tool-msone-normalize'),
+                      onPressed: _openingMsoneTools || _cues.isEmpty
+                          ? null : () => unawaited(_openMsoneToolSafely(
+                              widget.onNormalizeMalayalam,
+                              name: 'Malayalam normalization')),
+                      icon: const Icon(Icons.translate, size: 17),
+                      label: const Text('Malayalam Normalize'),
+                    ),
+                ]),
+              ],
+            ),
+          )),
+        ],
         if (_runningTool) const LinearProgressIndicator(),
         if (_toolsError != null) Padding(
           padding: const EdgeInsets.all(12),
@@ -4466,7 +4563,9 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             widget.onConvertFramerate == null &&
             widget.onClearAllFormatting == null &&
             widget.onImportComments == null &&
-            widget.onRemoveHearingImpaired == null)
+            widget.onRemoveHearingImpaired == null &&
+            widget.onInsertMsoneBanners == null &&
+            widget.onNormalizeMalayalam == null)
           Padding(
             padding: const EdgeInsets.all(14),
             child: Text('Tools are read-only for this session.',

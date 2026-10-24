@@ -40,7 +40,7 @@ acceptance. A wired callback is not proof of a working native interaction.
 | Subtitle synchronization | Wired in DS5 R15: first/last proportional anchors (durations preserved), positive/negative millisecond shift, selected-cue stretch, and video-gated framerate conversion (both bounds scaled); optimistic single-checkpoint history saves with canonical SRT range validation | Windows native video FPS detection, actual file sync, precision, selection consistency and Undo/Redo acceptance |
 | Remove hearing-impaired annotations | Wired in DS5 R14 to the shared `HearingImpairedCleanupService` through a dirty-draft guard and source-snapshot preflight; after the checkpoint transaction Studio Dock reloads all cues | Windows real-file cleanup, cue deletions, translated text preservation, Undo/Redo acceptance |
 | MSone submission (Existing Translator/Fresher, .msone or SRT pair) | Wired in DS5 R7 to the existing submission flow; shown only when MSone features are enabled | Native picker, completed form and route-return acceptance; never submit test data to the live endpoint |
-| **MSone banners and Malayalam Normalize** | **Not yet exposed** | Reuse mobile MSone feature gating and shared editing/history actions |
+| MSone banners and Malayalam Normalize | Wired in DS5 R16 to the existing mobile BannerConfigurationSheet and MalayalamNormalizationSheet with persisted MSone-feature gating, Tools menu/panel actions, popup/dirty-draft safeguards and shared history refresh | Native banner timing/overlap/edit, Malayalam preview selections, Cancel, Undo/Redo, and MSone enabled/disabled settings acceptance |
 | Project Settings (encoding, media, secondary subs) | Wired in DS5 R10 to existing `ProjectSettingsSheet`, repository models and live media/secondary/history refresh after close | Native encoding selection/Save As, media unlink/replace, secondary clear, project rename, marked lines and route-return acceptance |
 | App Settings, theme, typography, waveform limits, checkpoints | Wired to **existing** `SettingsSheet` in DS5 R5f | Verify immediate preference propagation and skin changes |
 | Help & Documentation | Wired to **existing** `HelpScreen` in DS5 R5f | Navigation/back-stack widget and native acceptance |
@@ -64,7 +64,7 @@ acceptance. A wired callback is not proof of a working native interaction.
    persistence/playback on a native desktop before declaring playback parity.
 2. **P1:** Verify synchronization and import comments, Go to Line, selected-cue batch operations and the
    now-wired Project Settings on native desktop when available.
-3. **P2:** MSone-gated banners/normalization, fullscreen comment and
+3. **P2:** Verify native MSone-gated banners/normalization, fullscreen comment and
    mark callbacks, hotkey parity, theme/accessibility and native media QA.
 
 Keep this ledger current after each checkpoint. Studio Dock must not be called

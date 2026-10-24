@@ -105,3 +105,5 @@ DS5 R14 EMPTY LANDING FINAL 2026-10-24: verify no Tools menu on freshly mounted 
 DS5 R15 SYNC FOCUSED GATE 2026-10-24: mobile-equivalent anchored sync and video-gated FPS conversion on sole desktop Studio Dock UI; unit and widget regressions. Flutter analyze/Studio Dock tests only, never native builds.
 
 DS5 R15 DRAFT NAV TEST RETRY 2026-10-24: verify Timing menu blocks dirty inspector before Tools. Rerun Flutter analysis and focused tests only; no builds.
+
+DS5 R16 MSONE TOOLS 2026-10-24: restore shared mobile banner and Malayalam normalizer sheets in native Studio Dock with MSone flag and dirty-draft protection; run Flutter analyze and focused studio_dock tests only; NO platform builds.

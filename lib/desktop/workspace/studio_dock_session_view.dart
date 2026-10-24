@@ -16,6 +16,7 @@ import 'package:subtitle_studio/screens/screen_help.dart';
 import 'package:subtitle_studio/widgets/settings_sheet.dart';
 import 'package:subtitle_studio/widgets/project_settings_sheet.dart';
 import 'package:subtitle_studio/widgets/import_comments_sheet.dart';
+import 'package:subtitle_studio/screens/edit/widgets/edit_tool_sheets.dart';
 import 'package:subtitle_studio/screens/edit/services/hearing_impaired_cleanup_service.dart';
 import 'package:subtitle_studio/screens/msone_submission_flow.dart';
 import 'package:subtitle_studio/screens/edit/services/editor_secondary_subtitle_service.dart';
@@ -1159,6 +1160,92 @@ class _StudioDockSessionViewState
     if (imported && mounted) await _refreshAfterCommentImport();
   }
 
+  List<SubtitleLine> _msoneToolLines(StudioDockSessionSnapshot snapshot) => [
+    for (final cue in snapshot.cues)
+      SubtitleLine()
+        ..index = cue.index
+        ..startTime = cue.start
+        ..endTime = cue.end
+        ..original = cue.original
+        ..edited = cue.storedEdited
+        ..marked = cue.marked
+        ..comment = cue.comment
+        ..resolved = cue.resolved,
+  ];
+
+  Future<void> _runMsoneEditorTool({required bool banners}) async {
+    if (!mounted || !widget.enableEditing || !_msoneEnabled) return;
+    final session = await ref.read(projectRepositoryProvider)
+        .getSession(widget.sessionId);
+    if (!mounted || session == null ||
+        session.subtitleCollectionId != widget.collectionId) {
+      throw StateError('The MSone subtitle project is unavailable.');
+    }
+    final current = await _load();
+    if (!mounted || current.cues.isEmpty) return;
+    bool applied = false;
+    final lines = _msoneToolLines(current);
+    try {
+      if (banners) {
+        await showEditorBannerSheet(
+          context: context,
+          subtitleCollectionId: widget.collectionId,
+          sessionId: widget.sessionId,
+          subtitleLines: lines,
+          onBannersInserted: () async { applied = true; },
+        );
+      } else {
+        await showEditorNormalizationSheet(
+          context: context,
+          subtitleCollectionId: widget.collectionId,
+          sessionId: widget.sessionId,
+          subtitleLines: lines,
+          onNormalizationComplete: () async { applied = true; },
+        );
+      }
+    } finally {
+      if (applied && mounted) {
+        // The original mobile sheets commit the operation into shared
+        // checkpoint history. Reflect every changed cue without remounting
+        // the current native player or replacing Studio Dock State.
+        final selection = _dockKey.currentState?.selectedCueNumbers
+            ?? const <int>[];
+        final preferred = _dockKey.currentState?.selectedCueNumber ?? -1;
+        try {
+          final updated = await _load();
+          if (mounted) {
+            setState(() => _latestBaseline = updated);
+            final indices = updated.cues.map((cue) => cue.index).toSet();
+            final selected = indices.contains(preferred)
+                ? preferred : updated.cues.isEmpty ? -1
+                : updated.cues.first.index;
+            final next = _snapshotUpdate(updated, selected);
+            _dockKey.currentState?.acceptExternalCueUpdate(
+              StudioDockCueUpdate(
+                cues: next.cues,
+                selectedCueId: selected,
+                selectedCueIds: selection.where(indices.contains).toList(),
+              ),
+            );
+          }
+        } catch (_) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Could not refresh the MSone tool changes. '
+                  'Reopen the project before further editing.'),
+            ));
+          }
+        }
+      }
+    }
+  }
+
+  Future<void> _openMsoneBanners() =>
+      _runMsoneEditorTool(banners: true);
+
+  Future<void> _openMalayalamNormalize() =>
+      _runMsoneEditorTool(banners: false);
+
   Future<void> _openHelp() async {
     if (!mounted) return;
     await Navigator.of(context).push<void>(MaterialPageRoute(
@@ -1258,6 +1345,10 @@ class _StudioDockSessionViewState
             widget.enableEditing ? _removeHearingImpaired : null,
         onOpenHelp: _openHelp,
         onSubmitToMsone: _msoneEnabled ? _submitToMsone : null,
+        onInsertMsoneBanners: widget.enableEditing && _msoneEnabled
+            ? _openMsoneBanners : null,
+        onNormalizeMalayalam: widget.enableEditing && _msoneEnabled
+            ? _openMalayalamNormalize : null,
         onLoadSecondarySubtitles: _openSecondaryPicker,
         onToggleSecondarySubtitles:
             _secondarySource == EditorSecondarySubtitleSource.none
