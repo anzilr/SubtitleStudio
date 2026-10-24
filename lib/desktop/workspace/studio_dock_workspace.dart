@@ -2602,20 +2602,23 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               style: const TextStyle(fontSize: 12)),
           const SizedBox(height: 12),
           if (widget.onApplyCueNotes != null) ...[
-            SwitchListTile.adaptive(
-              key: const ValueKey('studio-notes-mark'),
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Mark for review'),
-              value: _noteMarked,
-              onChanged: _savingDraft ? null : (marked) => setState(() {
-                _draftNotesCueId = _selectedId;
-                _draftMarked = marked;
-                if (!marked) {
-                  _draftNoteText = '';
-                  _draftResolved = false;
-                  _draftRevision++;
-                }
-              }),
+            Material(
+              color: Colors.transparent,
+              child: SwitchListTile.adaptive(
+                key: const ValueKey('studio-notes-mark'),
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Mark for review'),
+                value: _noteMarked,
+                onChanged: _savingDraft ? null : (marked) => setState(() {
+                  _draftNotesCueId = _selectedId;
+                  _draftMarked = marked;
+                  if (!marked) {
+                    _draftNoteText = '';
+                    _draftResolved = false;
+                    _draftRevision++;
+                  }
+                }),
+              ),
             ),
             const SizedBox(height: 12),
             _fieldLabel('COMMENT'),
@@ -2636,16 +2639,19 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               }),
             ),
             const SizedBox(height: 12),
-            SwitchListTile.adaptive(
-              key: const ValueKey('studio-notes-resolved'),
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Review resolved'),
-              value: _noteResolved,
-              onChanged: _savingDraft || !_noteMarked ? null
-                  : (resolved) => setState(() {
-                      _draftNotesCueId = _selectedId;
-                      _draftResolved = resolved;
-                    }),
+            Material(
+              color: Colors.transparent,
+              child: SwitchListTile.adaptive(
+                key: const ValueKey('studio-notes-resolved'),
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Review resolved'),
+                value: _noteResolved,
+                onChanged: _savingDraft || !_noteMarked ? null
+                    : (resolved) => setState(() {
+                        _draftNotesCueId = _selectedId;
+                        _draftResolved = resolved;
+                      }),
+              ),
             ),
             const SizedBox(height: 12),
             Row(children: [
