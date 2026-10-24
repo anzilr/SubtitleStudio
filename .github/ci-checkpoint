@@ -192,3 +192,5 @@ DS5 R7 FULL GATE 2026-10-24: include shared mobile MSone submission routing, fea
 DS5 R7 DISMISS FULL TEST FIX 2026-10-24: address ambiguous Discard finder in desktop MSone dirty-draft widget test; run Flutter analysis and full test suite only, without platform builds.
 
 DS5 R8 FULL GATE 2026-10-24: test desktop secondary-subtitle loading, saved source projection, existing shared player, and R7 analyzer warnings. Run Flutter pub get, analyze and all tests only, without native/platform builds.
+
+DS5 R9 FULL GATE 2026-10-24: re-enable waveform timing edits and cue insertion for native Studio Dock using checkpoint-backed services; add compact toolbar and draft guard regressions. Run Flutter pub get, analyze and all Flutter tests only; NO native builds.

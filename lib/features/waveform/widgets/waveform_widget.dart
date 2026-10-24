@@ -32,6 +32,10 @@ class WaveformWidget extends riverpod.ConsumerStatefulWidget {
   final Function(int)? onSubtitleHighlight; // Callback to highlight subtitle in list
   final Function()? onSubtitlesUpdated; // Callback when subtitles are updated (for refreshing parent)
   final Function(Duration startTime, Duration endTime)? onAddLineConfirmed; // Callback when add line is confirmed with selected times
+  /// Optional host-owned guarded history transaction for waveform time edits.
+  /// When absent, the existing mobile repository write remains unchanged.
+  final Future<bool> Function(int cueNumber, String start, String end)?
+      onApplyTimeEdit;
   final double height;
   /// Opt-in minimal toolbar/zoom UI when embedded in a short desktop band.
   /// The full-sized mobile and classic waveform remains unchanged.
@@ -56,6 +60,7 @@ class WaveformWidget extends riverpod.ConsumerStatefulWidget {
     this.onSubtitleHighlight,
     this.onSubtitlesUpdated,
     this.onAddLineConfirmed,
+    this.onApplyTimeEdit,
     this.height = 180.0,
     this.compact = false,
     this.enableTimeEditing = true,

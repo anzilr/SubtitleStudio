@@ -18,12 +18,19 @@ class StudioDockWaveformSurface extends StatelessWidget {
     required this.collectionId,
     required this.subtitles,
     required this.playback,
+    this.onApplyTimeEdit,
+    this.onAddLineConfirmed,
+    this.onSubtitleHighlight,
   });
 
   final String videoPath;
   final int collectionId;
   final List<SubtitleLine> subtitles;
   final StudioDockPlaybackLink playback;
+  final Future<bool> Function(int cueNumber, String start, String end)?
+      onApplyTimeEdit;
+  final void Function(Duration start, Duration end)? onAddLineConfirmed;
+  final ValueChanged<int>? onSubtitleHighlight;
 
   @override
   Widget build(BuildContext context) => ProviderScope(
@@ -32,6 +39,9 @@ class StudioDockWaveformSurface extends StatelessWidget {
       collectionId: collectionId,
       subtitles: subtitles,
       playback: playback,
+      onApplyTimeEdit: onApplyTimeEdit,
+      onAddLineConfirmed: onAddLineConfirmed,
+      onSubtitleHighlight: onSubtitleHighlight,
     ),
   );
 }
@@ -42,12 +52,19 @@ class _WaveformBody extends ConsumerStatefulWidget {
     required this.collectionId,
     required this.subtitles,
     required this.playback,
+    this.onApplyTimeEdit,
+    this.onAddLineConfirmed,
+    this.onSubtitleHighlight,
   });
 
   final String videoPath;
   final int collectionId;
   final List<SubtitleLine> subtitles;
   final StudioDockPlaybackLink playback;
+  final Future<bool> Function(int cueNumber, String start, String end)?
+      onApplyTimeEdit;
+  final void Function(Duration start, Duration end)? onAddLineConfirmed;
+  final ValueChanged<int>? onSubtitleHighlight;
 
   @override
   ConsumerState<_WaveformBody> createState() => _WaveformBodyState();
@@ -125,9 +142,13 @@ class _WaveformBodyState extends ConsumerState<_WaveformBody> {
           isVideoPlaying: () => widget.playback.playing.value,
           height: limits.maxHeight,
           compact: true,
-          enableTimeEditing: false,
-          // Changes to timing and cue insertion must use a guarded history
-          // transaction in a future checkpoint, never waveform direct writes.
+          enableTimeEditing: widget.onApplyTimeEdit != null &&
+              widget.onAddLineConfirmed != null,
+          onApplyTimeEdit: widget.onApplyTimeEdit,
+          onAddLineConfirmed: widget.onAddLineConfirmed,
+          onSubtitleHighlight: widget.onSubtitleHighlight,
+          // Native Studio Dock owns the guarded history transaction; never
+          // let the waveform fall back to unguarded direct database writes.
           subtitleCollectionId: null,
           sessionId: null,
         ),

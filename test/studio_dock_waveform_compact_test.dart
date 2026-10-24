@@ -8,6 +8,7 @@ import 'package:subtitle_studio/features/waveform/providers/waveform_controller.
 import 'package:subtitle_studio/features/waveform/state/waveform_state.dart';
 import 'package:subtitle_studio/features/waveform/state/waveform_event.dart';
 import 'package:subtitle_studio/features/waveform/widgets/waveform_widget.dart';
+import 'package:subtitle_studio/database/models/models.dart';
 
 class _CompactReadyController extends WaveformController {
   @override
@@ -76,6 +77,62 @@ void main() {
         .enableTimeEditing, isFalse);
     expect(find.byTooltip('Waveform Options'), findsNothing,
         reason: 'Full toolbar must not consume compact waveform height');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('compact controls add cues and route edits through the host',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final line = SubtitleLine()
+      ..index = 1
+      ..startTime = '00:00:01,000'
+      ..endTime = '00:00:02,000'
+      ..original = 'Original';
+    final edits = <String>[];
+    final additions = <Duration>[];
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        waveformControllerProvider.overrideWith(_CompactReadyController.new),
+      ],
+      child: MaterialApp(home: Scaffold(body: SizedBox(
+        width: 500, height: 95,
+        child: WaveformWidget(
+          compact: true, enableTimeEditing: true,
+          height: 95, subtitles: [line],
+          onApplyTimeEdit: (number, start, end) async {
+            edits.add('$number $start $end');
+            return true;
+          },
+          onAddLineConfirmed: (start, end) {
+            additions..add(start)..add(end);
+          },
+        ),
+      ))),
+    ));
+    await tester.pump();
+
+    expect(find.byKey(const ValueKey('waveform-compact-add-line')),
+        findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('waveform-compact-add-line')));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('waveform-compact-apply')),
+        findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('waveform-compact-apply')));
+    await tester.pump();
+    expect(additions, [Duration.zero, const Duration(seconds: 2)]);
+
+    final controller = ProviderScope.containerOf(
+        tester.element(find.byType(WaveformWidget)))
+        .read(waveformControllerProvider.notifier);
+    await controller.dispatch(const EnterTimeEditMode(0));
+    await controller.dispatch(const UpdateTempEndTime(Duration(seconds: 3)));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('waveform-compact-apply')));
+    await tester.pump();
+    expect(edits, ['1 00:00:01,000 00:00:03,000']);
     expect(tester.takeException(), isNull);
   });
 

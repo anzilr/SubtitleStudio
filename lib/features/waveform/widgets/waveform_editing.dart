@@ -164,7 +164,7 @@ extension _WaveformEditing on WaveformWidgetState {
   /// Apply time changes to database
   Future<void> _applyTimeChanges(WaveformReady state) async {
     if (!state.isEditMode || state.editingSubtitleIndex == null) return;
-    if (widget.subtitleCollectionId == null) {
+    if (widget.onApplyTimeEdit == null && widget.subtitleCollectionId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -217,18 +217,27 @@ extension _WaveformEditing on WaveformWidgetState {
     
     // Update subtitle and history atomically.
     try {
-      final repository = ref.read(waveformSubtitleRepositoryProvider);
-      final success = widget.sessionId != null
-          ? await repository.updateLinesWithHistory(
-              subtitleCollectionId: widget.subtitleCollectionId!,
-              sessionId: widget.sessionId!,
-              updatedLines: [afterSubtitle],
-              expectedLines: [subtitle],
-            )
-          : await repository.updateLines(
-              widget.subtitleCollectionId!,
-              [afterSubtitle],
-            );
+      final apply = widget.onApplyTimeEdit;
+      final bool success;
+      if (apply != null) {
+        // Native Studio Dock commits against its current guarded snapshot.
+        // This also lets the host resolve an unsaved inspector draft first.
+        success = await apply(
+          subtitle.index, afterSubtitle.startTime, afterSubtitle.endTime);
+      } else {
+        final repository = ref.read(waveformSubtitleRepositoryProvider);
+        success = widget.sessionId != null
+            ? await repository.updateLinesWithHistory(
+                subtitleCollectionId: widget.subtitleCollectionId!,
+                sessionId: widget.sessionId!,
+                updatedLines: [afterSubtitle],
+                expectedLines: [subtitle],
+              )
+            : await repository.updateLines(
+                widget.subtitleCollectionId!,
+                [afterSubtitle],
+              );
+      }
       
       if (!success) {
         throw Exception('Failed to update subtitle in database');

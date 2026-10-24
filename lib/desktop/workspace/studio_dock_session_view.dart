@@ -41,6 +41,7 @@ import 'studio_dock_cue_edit_service.dart';
 import 'studio_dock_bulk_review_service.dart';
 import 'studio_dock_search_service.dart';
 import 'studio_dock_bulk_tools_service.dart';
+import 'studio_dock_waveform_edit_plan.dart';
 
 /// Live Studio Dock host backed by the shared project, subtitle, history,
 /// native media and file services.
@@ -82,6 +83,9 @@ class _StudioDockSessionViewState
   bool _selectingVideo = false;
   StudioDockSessionSnapshot? _latestBaseline;
   final StudioDockPlaybackLink _playback = StudioDockPlaybackLink();
+  GlobalKey<StudioDockWorkspaceState> _dockKey =
+      GlobalKey<StudioDockWorkspaceState>();
+  bool _waveformEditBusy = false;
   bool _msoneEnabled = false;
   int _msonePreferenceRevision = 0;
   EditorSecondarySubtitleSource _secondarySource =
@@ -289,6 +293,70 @@ class _StudioDockSessionViewState
     } catch (_) {
       return false;
     }
+  }
+
+  Future<bool> _applyWaveformTime(
+      int cueNumber, String start, String end) async {
+    if (_waveformEditBusy || !widget.enableEditing) return false;
+    _waveformEditBusy = true;
+    try {
+      // A waveform drag must not discard an unsaved inspector/source draft.
+      if (await _dockKey.currentState?.prepareForExternalEdit() != true ||
+          !mounted) return false;
+      final saved = await _applyTiming(cueNumber, start, end);
+      final snapshot = _latestBaseline;
+      if (saved && mounted && snapshot != null) {
+        _dockKey.currentState?.acceptExternalCueUpdate(
+            _snapshotUpdate(snapshot, cueNumber));
+      }
+      return saved;
+    } finally {
+      _waveformEditBusy = false;
+    }
+  }
+
+  void _requestWaveformCue(Duration start, Duration end) =>
+      unawaited(_insertWaveformCue(start, end));
+
+  Future<void> _insertWaveformCue(Duration start, Duration end) async {
+    if (_waveformEditBusy || !widget.enableEditing) return;
+    _waveformEditBusy = true;
+    try {
+      final formattedStart = StudioDockWaveformEditPlan.formatTime(start);
+      final formattedEnd = StudioDockWaveformEditPlan.formatTime(end);
+      if (formattedStart == null || formattedEnd == null ||
+          StudioDockTimingEditService.validate(formattedStart, formattedEnd) != null) {
+        _showWaveformError('Select a valid subtitle time range.');
+        return;
+      }
+      if (await _dockKey.currentState?.prepareForExternalEdit() != true ||
+          !mounted) return;
+      final baseline = _latestBaseline;
+      if (baseline == null) return;
+      final position = StudioDockWaveformEditPlan.insertionPosition(
+          [for (final cue in baseline.cues) cue.start], start);
+      final afterCueNumber = position == 0
+          ? null : baseline.cues[position - 1].index;
+      final inserted = await _insertCue(afterCueNumber, StudioDockNewCueDraft(
+        start: formattedStart, end: formattedEnd,
+        original: '', edited: '',
+      ));
+      if (!mounted) return;
+      if (inserted == null) {
+        _showWaveformError('Could not add the subtitle line. Try again.');
+        return;
+      }
+      _dockKey.currentState?.acceptExternalCueUpdate(inserted);
+      _dockKey.currentState?.highlightCueFromWaveform(inserted.selectedCueId);
+    } finally {
+      _waveformEditBusy = false;
+    }
+  }
+
+  void _showWaveformError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)));
   }
 
   Future<bool> _applyCueContent(
@@ -836,6 +904,7 @@ class _StudioDockSessionViewState
     if (widget.sessionId != oldWidget.sessionId ||
         widget.collectionId != oldWidget.collectionId) {
       _latestBaseline = null;
+      _dockKey = GlobalKey<StudioDockWorkspaceState>();
       _snapshot = _load();
       _videoPath = widget.allowNativePlayback ? _resolveVideoPath() : null;
       _nativePlayerState = null;
@@ -890,7 +959,7 @@ class _StudioDockSessionViewState
           ),
       ];
       Widget buildDock(String? validVideoPath) => StudioDockWorkspace(
-        key: ValueKey('studio-dock-session-${session.sessionId}'),
+        key: _dockKey,
         initialCues: cues,
         playback: widget.allowNativePlayback ? _playback : null,
         isLiveSession: true,
@@ -958,6 +1027,12 @@ class _StudioDockSessionViewState
                 videoPath: validVideoPath,
                 collectionId: session.collectionId,
                 playback: _playback,
+                onApplyTimeEdit:
+                    widget.enableEditing ? _applyWaveformTime : null,
+                onAddLineConfirmed:
+                    widget.enableEditing ? _requestWaveformCue : null,
+                onSubtitleHighlight: (cueNumber) =>
+                    _dockKey.currentState?.highlightCueFromWaveform(cueNumber),
                 subtitles: [
                   for (final line in session.cues)
                     SubtitleLine()

@@ -178,7 +178,8 @@ extension _WaveformRendering on WaveformWidgetState {
     );
   }
 
-  Widget _buildCompactToolbar(WaveformReady state) => SizedBox(
+  Widget _buildCompactToolbar(WaveformReady state) => LayoutBuilder(
+    builder: (context, limits) => SizedBox(
     height: 28,
     child: Row(children: [
       IconButton(
@@ -191,7 +192,7 @@ extension _WaveformRendering on WaveformWidgetState {
         padding: EdgeInsets.zero,
         constraints: const BoxConstraints(minWidth: 28, minHeight: 26),
       ),
-      Text('Waveform', style: TextStyle(
+      if (limits.maxWidth >= 250) Text('Waveform', style: TextStyle(
           color: Theme.of(context).colorScheme.onSurfaceVariant,
           fontSize: 10)),
       IconButton(
@@ -205,6 +206,63 @@ extension _WaveformRendering on WaveformWidgetState {
         constraints: const BoxConstraints(minWidth: 28, minHeight: 26),
       ),
       const Spacer(),
+      if (widget.enableTimeEditing && limits.maxWidth >= 365) ...[
+        IconButton(
+          key: const ValueKey('waveform-compact-overlap'),
+          tooltip: state.allowOverlap ? 'Disable overlap' : 'Allow overlap',
+          icon: Icon(Icons.swap_horiz, size: 16,
+              color: state.allowOverlap ? WaveformControlColors.overlap : null),
+          onPressed: () => ref.read(waveformControllerProvider.notifier)
+              .dispatch(const ToggleOverlapMode()),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 28, minHeight: 26),
+        ),
+        IconButton(
+          key: const ValueKey('waveform-compact-magnet'),
+          tooltip: state.magnetSnapEnabled ? 'Disable magnet snap' : 'Enable magnet snap',
+          icon: Icon(Icons.align_horizontal_left, size: 16,
+              color: state.magnetSnapEnabled ? WaveformControlColors.magnet : null),
+          onPressed: () => ref.read(waveformControllerProvider.notifier)
+              .dispatch(const ToggleMagnetSnap()),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 28, minHeight: 26),
+        ),
+      ],
+      if (widget.enableTimeEditing) ...[
+        if (state.isEditMode || state.isAddLineMode) ...[
+          IconButton(
+            key: const ValueKey('waveform-compact-apply'),
+            tooltip: state.isEditMode ? 'Apply Time Changes' : 'Add Line with Selected Times',
+            icon: const Icon(Icons.check, size: 18),
+            onPressed: () {
+              if (state.isEditMode) {
+                unawaited(_applyTimeChanges(state));
+              } else {
+                _confirmAddLine(state);
+              }
+            },
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 26),
+          ),
+          IconButton(
+            key: const ValueKey('waveform-compact-cancel'),
+            tooltip: state.isEditMode ? 'Cancel Time Edit' : 'Cancel New Subtitle',
+            icon: const Icon(Icons.close, size: 18),
+            onPressed: () => ref.read(waveformControllerProvider.notifier)
+                .dispatch(state.isEditMode
+                    ? const ExitTimeEditMode() : const ExitAddLineMode()),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 26),
+          ),
+        ] else IconButton(
+          key: const ValueKey('waveform-compact-add-line'),
+          tooltip: 'Add New Subtitle Line',
+          icon: const Icon(Icons.add_circle_outline, size: 18),
+          onPressed: () => _triggerAddLineMode(state),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 28, minHeight: 26),
+        ),
+      ],
       IconButton(
         tooltip: state.autoScroll ? 'Disable waveform auto-scroll'
             : 'Enable waveform auto-scroll',
@@ -216,6 +274,7 @@ extension _WaveformRendering on WaveformWidgetState {
         constraints: const BoxConstraints(minWidth: 28, minHeight: 26),
       ),
     ]),
+  ));
   );
 
   Widget _buildWaveformView(WaveformReady state) {

@@ -235,11 +235,10 @@ class StudioDockWorkspace extends StatefulWidget {
   final bool manageLiveHotkeys;
 
   @override
-  State<StudioDockWorkspace> createState() =>
-      _StudioDockWorkspaceState();
+  StudioDockWorkspaceState createState() => StudioDockWorkspaceState();
 }
 
-class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
+class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   Color get _accent => Theme.of(context).colorScheme.primary;
   Color get _border => Theme.of(context).colorScheme.outlineVariant;
   Color get _muted => Theme.of(context).colorScheme.onSurfaceVariant;
@@ -1135,6 +1134,34 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       _draftRevision++;
     });
     unawaited(_reloadHistory());
+  }
+
+  /// The native waveform shares this exact draft gate with other desktop
+  /// navigation/structure actions; a pending inspector edit is never erased.
+  Future<bool> prepareForExternalEdit() async =>
+      mounted && !_changingStructure &&
+      await _confirmDraftBeforeLeaving() && mounted;
+
+  /// A guarded host transaction succeeded: reconcile every cue and history
+  /// in the current editor instead of retaining an outdated local snapshot.
+  void acceptExternalCueUpdate(StudioDockCueUpdate update) {
+    if (mounted) _acceptStructure(update);
+  }
+
+  /// A waveform double-click selects the matching subtitle in the Dock grid.
+  /// All existing selection/draft protections remain in effect.
+  void highlightCueFromWaveform(int cueId) {
+    if (!mounted) return;
+    _selectCue(cueId);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_cueScroll.hasClients) return;
+      final index = _visible.indexWhere((cue) => cue.id == cueId);
+      if (index < 0) return;
+      final target = (index * 40.0 - _cueScroll.position.viewportDimension / 2 + 20)
+          .clamp(0.0, _cueScroll.position.maxScrollExtent).toDouble();
+      _cueScroll.animateTo(target,
+          duration: const Duration(milliseconds: 180), curve: Curves.easeOut);
+    });
   }
 
   String _formatCueTime(int millis) {
