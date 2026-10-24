@@ -57,11 +57,10 @@ void main() {
     await tester.pumpAndSettle();
     await launch(tester, empty: true,
         cleanup: (_) async => null);
-    await tester.tap(find.byKey(const ValueKey('studio-tools-menu')));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('Remove Hearing Impaired'), findsNothing);
-    await tester.binding.handlePopRoute();
-    await tester.pumpAndSettle();
+    // The empty-project landing does not mount the editor's Tools menu.
+    expect(find.byKey(const ValueKey('studio-tools-menu')), findsNothing);
+    expect(find.byKey(const ValueKey('studio-tool-hearing-cleanup')),
+        findsNothing);
     expect(tester.takeException(), isNull);
   });
 

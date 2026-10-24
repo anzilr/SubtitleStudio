@@ -99,3 +99,5 @@ DS5 R14 HEARING CLEANUP 2026-10-24: expose shared cleanup in Studio Dock Tools/m
 DS5 R14 EMPTY PROJECT TEST RETRY 2026-10-24: confirm cleanup action absent in empty project Tools popup, not whole menu. Flutter analyze and focused tests only.
 
 DS5 R14 FRESH WORKSPACE TEST 2026-10-24: avoid reusing populated widget State when testing empty project. Analyze/focused Flutter tests only; no builds.
+
+DS5 R14 EMPTY LANDING FINAL 2026-10-24: verify no Tools menu on freshly mounted empty landing, no hearing cleanup button; Flutter focused analysis/tests only, no platform builds.

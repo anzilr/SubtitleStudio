@@ -216,3 +216,5 @@ DS5 R14 FULL GATE 2026-10-24: reuse checkpoint-backed hearing-impaired cleanup, 
 DS5 R14 EMPTY PROJECT TEST RETRY 2026-10-24: correct Tools menu expectation for zero-cue projects; Flutter analyze and full tests only. No native builds.
 
 DS5 R14 FRESH WORKSPACE TEST 2026-10-24: remount fresh State for empty-project assertion, preserving production behavior. Analyze/full flutter tests only.
+
+DS5 R14 EMPTY LANDING FINAL 2026-10-24: verify no Tools menu on freshly mounted empty landing, no hearing cleanup button; Flutter full analysis/tests only, no platform builds.
