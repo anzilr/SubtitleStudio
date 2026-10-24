@@ -109,3 +109,5 @@ DS5 R15 DRAFT NAV TEST RETRY 2026-10-24: verify Timing menu blocks dirty inspect
 DS5 R16 MSONE TOOLS 2026-10-24: restore shared mobile banner and Malayalam normalizer sheets in native Studio Dock with MSone flag and dirty-draft protection; run Flutter analyze and focused studio_dock tests only; NO platform builds.
 
 DS5 R17 HOTKEYS FOCUSED GATE 2026-10-24: shared manager callbacks, live media seek/play, copy protection in EditableText and modal/dialog guard widget tests; analyze/focused tests only, NO native builds.
+
+DS5 R17 FOCUS RETRY 2026-10-24: focused hotkey regression removes platform clipboard channel hang; asserts Ctrl/Cmd+C is Flutter-local and manager ignores cue navigation in EditableText. Analyze/test only.

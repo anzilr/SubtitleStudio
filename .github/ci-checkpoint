@@ -226,3 +226,5 @@ DS5 R15 DRAFT NAV TEST RETRY 2026-10-24: verify Timing menu blocks dirty inspect
 DS5 R16 MSONE TOOLS FULL GATE 2026-10-24: mobile MSone banner and normalization feature-parity route wiring, flag gating, modal/selection/history refresh; Flutter pub get/analyze/full test suite only; no native builds.
 
 DS5 R17 HOTKEYS FULL GATE 2026-10-24: shared manager parity for live playback, guarded navigation, project save, review-comment draft, settings/help; scoped Flutter clipboard; test route focus/manager lifecycle. Flutter pub get/analyze/all tests ONLY, NO platform builds.
+
+DS5 R17 FOCUS RETRY 2026-10-24: replace Linux unmocked Clipboard.setData/getData test (10m timeout) with local ShortcutActivator presence plus manager focus/seek suppression. Run Flutter pub get/analyze/full tests only, NO builds.

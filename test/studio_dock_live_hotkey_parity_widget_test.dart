@@ -107,23 +107,34 @@ void main() {
     expect(helpCalls, 1);
   });
 
-  testWidgets('Copy shortcut respects an active EditableText draft',
+  testWidgets('Copy is Flutter-scoped and native cue hotkeys respect text focus',
       (tester) async {
-    await Clipboard.setData(const ClipboardData(text: 'original clipboard'));
-    await launch(tester, onText: (_, __) async => true);
-    final editor = find.byKey(const ValueKey('studio-edit-1-0'));
-    await tester.enterText(editor, 'Editing this subtitle');
-    await tester.pump();
-    // Copy stays in Flutter's scoped shortcut tree rather than native
-    // hotkey_manager, so EditableText keeps its own Ctrl+C semantics.
+    final link = StudioDockPlaybackLink();
+    final seeks = <Duration>[];
+    link.attach(seeks.add);
+    await launch(tester, playback: link, onText: (_, __) async => true);
+    // Native manager never registers Copy: EditableText retains Ctrl/Cmd+C,
+    // while the parent CallbackShortcuts owns copy of selected cue rows.
     expect(manager.dispatchForTesting(HotkeyAction.copy), isFalse);
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
-    await tester.sendKeyEvent(LogicalKeyboardKey.keyC);
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
-    await tester.pumpAndSettle();
-    final unchanged = await Clipboard.getData('text/plain');
-    expect(unchanged?.text, 'original clipboard');
+    final shortcuts = tester.widget<CallbackShortcuts>(
+        find.byType(CallbackShortcuts).first);
+    expect(shortcuts.bindings.containsKey(
+        const SingleActivator(LogicalKeyboardKey.keyC, control: true)), isTrue);
+    expect(shortcuts.bindings.containsKey(
+        const SingleActivator(LogicalKeyboardKey.keyC, meta: true)), isTrue);
+
+    await tester.enterText(
+        find.byKey(const ValueKey('studio-edit-1-0')),
+        'Editing this subtitle');
+    await tester.pump();
+    expect(manager.dispatchForTesting(HotkeyAction.nextLine), isTrue);
+    await tester.pump();
+    expect(seeks, isEmpty);
+    expect(find.text('Editing this subtitle'), findsWidgets);
     expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+    link.dispose();
   });
 
   testWidgets('Ctrl+Shift+M drafts a review mark instead of persisting it',
