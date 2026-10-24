@@ -515,3 +515,5 @@ DS4 R3 FULL SUITE 2026-10-24: compact production waveform controls and player-se
 DS4 R3 FINAL SOURCE GATE 2026-10-24: final opt-in compact waveform and mpv-verified FFmpeg selected audio stream, legacy preferences respected for mobile, and disable waveform timing/add-line gestures until checkpoint-backed desktop editing exists. GitHub Actions flutter pub get/analyze/test only. NO native platform builds.
 
 DS5 R1 FULL FLUTTER GATE 2026-10-24: Studio Dock inspector timing fields commit through guarded shared checkpoint history; strict time validation, notes preservation, stale edit rejection, unsaved tab-change dialog. Studio Dock quality #40033259224 passed. Run flutter pub get/analyze/complete flutter test only. NO native platform builds.
+
+DS5 R2b 2026-10-24: full Flutter regression after guarded desktop split/combine and checkpoint transactions. Analyze and test only, no platform builds.
