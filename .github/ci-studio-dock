@@ -45,3 +45,5 @@ DS5 R4b 2026-10-24: connect Studio Dock Undo/Redo, fork choice, saved History ra
 DS5 R4c 2026-10-24: production filename and public type cleanup; demo fixtures moved under tool; require explicit live session cues and preserve demo selection. Run flutter pub get, flutter analyze and Studio Dock tests ONLY, never platform builds.
 
 DS5 R5a 2026-10-24: guarded desktop raw Source View using shared SRT parser/reconciler/history transaction, blank cue preservation and unsaved draft dialog. Run Flutter analyzer and Studio Dock tests ONLY, no native builds.
+
+DS5 R5a widget test timing correction: pump after entering raw SRT before tapping newly enabled Apply button; rerun analyzer and focused tests only, no builds.
