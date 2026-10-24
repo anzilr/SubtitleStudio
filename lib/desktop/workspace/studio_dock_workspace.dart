@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:subtitle_studio/screens/edit/services/raw_srt_document.dart';
 import 'package:subtitle_studio/screens/edit/widgets/source_view_pane.dart';
+import 'package:subtitle_studio/widgets/custom_text_render.dart';
 import 'package:subtitle_studio/utils/time_input_formatter.dart';
 import 'package:subtitle_studio/services/checkpoint_history_graph.dart';
 import 'package:subtitle_studio/services/checkpoint_history_labels.dart';
@@ -15,6 +16,8 @@ import 'studio_dock_timing_edit_service.dart';
 import 'studio_dock_insert_cue_dialog.dart';
 import 'studio_dock_split_cue_dialog.dart';
 import 'studio_dock_file_actions.dart';
+import 'studio_dock_style_actions.dart';
+import 'studio_dock_style_color_dialog.dart';
 import '../../utils/msone_hotkey_manager.dart';
 
 /// One subtitle row displayed in the Studio Dock workspace.
@@ -27,6 +30,8 @@ class StudioDockCue {
     required this.original,
     required this.edited,
     this.marked = false,
+    this.comment,
+    this.resolved = false,
   });
 
   final int id;
@@ -35,14 +40,19 @@ class StudioDockCue {
   final String original;
   final String edited;
   final bool marked;
+  final String? comment;
+  final bool resolved;
 
   StudioDockCue copyWith({
     String? start, String? end, String? edited, bool? marked,
+    String? comment, bool clearComment = false, bool? resolved,
   }) =>
       StudioDockCue(
         id: id, start: start ?? this.start, end: end ?? this.end,
         original: original,
         edited: edited ?? this.edited, marked: marked ?? this.marked,
+        comment: clearComment ? null : comment ?? this.comment,
+        resolved: resolved ?? this.resolved,
       );
 }
 
@@ -77,6 +87,7 @@ class StudioDockWorkspace extends StatefulWidget {
     this.onNewProject,
     this.onApplyCueText,
     this.onApplyCueTiming,
+    this.onApplyCueNotes,
     this.onInsertCue,
     this.onDeleteCue,
     this.onSplitCue,
@@ -115,6 +126,10 @@ class StudioDockWorkspace extends StatefulWidget {
   /// text edits. Null when timing edits are unavailable.
   final Future<bool> Function(int cueNumber, String start, String end)?
       onApplyCueTiming;
+  /// One atomic review-note/mark/resolution commit through shared history.
+  final Future<StudioDockCueUpdate?> Function(
+      int cueNumber, String? comment, bool marked, bool resolved)?
+      onApplyCueNotes;
   final Future<StudioDockCueUpdate?> Function(
       int? afterCueNumber, StudioDockNewCueDraft draft)? onInsertCue;
   final Future<StudioDockCueUpdate?> Function(int cueNumber)? onDeleteCue;
@@ -172,6 +187,7 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   final ScrollController _cueScroll = ScrollController();
   int? _playingCueId;
   bool _followPlayback = true;
+  final List<Color> _styleColorHistory = [];
   final FocusNode _gridFocus = FocusNode(debugLabel: 'Studio Dock grid');
   final FocusNode _searchFocus = FocusNode(debugLabel: 'Studio Dock search');
   final TextEditingController _commandSearch = TextEditingController();
@@ -191,6 +207,10 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   int? _draftTimingCueId;
   String? _draftStart;
   String? _draftEnd;
+  int? _draftNotesCueId;
+  String? _draftNoteText;
+  bool? _draftMarked;
+  bool? _draftResolved;
   int _draftRevision = 0;
   bool _savingDraft = false;
   bool _changingStructure = false;
@@ -568,7 +588,24 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       (_draftStart != null && _draftStart != _selected.start ||
        _draftEnd != null && _draftEnd != _selected.end);
 
-  bool get _hasDirtyDraft => _hasDirtyTextDraft || _hasDirtyTimingDraft;
+  static String? _normalizeNote(String? text) =>
+      text == null || text.trim().isEmpty ? null : text;
+
+  String get _noteText => _draftNotesCueId == _selectedId &&
+      _draftNoteText != null ? _draftNoteText! : _selected.comment ?? '';
+  bool get _noteMarked => _draftNotesCueId == _selectedId &&
+      _draftMarked != null ? _draftMarked! : _selected.marked;
+  bool get _noteResolved => _draftNotesCueId == _selectedId &&
+      _draftResolved != null ? _draftResolved! : _selected.resolved;
+  bool get _hasDirtyNotesDraft => widget.onApplyCueNotes != null &&
+      _cues.isNotEmpty && _draftNotesCueId == _selectedId &&
+      (_draftNoteText != null &&
+          _normalizeNote(_draftNoteText) != _normalizeNote(_selected.comment) ||
+       _draftMarked != null && _draftMarked != _selected.marked ||
+       _draftResolved != null && _draftResolved != _selected.resolved);
+
+  bool get _hasDirtyDraft => _hasDirtyTextDraft || _hasDirtyTimingDraft ||
+      _hasDirtyNotesDraft;
 
   String get _timingStart => _draftTimingCueId == _selectedId
       ? _draftStart ?? _selected.start : _selected.start;
@@ -577,6 +614,40 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   String? get _timingError =>
       StudioDockTimingEditService.validate(_timingStart, _timingEnd);
 
+  String get _styleText => _draftCueId == _selectedId && _draftText != null
+      ? _draftText!
+      : _selected.edited.isNotEmpty ? _selected.edited : _selected.original;
+
+  void _setStyleDraft(String text) {
+    if (widget.onApplyCueText == null || _savingDraft) return;
+    setState(() {
+      _draftCueId = _selectedId;
+      _draftText = text;
+    });
+  }
+
+  void _toggleStyleTag(String tag) => _setStyleDraft(
+    StudioDockStyleActions.toggleTag(_styleText, tag),
+  );
+
+  Future<void> _pickStyleColor() async {
+    if (widget.onApplyCueText == null || _savingDraft) return;
+    final current = _styleText;
+    final body = StudioDockStyleActions.body(current);
+    if (body.isEmpty) return;
+    final prefix = current.substring(0, current.length - body.length);
+    final initialColor = Theme.of(context).colorScheme.onSurface;
+    final chosen = await showDialog<String>(
+      context: context,
+      builder: (_) => StudioDockStyleColorDialog(
+        text: body,
+        initialColor: initialColor,
+        colorHistory: _styleColorHistory,
+      ),
+    );
+    if (chosen != null && mounted) _setStyleDraft(prefix + chosen);
+  }
+
   void _discardDraft() {
     setState(() {
       _draftCueId = null;
@@ -584,6 +655,10 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       _draftTimingCueId = null;
       _draftStart = null;
       _draftEnd = null;
+      _draftNotesCueId = null;
+      _draftNoteText = null;
+      _draftMarked = null;
+      _draftResolved = null;
       _draftRevision++;
     });
   }
@@ -591,6 +666,10 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   Future<bool> _applyDraft() async {
     if (_savingDraft || _savingFile) return false;
     if (!_hasDirtyDraft) return true;
+    if (_hasDirtyNotesDraft) {
+      if (_hasDirtyTextDraft || _hasDirtyTimingDraft) return false;
+      return _applyNotesDraft();
+    }
     // Changing inspector pages first confirms the previous draft, so these
     // cannot represent two independently committed edits to one cue.
     if (_hasDirtyTextDraft && _hasDirtyTimingDraft) return false;
@@ -637,6 +716,33 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     }
     if (applied) unawaited(_reloadHistory());
     return applied;
+  }
+
+  Future<bool> _applyNotesDraft() async {
+    final apply = widget.onApplyCueNotes;
+    if (apply == null || _savingDraft) return false;
+    final cueId = _selectedId;
+    final marked = _noteMarked;
+    final resolved = marked && _noteResolved;
+    final comment = marked ? _normalizeNote(_noteText) : null;
+    setState(() => _savingDraft = true);
+    StudioDockCueUpdate? update;
+    try {
+      update = await apply(cueId, comment, marked, resolved);
+    } catch (_) {
+      update = null;
+    }
+    if (!mounted) return false;
+    setState(() => _savingDraft = false);
+    if (update == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Could not save review notes. The subtitle may have '
+            'changed elsewhere. Your draft is preserved.'),
+      ));
+      return false;
+    }
+    _acceptStructure(update);
+    return true;
   }
 
   Future<bool> _confirmDraftBeforeLeaving() async {
@@ -795,6 +901,10 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       _draftTimingCueId = null;
       _draftStart = null;
       _draftEnd = null;
+      _draftNotesCueId = null;
+      _draftNoteText = null;
+      _draftMarked = null;
+      _draftResolved = null;
       _draftRevision++;
     });
     unawaited(_reloadHistory());
@@ -2139,7 +2249,8 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     Text cell(String value, {bool primary = false}) => Text(
       value, maxLines: 1, overflow: TextOverflow.ellipsis,
       style: TextStyle(fontSize: heading ? 10 : 11,
-        color: heading ? _muted : primary ? Colors.white : _muted),
+        color: heading ? _muted : primary
+            ? Theme.of(context).colorScheme.onSurface : _muted),
     );
     return Row(children: [
       SizedBox(width: 32, child: cell(heading ? '#' : cue.id.toString())),
@@ -2180,7 +2291,7 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   Widget _inspector() {
     const tabs = <String>['Text', 'Timing', 'Style', 'Notes'];
     return Container(
-      color: const Color(0xFF191D21),
+      color: Theme.of(context).colorScheme.surface,
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         _paneHeader(Icons.tune_outlined, 'LINE INSPECTOR',
             trailing: '#' + _selectedId.toString().padLeft(2, '0')),
@@ -2374,34 +2485,204 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         ];
       case 2:
         return [
-          _fieldLabel('SUBTITLE STYLE'),
-          Text('Color, alignment, placement and formatting '
-              'will reuse existing SubtitleStudio actions.',
-              style: TextStyle(fontSize: 12, color: _muted, height: 1.5)),
-          const SizedBox(height: 12),
-          Text('Preview only · no simulated formatting saves',
-              style: TextStyle(fontSize: 11, color: _muted)),
+          _fieldLabel('TEXT FORMATTING'),
+          Wrap(spacing: 7, runSpacing: 7, children: [
+            for (final (tag, label, icon) in const [
+              ('b', 'Bold', Icons.format_bold),
+              ('i', 'Italic', Icons.format_italic),
+              ('u', 'Underline', Icons.format_underline),
+            ])
+              OutlinedButton.icon(
+                key: ValueKey('studio-style-$tag'),
+                onPressed: widget.onApplyCueText != null && !_savingDraft
+                    ? () => _toggleStyleTag(tag) : null,
+                icon: Icon(icon, size: 16),
+                label: Text(label, style: const TextStyle(fontSize: 11)),
+              ),
+          ]),
+          const SizedBox(height: 10),
+          Row(children: [
+            Expanded(child: OutlinedButton.icon(
+              key: const ValueKey('studio-style-color'),
+              onPressed: widget.onApplyCueText != null && !_savingDraft
+                  ? () => unawaited(_pickStyleColor()) : null,
+              icon: const Icon(Icons.palette_outlined, size: 16),
+              label: const Text('Text color'),
+            )),
+            const SizedBox(width: 6),
+            OutlinedButton(
+              key: const ValueKey('studio-style-clear'),
+              onPressed: widget.onApplyCueText != null && !_savingDraft
+                  ? () => _setStyleDraft(
+                      StudioDockStyleActions.clearSupportedTags(_styleText))
+                  : null,
+              child: const Text('Clear tags'),
+            ),
+          ]),
+          const SizedBox(height: 20),
+          _fieldLabel('POSITION (9-GRID)'),
+          GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: 3,
+            crossAxisSpacing: 6,
+            mainAxisSpacing: 6,
+            childAspectRatio: 2.1,
+            children: [
+              for (final (code, label, symbol) in const [
+                (7, 'Top left', '↖'), (8, 'Top center', '↑'),
+                (9, 'Top right', '↗'), (4, 'Middle left', '←'),
+                (5, 'Center', '•'), (6, 'Middle right', '→'),
+                (1, 'Bottom left', '↙'), (2, 'Bottom center', '↓'),
+                (3, 'Bottom right', '↘'),
+              ])
+                Tooltip(
+                  message: label,
+                  child: OutlinedButton(
+                    key: ValueKey('studio-style-align-$code'),
+                    onPressed: widget.onApplyCueText != null && !_savingDraft
+                        ? () => _setStyleDraft(
+                            StudioDockStyleActions.setAlignment(_styleText, code))
+                        : null,
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: StudioDockStyleActions.alignment(
+                                  _styleText) == code
+                          ? _accent.withValues(alpha: .14) : null,
+                    ),
+                    child: Text(symbol, style: const TextStyle(fontSize: 20)),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          _fieldLabel('DRAFT PREVIEW'),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerLow,
+              border: Border.all(color: _border),
+              borderRadius: BorderRadius.circular(7),
+            ),
+            child: CustomHtmlText(
+              htmlContent: StudioDockStyleActions.body(
+                  _styleText).replaceAll('\n', '<br>'),
+              defaultStyle: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontSize: 13,
+              ),
+            ),
+          ),
+          const SizedBox(height: 9),
+          SelectableText(_styleText, style: TextStyle(
+            fontFamily: 'monospace', fontSize: 11, color: _muted)),
+          const SizedBox(height: 13),
+          if (widget.onApplyCueText != null) Row(children: [
+            Expanded(child: FilledButton.icon(
+              key: const ValueKey('studio-apply-style'),
+              onPressed: _hasDirtyTextDraft && !_savingDraft
+                  ? () => unawaited(_applyDraft()) : null,
+              icon: const Icon(Icons.check, size: 16),
+              label: const Text('Apply style'),
+            )),
+            const SizedBox(width: 8),
+            OutlinedButton(
+              key: const ValueKey('studio-discard-style'),
+              onPressed: _hasDirtyTextDraft && !_savingDraft
+                  ? _discardDraft : null,
+              child: const Text('Discard'),
+            ),
+          ]),
         ];
       default:
         return [
           _fieldLabel('REVIEW NOTES'),
-          Text(_selected.marked
+          Text(_noteMarked
               ? 'This subtitle is marked for review.'
               : 'No review mark on this subtitle.',
               style: const TextStyle(fontSize: 12)),
-          const SizedBox(height: 15),
-          OutlinedButton.icon(
-            key: const ValueKey('desktop-mark-cue'),
-            onPressed: widget.isLiveSession ? null : () => _replaceCue(_selected.copyWith(
-                marked: !_selected.marked)),
-            icon: Icon(_selected.marked
-                ? Icons.bookmark : Icons.bookmark_outline, size: 15),
-            label: Text(_selected.marked ? 'Unmark' : 'Mark for review'),
-          ),
-          const SizedBox(height: 15),
-          Text('Project comments will connect to shared '
-              'checkpoint and comment services.',
-              style: TextStyle(fontSize: 11, color: _muted, height: 1.5)),
+          const SizedBox(height: 12),
+          if (widget.onApplyCueNotes != null) ...[
+            SwitchListTile.adaptive(
+              key: const ValueKey('studio-notes-mark'),
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Mark for review'),
+              value: _noteMarked,
+              onChanged: _savingDraft ? null : (marked) => setState(() {
+                _draftNotesCueId = _selectedId;
+                _draftMarked = marked;
+                if (!marked) {
+                  _draftNoteText = '';
+                  _draftResolved = false;
+                  _draftRevision++;
+                }
+              }),
+            ),
+            const SizedBox(height: 12),
+            _fieldLabel('COMMENT'),
+            TextFormField(
+              key: ValueKey('studio-notes-comment-$_selectedId-$_draftRevision'),
+              initialValue: _noteText,
+              enabled: !_savingDraft,
+              minLines: 3,
+              maxLines: 7,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                hintText: 'Add a note or reference for this subtitle',
+              ),
+              onChanged: (value) => setState(() {
+                _draftNotesCueId = _selectedId;
+                _draftNoteText = value;
+                if (value.trim().isNotEmpty) _draftMarked = true;
+              }),
+            ),
+            const SizedBox(height: 12),
+            SwitchListTile.adaptive(
+              key: const ValueKey('studio-notes-resolved'),
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Review resolved'),
+              value: _noteResolved,
+              onChanged: _savingDraft || !_noteMarked ? null
+                  : (resolved) => setState(() {
+                      _draftNotesCueId = _selectedId;
+                      _draftResolved = resolved;
+                    }),
+            ),
+            const SizedBox(height: 12),
+            Row(children: [
+              Expanded(child: FilledButton.icon(
+                key: const ValueKey('studio-apply-notes'),
+                onPressed: _hasDirtyNotesDraft && !_savingDraft
+                    ? () => unawaited(_applyDraft()) : null,
+                icon: const Icon(Icons.check, size: 16),
+                label: const Text('Apply notes'),
+              )),
+              const SizedBox(width: 8),
+              OutlinedButton(
+                key: const ValueKey('studio-discard-notes'),
+                onPressed: _hasDirtyNotesDraft && !_savingDraft
+                    ? _discardDraft : null,
+                child: const Text('Discard'),
+              ),
+            ]),
+          ] else ...[
+            if (!widget.isLiveSession)
+              OutlinedButton.icon(
+                key: const ValueKey('desktop-mark-cue'),
+                onPressed: () => _replaceCue(_selected.copyWith(
+                    marked: !_selected.marked)),
+                icon: Icon(_selected.marked
+                    ? Icons.bookmark : Icons.bookmark_outline, size: 15),
+                label: Text(_selected.marked ? 'Unmark' : 'Mark for review'),
+              ),
+            const SizedBox(height: 15),
+            _fieldLabel('COMMENT'),
+            Text(_selected.comment?.isNotEmpty == true
+                ? _selected.comment! : 'No comment on this subtitle.',
+                style: TextStyle(fontSize: 12, color: _muted)),
+            const SizedBox(height: 12),
+            Text(_selected.resolved ? 'Review resolved' : 'Review unresolved',
+                style: TextStyle(fontSize: 12, color: _muted)),
+          ],
         ];
     }
   }
@@ -2415,7 +2696,7 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   Widget _readonlyField(String text) => Container(
     padding: EdgeInsets.all(11),
     decoration: BoxDecoration(
-      color: const Color(0xFF121518),
+      color: Theme.of(context).colorScheme.surfaceContainerLow,
       border: Border.all(color: _border),
       borderRadius: BorderRadius.circular(7),
     ),

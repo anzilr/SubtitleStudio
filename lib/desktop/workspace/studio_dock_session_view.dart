@@ -28,6 +28,7 @@ import 'studio_dock_file_actions.dart';
 import 'studio_dock_project_save_actions.dart';
 import 'studio_dock_history_service.dart';
 import 'studio_dock_source_view_service.dart';
+import 'studio_dock_notes_service.dart';
 
 /// Live Studio Dock host backed by the shared project, subtitle, history,
 /// native media and file services.
@@ -101,6 +102,7 @@ class _StudioDockSessionViewState
             StudioDockCue(
               id: cue.index, start: cue.start, end: cue.end,
               original: cue.original, edited: cue.edited, marked: cue.marked,
+              comment: cue.comment, resolved: cue.resolved,
             ),
         ],
         selectedCueId: cueId,
@@ -184,6 +186,30 @@ class _StudioDockSessionViewState
     }
   }
 
+  Future<StudioDockCueUpdate?> _applyNotes(
+    int cueNumber, String? comment, bool marked, bool resolved,
+  ) async {
+    final baseline = _latestBaseline;
+    if (baseline == null || !widget.enableEditing) return null;
+    try {
+      final updated = await StudioDockNotesService(
+        ref.read(projectRepositoryProvider),
+        ref.read(subtitleRepositoryProvider),
+      ).apply(
+        baseline: baseline,
+        cueNumber: cueNumber,
+        comment: comment,
+        marked: marked,
+        resolved: resolved,
+      );
+      if (!mounted || updated == null) return null;
+      setState(() => _latestBaseline = updated);
+      return _snapshotUpdate(updated, cueNumber);
+    } catch (_) {
+      return null;
+    }
+  }
+
   StudioDockCueStructureService get _structure => StudioDockCueStructureService(
     ref.read(projectRepositoryProvider),
     ref.read(subtitleRepositoryProvider),
@@ -201,6 +227,8 @@ class _StudioDockSessionViewState
               original: cue.original,
               edited: cue.edited,
               marked: cue.marked,
+              comment: cue.comment,
+              resolved: cue.resolved,
             ),
         ],
         selectedCueId: selectedCueNumber,
@@ -561,6 +589,8 @@ class _StudioDockSessionViewState
             original: line.original,
             edited: line.edited,
             marked: line.marked,
+            comment: line.comment,
+            resolved: line.resolved,
           ),
       ];
       Widget buildDock(String? validVideoPath) => StudioDockWorkspace(
@@ -576,6 +606,7 @@ class _StudioDockSessionViewState
         onChooseVideo: widget.allowNativePlayback ? _chooseVideo : null,
         onApplyCueText: widget.enableEditing ? _applyText : null,
         onApplyCueTiming: widget.enableEditing ? _applyTiming : null,
+        onApplyCueNotes: widget.enableEditing ? _applyNotes : null,
         onInsertCue: widget.enableEditing ? _insertCue : null,
         onDeleteCue: widget.enableEditing ? _deleteCue : null,
         onSplitCue: widget.enableEditing ? _splitCue : null,

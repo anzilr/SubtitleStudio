@@ -57,6 +57,8 @@ class CheckpointHistoryLabels {
   static final RegExp _marked = RegExp(r'^Marked line (\d+)$');
   static final RegExp _unmarked = RegExp(r'^Unmarked line (\d+)$');
   static final RegExp _comment = RegExp(r'^Updated comment on line (\d+)$');
+  static final RegExp _reviewNotes =
+      RegExp(r'^Updated review notes on line (\d+)$');
   static final RegExp _resolved = RegExp(r'^Updated resolution of line (\d+)$');
 
   static String? _matchOne(String title, RegExp pattern, String prefix,
@@ -76,6 +78,7 @@ class CheckpointHistoryLabels {
           suffix: ' for review') ??
       _matchOne(title, _unmarked, 'Removed review mark from subtitle') ??
       _matchOne(title, _comment, 'Updated note on subtitle') ??
+      _matchOne(title, _reviewNotes, 'Updated review notes on subtitle') ??
       _matchOne(title, _resolved, 'Updated review status of subtitle');
 
   static String? _matchEdit(String title) =>
