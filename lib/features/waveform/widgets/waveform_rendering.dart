@@ -236,7 +236,7 @@ extension _WaveformRendering on WaveformWidgetState {
             icon: const Icon(Icons.check, size: 18),
             onPressed: () {
               if (state.isEditMode) {
-                unawaited(_applyTimeChanges(state));
+                _applyTimeChanges(state);
               } else {
                 _confirmAddLine(state);
               }
@@ -275,7 +275,6 @@ extension _WaveformRendering on WaveformWidgetState {
       ),
     ]),
   ));
-  );
 
   Widget _buildWaveformView(WaveformReady state) {
     // Update viewport width when widget size changes

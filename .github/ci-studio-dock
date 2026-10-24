@@ -77,3 +77,5 @@ DS5 R7 DISMISS TEST FIX 2026-10-24: resolve Discard test tap ambiguity between d
 DS5 R8 SECONDARY TRACKS 2026-10-24: restore existing mobile secondary-subtitle picker, persisted source, player overlays and show/hide in native Dock; eliminate two analyzer warnings from R7. Run analyzer and focused Studio Dock tests only; NO native builds.
 
 DS5 R9 WAVEFORM HISTORY 2026-10-24: enable compact waveform edit/add controls and guard every edit through Studio Dock optimistic checkpoint transactions, with native grid synchronization and unsaved draft gate. Analyzer and focused Flutter tests only; NO builds.
+
+DS5 R9 TOOLBAR ANALYZER FIX 2026-10-24: remove a duplicated LayoutBuilder terminator and use the existing async callback invocation style. Re-run analyzer and focused Flutter tests; no platform builds.
