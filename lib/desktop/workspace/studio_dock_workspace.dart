@@ -3,6 +3,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:subtitle_studio/screens/edit/services/raw_srt_document.dart';
+import 'package:subtitle_studio/screens/edit/widgets/source_view_pane.dart';
 import 'package:subtitle_studio/utils/time_input_formatter.dart';
 import 'package:subtitle_studio/services/checkpoint_history_graph.dart';
 import 'package:subtitle_studio/services/checkpoint_history_labels.dart';
@@ -81,6 +83,8 @@ class StudioDockWorkspace extends StatefulWidget {
     this.onMergeCue,
     this.onLoadHistory,
     this.onRestoreHistory,
+    this.onLoadSourceView,
+    this.onApplySourceView,
     this.onSaveFile,
     this.onSaveAsFile,
     this.onExportFile,
@@ -126,6 +130,10 @@ class StudioDockWorkspace extends StatefulWidget {
   final Future<StudioDockCueUpdate?> Function(
       int targetCheckpointId, int expectedHeadId, int preferredCueId)?
       onRestoreHistory;
+  /// Loads the authoritative raw SRT snapshot once the inspector is clean.
+  final Future<String> Function()? onLoadSourceView;
+  /// One guarded full-document history commit; null for read-only sessions.
+  final Future<StudioDockCueUpdate?> Function(String rawSrt)? onApplySourceView;
   /// File Save is separate from the already checkpoint-backed inspector Apply.
   final Future<StudioDockFileResult> Function()? onSaveFile;
   final Future<StudioDockFileResult> Function()? onSaveAsFile;
@@ -189,6 +197,12 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   bool _savingFile = false;
   bool _historyBusy = false;
   bool _historyLoading = false;
+  String _sourceText = '';
+  String _sourceBaseline = '';
+  String? _sourceError;
+  bool _sourceLoading = false;
+  bool _sourceSaving = false;
+  bool get _sourceDirty => _sourceText != _sourceBaseline;
   String? _historyError;
   CheckpointHistoryGraph? _history;
   int _historyRequest = 0;
@@ -453,7 +467,7 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   }
 
   bool get _historyNavigationBlocked => _historyBusy || _historyLoading ||
-      _changingStructure || _savingDraft || _savingFile;
+      _changingStructure || _savingDraft || _savingFile || _sourceSaving;
 
   Future<void> _restoreHistoryPoint(int targetCheckpointId) async {
     final restore = widget.onRestoreHistory;
@@ -626,7 +640,11 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   }
 
   Future<bool> _confirmDraftBeforeLeaving() async {
-    if (_savingDraft || _changingStructure || _savingFile) return false;
+    if (_savingDraft || _changingStructure || _savingFile ||
+        _sourceSaving || _sourceLoading) return false;
+    if (_section == 5 && _sourceDirty) {
+      return _confirmSourceDraftBeforeLeaving();
+    }
     if (!_hasDirtyDraft) return true;
     final choice = await showDialog<String>(
       context: context,
@@ -656,6 +674,81 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     }
     if (choice == 'apply') return _applyDraft();
     return false;
+  }
+
+  Future<bool> _confirmSourceDraftBeforeLeaving() async {
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: const Text('Unsaved Source View changes'),
+        content: const Text('Apply the raw SRT changes before leaving Source View?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialog, 'cancel'),
+            child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(dialog, 'discard'),
+            child: const Text('Discard')),
+          FilledButton(onPressed: () => Navigator.pop(dialog, 'apply'),
+            child: const Text('Apply')),
+        ],
+      ),
+    );
+    if (!mounted) return false;
+    if (choice == 'discard') {
+      _discardSourceDraft();
+      return true;
+    }
+    if (choice == 'apply') return _applySourceView();
+    return false;
+  }
+
+  void _discardSourceDraft() => setState(() {
+    _sourceText = _sourceBaseline;
+    _sourceError = null;
+  });
+
+  Future<bool> _applySourceView() async {
+    final apply = widget.onApplySourceView;
+    if (apply == null || _sourceSaving || _sourceLoading) return false;
+    if (!_sourceDirty) return true;
+    try {
+      RawSrtDocument.parseStrict(_sourceText);
+    } on FormatException catch (error) {
+      if (mounted) setState(() => _sourceError = error.message);
+      return false;
+    }
+
+    setState(() { _sourceSaving = true; _sourceError = null; });
+    StudioDockCueUpdate? update;
+    try {
+      update = await apply(_sourceText);
+    } catch (_) {
+      update = null;
+    }
+    if (!mounted) return false;
+    if (update == null) {
+      setState(() {
+        _sourceSaving = false;
+        _sourceError = 'Could not apply Source View. The project may have '
+            'changed in another window. Your draft is preserved.';
+      });
+      return false;
+    }
+    _acceptStructure(update);
+    var canonical = _sourceText;
+    try {
+      canonical = await widget.onLoadSourceView?.call() ?? _sourceText;
+    } catch (_) {
+      // The database commit succeeded; retain the submitted document as the
+      // clean baseline if the follow-up display refresh is unavailable.
+    }
+    if (!mounted) return false;
+    setState(() {
+      _sourceText = canonical;
+      _sourceBaseline = canonical;
+      _sourceSaving = false;
+      _sourceError = null;
+    });
+    return true;
   }
 
   Future<void> _changeInspectorTab(int tab) async {
@@ -1149,8 +1242,8 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       );
     }
     return PopScope(
-      canPop: !_hasDirtyDraft && !_savingDraft &&
-          !_changingStructure && !_savingFile,
+      canPop: !_hasDirtyDraft && !_sourceDirty && !_savingDraft &&
+          !_changingStructure && !_savingFile && !_sourceSaving,
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop && !_savingDraft) {
           unawaited(_confirmDraftBeforeLeaving().then((allowed) {
@@ -1482,6 +1575,8 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       const SizedBox(height: 13),
       _railItem(0, Icons.movie_creation_outlined, 'Editor'),
       _railItem(1, Icons.account_tree_outlined, 'History'),
+      if (widget.onLoadSourceView != null)
+        _railItem(5, Icons.code_rounded, 'Source View'),
       _railItem(2, Icons.search_rounded, 'Find'),
       _railItem(3, Icons.tune_rounded, 'Tools'),
       const Spacer(),
@@ -1501,11 +1596,7 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         child: InkWell(
           key: ValueKey('rail-$index'),
           borderRadius: BorderRadius.circular(9),
-          onTap: () => setState(() {
-            _section = index;
-            _explorerOverlayOpen = false;
-            _inspectorOverlayOpen = false;
-          }),
+          onTap: () => unawaited(_switchSection(index)),
           child: SizedBox(width: 44, height: 43,
             child: Icon(icon, size: 21,
               color: _section == index ? _accent : _muted)),
@@ -1513,6 +1604,41 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       ),
     ),
   );
+
+  Future<void> _switchSection(int index) async {
+    if (index == _section) return;
+    if (!await _confirmDraftBeforeLeaving() || !mounted) return;
+    if (index == 5) {
+      final load = widget.onLoadSourceView;
+      if (load == null) return;
+      setState(() => _sourceLoading = true);
+      try {
+        final raw = await load();
+        if (!mounted) return;
+        setState(() {
+          _sourceText = raw;
+          _sourceBaseline = raw;
+          _sourceError = null;
+          _section = 5;
+          _explorerOverlayOpen = false;
+          _inspectorOverlayOpen = false;
+        });
+      } catch (_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Could not load the raw subtitle source.'),
+        ));
+      } finally {
+        if (mounted) setState(() => _sourceLoading = false);
+      }
+      return;
+    }
+    setState(() {
+      _section = index;
+      _explorerOverlayOpen = false;
+      _inspectorOverlayOpen = false;
+    });
+  }
 
   Widget _projectSidebar() => widget.isLiveSession
       ? _readOnlyProjectSidebar()
@@ -2298,6 +2424,7 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   );
 
   Widget _secondarySection() {
+    if (_section == 5) return _sourceViewSection();
     if (_section == 1 && widget.onLoadHistory != null) {
       return _historySection();
     }
@@ -2323,10 +2450,82 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           style: TextStyle(color: _muted, height: 1.6)),
         const SizedBox(height: 20),
         OutlinedButton(onPressed: () =>
-            setState(() => _section = 0), child: const Text('Back to editor')),
+            unawaited(_switchSection(0)), child: const Text('Back to editor')),
       ]),
     ));
   }
+
+  Widget _sourceViewSection() => Padding(
+    key: const ValueKey('studio-source-view'),
+    padding: const EdgeInsets.fromLTRB(22, 18, 22, 16),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        Icon(Icons.code_rounded, color: _accent),
+        const SizedBox(width: 10),
+        const Text('Source View', style: TextStyle(
+            fontSize: 21, fontWeight: FontWeight.w600)),
+        const Spacer(),
+        if (_sourceDirty)
+          Text('Unsaved source changes', style: TextStyle(
+              color: Theme.of(context).colorScheme.error, fontSize: 12)),
+      ]),
+      const SizedBox(height: 6),
+      Text('Edit the raw SRT document. Apply records one saved history point.',
+        style: TextStyle(fontSize: 12, color: _muted)),
+      const SizedBox(height: 14),
+      if (_sourceSaving || _sourceLoading) const LinearProgressIndicator(),
+      Expanded(child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          decoration: BoxDecoration(border: Border.all(color: _border)),
+          child: widget.onApplySourceView == null
+              ? SingleChildScrollView(child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: SelectableText(_sourceText, style: const TextStyle(
+                    fontFamily: 'monospace', fontSize: 14, height: 1.4)),
+                ))
+              : RawSrtEditor(
+                  key: const ValueKey('studio-source-editor'),
+                  initialText: _sourceText,
+                  onChanged: (value) => setState(() {
+                    _sourceText = value;
+                    _sourceError = null;
+                  }),
+                ),
+        ),
+      )),
+      if (_sourceError != null) Padding(
+        padding: const EdgeInsets.only(top: 10),
+        child: Text(_sourceError!, style: TextStyle(
+            color: Theme.of(context).colorScheme.error, fontSize: 12)),
+      ),
+      const SizedBox(height: 12),
+      Row(children: [
+        OutlinedButton.icon(
+          onPressed: () => unawaited(_switchSection(0)),
+          icon: const Icon(Icons.arrow_back),
+          label: const Text('Back to editor'),
+        ),
+        const Spacer(),
+        if (widget.onApplySourceView != null) ...[
+          OutlinedButton(
+            key: const ValueKey('studio-source-discard'),
+            onPressed: _sourceDirty && !_sourceSaving
+                ? _discardSourceDraft : null,
+            child: const Text('Discard changes'),
+          ),
+          const SizedBox(width: 10),
+          FilledButton.icon(
+            key: const ValueKey('studio-source-apply'),
+            onPressed: _sourceDirty && !_sourceSaving
+                ? () => unawaited(_applySourceView()) : null,
+            icon: const Icon(Icons.check),
+            label: const Text('Apply source'),
+          ),
+        ],
+      ]),
+    ]),
+  );
 
   Future<void> _confirmRestorePoint(HistoryGraphNode node) async {
     if (node.isHead || _historyNavigationBlocked) return;

@@ -27,6 +27,7 @@ import 'studio_dock_playback_link.dart';
 import 'studio_dock_file_actions.dart';
 import 'studio_dock_project_save_actions.dart';
 import 'studio_dock_history_service.dart';
+import 'studio_dock_source_view_service.dart';
 
 /// Live Studio Dock host backed by the shared project, subtitle, history,
 /// native media and file services.
@@ -152,15 +153,47 @@ class _StudioDockSessionViewState
     }
   }
 
+  StudioDockSourceViewService get _sourceView => StudioDockSourceViewService(
+    ref.read(projectRepositoryProvider),
+    ref.read(subtitleRepositoryProvider),
+  );
+
+  Future<String> _loadRawSource() async {
+    final baseline = _latestBaseline;
+    if (baseline == null) {
+      throw StateError('The subtitle session has not loaded.');
+    }
+    return StudioDockSourceViewService.compose(baseline);
+  }
+
+  Future<StudioDockCueUpdate?> _applyRawSource(String rawSource) async {
+    final baseline = _latestBaseline;
+    if (baseline == null || !widget.enableEditing) return null;
+    try {
+      final updated = await _sourceView.apply(
+        baseline: baseline,
+        rawSource: rawSource,
+      );
+      if (!mounted || updated == null) return null;
+      setState(() => _latestBaseline = updated);
+      final selection = updated.cues.any((cue) => cue.index == 1)
+          ? 1 : updated.cues.isEmpty ? -1 : updated.cues.first.index;
+      return _snapshotUpdate(updated, selection);
+    } catch (_) {
+      return null;
+    }
+  }
+
   StudioDockCueStructureService get _structure => StudioDockCueStructureService(
     ref.read(projectRepositoryProvider),
     ref.read(subtitleRepositoryProvider),
   );
 
-  StudioDockCueUpdate _toWorkspaceUpdate(StudioDockStructureChange change) =>
+  StudioDockCueUpdate _snapshotUpdate(
+      StudioDockSessionSnapshot snapshot, int selectedCueNumber) =>
       StudioDockCueUpdate(
         cues: [
-          for (final cue in change.snapshot.cues)
+          for (final cue in snapshot.cues)
             StudioDockCue(
               id: cue.index,
               start: cue.start,
@@ -170,8 +203,11 @@ class _StudioDockSessionViewState
               marked: cue.marked,
             ),
         ],
-        selectedCueId: change.selectedCueNumber,
+        selectedCueId: selectedCueNumber,
       );
+
+  StudioDockCueUpdate _toWorkspaceUpdate(StudioDockStructureChange change) =>
+      _snapshotUpdate(change.snapshot, change.selectedCueNumber);
 
   Future<StudioDockCueUpdate?> _insertCue(
     int? afterCueNumber,
@@ -546,6 +582,8 @@ class _StudioDockSessionViewState
         onMergeCue: widget.enableEditing ? _mergeCue : null,
         onLoadHistory: widget.enableEditing ? _loadHistory : null,
         onRestoreHistory: widget.enableEditing ? _restoreHistory : null,
+        onLoadSourceView: _loadRawSource,
+        onApplySourceView: widget.enableEditing ? _applyRawSource : null,
         onSaveFile: widget.enableEditing && widget.allowNativePlayback
             ? _saveSubtitleFile : null,
         onSaveAsFile: widget.enableEditing && widget.allowNativePlayback

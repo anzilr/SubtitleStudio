@@ -1384,6 +1384,46 @@ class SubtitleRepository {
   /// The source list is authoritative: removed entries are deleted, added
   /// entries become new subtitle lines, and matching existing cues keep their
   /// original/mark/comment metadata.
+  ///
+  /// Desktop callers use the guarded variant below. It compares the entire
+  /// previously displayed state in the same transaction as the mutation, so
+  /// raw multi-cue edits cannot overwrite changes made by another window.
+  Future<bool> syncSourceViewFromSnapshotWithHistory({
+    required int collectionId,
+    required int sessionId,
+    required List<SubtitleLine> expectedLines,
+    required List<SubtitleEntry> entries,
+  }) async {
+    final expected = CheckpointStateReducer.copyLines(expectedLines);
+    try {
+      await _historyTransaction.commit(
+        sessionId: sessionId,
+        subtitleCollectionId: collectionId,
+        operationType: 'source-view',
+        description: 'Saved Source View changes',
+        buildMutation: (currentLines) {
+          if (!CheckpointStateReducer.samePersistedLines(
+              currentLines, expected)) {
+            throw StateError('Source View baseline is stale. Reload the project.');
+          }
+          final next = SourceViewReconciler.reconcile(
+            existingLines: currentLines,
+            entries: entries,
+          );
+          return CheckpointMutationPlan(
+            nextLines: next,
+            deltas: CheckpointStateReducer.diffAsIndexDeltas(currentLines, next),
+            forceSnapshot: true,
+          );
+        },
+      );
+      return true;
+    } catch (error) {
+      logError('SubtitleRepository: Guarded Source View commit failed: $error');
+      return false;
+    }
+  }
+
   Future<void> syncSourceViewToDatabase(
     int collectionId,
     List<SubtitleEntry> entries, {
