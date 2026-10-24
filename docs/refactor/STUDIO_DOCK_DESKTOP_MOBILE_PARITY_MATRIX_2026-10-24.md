@@ -25,7 +25,7 @@ acceptance. A wired callback is not proof of a working native interaction.
 | Edit Mode (create subtitles from scratch) vs Translation Mode | Wired in DS5 R6 | Native mode-dependent inspector, cue insert/split, Source View and SRT export acceptance |
 | Video attach, playback, fullscreen | DS5 R19 adds View → Toggle video fullscreen and the existing F11/Cmd+F manager action on the mounted player, on top of shared `VideoPlayerSection` / `VideoPlayerWidget`; Shift+Delete and Marked Lines also restored to desktop hotkeys | Native fullscreen keyboard/menu, attach/unload/replace, playback/seek, OS hotkey conflict and dialog acceptance |
 | Playback-follow subtitle highlight and seek | Wired through shared playback link | Native bidirectional seek/scroll/accuracy acceptance |
-| Waveform display and selected audio stream | Shared `WaveformWidget`/controller supports zoom and audio selection; **partial direct-menu parity**: mobile Generate/Regenerate/Hide Waveform and Toggle Floating Controls still require a desktop interaction audit | Expose only missing commands through the shared waveform controller, and run native zoom, regenerate, hide/show, audio/cache acceptance |
+| Waveform display and selected audio stream | DS5 R20 adds direct Generate/Hide and Regenerate controls in the desktop waveform band, using the same scoped Riverpod controller, PCM-cache invalidation and player-resolved audio selector; waveform zoom/time editing remain. **Floating playback controls and compact peak-cache regeneration require further verification** | Native waveform generate/regenerate/hide/show, selected-track fidelity, cached/uncached paths, player non-remount, floating-controls verification |
 | Waveform gesture time edits and insertion | Wired in DS5 R9: shared waveform gestures and compact controls call guarded Studio Dock timing/insert services; successful edits reconcile the grid/player and history | Native drag precision, magnet/overlap behavior, cue creation, undo, media stability and synchronized scrolling acceptance |
 | Secondary subtitles, visibility and saved selection | Wired in DS5 R8 through the existing secondary sheet, `VideoRepository` preferences, and shared player; original-text overlay reprojects from current cues | Native external/video-track picker, original-text updates and selection persistence acceptance; Project Settings remains separate |
 | Edit text, start/end timing, formatting, nine-grid alignment | Wired to shared repositories and format tags | Native editor/controller interaction acceptance |
@@ -82,8 +82,8 @@ Dock's native menubar, shared services, and player controls:
 
 ## Next acceptance order (not optional feature cuts)
 
-1. **P0 implementation + native acceptance:** Close R19's remaining direct
-   waveform, repeat/dictionary/format shortcut and floating controls gaps;
+1. **P0 implementation + native acceptance:** Close repeat/dictionary/format
+   shortcut and floating player controls gaps after R20 waveform commands;
    validate waveform time drags, cue creation,
    magnet snap, overlap, selected-cue scrolling and secondary-subtitle
    persistence/playback on a native desktop before declaring playback parity.

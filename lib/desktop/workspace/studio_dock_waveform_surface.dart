@@ -72,6 +72,9 @@ class _WaveformBody extends ConsumerStatefulWidget {
 
 class _WaveformBodyState extends ConsumerState<_WaveformBody> {
   int _loadRevision = 0;
+  bool _waveformVisible = true;
+  bool _regenerating = false;
+  String? _commandError;
 
   @override
   void initState() {
@@ -129,30 +132,140 @@ class _WaveformBodyState extends ConsumerState<_WaveformBody> {
     });
   }
 
+
+  Future<void> _regenerateWaveform() async {
+    final selection = widget.playback.audio.value;
+    if (_regenerating || selection.status != StudioDockAudioStatus.ready) return;
+    final path = widget.videoPath;
+    final collection = widget.collectionId;
+    ++_loadRevision; // Cancel an older, post-frame automatic load.
+    setState(() {
+      _regenerating = true;
+      _commandError = null;
+      _waveformVisible = true;
+    });
+    try {
+      // Match mobile cache invalidation and retain the selected audio stream.
+      await ref.read(waveformPreferencesRepositoryProvider)
+          .clearWaveformCache(collection);
+      if (!mounted || widget.videoPath != path ||
+          widget.collectionId != collection) return;
+      final current = widget.playback.audio.value;
+      if (current.status != StudioDockAudioStatus.ready ||
+          current.trackId != selection.trackId ||
+          current.streamSelector != selection.streamSelector) return;
+      final controller = ref.read(waveformControllerProvider.notifier);
+      await controller.dispatch(const ClearWaveform());
+      if (!mounted) return;
+      await controller.dispatch(LoadAudioFile(path,
+        subtitleCollectionId: collection,
+        audioTrackId: selection.streamSelector,
+        useSavedAudioTrackPreference: false,
+      ));
+    } catch (_) {
+      if (mounted) {
+        setState(() => _commandError =
+            'Could not regenerate waveform. Check the audio track and retry.');
+      }
+    } finally {
+      if (mounted) setState(() => _regenerating = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, limits) => ValueListenableBuilder<Duration>(
-      valueListenable: widget.playback.position,
-      builder: (context, position, _) => ClipRect(
-        child: WaveformWidget(
-          key: const ValueKey('studio-dock-live-waveform'),
-          subtitles: widget.subtitles,
-          playbackPosition: position,
-          onSeek: widget.playback.seek,
-          isVideoPlaying: () => widget.playback.playing.value,
-          height: limits.maxHeight,
-          compact: true,
-          enableTimeEditing: widget.onApplyTimeEdit != null &&
-              widget.onAddLineConfirmed != null,
-          onApplyTimeEdit: widget.onApplyTimeEdit,
-          onAddLineConfirmed: widget.onAddLineConfirmed,
-          onSubtitleHighlight: widget.onSubtitleHighlight,
-          // Native Studio Dock owns the guarded history transaction; never
-          // let the waveform fall back to unguarded direct database writes.
-          subtitleCollectionId: null,
-          sessionId: null,
+    builder: (context, limits) => Column(children: [
+      SizedBox(
+        height: 32,
+        child: ValueListenableBuilder<StudioDockAudioSource>(
+          valueListenable: widget.playback.audio,
+          builder: (context, source, _) => StudioDockWaveformToolbar(
+            visible: _waveformVisible,
+            canRegenerate: source.status == StudioDockAudioStatus.ready,
+            busy: _regenerating,
+            onToggleVisibility: () => setState(() {
+              _waveformVisible = !_waveformVisible;
+              _commandError = null;
+            }),
+            onRegenerate: () => unawaited(_regenerateWaveform()),
+          ),
         ),
       ),
-    ),
+      if (_commandError != null)
+        Text(_commandError!, key: const ValueKey('studio-waveform-command-error'),
+            maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: Theme.of(context).colorScheme.error)),
+      if (_waveformVisible)
+        Expanded(
+          child: ValueListenableBuilder<Duration>(
+            valueListenable: widget.playback.position,
+            builder: (context, position, _) => ClipRect(
+              child: LayoutBuilder(builder: (context, size) => WaveformWidget(
+                key: const ValueKey('studio-dock-live-waveform'),
+                subtitles: widget.subtitles,
+                playbackPosition: position,
+                onSeek: widget.playback.seek,
+                isVideoPlaying: () => widget.playback.playing.value,
+                height: size.maxHeight,
+                compact: true,
+                enableTimeEditing: widget.onApplyTimeEdit != null &&
+                    widget.onAddLineConfirmed != null,
+                onApplyTimeEdit: widget.onApplyTimeEdit,
+                onAddLineConfirmed: widget.onAddLineConfirmed,
+                onSubtitleHighlight: widget.onSubtitleHighlight,
+                // Only the desktop host can persist waveform time edits.
+                subtitleCollectionId: null,
+                sessionId: null,
+              )),
+            ),
+          ),
+        )
+      else
+        const Expanded(child: Center(
+          child: Text('Waveform hidden — use Generate to show it.',
+              key: ValueKey('studio-waveform-hidden')),
+        )),
+    ]),
   );
+}
+
+/// Focusable controls above the existing waveform, independent of media_kit.
+class StudioDockWaveformToolbar extends StatelessWidget {
+  const StudioDockWaveformToolbar({
+    super.key,
+    required this.visible,
+    required this.canRegenerate,
+    required this.busy,
+    required this.onToggleVisibility,
+    required this.onRegenerate,
+  });
+
+  final bool visible;
+  final bool canRegenerate;
+  final bool busy;
+  final VoidCallback onToggleVisibility;
+  final VoidCallback onRegenerate;
+
+  @override
+  Widget build(BuildContext context) => Row(children: [
+    const SizedBox(width: 8),
+    const Icon(Icons.graphic_eq, size: 15),
+    const SizedBox(width: 6),
+    const Expanded(child: Text('Waveform', maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600))),
+    TextButton.icon(
+      key: const ValueKey('studio-waveform-visibility'),
+      onPressed: busy ? null : onToggleVisibility,
+      icon: Icon(visible ? Icons.visibility_off : Icons.visibility, size: 15),
+      label: Text(visible ? 'Hide' : 'Generate'),
+    ),
+    TextButton.icon(
+      key: const ValueKey('studio-waveform-regenerate'),
+      onPressed: canRegenerate && !busy ? onRegenerate : null,
+      icon: const Icon(Icons.refresh, size: 15),
+      label: Text(busy ? 'Loading…' : 'Regenerate'),
+    ),
+    const SizedBox(width: 8),
+  ]);
 }
