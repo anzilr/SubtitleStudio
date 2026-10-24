@@ -54,4 +54,6 @@ Predecessor: `STUDIO_DOCK_DS5_R5A_SOURCE_VIEW_2026-10-24.md`
 
 ## CI
 
-Pending focused and repository-wide Flutter CI on this checkpoint.
+- [Focused Studio Dock #40075098433](https://github.com/anzilr/SubtitleStudio/actions/runs/40075098433): **PASS**, analyzer clean, **121 tests passed**. The first focused run #40074874524 passed analyzer and 118 tests but exposed three Notes widget failures: Flutter required a local Material ink surface around SwitchListTile. The two switches now have transparent Material ancestors and all focused tests pass.
+- [Full Flutter repository #40075274018](https://github.com/anzilr/SubtitleStudio/actions/runs/40075274018): **PASS**, analyzer clean, **923 tests passed**.
+- GitHub Actions ran `flutter pub get`, `flutter analyze` and Flutter tests only, with no native/platform application builds. Desktop native acceptance remains pending.
