@@ -23,3 +23,9 @@ Branch: `feature/studio-dock-integration`
 ## Session handoff
 
 Current production desktop UI: Studio Dock only (`feature/studio-dock-integration`). Classic Editor is not a desktop fallback. Keep mobile and its waveform untouched; retain existing hotkeys, semantic theme integration, player/seek ownership, and checkpoint boundaries. Verify quality CI after each change and record native acceptance separately from unit/widget tests.
+
+## CI acceptance — completed
+
+- [Studio Dock Flutter quality #40062577310](https://github.com/anzilr/SubtitleStudio/actions/runs/40062577310): **PASS** (`flutter pub get`, analyzer and focused Studio Dock tests).
+- [Full Flutter regression #40062706321](https://github.com/anzilr/SubtitleStudio/actions/runs/40062706321): **PASS** (`flutter pub get`, analyzer and all Flutter tests).
+- Neither run built a native application. Physical Windows playback/waveform/layout and Split/Combine smoke checks remain **pending** and must not be labeled passed from CI alone.
