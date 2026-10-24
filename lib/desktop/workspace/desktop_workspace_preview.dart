@@ -54,7 +54,9 @@ class WorkspaceCueUpdate {
   final int selectedCueId;
 }
 
-enum _StudioDockFileMenuAction { save, saveAs, export }
+enum _StudioDockFileMenuAction {
+  save, saveAs, export, saveProject, saveProjectAs,
+}
 
 /// Desktop-first, data-isolated workspace design. Domain logic is intentionally
 /// absent: shared Editor, Isar, checkpoints, media and file-access providers
@@ -78,6 +80,8 @@ class DesktopWorkspacePreview extends StatefulWidget {
     this.onSaveFile,
     this.onSaveAsFile,
     this.onExportFile,
+    this.onSaveProject,
+    this.onSaveProjectAs,
     this.videoSurface,
     this.waveformSurface,
     this.playback,
@@ -111,6 +115,9 @@ class DesktopWorkspacePreview extends StatefulWidget {
   final Future<StudioDockFileResult> Function()? onSaveFile;
   final Future<StudioDockFileResult> Function()? onSaveAsFile;
   final Future<StudioDockFileResult> Function(bool originalOnly)? onExportFile;
+  /// Complete .msone document with checkpoint graph, separate from SRT Save.
+  final Future<StudioDockFileResult> Function()? onSaveProject;
+  final Future<StudioDockFileResult> Function()? onSaveProjectAs;
   /// Optional existing native-player surface. Only the standalone desktop
   /// host may provide it; the classic Editor preview must leave it null.
   final Widget? videoSurface;
@@ -757,6 +764,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   Future<void> _runFileAction(
     Future<StudioDockFileResult> Function() action, {
     bool draftAlreadyHandled = false,
+    bool projectDocument = false,
   }) async {
     if (_savingFile || _changingStructure) return;
     if (!draftAlreadyHandled && !await _confirmDraftBeforeLeaving()) return;
@@ -772,13 +780,17 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
     }
     if (!mounted || result == StudioDockFileResult.canceled) return;
     final feedback = switch (result) {
-      StudioDockFileResult.saved => 'Subtitle file saved successfully.',
+      StudioDockFileResult.saved => projectDocument
+          ? 'Project and checkpoint history saved successfully.'
+          : 'Subtitle file saved successfully.',
       StudioDockFileResult.needsLocation =>
-        'No writable source file. Use Save As to choose a destination.',
+        projectDocument
+          ? 'No writable project file. Use Save Project As to choose a destination.'
+          : 'No writable source file. Use Save As to choose a destination.',
       StudioDockFileResult.alreadyExists =>
         'Existing file was kept. No bytes were overwritten.',
       StudioDockFileResult.stale =>
-        'The subtitle project changed while the dialog was open. '
+        'The project changed while the dialog was open. '
         'Nothing was written; please retry.',
       StudioDockFileResult.savedButUnlinked =>
         'File saved, but its new location could not be linked to this project.',
@@ -786,7 +798,9 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
         'The selected encoding cannot represent this subtitle text. '
         'Choose a compatible encoding in Project Settings.',
       StudioDockFileResult.failed =>
-        'Could not save this subtitle file. Check the destination and retry.',
+        projectDocument
+          ? 'Could not save the .msone project. Check the destination and retry.'
+          : 'Could not save this subtitle file. Check the destination and retry.',
       StudioDockFileResult.canceled => '',
     };
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -813,6 +827,24 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   Future<void> _saveAsFileSafely() async {
     if (widget.onSaveAsFile == null) return;
     await _runFileAction(widget.onSaveAsFile!);
+  }
+
+  Future<void> _saveProjectSafely() async {
+    if (widget.onSaveProject == null) return;
+    await _runFileAction(() async {
+      final result = await widget.onSaveProject!();
+      if (result == StudioDockFileResult.needsLocation &&
+          widget.onSaveProjectAs != null) {
+        return widget.onSaveProjectAs!();
+      }
+      return result;
+    }, projectDocument: true);
+  }
+
+  Future<void> _saveProjectAsSafely() async {
+    if (widget.onSaveProjectAs == null) return;
+    await _runFileAction(
+      widget.onSaveProjectAs!, projectDocument: true);
   }
 
   Future<void> _exportFileSafely() async {
@@ -1083,7 +1115,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
     child: SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(children: [
-        if (widget.onSaveFile != null)
+        if (widget.onSaveFile != null || widget.onSaveProject != null)
           PopupMenuButton<_StudioDockFileMenuAction>(
             key: const ValueKey('studio-file-menu'),
             tooltip: 'File actions',
@@ -1096,15 +1128,28 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
                   unawaited(_saveAsFileSafely());
                 case _StudioDockFileMenuAction.export:
                   unawaited(_exportFileSafely());
+                case _StudioDockFileMenuAction.saveProject:
+                  unawaited(_saveProjectSafely());
+                case _StudioDockFileMenuAction.saveProjectAs:
+                  unawaited(_saveProjectAsSafely());
               }
             },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: _StudioDockFileMenuAction.save,
-                child: Text('Save subtitle file')),
-              PopupMenuItem(value: _StudioDockFileMenuAction.saveAs,
-                child: Text('Save As…')),
-              PopupMenuItem(value: _StudioDockFileMenuAction.export,
-                child: Text('Export SRT…')),
+            itemBuilder: (_) => [
+              if (widget.onSaveFile != null) ...const [
+                PopupMenuItem(value: _StudioDockFileMenuAction.save,
+                  child: Text('Save subtitle file')),
+                PopupMenuItem(value: _StudioDockFileMenuAction.saveAs,
+                  child: Text('Save As…')),
+                PopupMenuItem(value: _StudioDockFileMenuAction.export,
+                  child: Text('Export SRT…')),
+              ],
+              if (widget.onSaveProject != null) ...const [
+                PopupMenuDivider(),
+                PopupMenuItem(value: _StudioDockFileMenuAction.saveProject,
+                  child: Text('Save project (.msone)')),
+                PopupMenuItem(value: _StudioDockFileMenuAction.saveProjectAs,
+                  child: Text('Save project as…')),
+              ],
             ],
             child: const Padding(
               padding: EdgeInsets.only(right: 23),

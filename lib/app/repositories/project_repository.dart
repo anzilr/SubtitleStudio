@@ -32,6 +32,29 @@ class ProjectRepository {
       await _isar.sessions.put(session);
     });
   }
+
+  /// Studio Dock Save As must not relink a session that was switched to a
+  /// different collection or project location while the native dialog was
+  /// open. Only the intended locator is changed inside the transaction.
+  Future<bool> updateSessionProjectPathIfUnchanged({
+    required int sessionId,
+    required int collectionId,
+    required String? expectedProjectFilePath,
+    required String projectFilePath,
+  }) async {
+    return _isar.writeTxn(() async {
+      final session = await _isar.sessions.get(sessionId);
+      if (session == null ||
+          session.subtitleCollectionId != collectionId ||
+          session.projectFilePath != expectedProjectFilePath) {
+        return false;
+      }
+      session.projectFilePath = projectFilePath;
+      await _isar.sessions.put(session);
+      return true;
+    });
+  }
+
   Future<void> updateSessionFileName({
     required int sessionId,
     required String fileName,

@@ -24,6 +24,7 @@ import 'studio_dock_video_surface.dart';
 import 'studio_dock_waveform_surface.dart';
 import 'studio_dock_playback_link.dart';
 import 'studio_dock_file_actions.dart';
+import 'studio_dock_project_save_actions.dart';
 
 /// Shared live-session Studio Dock host. In DS3 R2 it can optionally expose
 /// text-only editing through the existing atomic history transaction.
@@ -213,6 +214,69 @@ class _StudioDockReadOnlySessionViewState
     ref.read(projectRepositoryProvider),
     ref.read(subtitleRepositoryProvider),
   );
+
+  StudioDockProjectSaveActions get _projectActions => StudioDockProjectSaveActions(
+    ref.read(projectRepositoryProvider),
+    ref.read(subtitleRepositoryProvider),
+    ref.read(projectSaveCoordinatorProvider),
+  );
+
+  Future<StudioDockFileResult> _saveProjectDocument() async {
+    try {
+      return await _projectActions.saveExisting(
+        sessionId: widget.sessionId, collectionId: widget.collectionId);
+    } catch (_) {
+      return StudioDockFileResult.failed;
+    }
+  }
+
+  Future<StudioDockFileResult> _saveProjectDocumentAs() async {
+    try {
+      final actions = _projectActions;
+      final prepared = await actions.prepare(
+        sessionId: widget.sessionId, collectionId: widget.collectionId);
+      if (prepared == null || !mounted) return StudioDockFileResult.failed;
+      final picked = await fp.FilePicker.platform.saveFile(
+        dialogTitle: 'Save SubtitleStudio Project As',
+        fileName: prepared.fileName,
+        type: fp.FileType.custom,
+        allowedExtensions: const ['msone'],
+      );
+      if (picked == null || picked.isEmpty || !mounted) {
+        return StudioDockFileResult.canceled;
+      }
+      var outcome = await actions.writeToPath(
+        prepared: prepared, selectedPath: picked);
+      if (outcome != StudioDockFileResult.alreadyExists || !mounted) {
+        return outcome;
+      }
+      final replace = await showDialog<bool>(
+        context: context,
+        builder: (dialog) => AlertDialog(
+          title: const Text('Replace existing project file?'),
+          content: const Text('The chosen .msone project already exists. '
+              'Replacing it will overwrite the saved project and its '
+              'checkpoint history at that location.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialog, false),
+              child: const Text('Keep existing project'),
+            ),
+            FilledButton(
+              key: const ValueKey('studio-confirm-project-overwrite'),
+              onPressed: () => Navigator.pop(dialog, true),
+              child: const Text('Replace project'),
+            ),
+          ],
+        ),
+      );
+      if (replace != true || !mounted) return StudioDockFileResult.canceled;
+      return actions.writeToPath(
+        prepared: prepared, selectedPath: picked, replaceExisting: true);
+    } catch (_) {
+      return StudioDockFileResult.failed;
+    }
+  }
 
   Future<StudioDockFileResult> _saveSubtitleFile() async {
     try {
@@ -445,6 +509,10 @@ class _StudioDockReadOnlySessionViewState
             ? _saveAsSubtitleFile : null,
         onExportFile: widget.enableTextEditing && widget.allowNativePlayback
             ? _exportSubtitleFile : null,
+        onSaveProject: widget.enableTextEditing && widget.allowNativePlayback
+            ? _saveProjectDocument : null,
+        onSaveProjectAs: widget.enableTextEditing && widget.allowNativePlayback
+            ? _saveProjectDocumentAs : null,
         manageLiveHotkeys: !widget.suppressParentEditorHotkeys,
         videoSurface: validVideoPath == null || !widget.allowNativePlayback
             ? null

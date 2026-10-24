@@ -28,6 +28,7 @@ class ProjectSaveCoordinator {
   Future<ProjectDocument> buildDocument({
     required Session session,
     required SubtitleCollection subtitleCollection,
+    DateTime? now,
   }) async {
     final checkpoints =
         await _checkpointRepository.getCheckpointsForSession(session.id);
@@ -41,6 +42,7 @@ class ProjectSaveCoordinator {
       persistentReferences: persistentRefs,
       projectVersion: projectVersion,
       appVersion: appVersion,
+      now: now,
     );
   }
 

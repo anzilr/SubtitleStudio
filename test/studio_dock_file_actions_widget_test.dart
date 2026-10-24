@@ -19,6 +19,8 @@ void main() {
     required Future<StudioDockFileResult> Function() save,
     Future<StudioDockFileResult> Function()? saveAs,
     Future<StudioDockFileResult> Function(bool)? exportFile,
+    Future<StudioDockFileResult> Function()? saveProject,
+    Future<StudioDockFileResult> Function()? saveProjectAs,
     Future<bool> Function(int, String)? edit,
   }) async {
     tester.view.physicalSize = const Size(1680, 1000);
@@ -31,6 +33,8 @@ void main() {
       onSaveFile: save,
       onSaveAsFile: saveAs,
       onExportFile: exportFile,
+      onSaveProject: saveProject,
+      onSaveProjectAs: saveProjectAs,
       onApplyCueText: edit,
     )));
     await tester.pumpAndSettle();
@@ -152,6 +156,53 @@ void main() {
     pending.complete(StudioDockFileResult.saved);
     await tester.pumpAndSettle();
     expect(calls, 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Project menu Save falls back to Save Project As',
+      (tester) async {
+    var directCalls = 0;
+    var asCalls = 0;
+    await launch(tester,
+      save: () async => StudioDockFileResult.saved,
+      saveProject: () async {
+        directCalls++;
+        return StudioDockFileResult.needsLocation;
+      },
+      saveProjectAs: () async {
+        asCalls++;
+        return StudioDockFileResult.saved;
+      },
+    );
+    await tester.tap(find.byKey(const ValueKey('studio-file-menu')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save project (.msone)'));
+    await tester.pumpAndSettle();
+    expect(directCalls, 1);
+    expect(asCalls, 1);
+    expect(find.text('Project and checkpoint history saved successfully.'),
+      findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Project Save As cancel does not show saved feedback',
+      (tester) async {
+    var calls = 0;
+    await launch(tester,
+      save: () async => StudioDockFileResult.saved,
+      saveProject: () async => StudioDockFileResult.saved,
+      saveProjectAs: () async {
+        calls++;
+        return StudioDockFileResult.canceled;
+      },
+    );
+    await tester.tap(find.byKey(const ValueKey('studio-file-menu')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save project as…'));
+    await tester.pumpAndSettle();
+    expect(calls, 1);
+    expect(find.text('Project and checkpoint history saved successfully.'),
+      findsNothing);
     expect(tester.takeException(), isNull);
   });
 }
