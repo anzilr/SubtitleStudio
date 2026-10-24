@@ -184,3 +184,5 @@ DS5 R5f FULL GATE 2026-10-24: desktop UI parity ledger and shared SettingsSheet/
 DS5 R5f FINAL FULL GATE 2026-10-24: nullable persisted edited value preserved through Studio Dock projections so clipboard matches mobile for unedited and intentionally blank cues. Focused #40084792597 passed analyzer and 151 tests; run Flutter pub get, analyze and complete Flutter tests. NO platform builds.
 
 DS5 R6 FULL GATE 2026-10-24: preserve existing mobile scratch Edit Mode and translation sessions, add native Studio Dock mode-aware UI and atomic Source View new-cue semantics. Run Flutter analyzer and all Flutter tests only; NO builds.
+
+DS5 R6 HEADER TEST FIX 2026-10-24: constrain the translation-mode project header badge and settle the new inspector widget test after input. Re-run full Flutter analyzer/tests only, no native builds.

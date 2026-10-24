@@ -2342,8 +2342,9 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           Text(title, style: const TextStyle(
               fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: .7)),
           const Spacer(),
-          if (trailing != null) Text(trailing,
-              style: TextStyle(color: _muted, fontSize: 10)),
+          if (trailing != null) Flexible(child: Text(trailing,
+              maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: _muted, fontSize: 10))),
         ]),
       );
 

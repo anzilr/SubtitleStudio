@@ -41,6 +41,7 @@ void main() {
     expect(find.text('EDITED'), findsNothing);
     await tester.enterText(find.byKey(const ValueKey('studio-edit-1-0')),
         'Fresh subtitle');
+    await tester.pump();
     await tester.tap(find.byKey(const ValueKey('studio-apply-cue')));
     await tester.pumpAndSettle();
     expect(applied, ['Fresh subtitle']);
