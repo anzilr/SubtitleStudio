@@ -220,3 +220,5 @@ DS5 R14 FRESH WORKSPACE TEST 2026-10-24: remount fresh State for empty-project a
 DS5 R14 EMPTY LANDING FINAL 2026-10-24: verify no Tools menu on freshly mounted empty landing, no hearing cleanup button; Flutter full analysis/tests only, no platform builds.
 
 DS5 R15 SYNC FULL GATE 2026-10-24: desktop first/last timecode anchors and framerate conversion matching mobile sync rules; optimistic history checkpoint, safe validation and widget tests. Flutter pub get/analyze/full tests only; NO platform builds.
+
+DS5 R15 DRAFT NAV TEST RETRY 2026-10-24: verify Timing menu blocks dirty inspector before Tools. Rerun Flutter analysis and full tests only; no builds.

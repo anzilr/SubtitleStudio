@@ -130,13 +130,15 @@ void main() {
     await tester.enterText(find.byKey(const ValueKey('studio-edit-1-0')),
         'Unsaved translation');
     await tester.pump();
-    await openTools(tester);
-    await tapTool(tester, 'studio-tool-sync-anchors');
-    await tester.tap(find.byKey(const ValueKey('studio-sync-anchor-next')));
+    // Studio Dock protects the dirty inspector before switching to Tools.
+    await tester.tap(find.byKey(const ValueKey('studio-timing-menu')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sync subtitles…').last);
     await tester.pumpAndSettle();
     expect(find.text('Unsaved subtitle edit'), findsOneWidget);
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('studio-tool-sync-anchors')), findsNothing);
     expect(calls, 0);
     expect(find.text('Unsaved translation'), findsWidgets);
     expect(tester.takeException(), isNull);
