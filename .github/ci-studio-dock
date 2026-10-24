@@ -55,3 +55,5 @@ DS5 R5b inspector Material fix: wrap review switches in own transparent Material
 DS5 R5c 2026-10-24: production in-project Find/Replace with shared snapshot and optimistic batch checkpoint, bulk timing shifts and supported-tag cleanup in Tools, command palette Find/Tools routing, widget and integration tests. Flutter analyzer and focused Studio Dock tests ONLY; no platform builds.
 
 DS5 R5d 2026-10-24: user-requested combined Text/Timing inspector with sticky Apply and one guarded simultaneous text+timing checkpoint; remove separate Timing tab, update command palette. Bulk selected cue review marks via shared history, context menus and shortcut. Validate new Isar and widget tests, narrow theme layout. Run Flutter analyzer and focused Studio Dock tests only, no native builds.
+
+DS5 R5d TEST ADJUSTMENTS 2026-10-24: adjust DS1 expectations to merged Text/Timing inspector and target outer inspector scroll for 1100px test. Focused Flutter analyzer and Studio Dock tests only; NO platform builds.
