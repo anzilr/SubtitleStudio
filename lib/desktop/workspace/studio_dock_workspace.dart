@@ -30,7 +30,7 @@ enum _StudioDockMenuAction {
   timing, shiftTools, showTools, sourceView, history, submitMsone,
   loadSecondary, toggleSecondary,
   shiftSelected, deleteSelected, selectByIndex, rangeSelection, goToLine,
-  importComments,
+  importComments, removeHearingImpaired,
   explorer, inspector, settings, help,
 }
 
@@ -141,6 +141,7 @@ class StudioDockWorkspace extends StatefulWidget {
     this.onOpenAppSettings,
     this.onOpenProjectSettings,
     this.onImportComments,
+    this.onRemoveHearingImpaired,
     this.onOpenHelp,
     this.onSubmitToMsone,
     this.onLoadSecondarySubtitles,
@@ -240,6 +241,9 @@ class StudioDockWorkspace extends StatefulWidget {
   /// Opens the mobile project's .msone comment importer in a native desktop
   /// dialog and refreshes the shared checkpoint-backed session afterward.
   final Future<void> Function()? onImportComments;
+  /// Shared hearing-impaired cleanup, persisted in a single history transaction.
+  final Future<StudioDockCueUpdate?> Function(int selectedCueNumber)?
+      onRemoveHearingImpaired;
   /// Opens the existing HelpScreen, shared with the mobile editor.
   final Future<void> Function()? onOpenHelp;
   /// Opens the established MSone submission flow after the current draft is
@@ -299,6 +303,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   bool _openingMsoneSubmission = false;
   bool _openingProjectSettings = false;
   bool _openingCommentImport = false;
+  bool _openingHearingCleanup = false;
+  ModalRoute<dynamic>? _hearingMenuRoute;
   ModalRoute<dynamic>? _msoneMenuRoute;
   ModalRoute<dynamic>? _secondaryMenuRoute;
   ModalRoute<dynamic>? _projectSettingsMenuRoute;
@@ -1157,6 +1163,27 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     }
   }
 
+  Future<void> _removeHearingSafely({ModalRoute<dynamic>? afterMenu}) async {
+    final remove = widget.onRemoveHearingImpaired;
+    if (remove == null || _openingHearingCleanup || _cues.isEmpty) return;
+    setState(() => _openingHearingCleanup = true);
+    try {
+      if (afterMenu != null) await afterMenu.completed;
+      if (!mounted) return;
+      await _runBulkTool(
+        title: 'Remove hearing-impaired annotations',
+        detail: 'Clean bracketed descriptions, sound effects, music notes, '
+            'speaker labels, and parenthesized descriptions from source '
+            'subtitle text. Cues left empty may be deleted. Stored '
+            'translations and review metadata on surviving cues are kept. '
+            'Continue?',
+        apply: () => remove(_selectedId),
+      );
+    } finally {
+      if (mounted) setState(() => _openingHearingCleanup = false);
+    }
+  }
+
   Future<void> _importCommentsSafely({ModalRoute<dynamic>? afterMenu}) async {
     final openImport = widget.onImportComments;
     if (openImport == null || _openingCommentImport || _cues.isEmpty) return;
@@ -1941,6 +1968,13 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               child: Text('Find & Replace')),
           const PopupMenuItem(value: _StudioDockMenuAction.showTools,
               child: Text('Subtitle tools')),
+          if (widget.onRemoveHearingImpaired != null)
+            PopupMenuItem(value: _StudioDockMenuAction.removeHearingImpaired,
+              enabled: !_openingHearingCleanup && _cues.isNotEmpty,
+              child: Builder(builder: (popupContext) {
+                _hearingMenuRoute = ModalRoute.of(popupContext);
+                return const Text('Remove Hearing Impaired…');
+              })),
           if (widget.onImportComments != null)
             PopupMenuItem(value: _StudioDockMenuAction.importComments,
               enabled: !_openingCommentImport && _cues.isNotEmpty,
@@ -2045,6 +2079,10 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         unawaited(_switchSection(5));
       case _StudioDockMenuAction.history:
         unawaited(_switchSection(1));
+      case _StudioDockMenuAction.removeHearingImpaired:
+        final route = _hearingMenuRoute;
+        _hearingMenuRoute = null;
+        unawaited(_removeHearingSafely(afterMenu: route));
       case _StudioDockMenuAction.importComments:
         final menuRoute = _commentsMenuRoute;
         _commentsMenuRoute = null;
@@ -2753,6 +2791,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     required Future<StudioDockCueUpdate?> Function() apply,
   }) async {
     if (_runningTool || _changingStructure || _savingDraft) return;
+    if (!await _confirmDraftBeforeLeaving() || !mounted ||
+        _runningTool || _changingStructure) return;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialog) => AlertDialog(
@@ -4164,6 +4204,33 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             ]),
           ]),
         )),
+        if (widget.onRemoveHearingImpaired != null) ...[
+          const SizedBox(height: 12),
+          Card(child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Hearing-impaired annotation cleanup',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 7),
+                Text('Clean descriptions, effects, and speaker labels from '
+                    'source text. Empty cues may be deleted. Surviving '
+                    'translations and review notes remain; Undo is available '
+                    'in editing history.',
+                    style: TextStyle(color: _muted, fontSize: 12)),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  key: const ValueKey('studio-tool-hearing-cleanup'),
+                  onPressed: !_runningTool && !_openingHearingCleanup &&
+                          _cues.isNotEmpty
+                      ? () => unawaited(_removeHearingSafely()) : null,
+                  icon: const Icon(Icons.hearing_disabled, size: 17),
+                  label: const Text('Remove Hearing Impaired'),
+                ),
+              ],
+            ),
+          )),
+        ],
         if (widget.onImportComments != null) ...[
           const SizedBox(height: 12),
           Card(child: Padding(
@@ -4197,7 +4264,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         ),
         if (widget.onShiftAllCues == null &&
             widget.onClearAllFormatting == null &&
-            widget.onImportComments == null)
+            widget.onImportComments == null &&
+            widget.onRemoveHearingImpaired == null)
           Padding(
             padding: const EdgeInsets.all(14),
             child: Text('Tools are read-only for this session.',

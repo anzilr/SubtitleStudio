@@ -93,3 +93,5 @@ DS5 R12 GO TO LINE 2026-10-24: implement the existing mobile Go to Line behavior
 DS5 R12 NUMERIC VALIDATION 2026-10-24: reject raw negative/malformed Go to Line inputs instead of stripping a leading sign into an unintended valid line. Re-run Flutter analyze and Studio Dock regression tests only; no builds.
 
 DS5 R13 IMPORT COMMENTS 2026-10-24: expose the shared mobile .msone comments importer on native Studio Dock Tools with popup/draft guard, desktop dialog, authoritative cue/history refresh and widget tests. Run Flutter analyzer and focused Studio Dock suite only; no platform builds.
+
+DS5 R14 HEARING CLEANUP 2026-10-24: expose shared cleanup in Studio Dock Tools/menu; guard dirty draft, confirm deletion, check stale snapshot, test UI and existing service plan. Flutter analysis and focused tests only; NO platform builds.

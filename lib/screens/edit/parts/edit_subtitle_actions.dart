@@ -409,7 +409,7 @@ extension _EditSubtitleActions on _EditScreenState {
           '• Speaker labels (NAME:)\n'
           '• Sound descriptions in parentheses\n\n'
           'Lines that become empty after removal will be deleted.\n\n'
-          'This action cannot be undone. Continue?',
+          'You can undo this operation in editing history. Continue?',
         ),
         actions: [
           TextButton(

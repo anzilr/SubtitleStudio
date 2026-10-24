@@ -39,6 +39,23 @@ void main() {
       );
     });
 
+    test('keeps translated text, timing, marks and review metadata on surviving cues', () {
+      final plan = HearingImpairedCleanupService.buildPlan([
+        _line(index: 1, original: 'NARRATOR: Hello there',
+            edited: 'പരിഭാഷ', marked: true, comment: 'Needs review',
+            resolved: true),
+      ]);
+      expect(plan.cleanedLines, hasLength(1));
+      final cue = plan.cleanedLines.single;
+      expect(cue.original, isNot('NARRATOR: Hello there'));
+      expect(cue.edited, 'പരിഭാഷ');
+      expect(cue.startTime, '00:00:01,000');
+      expect(cue.endTime, '00:00:01,900');
+      expect(cue.marked, isTrue);
+      expect(cue.comment, 'Needs review');
+      expect(cue.resolved, isTrue);
+    });
+
     test('preserves comment metadata in modified delta snapshots', () {
       final plan = HearingImpairedCleanupService.buildPlan([
         _line(

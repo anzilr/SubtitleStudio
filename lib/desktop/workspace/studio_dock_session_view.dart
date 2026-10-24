@@ -16,6 +16,7 @@ import 'package:subtitle_studio/screens/screen_help.dart';
 import 'package:subtitle_studio/widgets/settings_sheet.dart';
 import 'package:subtitle_studio/widgets/project_settings_sheet.dart';
 import 'package:subtitle_studio/widgets/import_comments_sheet.dart';
+import 'package:subtitle_studio/screens/edit/services/hearing_impaired_cleanup_service.dart';
 import 'package:subtitle_studio/screens/msone_submission_flow.dart';
 import 'package:subtitle_studio/screens/edit/services/editor_secondary_subtitle_service.dart';
 import 'package:subtitle_studio/utils/subtitle_parser.dart';
@@ -593,6 +594,47 @@ class _StudioDockSessionViewState
       if (!mounted || updated == null) return null;
       setState(() => _latestBaseline = updated);
       return _snapshotUpdate(updated, selectedCueNumber);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Runs the same checkpoint-backed cleanup as mobile, refusing stale
+  /// desktop state before starting a destructive whole-project operation.
+  Future<StudioDockCueUpdate?> _removeHearingImpaired(
+      int selectedCueNumber) async {
+    final baseline = _latestBaseline;
+    if (!mounted || !widget.enableEditing || baseline == null) return null;
+    try {
+      final current = await _load();
+      if (!mounted || current.sessionId != baseline.sessionId ||
+          current.collectionId != baseline.collectionId ||
+          current.cues.length != baseline.cues.length) return null;
+      for (var i = 0; i < current.cues.length; i++) {
+        final before = baseline.cues[i];
+        final now = current.cues[i];
+        if (before.index != now.index || before.start != now.start ||
+            before.end != now.end || before.original != now.original ||
+            before.storedEdited != now.storedEdited ||
+            before.marked != now.marked ||
+            before.comment != now.comment ||
+            before.resolved != now.resolved) return null;
+      }
+      await HearingImpairedCleanupService.execute(
+        isar: ref.read(isarProvider),
+        sessionId: widget.sessionId,
+        subtitleCollectionId: widget.collectionId,
+      );
+      if (!mounted) return null;
+      final refreshed = await _load();
+      if (!mounted) return null;
+      setState(() => _latestBaseline = refreshed);
+      final preferredPosition = baseline.cues.indexWhere(
+          (cue) => cue.index == selectedCueNumber);
+      final nextSelected = refreshed.cues.isEmpty ? -1 :
+          refreshed.cues[preferredPosition.clamp(
+              0, refreshed.cues.length - 1).toInt()].index;
+      return _snapshotUpdate(refreshed, nextSelected);
     } catch (_) {
       return null;
     }
@@ -1182,6 +1224,8 @@ class _StudioDockSessionViewState
             widget.enableEditing && widget.allowNativePlayback
                 ? _openProjectSettings : null,
         onImportComments: widget.enableEditing ? _openImportComments : null,
+        onRemoveHearingImpaired:
+            widget.enableEditing ? _removeHearingImpaired : null,
         onOpenHelp: _openHelp,
         onSubmitToMsone: _msoneEnabled ? _submitToMsone : null,
         onLoadSecondarySubtitles: _openSecondaryPicker,

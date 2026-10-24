@@ -156,7 +156,7 @@ class StudioDockBulkToolsService {
         final cue = baseline.cues.firstWhere((cue) => cue.index == line.index);
         return cue.start == line.startTime && cue.end == line.endTime;
       })) return baseline;
-      return _commit(
+      return await _commit(
         baseline: baseline,
         updated: updated,
         operationType: 'sync',
