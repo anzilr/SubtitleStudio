@@ -2114,6 +2114,9 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       _rangeStartCueId = null;
     });
     if (_rangeSelectionMode) {
+      // Tools replaces the subtitle grid; the two range-endpoint taps must
+      // happen in the editor where subtitle rows are visible.
+      if (_section != 0) unawaited(_switchSection(0));
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('Select the first subtitle, then the last subtitle in the range.'),
       ));

@@ -15,7 +15,8 @@ Studio Dock remains an alternate UI to the existing Flutter editor engine.
   1-based bounds) and **Range selection** (two subtitle-row pointers).
   Existing Ctrl/Cmd and Shift multi-selection remain intact. Index-based
   selection addresses underlying cues, not filtered search results; selecting
-  a range clears filters and text search to make the selection visible.
+  a range clears filters and text search to make the selection visible. Starting
+  pointer-range selection in Tools returns to the subtitle grid automatically.
 - The Timing menu and Tools panel expose **Shift selected**. The planner
   follows mobile `SubtitleSyncOperations.shiftSelectedTimecodes`: anchor the
   first cue start and last cue end, scale intermediate *start offsets*, and

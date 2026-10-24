@@ -68,6 +68,7 @@ void main() {
     await tester.pump();
     expect(find.textContaining('in order'), findsOneWidget);
     await tester.enterText(find.byKey(const ValueKey('studio-range-start')), '2');
+    await tester.enterText(find.byKey(const ValueKey('studio-range-end')), '3');
     await tester.tap(find.byKey(const ValueKey('studio-range-confirm')));
     await tester.pumpAndSettle();
     expect(find.textContaining('2 of 3 subtitles selected'), findsOneWidget);
@@ -150,11 +151,12 @@ void main() {
     await launch(tester);
     await openTools(tester);
     await tapTool(tester, 'studio-tool-select-range');
+    expect(find.byKey(const ValueKey('desktop-cue-3')), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('desktop-cue-3')));
     await tester.pumpAndSettle();
-    expect(find.textContaining('1 of 3 subtitles selected'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('desktop-cue-1')));
     await tester.pumpAndSettle();
+    await openTools(tester);
     expect(find.textContaining('3 of 3 subtitles selected'), findsOneWidget);
     expect(find.text('Range selection'), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -163,16 +165,18 @@ void main() {
   testWidgets('Unsaved inspector draft blocks selected index dialog on Cancel',
       (tester) async {
     await launch(tester, edit: (_, __) async => true);
-    await openTools(tester);
     await tester.enterText(
         find.byKey(const ValueKey('studio-edit-1-0')), 'Unsaved new text');
     await tester.pump();
-    await tapTool(tester, 'studio-tool-select-indices');
+    await tester.tap(find.byKey(const ValueKey('studio-edit-menu')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Select subtitles by index…').last);
+    await tester.pumpAndSettle();
     expect(find.text('Unsaved subtitle edit'), findsOneWidget);
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('studio-range-start')), findsNothing);
-    expect(find.textContaining('1 of 3 subtitles selected'), findsOneWidget);
+    expect(find.text('Unsaved new text'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
 }

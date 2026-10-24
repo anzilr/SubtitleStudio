@@ -202,3 +202,5 @@ DS5 R10 FULL GATE 2026-10-24: validate native Studio Dock Project Settings wirin
 DS5 R11 FULL GATE 2026-10-24: selected cue index/range, timing stretch and guarded atomic deletion through shared checkpoint engine, with desktop and Isar tests. Run Flutter pub get, analyze and full Flutter test suite only; NO platform builds.
 
 DS5 R11 DIALOG FULL RETRY 2026-10-24: correct TextField controller disposal during pop animation in selected index and time stretch dialogs; re-run complete Flutter analysis/tests, no platform builds.
+
+DS5 R11 RANGE FULL RETRY 2026-10-24: follow up on focused CI with corrected range-input expectations, editor-first pointer range UX and inspector unsaved-draft menu coverage; Flutter analysis and full tests only, no native builds.
