@@ -19,6 +19,13 @@ Branch: `feature/studio-dock-integration`
 - Run focused Flutter analysis/tests, the full Flutter suite and platform-sensitive host tests in GitHub Actions. Only `flutter pub get`, `flutter analyze` and `flutter test` are allowed; **no native/platform builds in CI**.
 - Physical Windows acceptance is still required for save picker, overwrite dialog, relinking after restart, checkpoint history import, file associations, 1366×768 / 1920×1080 layout and OS permissions. Later smoke-test macOS/Linux dialogs on their hosts.
 
+## Accepted CI gates
+
+- [Focused Studio Dock quality #40066304343](https://github.com/anzilr/SubtitleStudio/actions/runs/40066304343): **PASS** — Flutter analyzer and all focused Studio Dock tests (including complete project Save round trip, history and stale dialog guards).
+- [Full repository quality #40066465075](https://github.com/anzilr/SubtitleStudio/actions/runs/40066465075): **PASS** — Flutter analyzer and full regression suite on Linux.
+- [Windows/macOS file and encoding matrix #40066470084](https://github.com/anzilr/SubtitleStudio/actions/runs/40066470084): **PASS** on both operating systems. The host matrix includes existing desktop import tests and new .msone project Save tests.
+- All gates ran Flutter dependency resolution, analysis and tests only. **No application or platform builds** were attempted. OS-native picker, bookmark, window and playback behavior still need physical desktop acceptance.
+
 ## Next
 
 - DS5 R4b: checkpoint Undo / Redo and human-readable edit history integration within Studio Dock, reusing history services and existing hotkey manager.
