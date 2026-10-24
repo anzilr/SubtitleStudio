@@ -107,7 +107,8 @@ class _StudioDockSessionViewState
           for (final cue in restored.cues)
             StudioDockCue(
               id: cue.index, start: cue.start, end: cue.end,
-              original: cue.original, edited: cue.edited, marked: cue.marked,
+              original: cue.original, edited: cue.edited,
+              storedEdited: cue.storedEdited, marked: cue.marked,
               comment: cue.comment, resolved: cue.resolved,
             ),
         ],
@@ -354,6 +355,7 @@ class _StudioDockSessionViewState
               end: cue.end,
               original: cue.original,
               edited: cue.edited,
+              storedEdited: cue.storedEdited,
               marked: cue.marked,
               comment: cue.comment,
               resolved: cue.resolved,
@@ -741,6 +743,7 @@ class _StudioDockSessionViewState
             end: line.end,
             original: line.original,
             edited: line.edited,
+            storedEdited: line.storedEdited,
             marked: line.marked,
             comment: line.comment,
             resolved: line.resolved,

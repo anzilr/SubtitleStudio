@@ -39,6 +39,7 @@ class StudioDockCue {
     required this.end,
     required this.original,
     required this.edited,
+    this.storedEdited,
     this.marked = false,
     this.comment,
     this.resolved = false,
@@ -49,6 +50,9 @@ class StudioDockCue {
   final String end;
   final String original;
   final String edited;
+  /// The actual nullable persisted edit. Null means "use original" when
+  /// copying/exporting effective text; an explicit empty edit stays empty.
+  final String? storedEdited;
   final bool marked;
   final String? comment;
   final bool resolved;
@@ -60,7 +64,9 @@ class StudioDockCue {
       StudioDockCue(
         id: id, start: start ?? this.start, end: end ?? this.end,
         original: original,
-        edited: edited ?? this.edited, marked: marked ?? this.marked,
+        edited: edited ?? this.edited,
+        storedEdited: edited ?? storedEdited,
+        marked: marked ?? this.marked,
         comment: clearComment ? null : comment ?? this.comment,
         resolved: resolved ?? this.resolved,
       );
@@ -1813,7 +1819,11 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   Future<void> _copySelectedSubtitleText({Set<int>? cueIds}) async {
     final ids = cueIds ?? _selectedIds;
     final selected = _cues.where((cue) => ids.contains(cue.id));
-    final contents = selected.map((cue) => cue.edited.trim())
+    // The mobile editor copies `line.edited ?? line.original`; these values
+    // are not interchangeable when an edit was intentionally made blank.
+    final contents = selected.map((cue) =>
+        (cue.storedEdited ?? (cue.edited.isEmpty
+            ? cue.original : cue.edited)).trim())
         .join('\n\n').trim();
     if (contents.isEmpty) return;
     await Clipboard.setData(ClipboardData(text: contents));

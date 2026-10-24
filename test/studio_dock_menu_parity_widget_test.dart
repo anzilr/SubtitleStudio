@@ -24,7 +24,16 @@ void main() {
         ),
         StudioDockCue(
           id: 2, start: '00:00:03,000', end: '00:00:04,000',
-          original: 'Second original', edited: 'Edited second',
+          original: 'Second original', edited: '', storedEdited: null,
+        ),
+        StudioDockCue(
+          id: 3, start: '00:00:05,000', end: '00:00:06,000',
+          original: 'Third original', edited: '', storedEdited: '',
+        ),
+        StudioDockCue(
+          id: 4, start: '00:00:07,000', end: '00:00:08,000',
+          original: 'Fourth original', edited: 'Final edit',
+          storedEdited: 'Final edit',
         ),
       ],
       onApplyCueText: (_, __) async => true,
@@ -100,7 +109,7 @@ void main() {
     await launch(tester);
     await choose(tester, 'studio-edit-menu', 'Select all visible subtitles');
     await choose(tester, 'studio-edit-menu', 'Copy selected subtitles');
-    expect(copied, 'Edited line\n\nEdited second');
+    expect(copied, 'Edited line\n\nSecond original\n\n\n\nFinal edit');
     expect(tester.takeException(), isNull);
   });
 }

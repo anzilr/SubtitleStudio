@@ -27,6 +27,9 @@ supported/partial/missing ledger. Keep it updated as functionality is wired.
 - Wired **actual mobile `HelpScreen`** to the Help menu and command palette.
 - Added Select All Visible and Copy Selected Subtitle Text using the same
   effective-text format as mobile (`edited` text, blank line between cues).
+- Preserved the nullable persisted edited value in the desktop cue projection.
+  Clipboard output now distinguishes a never-edited cue (copy original text)
+  from a deliberately blank edited cue (copy blank), as mobile does.
 - Corrected wide-screen inspector commands so they reveal the docked panel
   rather than creating a second overlaid inspector instance.
 - Kept the mobile code and underlying editing repositories unchanged.
