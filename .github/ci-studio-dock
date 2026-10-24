@@ -87,3 +87,5 @@ DS5 R11 SELECTED BATCH 2026-10-24: desktop index/pointer range selection, mobile
 DS5 R11 DIALOG LIFECYCLE FIX 2026-10-24: use self-owned TextFormField state in selected-batch dialogs to avoid disposing a controller before its dismissal animation ends. Re-run analyzer and focused Flutter widget/integration tests only.
 
 DS5 R11 RANGE INTERACTION TEST FIX 2026-10-24: correct index-range widget expectation; switch back from Tools to subtitle grid for two-pointer range selection; test unsaved draft from the Edit menu while inspector is visible. Run Flutter analyze and focused suite only.
+
+DS5 R12 GO TO LINE 2026-10-24: implement the existing mobile Go to Line behavior on the sole native Studio Dock UI, including number/slider, draft guard, real grid scroll and attached media +50ms seek. Flutter analyze and focused Studio Dock tests only; NO native builds.

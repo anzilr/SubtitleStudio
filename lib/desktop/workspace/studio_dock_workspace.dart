@@ -15,6 +15,7 @@ import 'studio_dock_layout_preferences.dart';
 import 'studio_dock_timing_edit_service.dart';
 import 'studio_dock_insert_cue_dialog.dart';
 import 'studio_dock_split_cue_dialog.dart';
+import 'studio_dock_go_to_line_dialog.dart';
 import 'studio_dock_file_actions.dart';
 import 'studio_dock_style_actions.dart';
 import 'studio_dock_style_color_dialog.dart';
@@ -28,7 +29,7 @@ enum _StudioDockMenuAction {
   undo, redo, find, copySelected, selectAll, addCue, deleteCue, splitCue, mergeCue, notes,
   timing, shiftTools, showTools, sourceView, history, submitMsone,
   loadSecondary, toggleSecondary,
-  shiftSelected, deleteSelected, selectByIndex, rangeSelection,
+  shiftSelected, deleteSelected, selectByIndex, rangeSelection, goToLine,
   explorer, inspector, settings, help,
 }
 
@@ -356,6 +357,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     HotkeyAction.previousLine,
     HotkeyAction.playPause,
     HotkeyAction.findReplace,
+    HotkeyAction.gotoLine,
     HotkeyAction.markLine,
     HotkeyAction.splitLine,
     HotkeyAction.mergeLine,
@@ -367,6 +369,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       action == HotkeyAction.nextLine ||
       action == HotkeyAction.previousLine ||
       action == HotkeyAction.findReplace ||
+      action == HotkeyAction.gotoLine ||
       action == HotkeyAction.markLine && widget.onApplyBulkReview != null ||
       action == HotkeyAction.splitLine && widget.onSplitCue != null ||
       action == HotkeyAction.mergeLine && widget.onMergeCue != null ||
@@ -547,6 +550,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         }
       case HotkeyAction.findReplace:
         unawaited(_openFind());
+      case HotkeyAction.gotoLine:
+        unawaited(_goToLineSafely());
       case HotkeyAction.markLine:
         if (widget.onApplyBulkReview != null) {
           unawaited(_toggleReviewSelection());
@@ -1859,6 +1864,9 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               child: Text('Find & Replace')),
           const PopupMenuItem(value: _StudioDockMenuAction.selectAll,
               child: Text('Select all visible subtitles')),
+          PopupMenuItem(value: _StudioDockMenuAction.goToLine,
+              enabled: _cues.isNotEmpty,
+              child: const Text('Go to Line…')),
           const PopupMenuItem(value: _StudioDockMenuAction.selectByIndex,
               child: Text('Select subtitles by index…')),
           PopupMenuItem(value: _StudioDockMenuAction.rangeSelection,
@@ -1970,6 +1978,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         unawaited(_openFind());
       case _StudioDockMenuAction.selectAll:
         _selectAllVisibleCues();
+      case _StudioDockMenuAction.goToLine:
+        unawaited(_goToLineSafely());
       case _StudioDockMenuAction.selectByIndex:
         unawaited(_selectByIndexSafely());
       case _StudioDockMenuAction.rangeSelection:
@@ -2026,6 +2036,56 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     setState(() => _selectedIds
       ..clear()
       ..addAll(_visible.map((cue) => cue.id)));
+  }
+
+  Future<void> _goToLineSafely() async {
+    if (_cues.isEmpty || !await _confirmDraftBeforeLeaving() || !mounted) {
+      return;
+    }
+    // Applying a dirty Source View may replace the entire cue list.
+    if (_cues.isEmpty) return;
+    final initialIndex = _cues.indexWhere((cue) => cue.id == _selectedId);
+    final lineNumber = await showDialog<int>(
+      context: context,
+      builder: (_) => StudioDockGoToLineDialog(
+        lineCount: _cues.length,
+        initialLine: initialIndex < 0 ? 1 : initialIndex + 1,
+      ),
+    );
+    if (!mounted || lineNumber == null ||
+        lineNumber < 1 || lineNumber > _cues.length) return;
+
+    final cue = _cues[lineNumber - 1];
+    setState(() {
+      // Mobile Go to Line indexes the full subtitle document. Reveal rows
+      // hidden by the desktop-only review filter or search before scrolling.
+      _section = 0;
+      _reviewFilter = _StudioDockReviewFilter.all;
+      _query = '';
+      _tableSearch.clear();
+      _selectedId = cue.id;
+      _selectionAnchor = cue.id;
+      _selectedIds..clear()..add(cue.id);
+      _rangeSelectionMode = false;
+      _rangeStartCueId = null;
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_cueScroll.hasClients) return;
+      final visibleIndex = _visible.indexWhere((item) => item.id == cue.id);
+      if (visibleIndex < 0) return;
+      final target = (visibleIndex * 40.0 + 20 -
+              _cueScroll.position.viewportDimension / 2)
+          .clamp(0.0, _cueScroll.position.maxScrollExtent).toDouble();
+      _cueScroll.jumpTo(target);
+    });
+
+    // Match mobile's +50ms margin so the selected subtitle is active at the
+    // destination. No player exists until the host attaches its shared link.
+    if (widget.playback?.isAttached ?? false) {
+      final startMs = TimeValidator.timeStringToMilliseconds(cue.start);
+      widget.playback!.seek(Duration(milliseconds: startMs + 50));
+    }
   }
 
   void _applyIndexRange(int start, int end) {
@@ -2998,6 +3058,12 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     Row(children: [
       Expanded(child: _paneHeader(Icons.view_list_outlined, 'SUBTITLE LINES',
         trailing: _visible.length.toString() + ' / ' + _cues.length.toString())),
+      IconButton(
+        key: const ValueKey('studio-go-to-line'),
+        tooltip: 'Go to subtitle line',
+        icon: const Icon(Icons.numbers, size: 19),
+        onPressed: _cues.isEmpty ? null : () => unawaited(_goToLineSafely()),
+      ),
       DropdownButtonHideUnderline(child: DropdownButton<_StudioDockReviewFilter>(
         key: const ValueKey('studio-review-filter'),
         value: _reviewFilter,
