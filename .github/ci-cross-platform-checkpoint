@@ -34,3 +34,5 @@ with simulated Android/iOS paths; no platform application builds in Actions.
 DS5 R3 2026-10-24: native-host Windows/macOS Flutter analyzer and file/encoding/SRT Save As/Export tests. No platform builds.
 
 DS5 R3 host-neutral test isolation 2026-10-24: compare Windows/macOS Flutter file tests with simulated bookmark factory; no native plugin in headless harness and no builds.
+
+DS5 R4a 2026-10-24: host Flutter file/encoding/project Save tests on Windows and macOS only; no native application builds.
