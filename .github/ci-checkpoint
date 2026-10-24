@@ -519,3 +519,5 @@ DS5 R1 FULL FLUTTER GATE 2026-10-24: Studio Dock inspector timing fields commit 
 DS5 R2b 2026-10-24: full Flutter regression after guarded desktop split/combine and checkpoint transactions. Analyze and test only, no platform builds.
 
 DS5 R3 2026-10-24: full Flutter analyze/test gate after Studio Dock SRT Save/Save As/Export and focused test corrections. No platform application builds.
+
+DS5 R4a 2026-10-24: full Flutter analyzer and regression for guarded msone project Save/Save As. No platform builds.
