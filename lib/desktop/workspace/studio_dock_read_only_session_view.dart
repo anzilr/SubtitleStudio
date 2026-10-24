@@ -10,6 +10,7 @@ import 'package:subtitle_studio/screens/edit/repositories/video_repository.dart'
 import 'package:subtitle_studio/screens/edit/providers/subtitle_repository_provider.dart';
 import 'package:subtitle_studio/utils/msone_hotkey_manager.dart';
 import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
+import 'package:subtitle_studio/services/checkpoint_history_graph.dart';
 
 import 'desktop_workspace_preview.dart';
 import 'studio_dock_session_loader.dart';
@@ -25,6 +26,7 @@ import 'studio_dock_waveform_surface.dart';
 import 'studio_dock_playback_link.dart';
 import 'studio_dock_file_actions.dart';
 import 'studio_dock_project_save_actions.dart';
+import 'studio_dock_history_service.dart';
 
 /// Shared live-session Studio Dock host. In DS3 R2 it can optionally expose
 /// text-only editing through the existing atomic history transaction.
@@ -67,6 +69,46 @@ class _StudioDockReadOnlySessionViewState
   bool _selectingVideo = false;
   StudioDockSessionSnapshot? _latestBaseline;
   final StudioDockPlaybackLink _playback = StudioDockPlaybackLink();
+
+  StudioDockHistoryService get _history => StudioDockHistoryService(
+    StudioDockSessionLoader(
+      ref.read(projectRepositoryProvider), ref.read(subtitleRepositoryProvider)),
+    ref.read(checkpointRepositoryProvider),
+  );
+
+  Future<CheckpointHistoryGraph> _loadHistory() =>
+      _history.load(widget.sessionId);
+
+  Future<WorkspaceCueUpdate?> _restoreHistory(
+    int targetCheckpointId, int expectedHeadId, int preferredCueId,
+  ) async {
+    final baseline = _latestBaseline;
+    if (baseline == null || !widget.enableTextEditing) return null;
+    try {
+      final transition = await _history.checkout(
+        baseline: baseline, expectedHeadId: expectedHeadId,
+        targetCheckpointId: targetCheckpointId,
+      );
+      if (transition == null || !mounted) return null;
+      final restored = transition.snapshot;
+      final cueId = restored.cues.any((cue) => cue.index == preferredCueId)
+          ? preferredCueId
+          : restored.cues.isEmpty ? -1 : restored.cues.last.index;
+      setState(() => _latestBaseline = restored);
+      return WorkspaceCueUpdate(
+        cues: [
+          for (final cue in restored.cues)
+            WorkspaceDemoCue(
+              id: cue.index, start: cue.start, end: cue.end,
+              original: cue.original, edited: cue.edited, marked: cue.marked,
+            ),
+        ],
+        selectedCueId: cueId,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
 
   Future<bool> _applyText(int cueNumber, String editedText) async {
     final baseline = _latestBaseline;
@@ -503,6 +545,8 @@ class _StudioDockReadOnlySessionViewState
         onDeleteCue: widget.enableTextEditing ? _deleteCue : null,
         onSplitCue: widget.enableTextEditing ? _splitCue : null,
         onMergeCue: widget.enableTextEditing ? _mergeCue : null,
+        onLoadHistory: widget.enableTextEditing ? _loadHistory : null,
+        onRestoreHistory: widget.enableTextEditing ? _restoreHistory : null,
         onSaveFile: widget.enableTextEditing && widget.allowNativePlayback
             ? _saveSubtitleFile : null,
         onSaveAsFile: widget.enableTextEditing && widget.allowNativePlayback

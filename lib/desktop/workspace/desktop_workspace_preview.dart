@@ -4,6 +4,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:subtitle_studio/utils/time_input_formatter.dart';
+import 'package:subtitle_studio/services/checkpoint_history_graph.dart';
+import 'package:subtitle_studio/services/checkpoint_history_labels.dart';
 import 'studio_dock_geometry.dart';
 import 'studio_dock_playback_link.dart';
 import 'studio_dock_layout_preferences.dart';
@@ -77,6 +79,8 @@ class DesktopWorkspacePreview extends StatefulWidget {
     this.onDeleteCue,
     this.onSplitCue,
     this.onMergeCue,
+    this.onLoadHistory,
+    this.onRestoreHistory,
     this.onSaveFile,
     this.onSaveAsFile,
     this.onExportFile,
@@ -111,6 +115,14 @@ class DesktopWorkspacePreview extends StatefulWidget {
       int cueNumber, StudioDockSplitCueDraft draft)? onSplitCue;
   final Future<WorkspaceCueUpdate?> Function(
       int cueNumber, bool withPrevious)? onMergeCue;
+  /// The shared checkpoint graph is authoritative; never infer Undo/Redo
+  /// availability from the local preview's cue list.
+  final Future<CheckpointHistoryGraph> Function()? onLoadHistory;
+  /// Restores a saved point with the HEAD observed by this window. Returns
+  /// complete persisted cues, not a partial UI-only edit.
+  final Future<WorkspaceCueUpdate?> Function(
+      int targetCheckpointId, int expectedHeadId, int preferredCueId)?
+      onRestoreHistory;
   /// File Save is separate from the already checkpoint-backed inspector Apply.
   final Future<StudioDockFileResult> Function()? onSaveFile;
   final Future<StudioDockFileResult> Function()? onSaveAsFile;
@@ -211,6 +223,11 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   bool _savingDraft = false;
   bool _changingStructure = false;
   bool _savingFile = false;
+  bool _historyBusy = false;
+  bool _historyLoading = false;
+  String? _historyError;
+  CheckpointHistoryGraph? _history;
+  int _historyRequest = 0;
   double _sidebarWidth = 240;
   double _inspectorWidth = 320;
 
@@ -266,6 +283,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
     }
     widget.playback?.position.addListener(_onPlaybackPosition);
     unawaited(_restoreLayout());
+    unawaited(_reloadHistory());
   }
 
   Future<void> _installManagedHotkeys() async {
@@ -289,6 +307,9 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
       oldWidget.playback?.position.removeListener(_onPlaybackPosition);
       widget.playback?.position.addListener(_onPlaybackPosition);
       _onPlaybackPosition();
+    }
+    if (oldWidget.onLoadHistory != widget.onLoadHistory) {
+      unawaited(_reloadHistory());
     }
   }
 
@@ -317,6 +338,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
 
   @override
   void dispose() {
+    _historyRequest++;
     widget.playback?.position.removeListener(_onPlaybackPosition);
     _cueScroll.dispose();
     _layoutSaveTimer?.cancel();
@@ -428,6 +450,128 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
     }
   }
 
+  Future<void> _reloadHistory() async {
+    final request = ++_historyRequest;
+    final load = widget.onLoadHistory;
+    if (load == null) {
+      if (mounted) setState(() {
+        _history = null;
+        _historyError = null;
+        _historyLoading = false;
+      });
+      return;
+    }
+    if (mounted) setState(() {
+      _historyLoading = true;
+      _historyError = null;
+    });
+    try {
+      final graph = await load();
+      if (!mounted || request != _historyRequest) return;
+      setState(() {
+        _history = graph;
+        _historyLoading = false;
+      });
+    } catch (_) {
+      if (!mounted || request != _historyRequest) return;
+      setState(() {
+        _history = null;
+        _historyLoading = false;
+        _historyError = 'Could not load the saved editing history.';
+      });
+    }
+  }
+
+  HistoryGraphNode? get _currentHistoryPoint {
+    final graph = _history;
+    if (graph == null) return null;
+    for (final node in graph.nodes) {
+      if (node.checkpointId == graph.headCheckpointId) return node;
+    }
+    return null;
+  }
+
+  bool get _historyNavigationBlocked => _historyBusy || _historyLoading ||
+      _changingStructure || _savingDraft || _savingFile;
+
+  Future<void> _restoreHistoryPoint(int targetCheckpointId) async {
+    final restore = widget.onRestoreHistory;
+    final expectedHead = _history?.headCheckpointId;
+    if (restore == null || expectedHead == null ||
+        expectedHead == targetCheckpointId || _historyNavigationBlocked) return;
+    if (!await _confirmDraftBeforeLeaving() || !mounted) return;
+    setState(() => _historyBusy = true);
+    WorkspaceCueUpdate? update;
+    try {
+      update = await restore(targetCheckpointId, expectedHead, _selectedId);
+    } catch (_) {
+      update = null;
+    }
+    if (!mounted) return;
+    setState(() => _historyBusy = false);
+    if (update == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Could not restore this version. The project may '
+            'have changed in another window. Reload history and retry.'),
+      ));
+      unawaited(_reloadHistory());
+      return;
+    }
+    _acceptStructure(update);
+  }
+
+  Future<void> _undoHistory() async {
+    final parentId = _currentHistoryPoint?.parentCheckpointId;
+    if (parentId != null) await _restoreHistoryPoint(parentId);
+  }
+
+  Future<void> _redoHistory() async {
+    final current = _currentHistoryPoint;
+    if (current == null || current.childCheckpointIds.isEmpty ||
+        _historyNavigationBlocked) return;
+    final choices = current.childCheckpointIds;
+    int? target = choices.singleOrNull;
+    if (target == null) {
+      // A history fork has no uniquely correct Redo. Let the user choose the
+      // saved path instead of silently picking the newest timestamp.
+      target = await showDialog<int>(
+        context: context,
+        builder: (dialog) => AlertDialog(
+          title: const Text('Choose a version to redo'),
+          content: SizedBox(width: 420, child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final childId in choices)
+                ListTile(
+                  key: ValueKey('studio-redo-choice-$childId'),
+                  title: Text(_historyTitle(childId)),
+                  subtitle: Text('History point #$childId'),
+                  onTap: () => Navigator.pop(dialog, childId),
+                ),
+            ],
+          )),
+          actions: [TextButton(
+            onPressed: () => Navigator.pop(dialog),
+            child: const Text('Cancel'),
+          )],
+        ),
+      );
+    }
+    if (target != null && mounted) await _restoreHistoryPoint(target);
+  }
+
+  String _historyTitle(int checkpointId) {
+    final graph = _history;
+    if (graph == null) return 'Saved version';
+    for (final node in graph.nodes) {
+      if (node.checkpointId == checkpointId) {
+        return CheckpointHistoryLabels.entryTitle(
+          operationType: node.operationType, description: node.description);
+      }
+    }
+    return 'Saved version';
+  }
+
   void _toggleMarkedSelection() {
     if (widget.liveReadOnly || _selectedIds.isEmpty) return;
     setState(() {
@@ -516,6 +660,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
             'changed elsewhere. Your draft is preserved.'),
       ));
     }
+    if (applied) unawaited(_reloadHistory());
     return applied;
   }
 
@@ -598,6 +743,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
       _draftEnd = null;
       _draftRevision++;
     });
+    unawaited(_reloadHistory());
   }
 
   String _formatCueTime(int millis) {
@@ -975,6 +1121,24 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           title: Text(widget.projectTitle ?? 'Studio Dock'),
           actions: [
+            if (widget.onRestoreHistory != null) ...[
+              IconButton(
+                key: const ValueKey('studio-empty-undo'),
+                tooltip: 'Undo last edit',
+                icon: const Icon(Icons.undo),
+                onPressed: _historyNavigationBlocked ||
+                        _currentHistoryPoint?.parentCheckpointId == null
+                    ? null : () => unawaited(_undoHistory()),
+              ),
+              IconButton(
+                key: const ValueKey('studio-empty-redo'),
+                tooltip: 'Redo edit',
+                icon: const Icon(Icons.redo),
+                onPressed: _historyNavigationBlocked ||
+                        (_currentHistoryPoint?.childCheckpointIds.isEmpty ?? true)
+                    ? null : () => unawaited(_redoHistory()),
+              ),
+            ],
             if (widget.onInsertCue != null)
               IconButton(
                 key: const ValueKey('studio-empty-insert-cue'),
@@ -1037,12 +1201,27 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
       },
       child: CallbackShortcuts(
       bindings: {
-        // Only palette chord is new: the other shortcuts belong to
-        // MSoneHotkeyManager and must not be duplicated here.
+        // Undo/Redo stay in Flutter's focused shortcut tree, so the inner
+        // EditableText retains its own native text-draft Undo/Redo. Other
+        // desktop actions continue through MSoneHotkeyManager.
         const SingleActivator(LogicalKeyboardKey.keyK, control: true):
             _showCommandPalette,
         const SingleActivator(LogicalKeyboardKey.keyK, meta: true):
             _showCommandPalette,
+        if (widget.onRestoreHistory != null) ...{
+          const SingleActivator(LogicalKeyboardKey.keyZ, control: true):
+              () => unawaited(_undoHistory()),
+          const SingleActivator(LogicalKeyboardKey.keyZ, meta: true):
+              () => unawaited(_undoHistory()),
+          const SingleActivator(LogicalKeyboardKey.keyZ,
+              control: true, shift: true):
+              () => unawaited(_redoHistory()),
+          const SingleActivator(LogicalKeyboardKey.keyZ,
+              meta: true, shift: true):
+              () => unawaited(_redoHistory()),
+          const SingleActivator(LogicalKeyboardKey.keyY, control: true):
+              () => unawaited(_redoHistory()),
+        },
       },
       child: Focus(
         autofocus: true,
@@ -1204,6 +1383,24 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
           onPressed: _savingFile || _changingStructure ? null
               : () => unawaited(_saveFileSafely()),
         ),
+      if (widget.onRestoreHistory != null) ...[
+        IconButton(
+          key: const ValueKey('studio-dock-undo'),
+          icon: const Icon(Icons.undo),
+          tooltip: 'Undo (Ctrl/Cmd+Z)',
+          onPressed: _historyNavigationBlocked ||
+                  _currentHistoryPoint?.parentCheckpointId == null
+              ? null : () => unawaited(_undoHistory()),
+        ),
+        IconButton(
+          key: const ValueKey('studio-dock-redo'),
+          icon: const Icon(Icons.redo),
+          tooltip: 'Redo (Ctrl/Cmd+Shift+Z)',
+          onPressed: _historyNavigationBlocked ||
+                  (_currentHistoryPoint?.childCheckpointIds.isEmpty ?? true)
+              ? null : () => unawaited(_redoHistory()),
+        ),
+      ],
       Text(widget.onApplyCueText != null ? 'LIVE · TEXT EDIT' : (widget.liveReadOnly ? 'LIVE · READ ONLY' : 'DEMO WORKSPACE'),
         style: TextStyle(
           color: _muted, letterSpacing: 1, fontSize: 10)),
@@ -1787,6 +1984,13 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
             MapEntry('Find subtitle', () => _searchFocus.requestFocus()),
             MapEntry('Next cue', () => _selectRelative(1)),
             MapEntry('Previous cue', () => _selectRelative(-1)),
+            if (_currentHistoryPoint?.parentCheckpointId != null)
+              MapEntry('Undo subtitle edit', () => unawaited(_undoHistory())),
+            if (_currentHistoryPoint?.childCheckpointIds.isNotEmpty ?? false)
+              MapEntry('Redo subtitle edit', () => unawaited(_redoHistory())),
+            if (widget.onLoadHistory != null)
+              MapEntry('Show editing history', () =>
+                  setState(() => _section = 1)),
             if (!widget.liveReadOnly)
               MapEntry('Toggle playback preview',
                   () => _dispatchManagedAction(HotkeyAction.playPause)),
@@ -2133,6 +2337,9 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   );
 
   Widget _secondarySection() {
+    if (_section == 1 && widget.onLoadHistory != null) {
+      return _historySection();
+    }
     const screens = ['Editor', 'Version history', 'Search', 'Tools', 'Settings'];
     const descriptions = [
       '',
@@ -2158,6 +2365,98 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
             setState(() => _section = 0), child: const Text('Back to editor')),
       ]),
     ));
+  }
+
+  Future<void> _confirmRestorePoint(HistoryGraphNode node) async {
+    if (node.isHead || _historyNavigationBlocked) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: const Text('Restore this saved version?'),
+        content: const Text('The subtitles will return to this history '
+            'point. Other saved versions will remain in history. '
+            'New edits can continue from the restored point.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialog, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            key: const ValueKey('studio-history-confirm-restore'),
+            onPressed: () => Navigator.pop(dialog, true),
+            child: const Text('Restore version'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      await _restoreHistoryPoint(node.checkpointId);
+    }
+  }
+
+  Widget _historySection() {
+    final graph = _history;
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Icon(Icons.history, color: _accent),
+          const SizedBox(width: 12),
+          const Text('Editing history', style: TextStyle(
+            fontSize: 21, fontWeight: FontWeight.w600)),
+          const Spacer(),
+          IconButton(
+            key: const ValueKey('studio-history-refresh'),
+            tooltip: 'Refresh history',
+            icon: const Icon(Icons.refresh),
+            onPressed: _historyNavigationBlocked ? null
+                : () => unawaited(_reloadHistory()),
+          ),
+        ]),
+        const SizedBox(height: 6),
+        Text('Restore a saved version without deleting later edits.',
+          style: TextStyle(fontSize: 12, color: _muted)),
+        const SizedBox(height: 16),
+        if (_historyLoading || _historyBusy)
+          const LinearProgressIndicator(),
+        if (_historyError != null)
+          Padding(padding: const EdgeInsets.all(12),
+              child: Text(_historyError!, style: TextStyle(
+                color: Theme.of(context).colorScheme.error))),
+        Expanded(child: graph == null || graph.nodes.isEmpty
+            ? Center(child: Text(_historyLoading
+                ? 'Loading editing history…' : 'No saved history points yet.',
+                style: TextStyle(color: _muted)))
+            : ListView.builder(
+                key: const ValueKey('studio-history-list'),
+                itemCount: graph.newestFirst.length,
+                itemBuilder: (context, index) {
+                  final node = graph.newestFirst[index];
+                  return Card(
+                    key: ValueKey('studio-history-point-${node.checkpointId}'),
+                    child: ListTile(
+                      leading: Icon(node.isHead ? Icons.radio_button_checked
+                          : Icons.history_toggle_off,
+                          color: node.isHead ? _accent : _muted),
+                      title: Text(CheckpointHistoryLabels.entryTitle(
+                        operationType: node.operationType,
+                        description: node.description,
+                      )),
+                      subtitle: Text(CheckpointHistoryLabels.versionDetails(node)),
+                      trailing: node.isHead
+                          ? const Text('Current version')
+                          : OutlinedButton(
+                              key: ValueKey('studio-history-restore-${node.checkpointId}'),
+                              onPressed: _historyNavigationBlocked ? null
+                                  : () => unawaited(_confirmRestorePoint(node)),
+                              child: const Text('Restore'),
+                            ),
+                    ),
+                  );
+                },
+              )),
+      ]),
+    );
   }
 
   Widget _statusBar() => Container(

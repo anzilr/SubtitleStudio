@@ -39,3 +39,5 @@ DS5 R3 widget-test selector fix 2026-10-24: re-run analyzer and Studio Dock test
 DS5 R3 Isar test bootstrap correction 2026-10-24: rerun focused Flutter analyze/test without widget-binding network interception. No builds.
 
 DS5 R4a 2026-10-24: verify guarded complete .msone Save and Save As, checkpoint/ref snapshot, Studio Dock File menu with Flutter analyzer and focused widget/integration tests only.
+
+DS5 R4b 2026-10-24: connect Studio Dock Undo/Redo, fork choice, saved History rail and guarded shared checkpoint checkout with full cue refresh. Run analyzer and focused Studio Dock tests only; no native/platform builds.
