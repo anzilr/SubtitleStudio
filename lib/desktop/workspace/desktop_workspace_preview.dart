@@ -10,6 +10,7 @@ import 'studio_dock_layout_preferences.dart';
 import 'studio_dock_timing_edit_service.dart';
 import 'studio_dock_insert_cue_dialog.dart';
 import 'studio_dock_split_cue_dialog.dart';
+import 'studio_dock_file_actions.dart';
 import '../../utils/msone_hotkey_manager.dart';
 
 /// Demo-only cue; this screen intentionally does not persist any user data.
@@ -53,6 +54,8 @@ class WorkspaceCueUpdate {
   final int selectedCueId;
 }
 
+enum _StudioDockFileMenuAction { save, saveAs, export }
+
 /// Desktop-first, data-isolated workspace design. Domain logic is intentionally
 /// absent: shared Editor, Isar, checkpoints, media and file-access providers
 /// remain authoritative in the refactoring branch.
@@ -72,6 +75,9 @@ class DesktopWorkspacePreview extends StatefulWidget {
     this.onDeleteCue,
     this.onSplitCue,
     this.onMergeCue,
+    this.onSaveFile,
+    this.onSaveAsFile,
+    this.onExportFile,
     this.videoSurface,
     this.waveformSurface,
     this.playback,
@@ -101,6 +107,10 @@ class DesktopWorkspacePreview extends StatefulWidget {
       int cueNumber, StudioDockSplitCueDraft draft)? onSplitCue;
   final Future<WorkspaceCueUpdate?> Function(
       int cueNumber, bool withPrevious)? onMergeCue;
+  /// File Save is separate from the already checkpoint-backed inspector Apply.
+  final Future<StudioDockFileResult> Function()? onSaveFile;
+  final Future<StudioDockFileResult> Function()? onSaveAsFile;
+  final Future<StudioDockFileResult> Function(bool originalOnly)? onExportFile;
   /// Optional existing native-player surface. Only the standalone desktop
   /// host may provide it; the classic Editor preview must leave it null.
   final Widget? videoSurface;
@@ -193,6 +203,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   int _draftRevision = 0;
   bool _savingDraft = false;
   bool _changingStructure = false;
+  bool _savingFile = false;
   double _sidebarWidth = 240;
   double _inspectorWidth = 320;
 
@@ -214,6 +225,8 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
     HotkeyAction.markLine,
     HotkeyAction.splitLine,
     HotkeyAction.mergeLine,
+    HotkeyAction.save,
+    HotkeyAction.saveAs,
   ];
 
   bool _allowedLiveHotkey(HotkeyAction action) =>
@@ -221,7 +234,9 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
       action == HotkeyAction.previousLine ||
       action == HotkeyAction.findReplace ||
       action == HotkeyAction.splitLine && widget.onSplitCue != null ||
-      action == HotkeyAction.mergeLine && widget.onMergeCue != null;
+      action == HotkeyAction.mergeLine && widget.onMergeCue != null ||
+      action == HotkeyAction.save && widget.onSaveFile != null ||
+      action == HotkeyAction.saveAs && widget.onSaveAsFile != null;
 
   @override
   void initState() {
@@ -252,7 +267,10 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
       if (widget.liveReadOnly && !_allowedLiveHotkey(action)) continue;
       if (!mounted) return;
       await manager.registerCallback(action, () {
-        if (mounted && !_isEditingText) _dispatchManagedAction(action);
+        if (mounted && (!_isEditingText ||
+            action == HotkeyAction.save || action == HotkeyAction.saveAs)) {
+          _dispatchManagedAction(action);
+        }
       });
     }
   }
@@ -394,6 +412,10 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
         unawaited(_splitCueSafely());
       case HotkeyAction.mergeLine:
         unawaited(_mergeCueSafely());
+      case HotkeyAction.save:
+        unawaited(_saveFileSafely());
+      case HotkeyAction.saveAs:
+        unawaited(_saveAsFileSafely());
       default:
         break;
     }
@@ -441,7 +463,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   }
 
   Future<bool> _applyDraft() async {
-    if (_savingDraft) return false;
+    if (_savingDraft || _savingFile) return false;
     if (!_hasDirtyDraft) return true;
     // Changing inspector pages first confirms the previous draft, so these
     // cannot represent two independently committed edits to one cue.
@@ -491,7 +513,7 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
   }
 
   Future<bool> _confirmDraftBeforeLeaving() async {
-    if (_savingDraft || _changingStructure) return false;
+    if (_savingDraft || _changingStructure || _savingFile) return false;
     if (!_hasDirtyDraft) return true;
     final choice = await showDialog<String>(
       context: context,
@@ -732,6 +754,99 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
     }
   }
 
+  Future<void> _runFileAction(
+    Future<StudioDockFileResult> Function() action, {
+    bool draftAlreadyHandled = false,
+  }) async {
+    if (_savingFile || _changingStructure) return;
+    if (!draftAlreadyHandled && !await _confirmDraftBeforeLeaving()) return;
+    if (!mounted) return;
+    setState(() => _savingFile = true);
+    StudioDockFileResult result;
+    try {
+      result = await action();
+    } catch (_) {
+      result = StudioDockFileResult.failed;
+    } finally {
+      if (mounted) setState(() => _savingFile = false);
+    }
+    if (!mounted || result == StudioDockFileResult.canceled) return;
+    final feedback = switch (result) {
+      StudioDockFileResult.saved => 'Subtitle file saved successfully.',
+      StudioDockFileResult.needsLocation =>
+        'No writable source file. Use Save As to choose a destination.',
+      StudioDockFileResult.alreadyExists =>
+        'Existing file was kept. No bytes were overwritten.',
+      StudioDockFileResult.stale =>
+        'The subtitle project changed while the dialog was open. '
+        'Nothing was written; please retry.',
+      StudioDockFileResult.savedButUnlinked =>
+        'File saved, but its new location could not be linked to this project.',
+      StudioDockFileResult.invalidEncoding =>
+        'The selected encoding cannot represent this subtitle text. '
+        'Choose a compatible encoding in Project Settings.',
+      StudioDockFileResult.failed =>
+        'Could not save this subtitle file. Check the destination and retry.',
+      StudioDockFileResult.canceled => '',
+    };
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(feedback),
+      backgroundColor: result == StudioDockFileResult.saved ? null
+          : Theme.of(context).colorScheme.errorContainer,
+    ));
+  }
+
+  Future<void> _saveFileSafely() async {
+    if (widget.onSaveFile == null) return;
+    await _runFileAction(() async {
+      final result = await widget.onSaveFile!();
+      if (result == StudioDockFileResult.needsLocation &&
+          widget.onSaveAsFile != null) {
+        // The user explicitly asked for Save, so a missing/revoked location
+        // can open Save As, without reporting a canceled picker as success.
+        return widget.onSaveAsFile!();
+      }
+      return result;
+    });
+  }
+
+  Future<void> _saveAsFileSafely() async {
+    if (widget.onSaveAsFile == null) return;
+    await _runFileAction(widget.onSaveAsFile!);
+  }
+
+  Future<void> _exportFileSafely() async {
+    if (widget.onExportFile == null || _savingFile ||
+        !await _confirmDraftBeforeLeaving() || !mounted) return;
+    final originalOnly = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: const Text('Export subtitle file'),
+        content: const Text('Choose which text to include in the SRT. '
+            'Export does not change the current project or its save location.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialog),
+            child: const Text('Cancel'),
+          ),
+          OutlinedButton(
+            key: const ValueKey('studio-export-original'),
+            onPressed: () => Navigator.pop(dialog, true),
+            child: const Text('Original text'),
+          ),
+          FilledButton(
+            key: const ValueKey('studio-export-edited'),
+            onPressed: () => Navigator.pop(dialog, false),
+            child: const Text('Edited text'),
+          ),
+        ],
+      ),
+    );
+    if (originalOnly == null || !mounted) return;
+    await _runFileAction(
+      () => widget.onExportFile!(originalOnly), draftAlreadyHandled: true);
+  }
+
 
   Future<void> _selectCueAfterConfirmation(int id,
       {bool range = false, bool toggle = false}) async {
@@ -877,7 +992,8 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
       );
     }
     return PopScope(
-      canPop: !_hasDirtyDraft && !_savingDraft && !_changingStructure,
+      canPop: !_hasDirtyDraft && !_savingDraft &&
+          !_changingStructure && !_savingFile,
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop && !_savingDraft) {
           unawaited(_confirmDraftBeforeLeaving().then((allowed) {
@@ -967,8 +1083,41 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
     child: SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(children: [
+        if (widget.onSaveFile != null)
+          PopupMenuButton<_StudioDockFileMenuAction>(
+            key: const ValueKey('studio-file-menu'),
+            tooltip: 'File actions',
+            enabled: !_savingFile && !_changingStructure,
+            onSelected: (action) {
+              switch (action) {
+                case _StudioDockFileMenuAction.save:
+                  unawaited(_saveFileSafely());
+                case _StudioDockFileMenuAction.saveAs:
+                  unawaited(_saveAsFileSafely());
+                case _StudioDockFileMenuAction.export:
+                  unawaited(_exportFileSafely());
+              }
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: _StudioDockFileMenuAction.save,
+                child: Text('Save subtitle file')),
+              PopupMenuItem(value: _StudioDockFileMenuAction.saveAs,
+                child: Text('Save As…')),
+              PopupMenuItem(value: _StudioDockFileMenuAction.export,
+                child: Text('Export SRT…')),
+            ],
+            child: const Padding(
+              padding: EdgeInsets.only(right: 23),
+              child: Text('File', style: TextStyle(fontSize: 11)),
+            ),
+          )
+        else
+          const Padding(
+            padding: EdgeInsets.only(right: 23),
+            child: Text('File', style: TextStyle(fontSize: 11)),
+          ),
         for (final label in const [
-          'File', 'Edit', 'Subtitle', 'Timing', 'Tools', 'View', 'Help'
+          'Edit', 'Subtitle', 'Timing', 'Tools', 'View', 'Help'
         ])
           Padding(
             padding: const EdgeInsets.only(right: 23),
@@ -999,6 +1148,17 @@ class _DesktopWorkspacePreviewState extends State<DesktopWorkspacePreview> {
         style: TextStyle(color: _muted, fontSize: 12),
       )),
       const Spacer(),
+      if (widget.onSaveFile != null)
+        IconButton(
+          key: const ValueKey('studio-dock-save-file'),
+          icon: _savingFile
+              ? const SizedBox(width: 18, height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2))
+              : const Icon(Icons.save_outlined),
+          tooltip: 'Save subtitle file (Ctrl/Cmd+S)',
+          onPressed: _savingFile || _changingStructure ? null
+              : () => unawaited(_saveFileSafely()),
+        ),
       Text(widget.onApplyCueText != null ? 'LIVE · TEXT EDIT' : (widget.liveReadOnly ? 'LIVE · READ ONLY' : 'DEMO WORKSPACE'),
         style: TextStyle(
           color: _muted, letterSpacing: 1, fontSize: 10)),

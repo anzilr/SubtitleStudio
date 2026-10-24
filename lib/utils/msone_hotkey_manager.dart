@@ -36,6 +36,7 @@ enum HotkeyAction {
   boldFormat,
   italicFormat,
   save,
+  saveAs,
   delete,
   toggleSelection,
   copy,
@@ -306,6 +307,12 @@ class MSoneHotkeyManager {
         return HotKey(
           key: PhysicalKeyboardKey.keyS,
           modifiers: [_primaryModifier],
+          scope: HotKeyScope.inapp,
+        );
+      case HotkeyAction.saveAs:
+        return HotKey(
+          key: PhysicalKeyboardKey.keyS,
+          modifiers: [_primaryModifier, HotKeyModifier.shift],
           scope: HotKeyScope.inapp,
         );
       case HotkeyAction.nextLine:

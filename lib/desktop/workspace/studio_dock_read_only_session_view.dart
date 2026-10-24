@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:file_picker/file_picker.dart' as fp;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/app/providers/core_providers.dart';
@@ -22,6 +23,7 @@ import 'studio_dock_media_plan.dart';
 import 'studio_dock_video_surface.dart';
 import 'studio_dock_waveform_surface.dart';
 import 'studio_dock_playback_link.dart';
+import 'studio_dock_file_actions.dart';
 
 /// Shared live-session Studio Dock host. In DS3 R2 it can optionally expose
 /// text-only editing through the existing atomic history transaction.
@@ -207,6 +209,91 @@ class _StudioDockReadOnlySessionViewState
     }
   }
 
+  StudioDockFileActions get _fileActions => StudioDockFileActions(
+    ref.read(projectRepositoryProvider),
+    ref.read(subtitleRepositoryProvider),
+  );
+
+  Future<StudioDockFileResult> _saveSubtitleFile() async {
+    try {
+      return await _fileActions.saveExisting(
+        sessionId: widget.sessionId, collectionId: widget.collectionId);
+    } on FormatException {
+      return StudioDockFileResult.invalidEncoding;
+    } on UnsupportedError {
+      return StudioDockFileResult.invalidEncoding;
+    } catch (_) {
+      return StudioDockFileResult.failed;
+    }
+  }
+
+  Future<StudioDockFileResult> _saveAsSubtitleFile() =>
+      _pickAndWriteFile(relink: true);
+
+  Future<StudioDockFileResult> _exportSubtitleFile(bool originalOnly) =>
+      _pickAndWriteFile(relink: false, originalOnly: originalOnly);
+
+  Future<StudioDockFileResult> _pickAndWriteFile({
+    required bool relink,
+    bool originalOnly = false,
+  }) async {
+    try {
+      final actions = _fileActions;
+      final prepared = relink
+          ? await actions.prepareSaveAs(
+              sessionId: widget.sessionId, collectionId: widget.collectionId)
+          : await actions.prepareExport(
+              sessionId: widget.sessionId, collectionId: widget.collectionId,
+              originalOnly: originalOnly);
+      if (prepared == null || !mounted) return StudioDockFileResult.failed;
+      final picked = await fp.FilePicker.platform.saveFile(
+        dialogTitle: relink ? 'Save Subtitle As' : 'Export Subtitle',
+        fileName: prepared.plan.fileName,
+        type: fp.FileType.custom,
+        allowedExtensions: const ['srt'],
+      );
+      if (picked == null || picked.isEmpty) return StudioDockFileResult.canceled;
+      if (!mounted) return StudioDockFileResult.canceled;
+      var outcome = await actions.writeToPath(
+        prepared: prepared, selectedPath: picked);
+      if (outcome != StudioDockFileResult.alreadyExists || !mounted) {
+        return outcome;
+      }
+      // The system Save dialog may show its own replacement warning. Keep an
+      // explicit in-app confirmation as well, including for plugin variants
+      // that do not present a native warning.
+      final replace = await showDialog<bool>(
+        context: context,
+        builder: (dialog) => AlertDialog(
+          title: const Text('Replace existing subtitle file?'),
+          content: const Text('The chosen file already exists. Replacing it '
+              'will overwrite its contents with these subtitles.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialog, false),
+              child: const Text('Keep existing file'),
+            ),
+            FilledButton(
+              key: const ValueKey('studio-confirm-overwrite'),
+              onPressed: () => Navigator.pop(dialog, true),
+              child: const Text('Replace file'),
+            ),
+          ],
+        ),
+      );
+      if (replace != true || !mounted) return StudioDockFileResult.canceled;
+      outcome = await actions.writeToPath(
+        prepared: prepared, selectedPath: picked, replaceExisting: true);
+      return outcome;
+    } on FormatException {
+      return StudioDockFileResult.invalidEncoding;
+    } on UnsupportedError {
+      return StudioDockFileResult.invalidEncoding;
+    } catch (_) {
+      return StudioDockFileResult.failed;
+    }
+  }
+
 
   @override
   void initState() {
@@ -352,6 +439,12 @@ class _StudioDockReadOnlySessionViewState
         onDeleteCue: widget.enableTextEditing ? _deleteCue : null,
         onSplitCue: widget.enableTextEditing ? _splitCue : null,
         onMergeCue: widget.enableTextEditing ? _mergeCue : null,
+        onSaveFile: widget.enableTextEditing && widget.allowNativePlayback
+            ? _saveSubtitleFile : null,
+        onSaveAsFile: widget.enableTextEditing && widget.allowNativePlayback
+            ? _saveAsSubtitleFile : null,
+        onExportFile: widget.enableTextEditing && widget.allowNativePlayback
+            ? _exportSubtitleFile : null,
         manageLiveHotkeys: !widget.suppressParentEditorHotkeys,
         videoSurface: validVideoPath == null || !widget.allowNativePlayback
             ? null

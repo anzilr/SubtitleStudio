@@ -1133,6 +1133,42 @@ class SubtitleRepository {
     }
   }
 
+  /// Desktop Save As relinks only file-identity metadata after a successful
+  /// write. A second editor that changed the destination meanwhile must not
+  /// be overwritten by a stale Save As dialog.
+  Future<bool> updateSaveLocationIfUnchanged({
+    required int collectionId,
+    required int sessionId,
+    required String? expectedFilePath,
+    required String? expectedOriginalFileUri,
+    required String? expectedMacOsBookmark,
+    required String filePath,
+    required String originalFileUri,
+    String? macOsBookmark,
+  }) async {
+    if (filePath.isEmpty || originalFileUri.isEmpty) return false;
+    try {
+      return await _isar.writeTxn(() async {
+        final session = await _isar.sessions.get(sessionId);
+        if (session == null ||
+            session.subtitleCollectionId != collectionId) return false;
+        final current = await _isar.subtitleCollections.get(collectionId);
+        if (current == null ||
+            current.filePath != expectedFilePath ||
+            current.originalFileUri != expectedOriginalFileUri ||
+            current.macOsSrtBookmark != expectedMacOsBookmark) return false;
+        current.filePath = filePath;
+        current.originalFileUri = originalFileUri;
+        current.macOsSrtBookmark = macOsBookmark;
+        await _isar.subtitleCollections.put(current);
+        return true;
+      });
+    } catch (error) {
+      logError('SubtitleRepository: Save As relink rejected: $error');
+      return false;
+    }
+  }
+
   /// Persist only the encoding metadata on the latest collection object.
   ///
   /// A project settings sheet can stay open while subtitles are edited
