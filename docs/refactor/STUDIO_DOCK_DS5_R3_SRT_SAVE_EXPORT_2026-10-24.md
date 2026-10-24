@@ -26,3 +26,11 @@ Branch: `feature/studio-dock-integration`
 ## Session handoff
 
 Studio Dock is the **only** native desktop UI. Keep its integration branch, do not reintroduce classic Editor or mobile layout changes. Avoid separate media players, direct waveform mutations or stale Isar full-object writes. `StudioDockFileActions` is the new SRT-only byte preparation/write guard; ProjectSaveCoordinator remains the authoritative `.msone` builder for the next phase.
+
+
+## Verified GitHub Actions results
+
+- [Focused Studio Dock quality #40065308488](https://github.com/anzilr/SubtitleStudio/actions/runs/40065308488): **PASS** — dependency resolution, analyzer and 79 Studio Dock tests. Earlier failed trials #40064964333 and #40065151476 were corrected before this accepted run.
+- [Full repository Flutter quality #40065435460](https://github.com/anzilr/SubtitleStudio/actions/runs/40065435460): **PASS** — analyzer and full Flutter suite on Linux.
+- [Platform-sensitive host checks #40065541161](https://github.com/anzilr/SubtitleStudio/actions/runs/40065541161): **PASS** — Windows and macOS Flutter analysis and portable file, Source View, encoding and Studio Dock file-action tests. The opt-in workflow was extended to include `feature/studio-dock-integration` and this new regression test. No platform/application builds in GitHub Actions.
+- Host-level Flutter tests are not confirmation of the OS-native save dialog, security-scoped bookmarks, Desktop GUI at physical resolution, or file associations. Those require native acceptance.
