@@ -521,3 +521,5 @@ DS5 R2b 2026-10-24: full Flutter regression after guarded desktop split/combine 
 DS5 R3 2026-10-24: full Flutter analyze/test gate after Studio Dock SRT Save/Save As/Export and focused test corrections. No platform application builds.
 
 DS5 R4a 2026-10-24: full Flutter analyzer and regression for guarded msone project Save/Save As. No platform builds.
+
+DS5 R4b 2026-10-24: full Flutter analyzer and regression after guarded Studio Dock Undo/Redo, history version restore, fork chooser and stale-state tests. No native/platform builds.
