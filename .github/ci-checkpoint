@@ -240,3 +240,5 @@ DS5 R20 DIRECT WAVEFORM FULL GATE 2026-10-24: Generate/Hide/Regenerate scoped de
 DS5 R21 FLOATING PLAYBACK FULL GATE 2026-10-24: optional live transport overlay linked to existing media state, disabled on detach, guarded visible gating; Flutter pub get/analyze/full tests ONLY; no builds or live MSone submissions.
 
 DS5 R21 PAUSED DETACH FULL RETRY 2026-10-24: explicit playback attachment notifier + floating transport disabled after paused player detaches. Flutter pub get/analyze/full tests only; NO platform builds.
+
+DS5 R21 ANALYZER CLEAN FINAL 2026-10-24: remove duplicate fullscreen review test import; verify floating playback detachment and full suite. pub get/analyze/tests only, no builds.
