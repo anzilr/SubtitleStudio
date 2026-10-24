@@ -14,6 +14,7 @@ import 'package:subtitle_studio/services/checkpoint_repository.dart';
 import 'support/test_isar_harness.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   late TestIsarHarness db;
   late ProjectRepository projects;
   late SubtitleRepository subtitles;

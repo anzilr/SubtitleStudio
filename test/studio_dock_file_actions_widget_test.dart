@@ -18,7 +18,7 @@ void main() {
     WidgetTester tester, {
     required Future<StudioDockFileResult> Function() save,
     Future<StudioDockFileResult> Function()? saveAs,
-    Future<StudioDockFileResult> Function(bool)? export,
+    Future<StudioDockFileResult> Function(bool)? exportFile,
     Future<bool> Function(int, String)? edit,
   }) async {
     tester.view.physicalSize = const Size(1680, 1000);
@@ -30,7 +30,7 @@ void main() {
       initialCues: const [_cue],
       onSaveFile: save,
       onSaveAsFile: saveAs,
-      onExportFile: export,
+      onExportFile: exportFile,
       onApplyCueText: edit,
     )));
     await tester.pumpAndSettle();
@@ -77,7 +77,7 @@ void main() {
         saveAsCalls++;
         return StudioDockFileResult.saved;
       },
-      export: (original) async {
+      exportFile: (original) async {
         choices.add(original);
         return StudioDockFileResult.saved;
       },
@@ -128,7 +128,8 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('studio-dock-save-file')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Apply'));
+    await tester.tap(find.descendant(
+      of: find.byType(AlertDialog), matching: find.text('Apply')));
     await tester.pumpAndSettle();
     expect(applied, 1);
     expect(writes, 1);
