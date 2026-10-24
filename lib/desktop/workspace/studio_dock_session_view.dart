@@ -15,6 +15,7 @@ import 'package:subtitle_studio/services/checkpoint_history_graph.dart';
 import 'package:subtitle_studio/screens/screen_help.dart';
 import 'package:subtitle_studio/widgets/settings_sheet.dart';
 import 'package:subtitle_studio/widgets/project_settings_sheet.dart';
+import 'package:subtitle_studio/widgets/import_comments_sheet.dart';
 import 'package:subtitle_studio/screens/msone_submission_flow.dart';
 import 'package:subtitle_studio/screens/edit/services/editor_secondary_subtitle_service.dart';
 import 'package:subtitle_studio/utils/subtitle_parser.dart';
@@ -1033,6 +1034,59 @@ class _StudioDockSessionViewState
     }
   }
 
+  Future<void> _refreshAfterCommentImport() async {
+    final priorSelection = _dockKey.currentState?.selectedCueNumbers ?? const <int>[];
+    final preferredCue = _dockKey.currentState?.selectedCueNumber ?? -1;
+    try {
+      final refreshed = await _load();
+      if (!mounted) return;
+      setState(() => _latestBaseline = refreshed);
+      final surviving = refreshed.cues.map((cue) => cue.index).toSet();
+      final selected = surviving.contains(preferredCue)
+          ? preferredCue
+          : refreshed.cues.isEmpty ? -1 : refreshed.cues.first.index;
+      final update = _snapshotUpdate(refreshed, selected);
+      _dockKey.currentState?.acceptExternalCueUpdate(StudioDockCueUpdate(
+        cues: update.cues,
+        selectedCueId: selected,
+        selectedCueIds: priorSelection.where(surviving.contains).toList(),
+      ));
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Could not refresh imported comments. Reopen the project before editing.'),
+        ));
+      }
+    }
+  }
+
+  Future<void> _openImportComments() async {
+    if (!mounted) return;
+    final session = await ref.read(projectRepositoryProvider)
+        .getSession(widget.sessionId);
+    if (!mounted) return;
+    if (session == null || session.subtitleCollectionId != widget.collectionId) {
+      throw StateError('The active subtitle project is unavailable.');
+    }
+    var imported = false;
+    await showDialog<void>(
+      context: context,
+      builder: (dialog) => Dialog(
+        insetPadding: const EdgeInsets.all(24),
+        child: SizedBox(
+          width: 800,
+          height: (MediaQuery.sizeOf(dialog).height - 64)
+              .clamp(240.0, 760.0).toDouble(),
+          child: ImportCommentsSheet(
+            subtitleCollectionId: widget.collectionId,
+            onCommentsImported: () => imported = true,
+          ),
+        ),
+      ),
+    );
+    if (imported && mounted) await _refreshAfterCommentImport();
+  }
+
   Future<void> _openHelp() async {
     if (!mounted) return;
     await Navigator.of(context).push<void>(MaterialPageRoute(
@@ -1127,6 +1181,7 @@ class _StudioDockSessionViewState
         onOpenProjectSettings:
             widget.enableEditing && widget.allowNativePlayback
                 ? _openProjectSettings : null,
+        onImportComments: widget.enableEditing ? _openImportComments : null,
         onOpenHelp: _openHelp,
         onSubmitToMsone: _msoneEnabled ? _submitToMsone : null,
         onLoadSecondarySubtitles: _openSecondaryPicker,

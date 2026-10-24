@@ -30,6 +30,7 @@ enum _StudioDockMenuAction {
   timing, shiftTools, showTools, sourceView, history, submitMsone,
   loadSecondary, toggleSecondary,
   shiftSelected, deleteSelected, selectByIndex, rangeSelection, goToLine,
+  importComments,
   explorer, inspector, settings, help,
 }
 
@@ -139,6 +140,7 @@ class StudioDockWorkspace extends StatefulWidget {
     this.onChooseVideo,
     this.onOpenAppSettings,
     this.onOpenProjectSettings,
+    this.onImportComments,
     this.onOpenHelp,
     this.onSubmitToMsone,
     this.onLoadSecondarySubtitles,
@@ -235,6 +237,9 @@ class StudioDockWorkspace extends StatefulWidget {
   /// Hosts the existing ProjectSettingsSheet on native desktop. The live
   /// session refreshes paths, encoding, cues and history when it closes.
   final Future<void> Function()? onOpenProjectSettings;
+  /// Opens the mobile project's .msone comment importer in a native desktop
+  /// dialog and refreshes the shared checkpoint-backed session afterward.
+  final Future<void> Function()? onImportComments;
   /// Opens the existing HelpScreen, shared with the mobile editor.
   final Future<void> Function()? onOpenHelp;
   /// Opens the established MSone submission flow after the current draft is
@@ -255,6 +260,7 @@ class StudioDockWorkspace extends StatefulWidget {
 
 class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   int get selectedCueNumber => _selectedId;
+  List<int> get selectedCueNumbers => List.unmodifiable(_selectedIds);
 
   Color get _accent => Theme.of(context).colorScheme.primary;
   Color get _border => Theme.of(context).colorScheme.outlineVariant;
@@ -292,9 +298,11 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   bool _runningTool = false;
   bool _openingMsoneSubmission = false;
   bool _openingProjectSettings = false;
+  bool _openingCommentImport = false;
   ModalRoute<dynamic>? _msoneMenuRoute;
   ModalRoute<dynamic>? _secondaryMenuRoute;
   ModalRoute<dynamic>? _projectSettingsMenuRoute;
+  ModalRoute<dynamic>? _commentsMenuRoute;
   String? _findError;
   String? _toolsError;
   int _section = 0;
@@ -1149,6 +1157,27 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     }
   }
 
+  Future<void> _importCommentsSafely({ModalRoute<dynamic>? afterMenu}) async {
+    final openImport = widget.onImportComments;
+    if (openImport == null || _openingCommentImport || _cues.isEmpty) return;
+    setState(() => _openingCommentImport = true);
+    try {
+      // File picker and dialog must not compete with the departing Tools
+      // popup's barrier or accidentally bypass an unsaved inspector edit.
+      if (afterMenu != null) await afterMenu.completed;
+      if (!mounted || !await _confirmDraftBeforeLeaving() || !mounted) return;
+      await openImport();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Could not import project comments. Please try again.'),
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _openingCommentImport = false);
+    }
+  }
+
   Future<void> _loadSecondarySafely({ModalRoute<dynamic>? afterMenu}) async {
     final load = widget.onLoadSecondarySubtitles;
     if (load == null) return;
@@ -1912,6 +1941,13 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               child: Text('Find & Replace')),
           const PopupMenuItem(value: _StudioDockMenuAction.showTools,
               child: Text('Subtitle tools')),
+          if (widget.onImportComments != null)
+            PopupMenuItem(value: _StudioDockMenuAction.importComments,
+              enabled: !_openingCommentImport && _cues.isNotEmpty,
+              child: Builder(builder: (popupContext) {
+                _commentsMenuRoute = ModalRoute.of(popupContext);
+                return const Text('Import Comments (.msone)…');
+              })),
           if (widget.onLoadSecondarySubtitles != null)
             PopupMenuItem(value: _StudioDockMenuAction.loadSecondary,
               child: Builder(builder: (popupContext) {
@@ -2009,6 +2045,10 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         unawaited(_switchSection(5));
       case _StudioDockMenuAction.history:
         unawaited(_switchSection(1));
+      case _StudioDockMenuAction.importComments:
+        final menuRoute = _commentsMenuRoute;
+        _commentsMenuRoute = null;
+        unawaited(_importCommentsSafely(afterMenu: menuRoute));
       case _StudioDockMenuAction.submitMsone:
         final menuRoute = _msoneMenuRoute;
         _msoneMenuRoute = null;
@@ -4124,6 +4164,31 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             ]),
           ]),
         )),
+        if (widget.onImportComments != null) ...[
+          const SizedBox(height: 12),
+          Card(child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Project review annotations', style: TextStyle(
+                    fontSize: 16, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 7),
+                Text('Import comments and marked/resolved status from an '
+                    'existing .msone project by subtitle line number. '
+                    'Changes are saved to editing history.',
+                    style: TextStyle(color: _muted, fontSize: 12)),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  key: const ValueKey('studio-tool-import-comments'),
+                  onPressed: _openingCommentImport || _cues.isEmpty
+                      ? null : () => unawaited(_importCommentsSafely()),
+                  icon: const Icon(Icons.comment_outlined, size: 17),
+                  label: const Text('Import Comments (.msone)'),
+                ),
+              ],
+            ),
+          )),
+        ],
         if (_runningTool) const LinearProgressIndicator(),
         if (_toolsError != null) Padding(
           padding: const EdgeInsets.all(12),
@@ -4131,7 +4196,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               color: Theme.of(context).colorScheme.error)),
         ),
         if (widget.onShiftAllCues == null &&
-            widget.onClearAllFormatting == null)
+            widget.onClearAllFormatting == null &&
+            widget.onImportComments == null)
           Padding(
             padding: const EdgeInsets.all(14),
             child: Text('Tools are read-only for this session.',

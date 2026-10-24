@@ -36,7 +36,7 @@ acceptance. A wired callback is not proof of a working native interaction.
 | Copy selected subtitle text, select all visible | Wired in DS5 R5f using mobile copy format | Clipboard and multi-selection widget acceptance |
 | Shift/delete selected cues, select by index/range | Wired in DS5 R11: index/range and pointer/keyboard multi-select, mobile-style selected timing stretch with duration preservation, guarded single-checkpoint multi-delete | Native selection, source edits, long-project scrolling, mixed selections and undo/redo acceptance |
 | Go to Line and direct video seek | Wired in DS5 R12 to the Edit menu, grid, and shared `gotoLine` hotkey: 1-based input/slider, unsaved-draft guard, scroll-to-cue and attached-player start +50 ms | Native large-project keyboard input, slider, focus and seek-accuracy acceptance |
-| **Import comments from external files** | **Not yet exposed** | Reuse mobile import and merge/history service |
+| Import comments from .msone project files | Wired in DS5 R13 to existing `ImportCommentsSheet`, `ProjectCommentImportPlan` and shared checkpoint-backed `ProjectCommentRepository`; successful imports refresh live cues, selected rows and history | Native .msone picker, match counts, Cancel, changed marking/resolution, Undo/Redo, narrow dialog acceptance |
 | **Subtitle sync editor** | **Partial**: whole-file fixed shift only | Reuse shared sync planners and UI behavior |
 | **Remove hearing-impaired annotations** | **Not yet exposed** | Reuse `HearingImpairedCleanupService` with history guard |
 | MSone submission (Existing Translator/Fresher, .msone or SRT pair) | Wired in DS5 R7 to the existing submission flow; shown only when MSone features are enabled | Native picker, completed form and route-return acceptance; never submit test data to the live endpoint |
@@ -62,8 +62,8 @@ acceptance. A wired callback is not proof of a working native interaction.
 1. **P0 native acceptance:** Validate waveform time drags, cue creation,
    magnet snap, overlap, selected-cue scrolling and secondary-subtitle
    persistence/playback on a native desktop before declaring playback parity.
-2. **P1:** Complete the remaining sync surface, import comments
-   and hearing-impaired cleanup; verify Go to Line, selected-cue batch operations and the
+2. **P1:** Complete the remaining sync surface and hearing-impaired cleanup;
+   verify import comments, Go to Line, selected-cue batch operations and the
    now-wired Project Settings on native desktop when available.
 3. **P2:** MSone-gated banners/normalization, fullscreen comment and
    mark callbacks, hotkey parity, theme/accessibility and native media QA.
