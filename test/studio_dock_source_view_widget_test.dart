@@ -56,6 +56,8 @@ void main() {
     await openSource(tester);
     await tester.enterText(find.byKey(const ValueKey('raw-srt-editor')),
         '1\nInvalid timecode');
+    await tester.pump();
+    expect(find.text('Unsaved source changes'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('studio-source-apply')));
     await tester.pumpAndSettle();
     expect(applied, 0);
@@ -106,6 +108,7 @@ void main() {
     await openSource(tester);
     await tester.enterText(find.byKey(const ValueKey('raw-srt-editor')),
         _edited);
+    await tester.pump();
     await tester.tap(find.byKey(const ValueKey('studio-source-apply')));
     await tester.pumpAndSettle();
     expect(saves, 1);
@@ -123,6 +126,7 @@ void main() {
     await openSource(tester);
     await tester.enterText(find.byKey(const ValueKey('raw-srt-editor')),
         _edited);
+    await tester.pump();
     await tester.tap(find.byKey(const ValueKey('studio-source-apply')));
     await tester.pumpAndSettle();
     expect(find.textContaining('project may have changed'), findsOneWidget);
