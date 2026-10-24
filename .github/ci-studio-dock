@@ -59,3 +59,5 @@ DS5 R5d 2026-10-24: user-requested combined Text/Timing inspector with sticky Ap
 DS5 R5d TEST ADJUSTMENTS 2026-10-24: adjust DS1 expectations to merged Text/Timing inspector and target outer inspector scroll for 1100px test. Focused Flutter analyzer and Studio Dock tests only; NO platform builds.
 
 DS5 R5e 2026-10-24: implement guarded bulk Resolve/Reopen alongside Mark/Unmark; keep notes and marks when reopening, distinguish status icons, expose All/Marked/Unresolved/Resolved grid filters, prevent stale unchanged selection members. Focused Flutter analyzer and Studio Dock regression tests only; no platform builds.
+
+DS5 R5f 2026-10-24: desktop-only UI parity foundation: replace inert editor menus with actual commands, host shared SettingsSheet and HelpScreen, selected subtitle text copying, corrected inspector overlay, audit missing mobile features in parity ledger. Run flutter pub get/analyze and focused Studio Dock widget/integration tests only. No native platform builds.
