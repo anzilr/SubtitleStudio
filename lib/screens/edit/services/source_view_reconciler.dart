@@ -12,6 +12,7 @@ class SourceViewReconciler {
   static List<SubtitleLine> reconcile({
     required List<SubtitleLine> existingLines,
     required List<SubtitleEntry> entries,
+    bool isEditMode = false,
   }) {
     final usedExisting = <int>{};
     final result = <SubtitleLine>[];
@@ -36,6 +37,7 @@ class SourceViewReconciler {
           entry: entry,
           sequentialIndex: outputIndex + 1,
           existing: existing,
+          isEditMode: isEditMode,
         ),
       );
     }
@@ -78,14 +80,15 @@ class SourceViewReconciler {
     required SubtitleEntry entry,
     required int sequentialIndex,
     SubtitleLine? existing,
+    required bool isEditMode,
   }) {
     if (existing == null) {
       return SubtitleLine()
         ..index = sequentialIndex
         ..startTime = entry.startTime
         ..endTime = entry.endTime
-        ..original = entry.text
-        ..edited = null
+        ..original = isEditMode ? '' : entry.text
+        ..edited = isEditMode ? entry.text : null
         ..marked = false
         ..comment = null
         ..resolved = false;
@@ -96,7 +99,8 @@ class SourceViewReconciler {
       ..startTime = entry.startTime
       ..endTime = entry.endTime
       ..original = existing.original
-      ..edited = entry.text == existing.original ? null : entry.text
+      ..edited = !isEditMode && entry.text == existing.original
+          ? null : entry.text
       ..marked = existing.marked
       ..comment = existing.comment
       ..resolved = existing.resolved;

@@ -27,6 +27,7 @@ void main() {
     Future<StudioDockCueUpdate?> Function(int, StudioDockSplitCueDraft)? split,
     Future<StudioDockCueUpdate?> Function(int, bool)? merge,
     Future<bool> Function(int, String)? applyText,
+    bool isEditMode = false,
   }) async {
     tester.view.physicalSize = const Size(1680, 1000);
     tester.view.devicePixelRatio = 1;
@@ -35,6 +36,7 @@ void main() {
     await tester.pumpWidget(MaterialApp(
       home: StudioDockWorkspace(
         isLiveSession: true,
+        isEditMode: isEditMode,
         initialCues: cues,
         onInsertCue: insert,
         onDeleteCue: delete,
@@ -78,6 +80,62 @@ void main() {
     await tester.pumpAndSettle();
     expect(attempts, ['1:00:00:02,000:New source']);
     expect(find.byKey(const ValueKey('desktop-cue-2')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('scratch Edit Mode inserts a single subtitle text field',
+      (tester) async {
+    StudioDockNewCueDraft? submitted;
+    await launch(tester, cues: const [], isEditMode: true,
+      insert: (_, draft) async {
+        submitted = draft;
+        return const StudioDockCueUpdate(cues: [StudioDockCue(
+          id: 1, start: '00:00:00,000', end: '00:00:02,000',
+          original: '', edited: 'Hello from scratch',
+        )], selectedCueId: 1);
+      });
+    await tester.tap(find.byKey(const ValueKey('studio-empty-create-cue')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('studio-insert-original')), findsNothing);
+    expect(find.text('Subtitle Text'), findsOneWidget);
+    await tester.enterText(find.byKey(const ValueKey('studio-insert-edited')),
+        'Hello from scratch');
+    await tester.tap(find.byKey(const ValueKey('studio-confirm-insert')));
+    await tester.pumpAndSettle();
+    expect(submitted?.original, isEmpty);
+    expect(submitted?.edited, 'Hello from scratch');
+    expect(find.text('SUBTITLE TEXT'), findsWidgets);
+    expect(find.text('ORIGINAL'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('scratch Edit Mode splits subtitle text without translation fields',
+      (tester) async {
+    StudioDockSplitCueDraft? submitted;
+    await launch(tester, isEditMode: true,
+      cues: const [StudioDockCue(
+        id: 1, start: '00:00:01,000', end: '00:00:03,000',
+        original: '', edited: 'First second',
+      )],
+      split: (_, draft) async {
+        submitted = draft;
+        return const StudioDockCueUpdate(cues: [_first, _second],
+            selectedCueId: 1);
+      });
+    await tester.tap(find.byKey(const ValueKey('studio-dock-split-cue')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('studio-split-first-original')),
+        findsNothing);
+    expect(find.byKey(const ValueKey('studio-split-second-original')),
+        findsNothing);
+    expect(find.text('Subtitle Text'), findsNWidgets(2));
+    await tester.tap(find.byKey(const ValueKey('studio-confirm-split')));
+    await tester.pumpAndSettle();
+    expect(submitted, isNotNull);
+    expect(submitted!.firstOriginal, isEmpty);
+    expect(submitted!.secondOriginal, isEmpty);
+    expect(submitted!.firstEdited, 'First');
+    expect(submitted!.secondEdited, 'second');
     expect(tester.takeException(), isNull);
   });
 

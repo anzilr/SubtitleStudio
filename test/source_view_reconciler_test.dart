@@ -26,6 +26,22 @@ SubtitleLine _line({
 
 void main() {
   group('SourceViewReconciler', () {
+    test('edit mode creates and updates subtitle text without a source pair', () {
+      final result = SourceViewReconciler.reconcile(
+        isEditMode: true,
+        existingLines: [_line(index: 1, start: '00:00:01,000',
+          end: '00:00:02,000', original: '', edited: 'First')],
+        entries: [
+          SubtitleEntry(index: '1', startTime: '00:00:01,000',
+            endTime: '00:00:02,000', text: 'Changed'),
+          SubtitleEntry(index: '2', startTime: '00:00:03,000',
+            endTime: '00:00:04,000', text: 'Created'),
+        ],
+      );
+      expect(result.map((line) => line.original), ['', '']);
+      expect(result.map((line) => line.edited), ['Changed', 'Created']);
+    });
+
     test('updates existing cue while preserving metadata', () {
       final existing = [
         _line(

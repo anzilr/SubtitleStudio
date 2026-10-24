@@ -32,6 +32,7 @@ class StudioDockSplitCueDialog extends StatefulWidget {
     required this.original,
     required this.edited,
     required this.onSubmit,
+    this.isEditMode = false,
   });
 
   final int cueNumber;
@@ -39,6 +40,7 @@ class StudioDockSplitCueDialog extends StatefulWidget {
   final String end;
   final String original;
   final String edited;
+  final bool isEditMode;
   final Future<bool> Function(StudioDockSplitCueDraft) onSubmit;
 
   @override
@@ -165,22 +167,26 @@ class _StudioDockSplitCueDialogState extends State<StudioDockSplitCueDialog> {
             ]) ...[
               Text(half.$1, style: Theme.of(context).textTheme.titleSmall),
               const SizedBox(height: 8),
-              TextField(
-                key: ValueKey('studio-split-${half.$4}-original'),
-                controller: half.$2,
-                enabled: !_saving,
-                minLines: 2, maxLines: 3,
-                decoration: const InputDecoration(
-                  labelText: 'Original', border: OutlineInputBorder()),
-              ),
-              const SizedBox(height: 8),
+              if (!widget.isEditMode) ...[
+                TextField(
+                  key: ValueKey('studio-split-${half.$4}-original'),
+                  controller: half.$2,
+                  enabled: !_saving,
+                  minLines: 2, maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Original', border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 8),
+              ],
               TextField(
                 key: ValueKey('studio-split-${half.$4}-edited'),
                 controller: half.$3,
                 enabled: !_saving,
                 minLines: 2, maxLines: 3,
-                decoration: const InputDecoration(
-                  labelText: 'Edited (optional)', border: OutlineInputBorder()),
+                decoration: InputDecoration(
+                  labelText: widget.isEditMode
+                      ? 'Subtitle Text' : 'Edited (optional)',
+                  border: const OutlineInputBorder()),
               ),
               const SizedBox(height: 12),
             ],

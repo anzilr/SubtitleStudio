@@ -9,6 +9,7 @@ void main() {
   Future<void> launch(WidgetTester tester, {
     Future<bool> Function(int, String)? applyText,
     Future<StudioDockCueUpdate?> Function(int, String?, bool, bool)? applyNotes,
+    bool isEditMode = false,
   }) async {
     tester.view.physicalSize = const Size(1680, 1000);
     tester.view.devicePixelRatio = 1;
@@ -16,6 +17,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(MaterialApp(home: StudioDockWorkspace(
       isLiveSession: true,
+      isEditMode: isEditMode,
       initialCues: const [StudioDockCue(
         id: 1, start: '00:00:01,000', end: '00:00:02,000',
         original: 'Original', edited: 'Edited line',
@@ -25,6 +27,25 @@ void main() {
     )));
     await tester.pumpAndSettle();
   }
+
+  testWidgets('Edit Mode only displays the subtitle text editor',
+      (tester) async {
+    final applied = <String>[];
+    await launch(tester, isEditMode: true, applyText: (_, text) async {
+      applied.add(text);
+      return true;
+    });
+    expect(find.textContaining('SUBTITLE TEXT ·'), findsOneWidget);
+    expect(find.text('ORIGINAL TEXT'), findsNothing);
+    expect(find.text('Reset to original'), findsNothing);
+    expect(find.text('EDITED'), findsNothing);
+    await tester.enterText(find.byKey(const ValueKey('studio-edit-1-0')),
+        'Fresh subtitle');
+    await tester.tap(find.byKey(const ValueKey('studio-apply-cue')));
+    await tester.pumpAndSettle();
+    expect(applied, ['Fresh subtitle']);
+    expect(tester.takeException(), isNull);
+  });
 
   Future<void> tab(WidgetTester tester, String label) async {
     await tester.tap(find.byKey(ValueKey('inspector-tab-$label')));

@@ -57,6 +57,7 @@ void main() {
     expect(await harness.isar.sessions.count(), 0);
     final session = await actions.createEmpty('New desktop');
     expect(session.fileName, 'New desktop.srt');
+    expect(session.editMode, isTrue);
     final collection =
         await harness.isar.subtitleCollections.get(session.subtitleCollectionId);
     expect(collection!.lines, isEmpty);

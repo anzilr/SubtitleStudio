@@ -34,6 +34,7 @@ void main() {
   Future<({int session, int collection})> seed({
     required String name,
     required List<SubtitleLine> lines,
+    bool editMode = false,
   }) async {
     final collection = SubtitleCollection(
       fileName: name,
@@ -46,6 +47,7 @@ void main() {
     final session = Session(
       fileName: name,
       subtitleCollectionId: collection.id,
+      editMode: editMode,
     );
     await harness.isar.writeTxn(() async {
       await harness.isar.sessions.put(session);
@@ -66,6 +68,7 @@ void main() {
     );
     expect(data.fileName, 'Original.srt');
     expect(data.encoding, 'UTF-8');
+    expect(data.isEditMode, isFalse);
     expect(data.cues.map((e) => e.index), [1, 2, 3]);
     expect(data.cues[0].original, 'One');
     expect(data.cues[0].edited, isEmpty);
@@ -79,6 +82,16 @@ void main() {
     );
     expect((await harness.isar.subtitleCollections.get(ids.collection))!
         .lines.length, 3);
+  });
+
+  test('loading a scratch project preserves its edit mode', () async {
+    final ids = await seed(name: 'Scratch.srt', editMode: true,
+        lines: [cue(1, original: '', edited: 'My subtitle')]);
+    final data = await loader.load(
+      sessionId: ids.session, collectionId: ids.collection);
+    expect(data.isEditMode, isTrue);
+    expect(data.cues.single.edited, 'My subtitle');
+    expect(data.cues.single.original, isEmpty);
   });
 
   test('rejects cross-session access to a foreign subtitle collection',

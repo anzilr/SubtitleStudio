@@ -26,7 +26,7 @@ void main() {
   });
   tearDown(() async => db.close());
 
-  Future<({int sessionId, int collectionId})> seed() async {
+  Future<({int sessionId, int collectionId})> seed({bool editMode = false}) async {
     final first = SubtitleLine()
       ..index = 1
       ..startTime = '00:00:01,000'
@@ -51,7 +51,8 @@ void main() {
       await db.isar.subtitleCollections.put(collection);
     });
     final session = Session(
-      fileName: 'Source.srt', subtitleCollectionId: collection.id);
+      fileName: 'Source.srt', subtitleCollectionId: collection.id,
+      editMode: editMode);
     await db.isar.writeTxn(() async {
       await db.isar.sessions.put(session);
     });
@@ -71,6 +72,26 @@ void main() {
         rawSource: StudioDockSourceViewService.compose(snapshot)),
         same(snapshot));
     expect(await db.isar.checkpoints.count(), 0);
+  });
+
+  test('edit mode Source View stores newly written cues in subtitle text',
+      () async {
+    final ids = await seed(editMode: true);
+    final baseline = await loader.load(
+      sessionId: ids.sessionId, collectionId: ids.collectionId);
+    expect(baseline.isEditMode, isTrue);
+    final changed = await source.apply(
+      baseline: baseline,
+      rawSource: '1\n00:00:01,000 --> 00:00:02,000\nScratch line\n\n'
+          '2\n00:00:03,000 --> 00:00:04,000\nSecond line\n\n'
+          '3\n00:00:05,000 --> 00:00:06,000\nThird line',
+    );
+    expect(changed?.isEditMode, isTrue);
+    final saved = (await db.isar.subtitleCollections.get(ids.collectionId))!;
+    expect(saved.lines[0].edited, 'Scratch line');
+    expect(saved.lines[2].original, isEmpty);
+    expect(saved.lines[2].edited, 'Third line');
+    expect(StudioDockSourceViewService.compose(changed!), contains('Third line'));
   });
 
   test('bulk Source View edit uses one history commit and retains metadata',

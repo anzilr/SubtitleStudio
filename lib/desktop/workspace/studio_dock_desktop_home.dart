@@ -110,16 +110,20 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
         title: const Text('New Studio Dock project'),
         content: SizedBox(
           width: 420,
-          child: TextField(
-            key: const ValueKey('studio-dock-new-project-name'),
-            onChanged: (value) => projectName = value,
-            autofocus: true,
-            decoration: const InputDecoration(
-              labelText: 'Project name',
-              hintText: 'Untitled subtitles',
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Text('Create subtitles from scratch in Edit Mode.'),
+            const SizedBox(height: 12),
+            TextField(
+              key: const ValueKey('studio-dock-new-project-name'),
+              onChanged: (value) => projectName = value,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Project name',
+                hintText: 'Untitled subtitles',
+              ),
+              onSubmitted: (value) => Navigator.pop(dialog, value),
             ),
-            onSubmitted: (value) => Navigator.pop(dialog, value),
-          ),
+          ]),
         ),
         actions: [
           TextButton(
@@ -171,7 +175,8 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
                     leading: const Icon(Icons.subtitles_outlined),
                     title: Text(session.fileName,
                       maxLines: 1, overflow: TextOverflow.ellipsis),
-                    subtitle: Text('Session ${session.id} · text editing'),
+                    subtitle: Text('Session ${session.id} · '
+                        '${session.editMode ? 'Edit Mode' : 'Translation Mode'}'),
                     selected: session.id == _chosenSessionId,
                     onTap: () => Navigator.pop(dialogContext, session.id),
                   );

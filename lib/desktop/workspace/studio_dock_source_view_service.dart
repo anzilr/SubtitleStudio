@@ -60,6 +60,7 @@ class StudioDockSourceViewService {
     final next = SourceViewReconciler.reconcile(
       existingLines: previous,
       entries: entries,
+      isEditMode: baseline.isEditMode,
     );
     // Avoid adding a new checkpoint when the user only changed separators,
     // indentation or other formatting outside the persisted subtitle data.
@@ -76,6 +77,7 @@ class StudioDockSourceViewService {
       sessionId: baseline.sessionId,
       expectedLines: previous,
       entries: entries,
+      isEditMode: baseline.isEditMode,
     );
     if (!applied) return null;
     return StudioDockSessionLoader(_projects, _subtitles).load(

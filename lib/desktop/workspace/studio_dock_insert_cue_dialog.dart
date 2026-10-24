@@ -25,10 +25,12 @@ class StudioDockInsertCueDialog extends StatefulWidget {
     required this.initialStart,
     required this.initialEnd,
     required this.onSubmit,
+    this.isEditMode = false,
   });
 
   final String initialStart;
   final String initialEnd;
+  final bool isEditMode;
   final Future<bool> Function(StudioDockNewCueDraft) onSubmit;
 
   @override
@@ -74,7 +76,7 @@ class _StudioDockInsertCueDialogState extends State<StudioDockInsertCueDialog> {
       saved = await widget.onSubmit(StudioDockNewCueDraft(
         start: _start.text.trim(),
         end: _end.text.trim(),
-        original: _original.text,
+        original: widget.isEditMode ? '' : _original.text,
         edited: _edited.text,
       ));
     } catch (_) {
@@ -126,23 +128,26 @@ class _StudioDockInsertCueDialogState extends State<StudioDockInsertCueDialog> {
               )),
             ]),
             const SizedBox(height: 14),
-            TextField(
-              key: const ValueKey('studio-insert-original'),
-              controller: _original,
-              enabled: !_saving,
-              minLines: 2, maxLines: 4,
-              decoration: const InputDecoration(
-                labelText: 'Original text', border: OutlineInputBorder()),
-            ),
-            const SizedBox(height: 12),
+            if (!widget.isEditMode) ...[
+              TextField(
+                key: const ValueKey('studio-insert-original'),
+                controller: _original,
+                enabled: !_saving,
+                minLines: 2, maxLines: 4,
+                decoration: const InputDecoration(
+                  labelText: 'Original text', border: OutlineInputBorder()),
+              ),
+              const SizedBox(height: 12),
+            ],
             TextField(
               key: const ValueKey('studio-insert-edited'),
               controller: _edited,
               enabled: !_saving,
               minLines: 2, maxLines: 4,
-              decoration: const InputDecoration(
-                labelText: 'Edited text (optional)',
-                border: OutlineInputBorder()),
+              decoration: InputDecoration(
+                labelText: widget.isEditMode
+                    ? 'Subtitle Text' : 'Edited text (optional)',
+                border: const OutlineInputBorder()),
             ),
             if (_error != null) ...[
               const SizedBox(height: 12),

@@ -31,6 +31,7 @@ class StudioDockSessionSnapshot {
     required this.collectionId,
     required this.fileName,
     required this.encoding,
+    this.isEditMode = false,
     required List<StudioDockLoadedCue> cues,
   }) : cues = List<StudioDockLoadedCue>.unmodifiable(cues);
 
@@ -38,5 +39,7 @@ class StudioDockSessionSnapshot {
   final int collectionId;
   final String fileName;
   final String encoding;
+  /// Persisted session mode: scratch subtitle creation versus translation.
+  final bool isEditMode;
   final List<StudioDockLoadedCue> cues;
 }

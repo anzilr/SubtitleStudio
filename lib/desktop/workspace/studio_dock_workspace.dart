@@ -100,6 +100,7 @@ class StudioDockWorkspace extends StatefulWidget {
     required this.initialCues,
     this.initialSelectedCueId,
     this.isLiveSession = false,
+    this.isEditMode = false,
     this.projectTitle,
     this.encoding,
     this.onChooseProject,
@@ -143,6 +144,8 @@ class StudioDockWorkspace extends StatefulWidget {
   final int? initialSelectedCueId;
   /// Distinguishes a session connected to shared services from a local demo.
   final bool isLiveSession;
+  /// Scratch-created subtitles have one editable text track, unlike translation.
+  final bool isEditMode;
   final String? projectTitle;
   final String? encoding;
   final VoidCallback? onChooseProject;
@@ -1115,6 +1118,7 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         context: context,
         barrierDismissible: false,
         builder: (_) => StudioDockInsertCueDialog(
+          isEditMode: widget.isEditMode,
           initialStart: _formatCueTime(start),
           initialEnd: _formatCueTime(start + 2000),
           onSubmit: (draft) async {
@@ -1183,6 +1187,7 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         context: context,
         barrierDismissible: false,
         builder: (_) => StudioDockSplitCueDialog(
+          isEditMode: widget.isEditMode,
           cueNumber: cue.id,
           start: cue.start,
           end: cue.end,
@@ -1210,9 +1215,9 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       context: context,
       builder: (dialog) => AlertDialog(
         title: Text('Combine subtitle cue #$cueNumber'),
-        content: const Text('Choose an adjacent cue to combine. '
-            'Original and edited lines, timing, and review notes will be '
-            'combined in one checkpoint.'),
+        content: Text('Choose an adjacent cue to combine. '
+            '${widget.isEditMode ? 'Subtitle text' : 'Original and edited lines'}, '
+            'timing, and review notes will be combined in one checkpoint.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialog),
@@ -1339,6 +1344,12 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   Future<void> _exportFileSafely() async {
     if (widget.onExportFile == null || _savingFile ||
         !await _confirmDraftBeforeLeaving() || !mounted) return;
+    // A scratch-created project has no source/translation pair to choose from.
+    if (widget.isEditMode) {
+      await _runFileAction(
+        () => widget.onExportFile!(false), draftAlreadyHandled: true);
+      return;
+    }
     final originalOnly = await showDialog<bool>(
       context: context,
       builder: (dialog) => AlertDialog(
@@ -2266,7 +2277,7 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       border: Border(right: BorderSide(color: _border))),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       _paneHeader(Icons.folder_open_rounded, 'PROJECT',
-          trailing: 'READ ONLY'),
+          trailing: widget.isEditMode ? 'EDIT MODE' : 'TRANSLATION'),
       const SizedBox(height: 10),
       _sidebarRow(Icons.subtitles_rounded,
           widget.projectTitle ?? 'Subtitle session',
@@ -2274,8 +2285,11 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       Padding(
         padding: EdgeInsets.all(16),
         child: Text(
-          'Showing the current subtitle snapshot. Media, attachments, '
-          'versions and additional tracks are not connected in this preview.',
+          widget.isEditMode
+              ? 'Subtitle creation mode · enter subtitle text and timing. '
+                  'No original/translation pair is required.'
+              : 'Translation mode · keep the original text alongside your '
+                  'edited translation.',
           style: TextStyle(color: _muted, fontSize: 11, height: 1.5),
         ),
       ),
@@ -2832,13 +2846,15 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       SizedBox(width: 108, child: cell(heading ? 'END' : cue.end)),
       SizedBox(width: 84, child: cell(heading
           ? 'DURATION' : _cueDuration(cue))),
-      Expanded(child: Padding(
-        padding: const EdgeInsets.only(right: 12),
-        child: cell(heading ? 'ORIGINAL' : cue.original, primary: true),
-      )),
+      if (!widget.isEditMode)
+        Expanded(child: Padding(
+          padding: const EdgeInsets.only(right: 12),
+          child: cell(heading ? 'ORIGINAL' : cue.original, primary: true),
+        )),
       Expanded(child: Padding(
         padding: const EdgeInsets.only(right: 10),
-        child: cell(heading ? 'EDITED' : cue.edited, primary: true),
+        child: cell(heading ? (widget.isEditMode ? 'SUBTITLE TEXT' : 'EDITED')
+            : cue.edited, primary: true),
       )),
       SizedBox(width: 55, child: heading
           ? cell('STATUS')
@@ -2943,22 +2959,30 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     switch (_inspectorTab) {
       case 0:
         return [
-          _fieldLabel('ORIGINAL TEXT'),
-          Container(
-            padding: EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              border: Border.all(color: _border),
-              borderRadius: BorderRadius.circular(7),
+          if (!widget.isEditMode) ...[
+            _fieldLabel('ORIGINAL TEXT'),
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                border: Border.all(color: _border),
+                borderRadius: BorderRadius.circular(7),
+              ),
+              child: Text(_selected.original,
+                style: const TextStyle(fontSize: 13, height: 1.5)),
             ),
-            child: Text(_selected.original,
-              style: const TextStyle(fontSize: 13, height: 1.5)),
-          ),
-          const SizedBox(height: 17),
-          _fieldLabel(widget.onApplyCueText != null
-              ? 'EDITED TEXT · UNSAVED UNTIL APPLIED'
-              : (widget.isLiveSession
-                  ? 'EDITED TEXT · READ ONLY'
-                  : 'EDITED TEXT · DEMO ONLY')),
+            const SizedBox(height: 17),
+          ],
+          _fieldLabel(widget.isEditMode
+              ? (widget.onApplyCueText != null
+                  ? 'SUBTITLE TEXT · UNSAVED UNTIL APPLIED'
+                  : (widget.isLiveSession
+                      ? 'SUBTITLE TEXT · READ ONLY'
+                      : 'SUBTITLE TEXT · DEMO ONLY'))
+              : (widget.onApplyCueText != null
+                  ? 'EDITED TEXT · UNSAVED UNTIL APPLIED'
+                  : (widget.isLiveSession
+                      ? 'EDITED TEXT · READ ONLY'
+                      : 'EDITED TEXT · DEMO ONLY'))),
           TextFormField(
             key: widget.onApplyCueText == null
                 ? ValueKey('desktop-edit-' + _selected.id.toString())
@@ -2986,13 +3010,15 @@ class _StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               }
             },
           ),
-          const SizedBox(height: 14),
-          OutlinedButton.icon(
-            onPressed: widget.isLiveSession ? null : () => _replaceCue(
-                _selected.copyWith(edited: _selected.original)),
-            icon: const Icon(Icons.restore, size: 15),
-            label: const Text('Reset to original'),
-          ),
+          if (!widget.isEditMode) ...[
+            const SizedBox(height: 14),
+            OutlinedButton.icon(
+              onPressed: widget.isLiveSession ? null : () => _replaceCue(
+                  _selected.copyWith(edited: _selected.original)),
+              icon: const Icon(Icons.restore, size: 15),
+              label: const Text('Reset to original'),
+            ),
+          ],
           const SizedBox(height: 22),
           Divider(color: _border),
           const SizedBox(height: 10),

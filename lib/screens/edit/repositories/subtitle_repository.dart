@@ -1393,6 +1393,7 @@ class SubtitleRepository {
     required int sessionId,
     required List<SubtitleLine> expectedLines,
     required List<SubtitleEntry> entries,
+    bool isEditMode = false,
   }) async {
     final expected = CheckpointStateReducer.copyLines(expectedLines);
     try {
@@ -1409,6 +1410,7 @@ class SubtitleRepository {
           final next = SourceViewReconciler.reconcile(
             existingLines: currentLines,
             entries: entries,
+            isEditMode: isEditMode,
           );
           return CheckpointMutationPlan(
             nextLines: next,
@@ -1435,6 +1437,8 @@ class SubtitleRepository {
 
     try {
       if (sessionId != null) {
+        final session = await _isar.sessions.get(sessionId);
+        final isEditMode = session?.editMode ?? false;
         await _historyTransaction.commit(
           sessionId: sessionId,
           subtitleCollectionId: collectionId,
@@ -1444,6 +1448,7 @@ class SubtitleRepository {
             final reconciled = SourceViewReconciler.reconcile(
               existingLines: currentLines,
               entries: entries,
+              isEditMode: isEditMode,
             );
             return CheckpointMutationPlan(
               nextLines: reconciled,

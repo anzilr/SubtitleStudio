@@ -756,6 +756,7 @@ class _StudioDockSessionViewState
         isLiveSession: true,
         projectTitle: session.fileName,
         encoding: session.encoding,
+        isEditMode: session.isEditMode,
         onChooseProject: widget.onChooseProject,
         onImportFile: widget.onImportFile,
         onNewProject: widget.onNewProject,
