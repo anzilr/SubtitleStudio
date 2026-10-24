@@ -178,3 +178,5 @@ DS5 R5c FULL GATE 2026-10-24: production Find/Replace, optimistic search matches
 DS5 R5d FULL GATE 2026-10-24: merge Timing into Text inspector, atomic combined cue checkpoint, grouped review marking and legacy widget assertions. Focused #40079814187 passed analyzer and 142 tests. Run flutter pub get, flutter analyze and full flutter test only. Never any platform builds.
 
 DS5 R5e FULL GATE 2026-10-24: guarded multi-cue Resolve/Reopen without losing notes or marks, status icons and All/Marked/Unresolved/Resolved filter, strong stale-unchanged snapshot guards. Focused #40081735399 passed analyzer and 147 Studio Dock tests. Run Flutter pub get/analyze and full test suite only; no platform builds.
+
+DS5 R5f FULL GATE 2026-10-24: desktop UI parity ledger and shared SettingsSheet/HelpScreen bridge; real Edit/Subtitle/Timing/Tools/View/Help menus, copy selected cues and select all, wide inspector overlay correction. Focused #40084217886 passed analyzer plus 151 Studio Dock tests. Run flutter pub get/analyze/full flutter test only; NO platform builds.
