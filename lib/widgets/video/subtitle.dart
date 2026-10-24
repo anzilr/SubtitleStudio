@@ -10,6 +10,7 @@ class Subtitle {
   final String text;
   final bool marked;
   final String? comment;
+  final bool resolved;
 
   const Subtitle({
     required this.index,
@@ -18,5 +19,6 @@ class Subtitle {
     required this.text,
     this.marked = false,
     this.comment,
+    this.resolved = false,
   });
 }

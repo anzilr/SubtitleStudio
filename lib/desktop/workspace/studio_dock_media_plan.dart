@@ -36,6 +36,7 @@ class StudioDockMediaPlan {
           text: cue.storedEdited ?? cue.original,
           marked: cue.marked,
           comment: cue.comment,
+          resolved: cue.resolved,
         ));
       } on FormatException {
         // One malformed cue must not crash the entire media display.

@@ -145,6 +145,10 @@ class VideoPlayerWidget extends ConsumerStatefulWidget {
   /// Callback fired when a comment is added/updated for a subtitle line
   /// Parameters: (subtitleIndex, comment)
   final Function(int, String?)? onSubtitleCommentUpdated;
+  /// Optional atomic review save; mobile keeps its existing callback path.
+  final Future<bool> Function(int, String?, bool, bool)? onSubtitleReviewSaved;
+  /// Optional desktop-only Resolve/Reopen fullscreen action.
+  final Future<void> Function(int, bool)? onSubtitleResolvedChanged;
 
   /// Callback fired when the active subtitle changes
   /// Parameters: (arrayIndex) - The array index of the active subtitle, or -1 if none
@@ -177,6 +181,8 @@ class VideoPlayerWidget extends ConsumerStatefulWidget {
     this.onSubtitlesUpdated,                      // Update callback (optional)
     this.onSubtitleMarked,                        // Mark callback (optional)
     this.onSubtitleCommentUpdated,                // Comment callback (optional)
+    this.onSubtitleReviewSaved,
+    this.onSubtitleResolvedChanged,
     this.onActiveSubtitleChanged,                 // Active subtitle callback (optional)
     this.onPlayStateChanged,
     this.onAudioTrackChanged,                      // Play state callback (optional)

@@ -57,7 +57,9 @@ extension VideoPlayerActions on VideoPlayerWidgetState {
             _currentSubtitles[i].text != newSubtitles[i].text ||
             _currentSubtitles[i].start != newSubtitles[i].start ||
             _currentSubtitles[i].end != newSubtitles[i].end ||
-            _currentSubtitles[i].marked != newSubtitles[i].marked) {
+            _currentSubtitles[i].marked != newSubtitles[i].marked ||
+            _currentSubtitles[i].resolved != newSubtitles[i].resolved ||
+            _currentSubtitles[i].comment != newSubtitles[i].comment) {
           hasChanges = true;
           // Debug marked state changes specifically
           if (_currentSubtitles[i].marked != newSubtitles[i].marked) {

@@ -17,6 +17,9 @@ class StudioDockVideoSurface extends StatefulWidget {
     required this.playback,
     this.secondarySubtitles = const <Subtitle>[],
     this.onPlayerStateChanged,
+    this.onSubtitleMarked,
+    this.onSubtitleReviewSaved,
+    this.onSubtitleResolvedChanged,
   });
 
   final int collectionId;
@@ -27,6 +30,9 @@ class StudioDockVideoSurface extends StatefulWidget {
   /// Makes the existing player available to the shared secondary-track picker
   /// (including video-embedded text tracks), without creating a second player.
   final ValueChanged<VideoPlayerWidgetState?>? onPlayerStateChanged;
+  final Future<void> Function(int, bool)? onSubtitleMarked;
+  final Future<bool> Function(int, String?, bool, bool)? onSubtitleReviewSaved;
+  final Future<void> Function(int, bool)? onSubtitleResolvedChanged;
 
   @override
   State<StudioDockVideoSurface> createState() => _StudioDockVideoSurfaceState();
@@ -105,5 +111,8 @@ class _StudioDockVideoSurfaceState extends State<StudioDockVideoSurface> {
     onPositionChanged: widget.playback.updatePosition,
     onPlayStateChanged: widget.playback.updatePlaying,
     onAudioTrackChanged: _onAudioTrackChanged,
+    onSubtitleMarked: widget.onSubtitleMarked,
+    onSubtitleReviewSaved: widget.onSubtitleReviewSaved,
+    onSubtitleResolvedChanged: widget.onSubtitleResolvedChanged,
   );
 }

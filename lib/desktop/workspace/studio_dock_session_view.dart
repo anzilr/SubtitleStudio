@@ -90,6 +90,7 @@ class _StudioDockSessionViewState
   GlobalKey<StudioDockWorkspaceState> _dockKey =
       GlobalKey<StudioDockWorkspaceState>();
   bool _waveformEditBusy = false;
+  bool _fullscreenReviewBusy = false;
   bool _msoneEnabled = false;
   int _msonePreferenceRevision = 0;
   EditorSecondarySubtitleSource _secondarySource =
@@ -436,6 +437,71 @@ class _StudioDockSessionViewState
       return null;
     }
   }
+
+  /// Review actions from the existing fullscreen player share the Notes
+  /// inspector's optimistic, checkpoint-backed transaction. One confirmation
+  /// and one history point cover the comment and its new review mark.
+  Future<bool> _applyFullscreenReview(int cueNumber, {
+    String? comment,
+    bool? marked,
+    bool? resolved,
+    bool removeComment = false,
+  }) async {
+    if (!mounted || !widget.enableEditing || _fullscreenReviewBusy) return false;
+    _fullscreenReviewBusy = true;
+    try {
+      if (await _dockKey.currentState?.prepareForExternalEdit() != true ||
+          !mounted) return false;
+      final baseline = _latestBaseline;
+      if (baseline == null) return false;
+      final matching = baseline.cues.where((c) => c.index == cueNumber);
+      if (matching.length != 1) return false;
+      final cue = matching.single;
+      final newMarked = marked ?? cue.marked;
+      final newComment = removeComment ? null : comment ?? cue.comment;
+      final newResolved = resolved ?? cue.resolved;
+      final update = await _applyNotes(
+        cueNumber, newMarked ? newComment : null, newMarked,
+        newMarked && newResolved,
+      );
+      if (!mounted || update == null) {
+        if (mounted) _fullscreenReviewError();
+        return false;
+      }
+      _dockKey.currentState?.acceptExternalCueUpdate(update);
+      final latest = _latestBaseline;
+      if (latest != null) {
+        _nativePlayerState?.updateSubtitles(
+            StudioDockMediaPlan.overlayCues(latest));
+      }
+      return true;
+    } finally {
+      _fullscreenReviewBusy = false;
+    }
+  }
+
+  void _fullscreenReviewError() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      content: Text('Could not update this review. The project may have '
+          'changed elsewhere; refresh before retrying.'),
+    ));
+  }
+
+  Future<void> _markFromFullscreen(int cueNumber, bool marked) async {
+    await _applyFullscreenReview(cueNumber,
+        marked: marked, removeComment: !marked, resolved: marked ? null : false);
+  }
+
+  Future<void> _resolveFromFullscreen(int cueNumber, bool resolved) async {
+    await _applyFullscreenReview(cueNumber, marked: true, resolved: resolved);
+  }
+
+  Future<bool> _saveFullscreenComment(
+      int cueNumber, String? comment, bool marked, bool resolved) =>
+      _applyFullscreenReview(cueNumber,
+          comment: comment, marked: marked, resolved: resolved,
+          removeComment: comment == null);
 
   Future<StudioDockCueUpdate?> _applyNotes(
     int cueNumber, String? comment, bool marked, bool resolved,
@@ -1413,6 +1479,12 @@ class _StudioDockSessionViewState
                 subtitles: StudioDockMediaPlan.overlayCues(session),
                 secondarySubtitles: _secondaryOverlay(session),
                 onPlayerStateChanged: (player) => _nativePlayerState = player,
+                onSubtitleMarked: widget.enableEditing
+                    ? _markFromFullscreen : null,
+                onSubtitleReviewSaved: widget.enableEditing
+                    ? _saveFullscreenComment : null,
+                onSubtitleResolvedChanged: widget.enableEditing
+                    ? _resolveFromFullscreen : null,
                 playback: _playback,
               ),
         waveformSurface: validVideoPath == null || !widget.allowNativePlayback

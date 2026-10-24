@@ -32,7 +32,7 @@ acceptance. A wired callback is not proof of a working native interaction.
 | Cue insert, delete, split and combine | Wired, guarded, undoable | Compare edge cases and keyboard semantics with mobile |
 | History graph, checkpoints, undo/redo/forks | Wired to shared graph/repository | Native path/bookmark navigation acceptance |
 | Find/replace and raw Source View | Wired to shared tools/parser | Compare regex/case/selection semantics and file fidelity |
-| Marked lines, comments, resolve/reopen and filters | Wired to shared history with desktop filter | Preserve mobile comment-only lines and fullscreen overlay actions |
+| Marked lines, comments, resolve/reopen and filters | DS5 R18 extends the existing shared fullscreen player: mark/unmark and atomic mark+comment editing route to the desktop Notes checkpoint service; desktop-only Resolve/Reopen button, optimistic draft guard, refreshed player overlays (including comment-only/resolved changes), and unchanged mobile fullscreen defaults | Windows fullscreen mark/comment/Delete/Resolve/Reopen, OverlayEntry focus, Undo/Redo, repeated media transitions, unsaved-draft cancel acceptance |
 | Copy selected subtitle text, select all visible | Wired in DS5 R5f using mobile copy format | Clipboard and multi-selection widget acceptance |
 | Shift/delete selected cues, select by index/range | Wired in DS5 R11: index/range and pointer/keyboard multi-select, mobile-style selected timing stretch with duration preservation, guarded single-checkpoint multi-delete | Native selection, source edits, long-project scrolling, mixed selections and undo/redo acceptance |
 | Go to Line and direct video seek | Wired in DS5 R12 to the Edit menu, grid, and shared `gotoLine` hotkey: 1-based input/slider, unsaved-draft guard, scroll-to-cue and attached-player start +50 ms | Native large-project keyboard input, slider, focus and seek-accuracy acceptance |
@@ -64,8 +64,8 @@ acceptance. A wired callback is not proof of a working native interaction.
    persistence/playback on a native desktop before declaring playback parity.
 2. **P1:** Verify synchronization and import comments, Go to Line, selected-cue batch operations and the
    now-wired Project Settings on native desktop when available.
-3. **P2:** Verify native MSone banners/normalization, fullscreen comment
-   callbacks, desktop hotkey chords/conflicts, theme/accessibility and media QA.
+3. **P2:** Verify native MSone banners/normalization and DS5 R18 fullscreen
+   review callbacks, desktop hotkey chords/conflicts, theme/accessibility and media QA.
 
 Keep this ledger current after each checkpoint. Studio Dock must not be called
 "feature-parity complete" while any missing/partial row remains.

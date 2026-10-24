@@ -26,6 +26,8 @@ class VideoPlayerSection extends StatefulWidget {
   final Function()? onFullscreenExited;
   final Function(int, bool)? onSubtitleMarked;
   final Function(int, String?)? onSubtitleCommentUpdated;
+  final Future<bool> Function(int, String?, bool, bool)? onSubtitleReviewSaved;
+  final Future<void> Function(int, bool)? onSubtitleResolvedChanged;
 
   const VideoPlayerSection({
     super.key,
@@ -43,6 +45,8 @@ class VideoPlayerSection extends StatefulWidget {
     this.onFullscreenExited,
     this.onSubtitleMarked,
     this.onSubtitleCommentUpdated,
+    this.onSubtitleReviewSaved,
+    this.onSubtitleResolvedChanged,
   });
 
   @override
@@ -88,6 +92,8 @@ class _VideoPlayerSectionState extends State<VideoPlayerSection>
           onFullscreenExited: widget.onFullscreenExited,
           onSubtitleMarked: widget.onSubtitleMarked,
           onSubtitleCommentUpdated: widget.onSubtitleCommentUpdated,
+          onSubtitleReviewSaved: widget.onSubtitleReviewSaved,
+          onSubtitleResolvedChanged: widget.onSubtitleResolvedChanged,
         ),
       ),
     );

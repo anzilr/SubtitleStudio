@@ -155,8 +155,13 @@ extension VideoFullscreenActions on VideoPlayerWidgetState {
                 onCancelled: closeDialog,
                 onCommentSaved: (comment) async {
                   if (!mounted) return;
-                  if (!subtitle.marked && widget.onSubtitleMarked != null) {
-                    await _awaitCallbackResult(
+                  if (widget.onSubtitleReviewSaved != null) {
+                    final saved = await widget.onSubtitleReviewSaved!(
+                      subtitle.index, comment, true, subtitle.resolved);
+                    if (!saved) return;
+                  } else {
+                    if (!subtitle.marked && widget.onSubtitleMarked != null) {
+                      await _awaitCallbackResult(
                       widget.onSubtitleMarked!(subtitle.index, true),
                     );
                   }
@@ -165,11 +170,16 @@ extension VideoFullscreenActions on VideoPlayerWidgetState {
                       widget.onSubtitleCommentUpdated!(subtitle.index, comment),
                     );
                   }
+                  }
                   closeDialog();
                 },
                 onCommentDeleted: () async {
                   if (!mounted) return;
-                  if (widget.onSubtitleCommentUpdated != null) {
+                  if (widget.onSubtitleReviewSaved != null) {
+                    final saved = await widget.onSubtitleReviewSaved!(
+                      subtitle.index, null, subtitle.marked, subtitle.resolved);
+                    if (!saved) return;
+                  } else if (widget.onSubtitleCommentUpdated != null) {
                     await _awaitCallbackResult(
                       widget.onSubtitleCommentUpdated!(subtitle.index, null),
                     );
@@ -416,6 +426,7 @@ extension VideoFullscreenActions on VideoPlayerWidgetState {
                   formatDuration: _formatDuration,
                   onSubtitleMarked: widget.onSubtitleMarked,
                   onSubtitleCommentUpdated: widget.onSubtitleCommentUpdated,
+                  onSubtitleResolvedChanged: widget.onSubtitleResolvedChanged,
                   player: _player,
                   originalContext: _originalContext, // Pass original context for dialogs
                   skipDurationSeconds: _skipDurationSeconds, // Pass skip duration

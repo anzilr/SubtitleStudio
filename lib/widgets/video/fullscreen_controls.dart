@@ -24,6 +24,7 @@ class _FullscreenControlsWidget extends StatefulWidget {
   final String Function(Duration) formatDuration;
   final Function(int, bool)? onSubtitleMarked;
   final Function(int, String?)? onSubtitleCommentUpdated;
+  final Future<void> Function(int, bool)? onSubtitleResolvedChanged;
   final Player player;
   final BuildContext? originalContext; // For showing dialogs over fullscreen
   final int skipDurationSeconds; // Skip duration parameter
@@ -53,6 +54,7 @@ class _FullscreenControlsWidget extends StatefulWidget {
     required this.formatDuration,
     this.onSubtitleMarked,
     this.onSubtitleCommentUpdated,
+    this.onSubtitleResolvedChanged,
     required this.player,
     this.originalContext, // For showing dialogs over fullscreen
     required this.skipDurationSeconds, // Add to constructor
@@ -488,6 +490,8 @@ class _FullscreenControlsWidgetState extends State<_FullscreenControlsWidget> {
                             
                             // Mark/Unmark current subtitle line button
                             _buildMarkButton(),
+                            if (widget.onSubtitleResolvedChanged != null)
+                              _buildResolveButton(),
                             
                             const Spacer(), // Push fullscreen button to the right
                             
@@ -662,6 +666,23 @@ class _FullscreenControlsWidgetState extends State<_FullscreenControlsWidget> {
     
     // Show the controls to provide visual feedback
     _showControls();
+  }
+
+  /// Optional review-state control; no button in existing mobile clients.
+  Widget _buildResolveButton() {
+    final cue = _getCachedActiveSubtitle();
+    return IconButton(
+      key: const ValueKey('fullscreen-resolve-review'),
+      tooltip: cue?.resolved == true ? 'Reopen subtitle review'
+          : 'Resolve subtitle review',
+      icon: Icon(cue?.resolved == true ? Icons.undo : Icons.task_alt,
+          color: cue?.marked == true ? Colors.white : Colors.grey),
+      onPressed: cue == null || !cue.marked ? null : () {
+        final change = widget.onSubtitleResolvedChanged;
+        if (change != null) unawaited(change(cue.index, !cue.resolved));
+        _showControls();
+      },
+    );
   }
 
   // Public method to trigger comment dialog from external keyboard shortcuts
