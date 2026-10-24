@@ -52,4 +52,6 @@ Predecessor: `STUDIO_DOCK_DS5_R5D_COMBINED_INSPECTOR_REVIEW_2026-10-24.md`
 
 ## CI
 
-Pending focused and full Flutter validation.
+- **Focused Studio Dock PASS:** [run 40081735399](https://github.com/anzilr/SubtitleStudio/actions/runs/40081735399), Flutter analysis successful and **147 focused tests passed**.
+- **Full Flutter PASS:** [run 40081916712](https://github.com/anzilr/SubtitleStudio/actions/runs/40081916712), Flutter analysis successful and **950 tests passed**.
+- No Android, iOS, macOS, Linux or Windows platform builds executed in CI.
