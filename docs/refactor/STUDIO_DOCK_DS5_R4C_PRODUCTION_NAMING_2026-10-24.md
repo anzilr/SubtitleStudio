@@ -55,3 +55,9 @@ they implement actual user-visible previews, not a deprecated app shell.
 
 This checkpoint changes names and separates fixtures; it does not introduce
 new persistence or alter the mobile editor.
+
+## Accepted Flutter CI
+
+- [Focused Studio Dock quality #40070989138](https://github.com/anzilr/SubtitleStudio/actions/runs/40070989138): **PASS** — Flutter analyzer clean, **97 tests passed**.
+- [Full repository quality #40071109612](https://github.com/anzilr/SubtitleStudio/actions/runs/40071109612): **PASS** — Flutter analyzer clean, **899 tests passed**.
+- Both workflows used `flutter pub get`, `flutter analyze` and `flutter test` only; **no platform builds** were run.
