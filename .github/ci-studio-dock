@@ -53,3 +53,5 @@ DS5 R5b 2026-10-24: atomic Notes metadata review/history, shared Style tags, col
 DS5 R5b inspector Material fix: wrap review switches in own transparent Material to satisfy Flutter ListTile ink assertions. Re-run analyze and focused widget/integration tests only; no platform builds.
 
 DS5 R5c 2026-10-24: production in-project Find/Replace with shared snapshot and optimistic batch checkpoint, bulk timing shifts and supported-tag cleanup in Tools, command palette Find/Tools routing, widget and integration tests. Flutter analyzer and focused Studio Dock tests ONLY; no platform builds.
+
+DS5 R5d 2026-10-24: user-requested combined Text/Timing inspector with sticky Apply and one guarded simultaneous text+timing checkpoint; remove separate Timing tab, update command palette. Bulk selected cue review marks via shared history, context menus and shortcut. Validate new Isar and widget tests, narrow theme layout. Run Flutter analyzer and focused Studio Dock tests only, no native builds.
