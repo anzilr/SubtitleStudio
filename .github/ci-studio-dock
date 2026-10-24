@@ -29,3 +29,5 @@ DS5 R2b 2026-10-24: validate expanded waveform layout and fixed empty-cue integr
 DS5 R2c 2026-10-24: playback cue highlight, follow-scroll, click seek and semantic workspace accent, updated geometry tests. Flutter analyzer and Studio Dock tests only, no platform builds.
 
 DS5 R2c analyzer correction: remove const widget constructors containing dynamic ColorScheme colors. Flutter analyze and focused tests only; no builds.
+
+DS5 R2b guarded split/combine 2026-10-24: run analyzer and Studio Dock widget/integration tests for atomic split/merge, stale snapshot guards and desktop shortcuts. Flutter only, no platform builds.
