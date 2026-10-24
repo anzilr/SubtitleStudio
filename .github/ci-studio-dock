@@ -83,3 +83,5 @@ DS5 R9 TOOLBAR ANALYZER FIX 2026-10-24: remove a duplicated LayoutBuilder termin
 DS5 R10 PROJECT SETTINGS 2026-10-24: use the existing shared ProjectSettingsSheet from live native Dock, wait File popup dismissal, guard unsaved drafts, and refresh authoritative encoding/media/secondary/history. Run analyzer and focused Flutter tests only; NO builds.
 
 DS5 R11 SELECTED BATCH 2026-10-24: desktop index/pointer range selection, mobile-equivalent selected time-stretch, optimistic one-checkpoint selected deletion and widget/integration regression tests. Run Flutter analyzer and focused Studio Dock tests only; NO builds.
+
+DS5 R11 DIALOG LIFECYCLE FIX 2026-10-24: use self-owned TextFormField state in selected-batch dialogs to avoid disposing a controller before its dismissal animation ends. Re-run analyzer and focused Flutter widget/integration tests only.

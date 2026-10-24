@@ -2048,8 +2048,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
 
   Future<void> _selectByIndexSafely() async {
     if (_cues.isEmpty || !await _confirmDraftBeforeLeaving() || !mounted) return;
-    final startInput = TextEditingController(text: '1');
-    final endInput = TextEditingController(text: '${_cues.length}');
+    var firstText = '1';
+    var lastText = '${_cues.length}';
     String? error;
     final chosen = await showDialog<List<int>>(
       context: context,
@@ -2060,17 +2060,19 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           children: [
             Text('Select an inclusive range from 1 to ${_cues.length}.'),
             const SizedBox(height: 14),
-            TextField(
+            TextFormField(
               key: const ValueKey('studio-range-start'),
-              controller: startInput,
+              initialValue: firstText,
+              onChanged: (value) => firstText = value,
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(
                 labelText: 'First line', border: OutlineInputBorder()),
             ),
             const SizedBox(height: 10),
-            TextField(
+            TextFormField(
               key: const ValueKey('studio-range-end'),
-              controller: endInput,
+              initialValue: lastText,
+              onChanged: (value) => lastText = value,
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(
                 labelText: 'Last line', border: OutlineInputBorder()),
@@ -2088,8 +2090,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           FilledButton(
             key: const ValueKey('studio-range-confirm'),
             onPressed: () {
-              final start = int.tryParse(startInput.text.trim());
-              final end = int.tryParse(endInput.text.trim());
+              final start = int.tryParse(firstText.trim());
+              final end = int.tryParse(lastText.trim());
               if (start == null || end == null || start < 1 ||
                   end < start || end > _cues.length) {
                 refresh(() => error = 'Enter indices between 1 and ${_cues.length} in order.');
@@ -2102,8 +2104,6 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         ],
       )),
     );
-    startInput.dispose();
-    endInput.dispose();
     if (chosen == null || !mounted) return;
     _applyIndexRange(chosen[0], chosen[1]);
   }
@@ -2145,8 +2145,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       if (_selectedIds.contains(cue.id)) cue];
     if (selected.isEmpty) return;
     final cueNumbers = selected.map((cue) => cue.id).toList();
-    final startInput = TextEditingController(text: selected.first.start);
-    final endInput = TextEditingController(text: selected.last.end);
+    var firstText = selected.first.start;
+    var lastText = selected.last.end;
     var saving = false;
     String? error;
     await showDialog<void>(
@@ -2161,17 +2161,19 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               const Text('Set a new start for the first selected cue and an end '
                   'anchor for the last. Relative starts scale; durations stay unchanged.'),
               const SizedBox(height: 14),
-              TextField(
+              TextFormField(
                 key: const ValueKey('studio-selected-start'),
-                controller: startInput,
+                initialValue: firstText,
+                onChanged: (value) => firstText = value,
                 enabled: !saving,
                 decoration: const InputDecoration(
                   labelText: 'First selected start', border: OutlineInputBorder()),
               ),
               const SizedBox(height: 10),
-              TextField(
+              TextFormField(
                 key: const ValueKey('studio-selected-end'),
-                controller: endInput,
+                initialValue: lastText,
+                onChanged: (value) => lastText = value,
                 enabled: !saving,
                 decoration: const InputDecoration(
                   labelText: 'Last selected end anchor', border: OutlineInputBorder()),
@@ -2189,8 +2191,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             FilledButton(
               key: const ValueKey('studio-selected-shift-apply'),
               onPressed: saving ? null : () async {
-                final start = startInput.text.trim();
-                final end = endInput.text.trim();
+                final start = firstText.trim();
+                final end = lastText.trim();
                 final validation = StudioDockTimingEditService.validate(start, end);
                 if (validation != null) {
                   refresh(() => error = validation);
@@ -2221,8 +2223,6 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         ),
       )),
     );
-    startInput.dispose();
-    endInput.dispose();
   }
 
   Future<void> _deleteSelectedSafely() async {
