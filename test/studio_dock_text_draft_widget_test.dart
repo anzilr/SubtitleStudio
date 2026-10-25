@@ -78,7 +78,7 @@ void main() {
     expect(find.byKey(const ValueKey('studio-edit-2-1')), findsOneWidget);
     expect(FocusManager.instance.primaryFocus,
         isNotNull, reason: 'New edited text input should receive focus');
-    await tester.testTextInput.enterText('Typed without clicking');
+    tester.testTextInput.enterText('Typed without clicking');
     await tester.pump();
     expect(find.text('Typed without clicking'), findsWidgets);
     expect(tester.takeException(), isNull);

@@ -820,7 +820,11 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         unawaited(_goToLineSafely());
       case HotkeyAction.markLineAndComment:
         if (widget.onApplyCueNotes != null) {
-          unawaited(_toggleInspectorFromShortcut(2));
+          if (_section == 0 && _inspectorOpen && _inspectorTab == 2) {
+            unawaited(_toggleInspectorFromShortcut(2));
+          } else {
+            unawaited(_openReviewNotesForHotkey());
+          }
         }
       case HotkeyAction.markLine:
         if (widget.onApplyBulkReview != null) {
