@@ -16,6 +16,7 @@ import 'package:subtitle_studio/screens/edit/services/editor_secondary_subtitle_
 import 'package:subtitle_studio/services/subtitle_text_codec.dart';
 import 'package:subtitle_studio/services/subtitle_extended_encoding_service.dart';
 import 'package:subtitle_studio/widgets/project_settings/project_encoding_selector.dart';
+import 'package:subtitle_studio/widgets/project_settings/project_settings_line_summary.dart';
 import 'package:subtitle_studio/widgets/marked_lines_sheet.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';
@@ -288,15 +289,17 @@ class _ProjectSettingsSheetState extends ConsumerState<ProjectSettingsSheet> wit
           ? await ref.read(subtitleRepositoryProvider)
               .fetchLines(widget.subtitleCollection.id)
           : widget.subtitleCollection.lines;
-      final stats = _getSessionInfo(lines);
-      final marked = lines.where((line) => line.marked).toList();
+      final summary = ProjectSettingsLineSummary.fromLoadedLines(
+        lines,
+        lastEditedIndex: widget.session.lastEditedIndex ?? 1,
+      );
       final preferences = await ref
           .read(editorPreferencesRepositoryProvider)
           .getVideoPreferences(widget.session.subtitleCollectionId);
       if (!mounted) return;
       setState(() {
-        _sessionInfo = stats;
-        _markedLines = marked;
+        _sessionInfo = summary.sessionInfo;
+        _markedLines = summary.markedLines;
         _videoPath = preferences.videoPath;
         _secondarySubtitlePath = preferences.secondarySubtitlePath;
         _isSecondaryFromOriginal = preferences.secondaryIsOriginal;
@@ -314,47 +317,6 @@ class _ProjectSettingsSheetState extends ConsumerState<ProjectSettingsSheet> wit
           backgroundColor: Theme.of(context).colorScheme.error,
         );
       }
-    }
-  }
-
-  Map<String, dynamic> _getSessionInfo(List<SubtitleLine> subtitleLines) {
-    try {
-      final editedCount = subtitleLines.where((line) => line.edited != null && line.edited!.isNotEmpty).length;
-      final totalLines = subtitleLines.length;
-      final progress = totalLines > 0 ? editedCount / totalLines : 0.0;
-      
-      // Language detection with codes - same as HomeScreen
-      Set<String> detectedLanguageCodes = {'EN'}; // Default English
-      
-      // Check for common non-Latin scripts
-      for (final line in subtitleLines.take(10)) { // Check first 10 lines for performance
-        final text = line.original + (line.edited ?? '');
-        if (_containsScript(text, 'Malayalam')) detectedLanguageCodes.add('ML');
-        if (_containsScript(text, 'Hindi')) detectedLanguageCodes.add('HI');
-        if (_containsScript(text, 'Arabic')) detectedLanguageCodes.add('AR');
-        if (_containsScript(text, 'Chinese')) detectedLanguageCodes.add('ZH');
-        if (_containsScript(text, 'Japanese')) detectedLanguageCodes.add('JA');
-        if (_containsScript(text, 'Korean')) detectedLanguageCodes.add('KO');
-        if (_containsScript(text, 'Russian')) detectedLanguageCodes.add('RU');
-      }
-      
-      return {
-        'totalLines': totalLines,
-        'editedLines': editedCount,
-        'lastEditedIndex': widget.session.lastEditedIndex ?? 1,
-        'progress': progress,
-        'languageCodes': detectedLanguageCodes.join('/'),
-        'languages': detectedLanguageCodes.toList(),
-      };
-    } catch (e) {
-      return {
-        'totalLines': 0,
-        'editedLines': 0,
-        'lastEditedIndex': 1,
-        'progress': 0.0,
-        'languageCodes': 'EN',
-        'languages': ['EN'],
-      };
     }
   }
 

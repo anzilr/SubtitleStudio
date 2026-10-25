@@ -6,27 +6,6 @@ extension _ProjectSettingsPathHelpers on _ProjectSettingsSheetState {
     return _sessionInfo!['languageCodes'] ?? 'EN';
   }
 
-  bool _containsScript(String text, String script) {
-    switch (script) {
-      case 'Malayalam':
-        return RegExp(r'[\u0D00-\u0D7F]').hasMatch(text);
-      case 'Hindi':
-        return RegExp(r'[\u0900-\u097F]').hasMatch(text);
-      case 'Arabic':
-        return RegExp(r'[\u0600-\u06FF]').hasMatch(text);
-      case 'Chinese':
-        return RegExp(r'[\u4E00-\u9FFF]').hasMatch(text);
-      case 'Japanese':
-        return RegExp(r'[\u3040-\u309F\u30A0-\u30FF]').hasMatch(text);
-      case 'Korean':
-        return RegExp(r'[\uAC00-\uD7AF]').hasMatch(text);
-      case 'Russian':
-        return RegExp(r'[\u0400-\u04FF]').hasMatch(text);
-      default:
-        return false;
-    }
-  }
-
   void _copyToClipboard(String text) {
     Clipboard.setData(ClipboardData(text: text));
     SnackbarHelper.showSnackBar(
