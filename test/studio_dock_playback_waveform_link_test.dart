@@ -123,7 +123,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(videoMounts, 1);
     expect(waveformMounts, 1);
-    expect(find.text('Synced with video'), findsOneWidget);
+    expect(find.text('real waveform'), findsOneWidget,
+        reason: 'The provided waveform owns its header and playback state');
 
     await tester.tap(find.byKey(const ValueKey('rail-1')));
     await tester.pumpAndSettle();

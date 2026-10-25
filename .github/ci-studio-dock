@@ -142,4 +142,4 @@ DS5 R28 2026-10-25: cancel stale wheel seek during drag handoff and deduplicate 
 DS5 R29 2026-10-25: shared waveform start/end/move range planner, safe magnetic gap snapping, overlap checks after snaps, and nine targeted tests; Flutter analyzer/focused tests only, no native builds.
 DS5 R30 2026-10-25: parity audit, guarded review-filter transitions and direct Tools marked-lines route; Flutter analyzer and focused widget tests only, no native builds.
 
-DS5 R32.1: fix platform modifier import and prune redundant project helper/import; rerun Flutter analyzer/tests only.
+DS5 R32.2 2026-10-25: update compact waveform control expectations and shared history routing, Flutter-only analysis/tests.

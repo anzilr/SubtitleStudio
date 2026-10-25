@@ -31,7 +31,7 @@ void main() {
       onVisibility: () => visibilityCalls++,
       onRegenerate: () => regenerationCalls++,
     );
-    expect(find.text('Hide'), findsOneWidget);
+    expect(find.byTooltip('Hide waveform'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('studio-waveform-visibility')));
     expect(visibilityCalls, 1);
     expect(regenerationCalls, 0);
@@ -46,7 +46,7 @@ void main() {
       onVisibility: () => shown++,
       onRegenerate: () => regenerated++,
     );
-    expect(find.text('Generate'), findsOneWidget);
+    expect(find.byTooltip('Show waveform'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('studio-waveform-visibility')));
     await tester.tap(find.byKey(const ValueKey('studio-waveform-regenerate')));
     expect(shown, 1);
@@ -61,7 +61,7 @@ void main() {
       onVisibility: () {},
       onRegenerate: () => regenerations++,
     );
-    final button = tester.widget<TextButton>(
+    final button = tester.widget<IconButton>(
         find.byKey(const ValueKey('studio-waveform-regenerate')));
     expect(button.onPressed, isNull);
     expect(regenerations, 0);
@@ -75,13 +75,14 @@ void main() {
       onVisibility: () => calls++,
       onRegenerate: () => calls++,
     );
-    final visibility = tester.widget<TextButton>(
+    final visibility = tester.widget<IconButton>(
         find.byKey(const ValueKey('studio-waveform-visibility')));
-    final regenerate = tester.widget<TextButton>(
+    final regenerate = tester.widget<IconButton>(
         find.byKey(const ValueKey('studio-waveform-regenerate')));
     expect(visibility.onPressed, isNull);
     expect(regenerate.onPressed, isNull);
-    expect(find.text('Loading…'), findsOneWidget);
+    expect(find.byTooltip('Loading waveform…'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
     expect(calls, 0);
     expect(tester.takeException(), isNull);
   });

@@ -5007,7 +5007,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
 
   Widget _secondarySection() {
     if (_section == 5) return _sourceViewSection();
-    if (_section == 1 && widget.onLoadHistory != null) {
+    if (_section == 1 &&
+        (widget.onLoadHistory != null || widget.checkpointHistoryPanel != null)) {
       return _historySection();
     }
     if (_section == 2) return _findSection();

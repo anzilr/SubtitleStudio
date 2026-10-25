@@ -315,9 +315,12 @@ class StudioDockWaveformToolbar extends StatelessWidget {
     ),
     if (size.maxWidth < 650) IconButton(
       key: const ValueKey('studio-waveform-regenerate'),
-      tooltip: 'Regenerate waveform',
+      tooltip: busy ? 'Loading waveform…' : 'Regenerate waveform',
       onPressed: canRegenerate && !busy ? onRegenerate : null,
-      icon: const Icon(Icons.refresh, size: 17),
+      icon: busy
+          ? const SizedBox(width: 15, height: 15,
+              child: CircularProgressIndicator(strokeWidth: 2))
+          : const Icon(Icons.refresh, size: 17),
       constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
       padding: EdgeInsets.zero,
     ) else TextButton.icon(
