@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_playback_link.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_workspace.dart';
+import 'package:subtitle_studio/desktop/workspace/studio_dock_layout_preferences.dart';
 import 'package:subtitle_studio/widgets/video/repeat_range_dialog.dart';
 import 'package:subtitle_studio/widgets/video/subtitle.dart';
 
@@ -14,7 +15,9 @@ const _cues = [
 ];
 
 void main() {
-  setUp(() => SharedPreferences.setMockInitialValues({}));
+  setUp(() => SharedPreferences.setMockInitialValues({
+    StudioDockLayoutPreferences.prefix + 'videoOpen': true,
+  }));
 
   Future<void> openView(WidgetTester tester) async {
     await tester.tap(find.byKey(const ValueKey('studio-view-menu')));

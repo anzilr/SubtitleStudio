@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_workspace.dart';
+import 'package:subtitle_studio/desktop/workspace/studio_dock_layout_preferences.dart';
 
 void main() {
-  setUp(() => SharedPreferences.setMockInitialValues({}));
+  setUp(() => SharedPreferences.setMockInitialValues({
+    StudioDockLayoutPreferences.prefix + 'videoOpen': true,
+  }));
 
   Future<void> launch(WidgetTester tester, {
     bool videoAttached = true,

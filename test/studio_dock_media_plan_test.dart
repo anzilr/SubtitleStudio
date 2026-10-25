@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_workspace.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_media_plan.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_session_snapshot.dart';
+import 'package:subtitle_studio/desktop/workspace/studio_dock_layout_preferences.dart';
 
 void main() {
   test('saved video needs an existing path before the native player can mount',
@@ -91,7 +92,9 @@ void main() {
 
   testWidgets('native player slot survives changing Studio Dock sections',
       (tester) async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({
+      StudioDockLayoutPreferences.prefix + 'videoOpen': true,
+    });
     tester.view.physicalSize = const Size(1700, 1000);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);

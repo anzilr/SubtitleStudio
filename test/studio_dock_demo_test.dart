@@ -23,11 +23,11 @@ void main() {
 
     expect(find.text('SubtitleStudio'), findsOneWidget);
     expect(find.text('PROJECT'), findsOneWidget);
-    expect(find.text('VIDEO PREVIEW'), findsOneWidget);
-    expect(find.text('WAVEFORM'), findsOneWidget);
+    expect(find.text('VIDEO PREVIEW'), findsNothing);
+    expect(find.text('WAVEFORM'), findsNothing);
     expect(find.text('SUBTITLE LINES'), findsOneWidget);
     expect(find.text('LINE INSPECTOR'), findsOneWidget);
-    expect(find.text('Demo workspace · no files are modified'), findsOneWidget);
+    expect(find.text('Ready'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -74,7 +74,7 @@ void main() {
     expect(find.text('Version history'), findsOneWidget);
     await tester.tap(find.text('Back to editor'));
     await tester.pumpAndSettle();
-    expect(find.text('VIDEO PREVIEW'), findsOneWidget);
+    expect(find.text('VIDEO PREVIEW'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -88,7 +88,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('PROJECT'), findsNothing);
     expect(find.text('LINE INSPECTOR'), findsNothing);
-    expect(find.text('VIDEO PREVIEW'), findsOneWidget);
+    expect(find.text('VIDEO PREVIEW'), findsNothing);
     expect(find.text('SUBTITLE LINES'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

@@ -5727,7 +5727,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     child: Row(children: [
       Icon(Icons.info_outline, color: _accent, size: 13),
       const SizedBox(width: 8),
-      Expanded(child: Text(widget.projectTitle ?? 'SubtitleStudio',
+      Expanded(child: Text(widget.projectTitle ?? 'Ready',
         style: TextStyle(color: _muted, fontSize: 10))),
       Text(widget.encoding == null
           ? 'Desktop prototype  •  Windows / macOS / Linux'

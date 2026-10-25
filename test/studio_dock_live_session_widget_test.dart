@@ -32,7 +32,7 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    expect(find.text('LIVE · READ ONLY'), findsOneWidget);
+    expect(find.text('READ ONLY'), findsOneWidget);
     expect(find.text('Live project.srt'), findsWidgets);
     expect(find.text('Night Drive.mp4'), findsNothing);
     expect(find.text('Original live cue'), findsWidgets);
@@ -45,8 +45,7 @@ void main() {
       )).readOnly,
       isTrue,
     );
-    expect(tester.widget<IconButton>(
-      find.byKey(const ValueKey('preview-play'))).onPressed, isNull);
+    expect(find.byKey(const ValueKey('preview-play')), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey('desktop-command-palette')));
     await tester.pumpAndSettle();
@@ -64,7 +63,7 @@ void main() {
       ),
     ));
     await tester.pumpAndSettle();
-    expect(find.text('This project has no subtitle cues yet.'), findsOneWidget);
+    expect(find.text('This project has no subtitle lines yet.'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_playback_link.dart';
+import 'package:subtitle_studio/desktop/workspace/studio_dock_layout_preferences.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_workspace.dart';
 
 class _VideoSlot extends StatefulWidget {
@@ -23,7 +24,9 @@ class _VideoSlotState extends State<_VideoSlot> {
 }
 
 void main() {
-  setUp(() => SharedPreferences.setMockInitialValues({}));
+  setUp(() => SharedPreferences.setMockInitialValues({
+    StudioDockLayoutPreferences.prefix + 'videoOpen': true,
+  }));
 
   Future<void> launch(WidgetTester tester, StudioDockPlaybackLink playback, {
     Widget? video,

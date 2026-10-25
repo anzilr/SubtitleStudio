@@ -79,7 +79,7 @@ void main() {
     });
     await chooseFromMenu(tester);
     expect(find.text('Remove hearing-impaired annotations'), findsOneWidget);
-    expect(find.textContaining('Cues left empty may be deleted'), findsOneWidget);
+    expect(find.textContaining('Lines left empty may be deleted'), findsOneWidget);
     await tester.tap(find.text('Cancel').last);
     await tester.pumpAndSettle();
     expect(calls, 0);

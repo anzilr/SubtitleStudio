@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_workspace.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_playback_link.dart';
+import 'package:subtitle_studio/desktop/workspace/studio_dock_layout_preferences.dart';
 
 void main() {
   test('waveform seeks through the attached native player only', () {
@@ -92,7 +93,10 @@ void main() {
 
   testWidgets('separate video and waveform surfaces retain their owner State',
       (tester) async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({
+      StudioDockLayoutPreferences.prefix + 'videoOpen': true,
+      StudioDockLayoutPreferences.prefix + 'waveformOpen': true,
+    });
     tester.view.physicalSize = const Size(1750, 1000);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);

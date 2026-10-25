@@ -58,7 +58,7 @@ void main() {
     });
     await tester.tap(find.byKey(const ValueKey('studio-dock-insert-cue')));
     await tester.pumpAndSettle();
-    expect(find.text('Insert subtitle cue'), findsOneWidget);
+    expect(find.text('Insert subtitle line'), findsOneWidget);
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
     expect(attempts, isEmpty);
@@ -206,7 +206,7 @@ void main() {
         return const StudioDockCueUpdate(cues: [_first], selectedCueId: 1);
       },
     );
-    expect(find.text('This project has no subtitle cues yet.'), findsOneWidget);
+    expect(find.text('This project has no subtitle lines yet.'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('studio-empty-create-cue')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('studio-confirm-insert')));

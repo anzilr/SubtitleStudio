@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_workspace.dart';
+import 'package:subtitle_studio/desktop/workspace/studio_dock_layout_preferences.dart';
 import 'package:subtitle_studio/utils/msone_hotkey_manager.dart';
 
 void main() {
-  setUp(() => SharedPreferences.setMockInitialValues({}));
+  setUp(() => SharedPreferences.setMockInitialValues({
+    StudioDockLayoutPreferences.prefix + 'videoOpen': true,
+  }));
 
   Future<void> launch(WidgetTester tester, {
     VoidCallback? fullscreen,
@@ -119,7 +122,7 @@ void main() {
     final manager = MSoneHotkeyManager.instance;
     expect(manager.dispatchForTesting(HotkeyAction.delete), isTrue);
     await tester.pumpAndSettle();
-    expect(find.text('Delete subtitle cue #1?'), findsOneWidget);
+    expect(find.text('Delete subtitle line #1?'), findsOneWidget);
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
     expect(deletes, 0);

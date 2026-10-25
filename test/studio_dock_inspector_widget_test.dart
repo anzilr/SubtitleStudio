@@ -35,7 +35,7 @@ void main() {
       applied.add(text);
       return true;
     });
-    expect(find.textContaining('SUBTITLE TEXT ·'), findsOneWidget);
+    expect(find.text('SUBTITLE TEXT'), findsWidgets);
     expect(find.text('ORIGINAL TEXT'), findsNothing);
     expect(find.text('Reset to original'), findsNothing);
     expect(find.text('EDITED'), findsNothing);
