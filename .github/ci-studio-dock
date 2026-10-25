@@ -133,3 +133,5 @@ DS5 R21 ANALYZER CLEAN FINAL 2026-10-24: focused Flutter analyzer and Studio Doc
 DS5 R22 REPEAT PLAYBACK 2026-10-24: source-level current cue/custom range repeat using shared position link, dialog and hotkeys; run Flutter analyzer and Studio Dock suite only, no platform builds or live submissions.
 
 DS5 R22 MENU SELECTOR RETRY 2026-10-25: verify disabled repeat actions by visible PopupMenu labels/taps, avoiding typed private generic item matcher; Flutter analyzer and Studio Dock tests only.
+
+DS5 R26 EDIT LINE DISPLAY/NAV 2026-10-25: mobile Edit Line preference parity, safe auto-save navigation and formatted preview. Flutter analyzer and focused Studio Dock widget tests only; no native builds.

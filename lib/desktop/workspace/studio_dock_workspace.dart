@@ -29,6 +29,14 @@ import '../../utils/msone_hotkey_manager.dart';
 
 enum _StudioDockReviewFilter { all, marked, unresolved, resolved }
 
+/// Same persisted switches used by mobile Edit Line; formatted preview is
+/// intentionally session-only (mobile also does not persist its toggle).
+enum StudioDockEditPreference {
+  showOriginalLine,
+  autoSaveWithNavigation,
+  showOriginalTextField,
+}
+
 enum _StudioDockMenuAction {
   undo, redo, find, copySelected, selectAll, addCue, deleteCue, splitCue, mergeCue, notes,
   timing, shiftTools, showTools, syncSubtitles, sourceView, history, submitMsone,
@@ -39,6 +47,8 @@ enum _StudioDockMenuAction {
   msoneDictionary, olamDictionary, urbanDictionary,
   explorer, inspector, toggleFullscreen, floatingPlayback, unloadVideo,
   repeatCurrent, repeatRange, settings, help,
+  showOriginalLine, autoSaveWithNavigation, showOriginalTextField,
+  formattedView,
 }
 
 /// One subtitle row displayed in the Studio Dock workspace.
@@ -112,6 +122,10 @@ class StudioDockWorkspace extends StatefulWidget {
     this.initialSelectedCueId,
     this.isLiveSession = false,
     this.isEditMode = false,
+    this.showOriginalLine = false,
+    this.autoSaveWithNavigation = false,
+    this.showOriginalTextField = true,
+    this.onSaveEditPreference,
     this.projectTitle,
     this.encoding,
     this.onChooseProject,
@@ -178,6 +192,12 @@ class StudioDockWorkspace extends StatefulWidget {
   final bool isLiveSession;
   /// Scratch-created subtitles have one editable text track, unlike translation.
   final bool isEditMode;
+  final bool showOriginalLine;
+  final bool autoSaveWithNavigation;
+  final bool showOriginalTextField;
+  /// Null in previews/harnesses without shared persisted Edit Line settings.
+  final Future<bool> Function(StudioDockEditPreference preference, bool value)?
+      onSaveEditPreference;
   final String? projectTitle;
   final String? encoding;
   final VoidCallback? onChooseProject;
@@ -388,6 +408,10 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   bool _changingStructure = false;
   bool _savingFile = false;
   bool _unloadingVideo = false;
+  bool _updatingEditPreference = false;
+  bool _formattedView = false;
+  bool _navigatingCue = false;
+  ModalRoute<dynamic>? _editPreferenceMenuRoute;
   bool _historyBusy = false;
   bool _historyLoading = false;
   String _sourceText = '';
@@ -532,6 +556,12 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   @override
   void didUpdateWidget(covariant StudioDockWorkspace oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.showOriginalLine != widget.showOriginalLine &&
+        !_hasDirtyTextDraft) {
+      // TextFormField.initialValue must be reloaded when the original fallback
+      // changes, without replacing a user's still-unapplied edit.
+      _draftRevision++;
+    }
     if (oldWidget.playback != widget.playback) {
       oldWidget.playback?.position.removeListener(_onPlaybackPosition);
       widget.playback?.position.addListener(_onPlaybackPosition);
@@ -1269,6 +1299,75 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     return false;
   }
 
+  /// Only cue-to-cue navigation follows Edit Line's auto-save preference.
+  /// File, project, source, review and media transitions always retain their
+  /// explicit draft confirmation boundary.
+  Future<bool> _prepareForCueNavigation() async {
+    if (_savingDraft || _savingFile || _changingStructure) return false;
+    if (!_hasDirtyDraft) return true;
+    final mayAutoSave = widget.onSaveEditPreference != null &&
+        (!widget.showOriginalLine || widget.autoSaveWithNavigation);
+    if (mayAutoSave && !_hasDirtyNotesDraft) return _applyDraft();
+    return _confirmDraftBeforeLeaving();
+  }
+
+  Future<void> _setEditPreference(StudioDockEditPreference preference,
+      {ModalRoute<dynamic>? afterMenu}) async {
+    if (afterMenu != null) await afterMenu.completed;
+    final save = widget.onSaveEditPreference;
+    if (!mounted || save == null || _updatingEditPreference) return;
+    if (preference == StudioDockEditPreference.showOriginalLine &&
+        !await _confirmDraftBeforeLeaving()) return;
+    if (!mounted) return;
+    final current = switch (preference) {
+      StudioDockEditPreference.showOriginalLine => widget.showOriginalLine,
+      StudioDockEditPreference.autoSaveWithNavigation =>
+        widget.autoSaveWithNavigation,
+      StudioDockEditPreference.showOriginalTextField =>
+        widget.showOriginalTextField,
+    };
+    final next = !current;
+    if (preference == StudioDockEditPreference.showOriginalLine) {
+      final approved = await showDialog<bool>(
+        context: context,
+        builder: (dialog) => AlertDialog(
+          title: Text(next ? 'Show original line when edit is empty?'
+              : 'Stop showing original line in empty edits?'),
+          content: Text(next
+              ? 'Empty edits will display the original text. To prevent '
+                  'unintended edits, automatic saving on navigation will be '
+                  'turned off until you re-enable it.'
+              : 'Empty edits will remain empty. Automatic saving on '
+                  'navigation will be enabled, as in mobile Edit Line.'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialog, false),
+                child: const Text('Cancel')),
+            FilledButton(
+              key: const ValueKey('studio-confirm-original-line'),
+              onPressed: () => Navigator.pop(dialog, true),
+              child: const Text('Continue'),
+            ),
+          ],
+        ),
+      );
+      if (approved != true || !mounted) return;
+    }
+    setState(() => _updatingEditPreference = true);
+    bool saved;
+    try {
+      saved = await save(preference, next);
+    } catch (_) {
+      saved = false;
+    }
+    if (!mounted) return;
+    setState(() => _updatingEditPreference = false);
+    if (!saved) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Could not save the Edit Line preference. Try again.'),
+      ));
+    }
+  }
+
   Future<bool> _confirmSourceDraftBeforeLeaving() async {
     final choice = await showDialog<String>(
       context: context,
@@ -1874,12 +1973,19 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
 
   Future<void> _selectCueAfterConfirmation(int id,
       {bool range = false, bool toggle = false}) async {
-    if (await _confirmDraftBeforeLeaving() && mounted) {
-      _applyCueSelection(id, range: range, toggle: toggle);
+    if (_navigatingCue) return;
+    _navigatingCue = true;
+    try {
+      if (await _prepareForCueNavigation() && mounted) {
+        _applyCueSelection(id, range: range, toggle: toggle);
+      }
+    } finally {
+      _navigatingCue = false;
     }
   }
 
   void _selectCue(int id, {bool range = false, bool toggle = false}) {
+    if (_navigatingCue) return;
     if (id != _selectedId && _hasDirtyDraft) {
       unawaited(_selectCueAfterConfirmation(
           id, range: range, toggle: toggle));
@@ -2437,6 +2543,43 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               child: Text('Toggle project explorer')),
           const PopupMenuItem(value: _StudioDockMenuAction.inspector,
               child: Text('Toggle line inspector')),
+          if (widget.onSaveEditPreference != null) ...[
+            const PopupMenuDivider(),
+            if (!widget.isEditMode) ...[
+              PopupMenuItem(
+                value: _StudioDockMenuAction.showOriginalLine,
+                enabled: !_updatingEditPreference,
+                child: Builder(builder: (popupContext) {
+                  _editPreferenceMenuRoute = ModalRoute.of(popupContext);
+                  return Row(children: [
+                    Icon(widget.showOriginalLine
+                        ? Icons.check_box : Icons.check_box_outline_blank,
+                        size: 18),
+                    const SizedBox(width: 12),
+                    const Text('Show Original Line'),
+                  ]);
+                }),
+              ),
+              if (widget.showOriginalLine)
+                CheckedPopupMenuItem(
+                  value: _StudioDockMenuAction.autoSaveWithNavigation,
+                  enabled: !_updatingEditPreference,
+                  checked: widget.autoSaveWithNavigation,
+                  child: const Text('Auto-save with navigation'),
+                ),
+            ],
+            CheckedPopupMenuItem(
+              value: _StudioDockMenuAction.showOriginalTextField,
+              enabled: !_updatingEditPreference,
+              checked: widget.showOriginalTextField,
+              child: const Text('Show Original Text Field'),
+            ),
+          ],
+          CheckedPopupMenuItem(
+            value: _StudioDockMenuAction.formattedView,
+            checked: _formattedView,
+            child: const Text('Formatted View'),
+          ),
           if (widget.onToggleFullscreen != null)
             PopupMenuItem(value: _StudioDockMenuAction.toggleFullscreen,
                 enabled: widget.videoSurface != null,
@@ -2596,6 +2739,19 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         final route = _unloadVideoMenuRoute;
         _unloadVideoMenuRoute = null;
         unawaited(_unloadVideoSafely(afterMenu: route));
+      case _StudioDockMenuAction.showOriginalLine:
+        final route = _editPreferenceMenuRoute;
+        _editPreferenceMenuRoute = null;
+        unawaited(_setEditPreference(
+            StudioDockEditPreference.showOriginalLine, afterMenu: route));
+      case _StudioDockMenuAction.autoSaveWithNavigation:
+        unawaited(_setEditPreference(
+            StudioDockEditPreference.autoSaveWithNavigation));
+      case _StudioDockMenuAction.showOriginalTextField:
+        unawaited(_setEditPreference(
+            StudioDockEditPreference.showOriginalTextField));
+      case _StudioDockMenuAction.formattedView:
+        setState(() => _formattedView = !_formattedView);
       case _StudioDockMenuAction.repeatCurrent:
         if (widget.videoSurface != null && _cues.isNotEmpty) {
           widget.onToggleRepeat?.call();
@@ -4318,7 +4474,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     switch (_inspectorTab) {
       case 0:
         return [
-          if (!widget.isEditMode) ...[
+          if (!widget.isEditMode && widget.showOriginalTextField) ...[
             _fieldLabel('ORIGINAL TEXT'),
             Container(
               padding: EdgeInsets.all(12),
@@ -4326,8 +4482,14 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                 border: Border.all(color: _border),
                 borderRadius: BorderRadius.circular(7),
               ),
-              child: Text(_selected.original,
-                style: const TextStyle(fontSize: 13, height: 1.5)),
+              child: _formattedView
+                  ? CustomHtmlText(
+                      key: const ValueKey('studio-formatted-original'),
+                      htmlContent: _selected.original.replaceAll('\n', '<br>'),
+                      defaultStyle: const TextStyle(fontSize: 13, height: 1.5),
+                    )
+                  : Text(_selected.original,
+                      style: const TextStyle(fontSize: 13, height: 1.5)),
             ),
             const SizedBox(height: 17),
           ],
@@ -4349,7 +4511,9 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                 : ValueKey('studio-edit-' + _selected.id.toString() +
                     '-' + _draftRevision.toString()),
             initialValue: _draftCueId == _selectedId && _draftText != null
-                ? _draftText : _selected.edited,
+                ? _draftText : (!widget.isEditMode &&
+                    widget.showOriginalLine && _selected.edited.isEmpty
+                    ? _selected.original : _selected.edited),
             readOnly: _savingDraft ||
                 (widget.isLiveSession && widget.onApplyCueText == null),
             minLines: 3, maxLines: 8,
@@ -4370,6 +4534,27 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               }
             },
           ),
+          if (_formattedView) ...[
+            const SizedBox(height: 12),
+            _fieldLabel('FORMATTED PREVIEW · READ ONLY'),
+            Container(
+              key: const ValueKey('studio-formatted-preview'),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                border: Border.all(color: _border),
+                borderRadius: BorderRadius.circular(7),
+              ),
+              child: CustomHtmlText(
+                htmlContent: (_draftCueId == _selectedId && _draftText != null
+                    ? _draftText!
+                    : (!widget.isEditMode && widget.showOriginalLine &&
+                        _selected.edited.isEmpty
+                        ? _selected.original : _selected.edited))
+                    .replaceAll('\n', '<br>'),
+                defaultStyle: const TextStyle(fontSize: 13, height: 1.5),
+              ),
+            ),
+          ],
           if (!widget.isEditMode) ...[
             const SizedBox(height: 14),
             OutlinedButton.icon(

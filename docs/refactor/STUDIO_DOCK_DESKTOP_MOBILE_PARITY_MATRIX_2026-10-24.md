@@ -68,11 +68,13 @@ Dock's native menubar, shared services, and player controls:
   formatting/dictionary/Paste Original hotkeys into the shared draft path.
   R24 adds the mobile multi-selection commands and per-cue actions to the
   desktop right-click menu. R25 adds direct saved-video unlink with draft and
-  media safety guards. Mobile Edit Line's per-user toggles for Show Original
-  Line, Auto-save with navigation, Show Original Text Field and Formatted View
-  have **not** all been given equivalent desktop preferences; the Dock always
-  exposes original/edited columns and uses Apply/Discard draft navigation.
-  This interaction difference still needs a product-level parity decision.
+  media safety guards. **R26 wires** mobile Edit Line's original fallback,
+  navigation-save and original-field toggles through the shared Isar settings,
+  adds a transient formatted preview, and keeps the original/edited desktop
+  grid intact. Auto-save uses the existing checkpoint-backed Apply, never
+  copies an untouched original fallback into persisted edited text; notes,
+  media and project transitions retain their explicit draft guards. These
+  behaviors still require native Windows acceptance.
   Native loop behavior, actual OS chord handling,
   dictionary provider selection and pointer context menu behavior are not
   accepted. Do **not** mark these native behaviors complete.

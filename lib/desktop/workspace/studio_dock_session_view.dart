@@ -97,6 +97,13 @@ class _StudioDockSessionViewState
   bool _fullscreenReviewBusy = false;
   bool _msoneEnabled = false;
   int _msonePreferenceRevision = 0;
+  EditorLineDisplayPreferences _lineDisplay =
+      const EditorLineDisplayPreferences(
+        showOriginalLine: false,
+        autoSaveWithNavigation: true,
+        showOriginalTextField: true,
+      );
+  int _lineDisplayRevision = 0;
   EditorSecondarySubtitleSource _secondarySource =
       EditorSecondarySubtitleSource.none;
   List<SimpleSubtitleLine> _externalSecondary = const [];
@@ -106,6 +113,39 @@ class _StudioDockSessionViewState
 
   VideoRepository get _videoRepository => VideoRepository(
       EditorPreferencesRepository(ref.read(isarProvider)));
+
+  Future<void> _refreshLineDisplay() async {
+    final revision = ++_lineDisplayRevision;
+    try {
+      final options = await EditorPreferencesRepository(
+          ref.read(isarProvider)).getLineDisplayPreferences();
+      if (mounted && revision == _lineDisplayRevision) {
+        setState(() => _lineDisplay = options);
+      }
+    } catch (_) {
+      // The live editor remains usable with safe defaults if settings fail.
+    }
+  }
+
+  Future<bool> _saveLineDisplayPreference(
+      StudioDockEditPreference preference, bool value) async {
+    final repository = EditorPreferencesRepository(ref.read(isarProvider));
+    try {
+      switch (preference) {
+        case StudioDockEditPreference.showOriginalLine:
+          await repository.setShowOriginalLine(value);
+        case StudioDockEditPreference.autoSaveWithNavigation:
+          await repository.setAutoSaveWithNavigation(value);
+        case StudioDockEditPreference.showOriginalTextField:
+          await repository.setShowOriginalTextField(value);
+      }
+      if (!mounted) return false;
+      await _refreshLineDisplay();
+      return mounted;
+    } catch (_) {
+      return false;
+    }
+  }
 
   Future<void> _refreshSavedSecondary() async {
     final revision = ++_secondaryRevision;
@@ -1062,6 +1102,7 @@ class _StudioDockSessionViewState
     _snapshot = _load();
     _videoPath = widget.allowNativePlayback ? _resolveVideoPath() : null;
     unawaited(_refreshMsonePreference());
+    unawaited(_refreshLineDisplay());
     unawaited(_refreshSavedSecondary());
   }
 
@@ -1159,12 +1200,14 @@ class _StudioDockSessionViewState
             if (mounted) {
               setState(() {});
               unawaited(_refreshMsonePreference());
+              unawaited(_refreshLineDisplay());
             }
           }),
         ),
       ),
     );
     if (mounted) await _refreshMsonePreference();
+    if (mounted) await _refreshLineDisplay();
   }
 
   Future<void> _saveProjectFromSettings() async {
@@ -1430,6 +1473,7 @@ class _StudioDockSessionViewState
       _externalSecondary = const [];
       _showSecondary = true;
       unawaited(_refreshSavedSecondary());
+      unawaited(_refreshLineDisplay());
     }
   }
 
@@ -1486,6 +1530,10 @@ class _StudioDockSessionViewState
         projectTitle: session.fileName,
         encoding: session.encoding,
         isEditMode: session.isEditMode,
+        showOriginalLine: _lineDisplay.showOriginalLine,
+        autoSaveWithNavigation: _lineDisplay.autoSaveWithNavigation,
+        showOriginalTextField: _lineDisplay.showOriginalTextField,
+        onSaveEditPreference: _saveLineDisplayPreference,
         onChooseProject: widget.onChooseProject,
         onImportFile: widget.onImportFile,
         onNewProject: widget.onNewProject,

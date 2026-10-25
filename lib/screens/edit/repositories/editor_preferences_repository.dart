@@ -3,6 +3,20 @@ import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/database/stores/preferences_store.dart';
 import 'package:subtitle_studio/database/stores/video_preferences_store.dart';
 
+/// Display/navigation preferences shared by mobile Edit Line and Studio Dock.
+/// Formatted View is deliberately transient, as it is on mobile.
+class EditorLineDisplayPreferences {
+  const EditorLineDisplayPreferences({
+    required this.showOriginalLine,
+    required this.autoSaveWithNavigation,
+    required this.showOriginalTextField,
+  });
+
+  final bool showOriginalLine;
+  final bool autoSaveWithNavigation;
+  final bool showOriginalTextField;
+}
+
 /// Isar-backed persistence used by the main Editor's video/layout repository.
 ///
 /// Keeping these operations behind an injected repository removes the Editor's
@@ -24,6 +38,33 @@ class EditorPreferencesRepository {
   ) {
     return _preferencesStore.update(update);
   }
+
+  Future<EditorLineDisplayPreferences> getLineDisplayPreferences() async {
+    final preferences = await _getPreferences();
+    return EditorLineDisplayPreferences(
+      showOriginalLine: preferences.showOriginalLine,
+      autoSaveWithNavigation: preferences.showOriginalLine
+          ? preferences.autoSaveWithNavigation : true,
+      showOriginalTextField: preferences.showOriginalTextField,
+    );
+  }
+
+  /// One transaction preserves the mobile coupling: enabling original-line
+  /// fallback disables navigation auto-save until explicitly re-enabled.
+  Future<void> setShowOriginalLine(bool enabled) => _updatePreferences(
+    (preferences) {
+      preferences.showOriginalLine = enabled;
+      preferences.autoSaveWithNavigation = !enabled;
+    },
+  );
+
+  Future<void> setAutoSaveWithNavigation(bool enabled) =>
+      _updatePreferences((preferences) =>
+          preferences.autoSaveWithNavigation = enabled);
+
+  Future<void> setShowOriginalTextField(bool enabled) =>
+      _updatePreferences((preferences) =>
+          preferences.showOriginalTextField = enabled);
 
   Future<VideoPreferences> getVideoPreferences(
     int subtitleCollectionId,
