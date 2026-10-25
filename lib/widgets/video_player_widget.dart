@@ -164,6 +164,10 @@ class VideoPlayerWidget extends ConsumerStatefulWidget {
   /// Parameters: (isRepeatEnabled)
   final Function(bool)? onRepeatModeToggled;
 
+  /// Opens the host's repeat-range picker. Desktop supplies this instead of
+  /// requiring an EditSubtitleScreen ancestor in its fullscreen overlay.
+  final VoidCallback? onOpenRepeatRange;
+
   /// Whether repeat mode is currently enabled
   final bool isRepeatModeEnabled;
 
@@ -187,6 +191,7 @@ class VideoPlayerWidget extends ConsumerStatefulWidget {
     this.onPlayStateChanged,
     this.onAudioTrackChanged,                      // Play state callback (optional)
     this.onRepeatModeToggled,                     // Repeat mode callback (optional)
+    this.onOpenRepeatRange,
     this.isRepeatModeEnabled = false,             // Repeat mode state (optional)
     this.onFullscreenExited,                      // Fullscreen exit callback (optional)
   });

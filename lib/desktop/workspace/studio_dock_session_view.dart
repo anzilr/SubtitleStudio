@@ -23,6 +23,7 @@ import 'package:subtitle_studio/screens/edit/services/editor_secondary_subtitle_
 import 'package:subtitle_studio/utils/subtitle_parser.dart';
 import 'package:subtitle_studio/widgets/secondary_subtitle_sheet.dart';
 import 'package:subtitle_studio/widgets/video_player_widget.dart';
+import 'package:subtitle_studio/widgets/video/repeat_range_dialog.dart';
 
 import 'studio_dock_workspace.dart';
 import 'studio_dock_session_loader.dart';
@@ -36,6 +37,7 @@ import 'studio_dock_media_plan.dart';
 import 'studio_dock_video_surface.dart';
 import 'studio_dock_waveform_surface.dart';
 import 'studio_dock_playback_link.dart';
+import 'studio_dock_repeat_controller.dart';
 import 'studio_dock_file_actions.dart';
 import 'studio_dock_project_save_actions.dart';
 import 'studio_dock_history_service.dart';
@@ -87,6 +89,8 @@ class _StudioDockSessionViewState
   bool _selectingVideo = false;
   StudioDockSessionSnapshot? _latestBaseline;
   final StudioDockPlaybackLink _playback = StudioDockPlaybackLink();
+  late final StudioDockRepeatController _repeat =
+      StudioDockRepeatController(_playback);
   GlobalKey<StudioDockWorkspaceState> _dockKey =
       GlobalKey<StudioDockWorkspaceState>();
   bool _waveformEditBusy = false;
@@ -230,6 +234,44 @@ class _StudioDockSessionViewState
     // Reuse the mounted player and its fullscreen OverlayEntry; do not build
     // another Video or detach the waveform's shared playback coordinator.
     _nativePlayerState?.toggleCustomFullscreen();
+  }
+
+  void _toggleRepeatCurrent() {
+    if (!widget.allowNativePlayback || _nativePlayerState == null) return;
+    final cue = _dockKey.currentState?.selectedCueNumber ?? -1;
+    setState(() => _repeat.toggleCurrent(cue));
+  }
+
+  void _setRepeatMode(bool enabled) {
+    if (!widget.allowNativePlayback || _nativePlayerState == null) return;
+    final cue = _dockKey.currentState?.selectedCueNumber ?? -1;
+    setState(() {
+      if (enabled) {
+        _repeat.setNormal(cue);
+      } else {
+        _repeat.stop();
+      }
+    });
+  }
+
+  void _openRepeatRange() {
+    if (!mounted || !widget.allowNativePlayback ||
+        _nativePlayerState == null || _latestBaseline == null) return;
+    final subtitles = StudioDockMediaPlan.overlayCues(_latestBaseline!);
+    if (subtitles.isEmpty) return;
+    unawaited(showDialog<void>(
+      context: context,
+      builder: (_) => RepeatRangeDialog(
+        subtitles: subtitles,
+        onNormalRepeat: () {
+          final cue = _dockKey.currentState?.selectedCueNumber ?? -1;
+          setState(() => _repeat.setNormal(cue));
+        },
+        onCustomRangeSelected: (first, last) {
+          setState(() => _repeat.setRange(first, last));
+        },
+      ),
+    ));
   }
 
   Future<void> _submitToMsone() async {
@@ -1025,6 +1067,7 @@ class _StudioDockSessionViewState
 
   @override
   void dispose() {
+    _repeat.dispose();
     _playback.dispose();
     if (widget.suppressParentEditorHotkeys) {
       MSoneHotkeyManager.instance.resumeCallbacks();
@@ -1407,6 +1450,8 @@ class _StudioDockSessionViewState
             resolved: line.resolved,
           ),
       ];
+      final videoCues = StudioDockMediaPlan.overlayCues(session);
+      _repeat.updateCues(videoCues);
       Widget buildDock(String? validVideoPath) => StudioDockWorkspace(
         key: _dockKey,
         initialCues: cues,
@@ -1423,6 +1468,12 @@ class _StudioDockSessionViewState
             widget.allowNativePlayback ? _toggleExistingPlayback : null,
         onToggleFullscreen:
             widget.allowNativePlayback ? _toggleExistingFullscreen : null,
+        onToggleRepeat:
+            widget.allowNativePlayback ? _toggleRepeatCurrent : null,
+        onOpenRepeatRange:
+            widget.allowNativePlayback ? _openRepeatRange : null,
+        onSelectedCueChanged: _repeat.selectCue,
+        repeatEnabled: _repeat.enabled,
         onOpenAppSettings: _openAppSettings,
         onOpenProjectSettings:
             widget.enableEditing && widget.allowNativePlayback
@@ -1485,7 +1536,7 @@ class _StudioDockSessionViewState
                 key: ValueKey('studio-dock-player-${session.collectionId}-$validVideoPath'),
                 collectionId: session.collectionId,
                 videoPath: validVideoPath,
-                subtitles: StudioDockMediaPlan.overlayCues(session),
+                subtitles: videoCues,
                 secondarySubtitles: _secondaryOverlay(session),
                 onPlayerStateChanged: (player) => _nativePlayerState = player,
                 onSubtitleMarked: widget.enableEditing
@@ -1494,6 +1545,9 @@ class _StudioDockSessionViewState
                     ? _saveFullscreenComment : null,
                 onSubtitleResolvedChanged: widget.enableEditing
                     ? _resolveFromFullscreen : null,
+                onRepeatModeToggled: _setRepeatMode,
+                isRepeatModeEnabled: _repeat.enabled,
+                onOpenRepeatRange: _openRepeatRange,
                 playback: _playback,
               ),
         waveformSurface: validVideoPath == null || !widget.allowNativePlayback

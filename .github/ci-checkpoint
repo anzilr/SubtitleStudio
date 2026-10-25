@@ -242,3 +242,5 @@ DS5 R21 FLOATING PLAYBACK FULL GATE 2026-10-24: optional live transport overlay 
 DS5 R21 PAUSED DETACH FULL RETRY 2026-10-24: explicit playback attachment notifier + floating transport disabled after paused player detaches. Flutter pub get/analyze/full tests only; NO platform builds.
 
 DS5 R21 ANALYZER CLEAN FINAL 2026-10-24: remove duplicate fullscreen review test import; verify floating playback detachment and full suite. pub get/analyze/tests only, no builds.
+
+DS5 R22 REPEAT PLAYBACK FULL GATE 2026-10-24: shared repeat current/range controller and dialog, detachment guards, desktop menu and hotkeys, tests; Flutter pub get/analyze/full tests only, never native platform builds.

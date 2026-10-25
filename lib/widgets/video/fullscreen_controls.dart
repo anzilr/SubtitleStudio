@@ -912,6 +912,12 @@ class _RepeatButtonState extends State<_RepeatButton> {
   }
   
   Future<void> _showRepeatRangeDialog(BuildContext context) async {
+    final desktopPicker =
+        context.findAncestorStateOfType<VideoPlayerWidgetState>()?.widget.onOpenRepeatRange;
+    if (desktopPicker != null) {
+      desktopPicker();
+      return;
+    }
     final editScreenState =
         context.findAncestorStateOfType<EditSubtitleScreenState>();
     if (editScreenState == null) return;

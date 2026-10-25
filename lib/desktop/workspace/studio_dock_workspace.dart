@@ -31,7 +31,8 @@ enum _StudioDockMenuAction {
   loadSecondary, toggleSecondary,
   shiftSelected, deleteSelected, selectByIndex, rangeSelection, goToLine,
   importComments, removeHearingImpaired, insertMsoneBanners, normalizeMalayalam,
-  explorer, inspector, toggleFullscreen, floatingPlayback, settings, help,
+  explorer, inspector, toggleFullscreen, floatingPlayback,
+  repeatCurrent, repeatRange, settings, help,
 }
 
 /// One subtitle row displayed in the Studio Dock workspace.
@@ -143,6 +144,10 @@ class StudioDockWorkspace extends StatefulWidget {
     this.onChooseVideo,
     this.onTogglePlayback,
     this.onToggleFullscreen,
+    this.onToggleRepeat,
+    this.onOpenRepeatRange,
+    this.onSelectedCueChanged,
+    this.repeatEnabled = false,
     this.onOpenAppSettings,
     this.onOpenProjectSettings,
     this.onImportComments,
@@ -252,6 +257,12 @@ class StudioDockWorkspace extends StatefulWidget {
   final VoidCallback? onTogglePlayback;
   /// Toggle fullscreen on the same mounted native video player.
   final VoidCallback? onToggleFullscreen;
+  /// The shared native player repeats the currently selected subtitle.
+  final VoidCallback? onToggleRepeat;
+  /// Opens the shared mobile repeat-range dialog for the native player.
+  final VoidCallback? onOpenRepeatRange;
+  final ValueChanged<int>? onSelectedCueChanged;
+  final bool repeatEnabled;
   /// Opens the production shared SettingsSheet instead of a parallel desktop
   /// preferences implementation. The host owns provider-dependent UI.
   final Future<void> Function()? onOpenAppSettings;
@@ -399,6 +410,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     HotkeyAction.previousLine,
     HotkeyAction.playPause,
     HotkeyAction.toggleFullscreen,
+    HotkeyAction.toggleRepeat,
+    HotkeyAction.toggleRepeatRange,
     HotkeyAction.delete,
     HotkeyAction.editCurrentLine,
     HotkeyAction.showMarkedLines,
@@ -421,6 +434,9 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       action == HotkeyAction.playPause && widget.onTogglePlayback != null ||
       action == HotkeyAction.toggleFullscreen &&
           widget.onToggleFullscreen != null ||
+      action == HotkeyAction.toggleRepeat && widget.onToggleRepeat != null ||
+      action == HotkeyAction.toggleRepeatRange &&
+          widget.onOpenRepeatRange != null ||
       action == HotkeyAction.delete &&
           (widget.onDeleteSelectedCues != null || widget.onDeleteCue != null) ||
       action == HotkeyAction.editCurrentLine &&
@@ -622,6 +638,10 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         }
       case HotkeyAction.toggleFullscreen:
         widget.onToggleFullscreen?.call();
+      case HotkeyAction.toggleRepeat:
+        widget.onToggleRepeat?.call();
+      case HotkeyAction.toggleRepeatRange:
+        widget.onOpenRepeatRange?.call();
       case HotkeyAction.delete:
         if (_selectedIds.length > 1 && widget.onDeleteSelectedCues != null) {
           unawaited(_deleteSelectedSafely());
@@ -1346,6 +1366,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       _draftResolved = null;
       _draftRevision++;
     });
+    widget.onSelectedCueChanged?.call(_selectedId);
     unawaited(_reloadHistory());
   }
 
@@ -1705,6 +1726,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       }
       _selectedId = id;
     });
+    widget.onSelectedCueChanged?.call(id);
   }
 
   void _selectFromPointer(int id) {
@@ -1717,7 +1739,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     _selectCue(id,
         range: keyboard.isShiftPressed,
         toggle: keyboard.isControlPressed || keyboard.isMetaPressed);
-    if (!keyboard.isShiftPressed && !keyboard.isControlPressed && !keyboard.isMetaPressed) {
+    if (!widget.repeatEnabled && !keyboard.isShiftPressed &&
+        !keyboard.isControlPressed && !keyboard.isMetaPressed) {
       final cue = _cues.where((item) => item.id == id).firstOrNull;
       if (cue != null) widget.playback?.seek(Duration(milliseconds: TimeValidator.timeStringToMilliseconds(cue.start)));
     }
@@ -2196,6 +2219,16 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             PopupMenuItem(value: _StudioDockMenuAction.toggleFullscreen,
                 enabled: widget.videoSurface != null,
                 child: const Text('Toggle video fullscreen')),
+          if (widget.onToggleRepeat != null)
+            PopupMenuItem(value: _StudioDockMenuAction.repeatCurrent,
+                enabled: widget.videoSurface != null && _cues.isNotEmpty,
+                child: Text(widget.repeatEnabled
+                    ? 'Stop subtitle repeat'
+                    : 'Repeat selected subtitle')),
+          if (widget.onOpenRepeatRange != null)
+            PopupMenuItem(value: _StudioDockMenuAction.repeatRange,
+                enabled: widget.videoSurface != null && _cues.isNotEmpty,
+                child: const Text('Repeat subtitle range…')),
           if (widget.videoSurface != null &&
               widget.onTogglePlayback != null && widget.playback != null)
             PopupMenuItem(
@@ -2311,6 +2344,14 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         }
       case _StudioDockMenuAction.toggleFullscreen:
         if (widget.videoSurface != null) widget.onToggleFullscreen?.call();
+      case _StudioDockMenuAction.repeatCurrent:
+        if (widget.videoSurface != null && _cues.isNotEmpty) {
+          widget.onToggleRepeat?.call();
+        }
+      case _StudioDockMenuAction.repeatRange:
+        if (widget.videoSurface != null && _cues.isNotEmpty) {
+          widget.onOpenRepeatRange?.call();
+        }
       case _StudioDockMenuAction.settings:
         unawaited(_switchSection(4));
       case _StudioDockMenuAction.help:
@@ -2357,6 +2398,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       _rangeSelectionMode = false;
       _rangeStartCueId = null;
     });
+    widget.onSelectedCueChanged?.call(cue.id);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_cueScroll.hasClients) return;
@@ -2370,7 +2412,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
 
     // Match mobile's +50ms margin so the selected subtitle is active at the
     // destination. No player exists until the host attaches its shared link.
-    if (widget.playback?.isAttached ?? false) {
+    if (!widget.repeatEnabled && (widget.playback?.isAttached ?? false)) {
       final startMs = TimeValidator.timeStringToMilliseconds(cue.start);
       widget.playback!.seek(Duration(milliseconds: startMs + 50));
     }
@@ -2392,6 +2434,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       _rangeSelectionMode = false;
       _rangeStartCueId = null;
     });
+    widget.onSelectedCueChanged?.call(_selectedId);
   }
 
   Future<void> _selectByIndexSafely() async {
@@ -2480,6 +2523,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         _selectedId = cueId;
         _selectedIds..clear()..add(cueId);
       });
+      widget.onSelectedCueChanged?.call(cueId);
       return;
     }
     final first = _cues.indexWhere((cue) => cue.id == _rangeStartCueId);

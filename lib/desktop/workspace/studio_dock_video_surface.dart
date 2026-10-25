@@ -20,6 +20,9 @@ class StudioDockVideoSurface extends StatefulWidget {
     this.onSubtitleMarked,
     this.onSubtitleReviewSaved,
     this.onSubtitleResolvedChanged,
+    this.onRepeatModeToggled,
+    this.isRepeatModeEnabled = false,
+    this.onOpenRepeatRange,
   });
 
   final int collectionId;
@@ -33,6 +36,9 @@ class StudioDockVideoSurface extends StatefulWidget {
   final Future<void> Function(int, bool)? onSubtitleMarked;
   final Future<bool> Function(int, String?, bool, bool)? onSubtitleReviewSaved;
   final Future<void> Function(int, bool)? onSubtitleResolvedChanged;
+  final ValueChanged<bool>? onRepeatModeToggled;
+  final bool isRepeatModeEnabled;
+  final VoidCallback? onOpenRepeatRange;
 
   @override
   State<StudioDockVideoSurface> createState() => _StudioDockVideoSurfaceState();
@@ -114,5 +120,8 @@ class _StudioDockVideoSurfaceState extends State<StudioDockVideoSurface> {
     onSubtitleMarked: widget.onSubtitleMarked,
     onSubtitleReviewSaved: widget.onSubtitleReviewSaved,
     onSubtitleResolvedChanged: widget.onSubtitleResolvedChanged,
+    onRepeatModeToggled: widget.onRepeatModeToggled,
+    isRepeatModeEnabled: widget.isRepeatModeEnabled,
+    onOpenRepeatRange: widget.onOpenRepeatRange,
   );
 }

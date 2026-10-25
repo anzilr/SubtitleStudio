@@ -1,15 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:subtitle_studio/screens/screen_edit_line.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
+import 'package:subtitle_studio/widgets/video/subtitle.dart';
 
 /// Dialog for setting a custom subtitle repeat range.
 class RepeatRangeDialog extends StatefulWidget {
-  final EditSubtitleScreenState editScreenState;
+  final EditSubtitleScreenState? editScreenState;
+  /// Desktop hosts can reuse the same range picker without mounting an
+  /// EditSubtitleScreen behind their own video player.
+  final List<Subtitle>? subtitles;
+  final VoidCallback? onNormalRepeat;
+  final void Function(int first, int last)? onCustomRangeSelected;
 
   const RepeatRangeDialog({
     super.key,
-    required this.editScreenState,
-  });
+    this.editScreenState,
+    this.subtitles,
+    this.onNormalRepeat,
+    this.onCustomRangeSelected,
+  }) : assert(editScreenState != null || subtitles != null);
+
+  List<Subtitle> get availableSubtitles =>
+      subtitles ?? editScreenState!.subtitles;
 
   @override
   State<RepeatRangeDialog> createState() => RepeatRangeDialogState();
@@ -25,7 +37,7 @@ class RepeatRangeDialogState extends State<RepeatRangeDialog> {
   void initState() {
     super.initState();
 
-    final subtitleCount = widget.editScreenState.subtitles.length;
+    final subtitleCount = widget.availableSubtitles.length;
     if (subtitleCount > 0) {
       _endIndex = subtitleCount - 1;
     }
@@ -43,7 +55,7 @@ class RepeatRangeDialogState extends State<RepeatRangeDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final subtitleCount = widget.editScreenState.subtitles.length;
+    final subtitleCount = widget.availableSubtitles.length;
 
     if (subtitleCount == 0) {
       return AlertDialog(
@@ -193,7 +205,7 @@ class RepeatRangeDialogState extends State<RepeatRangeDialog> {
   }
 
   Widget _buildRangePreview(BuildContext context) {
-    final subtitles = widget.editScreenState.subtitles;
+    final subtitles = widget.availableSubtitles;
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -234,12 +246,16 @@ class RepeatRangeDialogState extends State<RepeatRangeDialog> {
   }
 
   void _enableNormalRepeat() {
-    widget.editScreenState.clearCustomRepeatRange();
-
-    if (!widget.editScreenState.isRepeatModeEnabled) {
-      widget.editScreenState.toggleRepeatMode();
+    if (widget.onNormalRepeat != null) {
+      widget.onNormalRepeat!();
     } else {
-      widget.editScreenState.startRepeatPlayback();
+      final editor = widget.editScreenState!;
+      editor.clearCustomRepeatRange();
+      if (!editor.isRepeatModeEnabled) {
+        editor.toggleRepeatMode();
+      } else {
+        editor.startRepeatPlayback();
+      }
     }
 
     Navigator.of(context).pop();
@@ -263,15 +279,16 @@ class RepeatRangeDialogState extends State<RepeatRangeDialog> {
       return;
     }
 
-    widget.editScreenState.setCustomRepeatRange(
-      startValue - 1,
-      endValue - 1,
-    );
-
-    if (!widget.editScreenState.isRepeatModeEnabled) {
-      widget.editScreenState.toggleRepeatMode();
+    if (widget.onCustomRangeSelected != null) {
+      widget.onCustomRangeSelected!(startValue - 1, endValue - 1);
     } else {
-      widget.editScreenState.startRepeatPlayback();
+      final editor = widget.editScreenState!;
+      editor.setCustomRepeatRange(startValue - 1, endValue - 1);
+      if (!editor.isRepeatModeEnabled) {
+        editor.toggleRepeatMode();
+      } else {
+        editor.startRepeatPlayback();
+      }
     }
 
     Navigator.of(context).pop();

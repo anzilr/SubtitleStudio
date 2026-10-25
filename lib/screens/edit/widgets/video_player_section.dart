@@ -28,6 +28,9 @@ class VideoPlayerSection extends StatefulWidget {
   final Function(int, String?)? onSubtitleCommentUpdated;
   final Future<bool> Function(int, String?, bool, bool)? onSubtitleReviewSaved;
   final Future<void> Function(int, bool)? onSubtitleResolvedChanged;
+  final ValueChanged<bool>? onRepeatModeToggled;
+  final bool isRepeatModeEnabled;
+  final VoidCallback? onOpenRepeatRange;
 
   const VideoPlayerSection({
     super.key,
@@ -47,6 +50,9 @@ class VideoPlayerSection extends StatefulWidget {
     this.onSubtitleCommentUpdated,
     this.onSubtitleReviewSaved,
     this.onSubtitleResolvedChanged,
+    this.onRepeatModeToggled,
+    this.isRepeatModeEnabled = false,
+    this.onOpenRepeatRange,
   });
 
   @override
@@ -94,6 +100,9 @@ class _VideoPlayerSectionState extends State<VideoPlayerSection>
           onSubtitleCommentUpdated: widget.onSubtitleCommentUpdated,
           onSubtitleReviewSaved: widget.onSubtitleReviewSaved,
           onSubtitleResolvedChanged: widget.onSubtitleResolvedChanged,
+          onRepeatModeToggled: widget.onRepeatModeToggled,
+          isRepeatModeEnabled: widget.isRepeatModeEnabled,
+          onOpenRepeatRange: widget.onOpenRepeatRange,
         ),
       ),
     );
