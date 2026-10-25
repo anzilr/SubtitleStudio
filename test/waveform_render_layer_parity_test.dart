@@ -48,6 +48,33 @@ Future<Uint8List> _paintPixels(
 }
 
 void main() {
+  testWidgets('waveform fills both positive and negative peak envelopes',
+      (tester) async {
+    final painter = WaveformPainter(
+      zoomLevel: ZoomLevel(samplesPerPixel: 8, data: [
+        List<WaveformSample>.filled(180, WaveformSample(-0.8, 0.4)),
+      ]),
+      scrollOffset: 0,
+      playbackPosition: Duration.zero,
+      subtitles: const [],
+      sampleRate: 2000,
+      samplesPerPixel: 8,
+      waveformColor: Colors.green,
+      backgroundColor: Colors.black,
+      showWaveformOnly: true,
+      showPlaybackIndicator: false,
+    );
+    final pixels = await tester.runAsync(
+        () => _paintPixels(painter, split: false));
+    expect(pixels, isNotNull);
+    // The negative half used to receive only a thin zig-zag stroke. It must
+    // now contain the same filled envelope as the positive half.
+    const x = 30;
+    const y = 85;
+    final pixel = (y * 180 + x) * 4;
+    expect(pixels![pixel + 1], greaterThan(20));
+  });
+
   testWidgets('split painter exactly preserves single-pass rendered pixels',
       (tester) async {
     for (final position in [

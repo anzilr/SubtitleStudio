@@ -28,6 +28,8 @@ class WaveformPainter extends CustomPainter {
   final int samplesPerPixel;
   final double verticalZoom; // Amplitude multiplier
   final Color? backgroundColor;
+  /// Desktop-only timing ruler and grid, over the existing mobile waveform.
+  final bool showTimeRuler;
   final bool showSubtitlesOnly; // Show only subtitle boxes
   final bool showWaveformOnly; // Show only waveform
   final Color? subtitleHighlightColor; // Color for highlighting subtitle regions in waveform
@@ -64,6 +66,7 @@ class WaveformPainter extends CustomPainter {
     this.channelSpacing = 10.0,
     this.verticalZoom = 1.5,
     this.backgroundColor,
+    this.showTimeRuler = false,
     this.showSubtitlesOnly = false,
     this.showWaveformOnly = false,
     this.subtitleHighlightColor,
@@ -97,6 +100,7 @@ class WaveformPainter extends CustomPainter {
     channelSpacing: channelSpacing,
     verticalZoom: verticalZoom,
     backgroundColor: backgroundColor,
+    showTimeRuler: showTimeRuler,
     showSubtitlesOnly: showSubtitlesOnly,
     showWaveformOnly: showWaveformOnly,
     subtitleHighlightColor: subtitleHighlightColor,
@@ -160,6 +164,7 @@ class WaveformPainter extends CustomPainter {
           tiles,
         );
       }
+      if (showTimeRuler) _drawTimeRuler(canvas, size);
     }
 
     // Draw subtitle boxes (only if not waveform-only mode)
@@ -197,6 +202,51 @@ class WaveformPainter extends CustomPainter {
     }
   }
 
+  /// Subtle time divisions make spoken syllables easier to align without
+  /// taking a separate toolbar row from the subtitle list. Spacing adapts to
+  /// horizontal zoom, limiting labels in wide, zoomed-out recordings.
+  void _drawTimeRuler(Canvas canvas, Size size) {
+    if (sampleRate <= 0 || samplesPerPixel <= 0 || size.width <= 0) return;
+    final pixelsPerSecond = sampleRate / samplesPerPixel;
+    const intervals = <int>[1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 1800];
+    final secondsPerMark = intervals.firstWhere(
+      (interval) => interval * pixelsPerSecond >= 85,
+      orElse: () => intervals.last,
+    );
+    final firstSecond = (scrollOffset / pixelsPerSecond /
+        secondsPerMark).floor() * secondsPerMark;
+    final lastSecond = (scrollOffset + size.width) / pixelsPerSecond;
+    final gridPaint = Paint()
+      ..color = waveformColor.withValues(alpha: .16)
+      ..strokeWidth = 1;
+    final barPaint = Paint()
+      ..color = (backgroundColor ?? Colors.black)
+          .withValues(alpha: .73);
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, 17), barPaint);
+    for (var second = firstSecond;
+        second <= lastSecond && second < firstSecond + 1800 * secondsPerMark;
+        second += secondsPerMark) {
+      if (second < 0) continue;
+      final x = second * pixelsPerSecond - scrollOffset;
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
+      final hour = second ~/ 3600;
+      final minute = (second ~/ 60) % 60;
+      final sec = second % 60;
+      final label = hour > 0
+          ? '$hour:${minute.toString().padLeft(2, '0')}:${sec.toString().padLeft(2, '0')}'
+          : '$minute:${sec.toString().padLeft(2, '0')}';
+      final painter = TextPainter(
+        text: TextSpan(text: label, style: TextStyle(
+          fontSize: 10, fontFeatures: const [FontFeature.tabularFigures()],
+          color: waveformColor,
+        )),
+        textDirection: TextDirection.ltr,
+        maxLines: 1,
+      )..layout();
+      painter.paint(canvas, Offset(x + 3, 2));
+    }
+  }
+
   /// Draw waveform for a single channel
   void _drawChannel(Canvas canvas, Size size, int channel, double yOffset,
       double dynamicChannelHeight, List<WaveformViewportTile>? tiles) {
@@ -223,62 +273,43 @@ class WaveformPainter extends CustomPainter {
             .clamp(startPixel, zoomLevel.pixelCount)
             .clamp(startPixel, startPixel + 8192);
 
-    // Fill waveform area for better visibility (draw first, behind the stroke)
-    final fillPath = Path();
-    bool firstFillPoint = true;
-
-    for (var pixel = startPixel; pixel < endPixel && pixel < (channelData?.length ?? zoomLevel.pixelCount); pixel++) {
+    // Every sample contains a signed minimum and maximum. Previously the
+    // fill stopped at the center line and the stroke zig-zagged from the top
+    // of one sample to the bottom of the next. Quiet consonants and negative
+    // transients were consequently hard to see. Draw the *complete* peak
+    // envelope and individual vertical bars instead, without inventing new
+    // amplitude values or changing the audio/zoom pipeline.
+    final upper = <Offset>[];
+    final lower = <Offset>[];
+    final peakBars = Path();
+    final pixelLimit = channelData?.length ?? zoomLevel.pixelCount;
+    for (var pixel = startPixel; pixel < endPixel && pixel < pixelLimit; pixel++) {
       final sample = sampleAt(pixel);
       final x = pixel - scrollOffset;
-      final yMax = centerY - (sample.max * amplitude);
-
-      if (firstFillPoint) {
-        fillPath.moveTo(x, centerY);
-        firstFillPoint = false;
-      }
-      fillPath.lineTo(x, yMax);
+      final top = centerY - sample.max * amplitude;
+      final bottom = centerY - sample.min * amplitude;
+      upper.add(Offset(x, top));
+      lower.add(Offset(x, bottom));
+      peakBars.moveTo(x, top);
+      peakBars.lineTo(x, bottom);
     }
+    if (upper.isEmpty) return;
 
-    // Complete the fill path
-    if (!firstFillPoint) {
-      fillPath.lineTo((endPixel - scrollOffset).toDouble(), centerY);
-      fillPath.close();
-
-      final fillPaint = Paint()
-        ..color = waveformColor.withValues(alpha: 0.5)
-        ..style = PaintingStyle.fill;
-      canvas.drawPath(fillPath, fillPaint);
+    final envelope = Path()..moveTo(upper.first.dx, upper.first.dy);
+    for (var i = 1; i < upper.length; i++) {
+      envelope.lineTo(upper[i].dx, upper[i].dy);
     }
-
-    // Draw waveform stroke on top with thinner line
-    final waveformPaint = Paint()
-      ..color = waveformColor
-      ..strokeWidth = 1.0 // Thinner stroke
-      ..style = PaintingStyle.stroke;
-
-    // Draw waveform using lines
-    final path = Path();
-    bool isFirstPoint = true;
-
-    for (var pixel = startPixel; pixel < endPixel && pixel < (channelData?.length ?? zoomLevel.pixelCount); pixel++) {
-      final sample = sampleAt(pixel);
-      final x = pixel - scrollOffset;
-
-      // Draw from min to max for this pixel
-      final yMin = centerY - (sample.min * amplitude);
-      final yMax = centerY - (sample.max * amplitude);
-
-      if (isFirstPoint) {
-        path.moveTo(x, yMin);
-        isFirstPoint = false;
-      }
-
-      // Draw vertical line from min to max
-      path.lineTo(x, yMin);
-      path.lineTo(x, yMax);
+    for (var i = lower.length - 1; i >= 0; i--) {
+      envelope.lineTo(lower[i].dx, lower[i].dy);
     }
-
-    canvas.drawPath(path, waveformPaint);
+    envelope.close();
+    canvas.drawPath(envelope, Paint()
+      ..color = waveformColor.withValues(alpha: .52)
+      ..style = PaintingStyle.fill);
+    canvas.drawPath(peakBars, Paint()
+      ..color = waveformColor.withValues(alpha: .94)
+      ..strokeWidth = 1
+      ..style = PaintingStyle.stroke);
   }
 
   /// Draw subtitle overlays
@@ -963,6 +994,7 @@ class WaveformPainter extends CustomPainter {
         oldDelegate.backgroundColor != backgroundColor ||
         oldDelegate.channelHeight != channelHeight ||
         oldDelegate.channelSpacing != channelSpacing ||
+        oldDelegate.showTimeRuler != showTimeRuler ||
         oldDelegate.showSubtitlesOnly != showSubtitlesOnly;
     if (renderLayer == WaveformPaintLayer.scenery) return sceneryChanged;
     if (renderLayer == WaveformPaintLayer.overlays) {

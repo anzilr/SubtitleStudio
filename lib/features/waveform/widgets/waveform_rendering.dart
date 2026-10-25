@@ -584,6 +584,7 @@ extension _WaveformRendering on WaveformWidgetState {
                     },
                     itemBuilder: (context) => [
                       PopupMenuItem<String>(
+                        height: widget.compact ? 34 : kMinInteractiveDimension,
                         value: 'toggle_autoscroll',
                         child: Row(
                           children: [
@@ -597,7 +598,8 @@ extension _WaveformRendering on WaveformWidgetState {
                           ],
                         ),
                       ),
-                      const PopupMenuItem<String>(
+                      PopupMenuItem<String>(
+                        height: widget.compact ? 34 : kMinInteractiveDimension,
                         value: 'settings',
                         child: Row(
                           children: [
@@ -673,6 +675,7 @@ extension _WaveformRendering on WaveformWidgetState {
                                   addLineColor: WaveformControlColors.addLine,
                                   playbackColor: WaveformControlColors.playhead,
                                   backgroundColor: Theme.of(context).colorScheme.surface,
+                                  showTimeRuler: widget.compact,
                                   showSubtitlesOnly: false,
                                   showWaveformOnly: true,
                                   subtitleHighlightColor: _getSubtitleHighlightColor(context),
@@ -735,6 +738,7 @@ extension _WaveformRendering on WaveformWidgetState {
                                   addLineColor: WaveformControlColors.addLine,
                                   playbackColor: WaveformControlColors.playhead,
                                   backgroundColor: Colors.transparent,
+                                  showTimeRuler: widget.compact,
                                   showSubtitlesOnly: true,
                                   showWaveformOnly: false,
                                   subtitleHighlightColor: _getSubtitleHighlightColor(context),

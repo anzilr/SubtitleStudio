@@ -142,11 +142,12 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('desktop-cue-2')));
     await tester.pumpAndSettle();
-    // Display-only original fallback must not write a replacement edit.
+    // Showing an original during playback never fills the Edited Text input.
+    // An empty translation remains visibly empty until the user edits it.
     expect(saves, isEmpty);
     expect(tester.widget<TextFormField>(find.byKey(
         const ValueKey('studio-edit-2-1'))).initialValue,
-        'Second original');
+        '');
     expect(tester.takeException(), isNull);
   });
 

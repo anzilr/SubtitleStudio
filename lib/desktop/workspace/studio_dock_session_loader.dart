@@ -1,4 +1,5 @@
 import 'package:subtitle_studio/app/repositories/project_repository.dart';
+import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/screens/edit/repositories/subtitle_repository.dart';
 
 import 'studio_dock_session_snapshot.dart';
@@ -17,6 +18,7 @@ class StudioDockSessionLoader {
   Future<StudioDockSessionSnapshot> load({
     required int sessionId,
     required int collectionId,
+    void Function(SubtitleCollection)? onCollectionLoaded,
   }) async {
     final session = await _projects.getSession(sessionId);
     if (session == null) {
@@ -29,6 +31,7 @@ class StudioDockSessionLoader {
     if (collection == null) {
       throw StateError('The subtitle collection could not be found.');
     }
+    onCollectionLoaded?.call(collection);
     return StudioDockSessionSnapshot(
       sessionId: sessionId,
       collectionId: collectionId,

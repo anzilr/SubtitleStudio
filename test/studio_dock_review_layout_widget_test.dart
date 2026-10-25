@@ -10,6 +10,7 @@ void main() {
 
   Future<void> launch(WidgetTester tester, {
     Size size = const Size(1680, 1000),
+    ThemeData? theme,
     Future<StudioDockCueUpdate?> Function(
         List<int>, StudioDockReviewAction, int)? review,
     Future<bool> Function(int, String)? applyText,
@@ -19,7 +20,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(MaterialApp(theme: ThemeData.dark(),
+    await tester.pumpWidget(MaterialApp(theme: theme ?? ThemeData.dark(),
       home: StudioDockWorkspace(
         isLiveSession: true,
         onApplyBulkReview: review,
@@ -38,6 +39,21 @@ void main() {
     ));
     await tester.pumpAndSettle();
   }
+
+  testWidgets('compact subtitle rows use adaptive light-theme backgrounds',
+      (tester) async {
+    final lightTheme = ThemeData.light();
+    await launch(tester, theme: lightTheme);
+    final first = find.byKey(const ValueKey('desktop-cue-1'));
+    final second = find.byKey(const ValueKey('desktop-cue-2'));
+    expect(tester.getSize(first).height, 32);
+    expect(tester.getSize(second).height, 32);
+    final rowMaterial = tester.widget<Material>(find.ancestor(
+      of: second, matching: find.byType(Material),
+    ).first);
+    expect(rowMaterial.color, lightTheme.colorScheme.surfaceContainerLow);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('multi-cue mark/unmark confirms and retains selection',
       (tester) async {

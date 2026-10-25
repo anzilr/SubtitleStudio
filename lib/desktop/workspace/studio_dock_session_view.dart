@@ -94,6 +94,7 @@ class _StudioDockSessionViewState
   Future<String?>? _videoPath;
   bool _selectingVideo = false;
   StudioDockSessionSnapshot? _latestBaseline;
+  SubtitleCollection? _loadedCollection;
   final StudioDockPlaybackLink _playback = StudioDockPlaybackLink();
   late final StudioDockRepeatController _repeat =
       StudioDockRepeatController(_playback);
@@ -1281,15 +1282,13 @@ class _StudioDockSessionViewState
   Future<void> _openProjectSettings() async {
     if (!mounted) return;
     try {
-      final session = await ref.read(projectRepositoryProvider)
-          .getSession(widget.sessionId);
-      final collection = await ref.read(subtitleRepositoryProvider)
-          .fetchSubtitleCollection(widget.collectionId);
-      if (!mounted) return;
-      if (session == null || collection == null ||
-          session.subtitleCollectionId != collection.id) {
-        throw StateError('The active subtitle project is unavailable.');
-      }
+      // The embedded subtitle collection can be large. Open the route first
+      // and perform independent reads concurrently, so clicking Settings
+      // never freezes the workspace while storage is being queried.
+      final projectData = Future.wait<Object?>([
+        ref.read(projectRepositoryProvider).getSession(widget.sessionId),
+        _collectionForSettings(),
+      ]);
       await showDialog<void>(
         context: context,
         builder: (dialog) => Dialog(
@@ -1298,16 +1297,38 @@ class _StudioDockSessionViewState
             width: 880,
             height: (MediaQuery.sizeOf(dialog).height - 64)
                 .clamp(240.0, 840.0).toDouble(),
-            child: ProjectSettingsSheet(
-              session: session,
-              subtitleCollection: collection,
-              // The sheet persists changes; reconcile the live Dock after the
-              // route closes so no stale cue/encoding/media state remains.
-              onProjectUpdated: () {},
-              onSecondarySubtitlesLoaded: _setSecondaryLocally,
-              onSecondarySubtitlesCleared: _clearSecondaryLocally,
-              onSaveProject: _saveProjectFromSettings,
-              onLoadVideo: _chooseVideo,
+            child: FutureBuilder<List<Object?>>(
+              future: projectData,
+              builder: (context, result) {
+                if (result.hasError) {
+                  return Center(child: Text(
+                    'Could not load Project Settings. Please try again.',
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.error),
+                  ));
+                }
+                if (!result.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final session = result.data![0] as Session?;
+                final collection = result.data![1] as SubtitleCollection?;
+                if (session == null || collection == null ||
+                    session.subtitleCollectionId != collection.id) {
+                  return const Center(child: Text(
+                      'The active subtitle project is unavailable.'));
+                }
+                return ProjectSettingsSheet(
+                  session: session,
+                  subtitleCollection: collection,
+                  // Mutations are still reconciled with the live editor after
+                  // the route closes, preserving project-data consistency.
+                  onProjectUpdated: () {},
+                  onSecondarySubtitlesLoaded: _setSecondaryLocally,
+                  onSecondarySubtitlesCleared: _clearSecondaryLocally,
+                  onSaveProject: _saveProjectFromSettings,
+                  onLoadVideo: _chooseVideo,
+                );
+              },
             ),
           ),
         ),
@@ -1324,6 +1345,41 @@ class _StudioDockSessionViewState
     } finally {
       if (mounted) await _refreshAfterProjectSettings();
     }
+  }
+
+  /// Reuse the collection already read when the project opened. Settings
+  /// previously fetched all embedded subtitle lines a second time before
+  /// showing anything. Project text edits are reflected from the authoritative
+  /// live snapshot; file metadata comes from the original loaded collection.
+  Future<SubtitleCollection?> _collectionForSettings() async {
+    final cached = _loadedCollection;
+    final baseline = _latestBaseline;
+    if (cached == null || baseline == null ||
+        cached.id != widget.collectionId ||
+        baseline.collectionId != widget.collectionId) {
+      return ref.read(subtitleRepositoryProvider)
+          .fetchSubtitleCollection(widget.collectionId);
+    }
+    final lines = <SubtitleLine>[
+      for (final cue in baseline.cues)
+        (SubtitleLine()
+          ..index = cue.index
+          ..startTime = cue.start
+          ..endTime = cue.end
+          ..original = cue.original
+          ..edited = cue.edited.isEmpty ? null : cue.edited
+          ..marked = cue.marked
+          ..comment = cue.comment
+          ..resolved = cue.resolved),
+    ];
+    return SubtitleCollection(
+      fileName: cached.fileName,
+      filePath: cached.filePath,
+      originalFileUri: cached.originalFileUri,
+      encoding: baseline.encoding,
+      macOsSrtBookmark: cached.macOsSrtBookmark,
+      lines: lines,
+    )..id = cached.id;
   }
 
   Future<void> _refreshAfterCommentImport() async {
@@ -1480,6 +1536,11 @@ class _StudioDockSessionViewState
     return loader.load(
       sessionId: widget.sessionId,
       collectionId: widget.collectionId,
+      onCollectionLoaded: (collection) {
+        if (widget.collectionId == collection.id) {
+          _loadedCollection = collection;
+        }
+      },
     );
   }
 
@@ -1489,6 +1550,7 @@ class _StudioDockSessionViewState
     if (widget.sessionId != oldWidget.sessionId ||
         widget.collectionId != oldWidget.collectionId) {
       _latestBaseline = null;
+      _loadedCollection = null;
       _dockKey = GlobalKey<StudioDockWorkspaceState>();
       _snapshot = _load();
       _videoPath = widget.allowNativePlayback ? _resolveVideoPath() : null;

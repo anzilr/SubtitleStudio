@@ -94,6 +94,21 @@ void main() {
     expect(data.cues.single.original, isEmpty);
   });
 
+  test('loader exposes the already-read collection for desktop settings',
+      () async {
+    final ids = await seed(name: 'Settings.srt', lines: [
+      cue(1, original: 'Hello', edited: 'Edited'),
+    ]);
+    SubtitleCollection? cached;
+    await loader.load(
+      sessionId: ids.session,
+      collectionId: ids.collection,
+      onCollectionLoaded: (value) => cached = value,
+    );
+    expect(cached?.id, ids.collection);
+    expect(cached?.lines.single.edited, 'Edited');
+  });
+
   test('rejects cross-session access to a foreign subtitle collection',
       () async {
     final first = await seed(name: 'One.srt', lines: [cue(1)]);

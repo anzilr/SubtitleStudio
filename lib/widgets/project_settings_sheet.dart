@@ -293,17 +293,23 @@ class _ProjectSettingsSheetState extends ConsumerState<ProjectSettingsSheet> wit
         lines,
         lastEditedIndex: widget.session.lastEditedIndex ?? 1,
       );
+      // Statistics and marks are already available. Render the sheet now:
+      // media preferences may involve a separate database read on Windows,
+      // but they should not hold the entire settings dialog behind a spinner.
+      if (!mounted) return;
+      setState(() {
+        _sessionInfo = summary.sessionInfo;
+        _markedLines = summary.markedLines;
+        _isLoading = false;
+      });
       final preferences = await ref
           .read(editorPreferencesRepositoryProvider)
           .getVideoPreferences(widget.session.subtitleCollectionId);
       if (!mounted) return;
       setState(() {
-        _sessionInfo = summary.sessionInfo;
-        _markedLines = summary.markedLines;
         _videoPath = preferences.videoPath;
         _secondarySubtitlePath = preferences.secondarySubtitlePath;
         _isSecondaryFromOriginal = preferences.secondaryIsOriginal;
-        _isLoading = false;
       });
     } catch (e) {
       if (!mounted) return;

@@ -2450,23 +2450,23 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             },
             itemBuilder: (_) => [
               if (widget.onSaveFile != null) ...const [
-                PopupMenuItem(value: _StudioDockFileMenuAction.save,
+                PopupMenuItem(height: 34, value: _StudioDockFileMenuAction.save,
                   child: Text('Save subtitle file')),
-                PopupMenuItem(value: _StudioDockFileMenuAction.saveAs,
+                PopupMenuItem(height: 34, value: _StudioDockFileMenuAction.saveAs,
                   child: Text('Save As…')),
-                PopupMenuItem(value: _StudioDockFileMenuAction.export,
+                PopupMenuItem(height: 34, value: _StudioDockFileMenuAction.export,
                   child: Text('Export SRT…')),
               ],
               if (widget.onSaveProject != null) ...const [
                 PopupMenuDivider(),
-                PopupMenuItem(value: _StudioDockFileMenuAction.saveProject,
+                PopupMenuItem(height: 34, value: _StudioDockFileMenuAction.saveProject,
                   child: Text('Save project (.msone)')),
-                PopupMenuItem(value: _StudioDockFileMenuAction.saveProjectAs,
+                PopupMenuItem(height: 34, value: _StudioDockFileMenuAction.saveProjectAs,
                   child: Text('Save project as…')),
               ],
               if (widget.onOpenProjectSettings != null) ...[
                 const PopupMenuDivider(),
-                PopupMenuItem(
+                PopupMenuItem(height: 34,
                   value: _StudioDockFileMenuAction.projectSettings,
                   child: Builder(builder: (popupContext) {
                     _projectSettingsMenuRoute = ModalRoute.of(popupContext);
@@ -2486,158 +2486,158 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             child: Text('File', style: TextStyle(fontSize: 14)),
           ),
         _desktopMenu('Edit', const ValueKey('studio-edit-menu'), [
-          PopupMenuItem(value: _StudioDockMenuAction.undo,
+          PopupMenuItem(height: 34, value: _StudioDockMenuAction.undo,
               enabled: !_historyNavigationBlocked &&
                   _currentHistoryPoint?.parentCheckpointId != null,
               child: const Text('Undo')),
-          PopupMenuItem(value: _StudioDockMenuAction.redo,
+          PopupMenuItem(height: 34, value: _StudioDockMenuAction.redo,
               enabled: !_historyNavigationBlocked &&
                   (_currentHistoryPoint?.childCheckpointIds.isNotEmpty ?? false),
               child: const Text('Redo')),
-          const PopupMenuItem(value: _StudioDockMenuAction.find,
+          const PopupMenuItem(height: 34, value: _StudioDockMenuAction.find,
               child: Text('Find & Replace')),
-          const PopupMenuItem(value: _StudioDockMenuAction.selectAll,
+          const PopupMenuItem(height: 34, value: _StudioDockMenuAction.selectAll,
               child: Text('Select all visible subtitles')),
-          PopupMenuItem(value: _StudioDockMenuAction.goToLine,
+          PopupMenuItem(height: 34, value: _StudioDockMenuAction.goToLine,
               enabled: _cues.isNotEmpty,
               child: const Text('Go to Line…')),
-          const PopupMenuItem(value: _StudioDockMenuAction.selectByIndex,
+          const PopupMenuItem(height: 34, value: _StudioDockMenuAction.selectByIndex,
               child: Text('Select subtitles by index…')),
-          PopupMenuItem(value: _StudioDockMenuAction.rangeSelection,
+          PopupMenuItem(height: 34, value: _StudioDockMenuAction.rangeSelection,
               child: Text(_rangeSelectionMode
                   ? 'Cancel range selection' : 'Select subtitle range')),
-          PopupMenuItem(value: _StudioDockMenuAction.copySelected,
+          PopupMenuItem(height: 34, value: _StudioDockMenuAction.copySelected,
               enabled: _selectedIds.isNotEmpty,
               child: const Text('Copy selected subtitles')),
           if (!widget.isEditMode && widget.onApplyCueText != null)
-            PopupMenuItem(value: _StudioDockMenuAction.pasteOriginal,
+            PopupMenuItem(height: 34, value: _StudioDockMenuAction.pasteOriginal,
                 enabled: _cues.isNotEmpty && !_savingDraft,
                 child: const Text('Paste original text (Alt+V)')),
         ]),
         _desktopMenu('Subtitle', const ValueKey('studio-subtitle-menu'), [
           if (widget.onInsertCue != null)
-            const PopupMenuItem(value: _StudioDockMenuAction.addCue,
+            const PopupMenuItem(height: 34, value: _StudioDockMenuAction.addCue,
                 child: Text('Add subtitle')),
           if (widget.onDeleteCue != null)
-            const PopupMenuItem(value: _StudioDockMenuAction.deleteCue,
+            const PopupMenuItem(height: 34, value: _StudioDockMenuAction.deleteCue,
                 child: Text('Delete subtitle')),
           if (widget.onDeleteSelectedCues != null)
-            PopupMenuItem(value: _StudioDockMenuAction.deleteSelected,
+            PopupMenuItem(height: 34, value: _StudioDockMenuAction.deleteSelected,
                 enabled: _selectedIds.isNotEmpty && !_runningSelectedBatch,
                 child: Text('Delete selected subtitles (${_selectedIds.length})')),
           if (widget.onSplitCue != null)
-            const PopupMenuItem(value: _StudioDockMenuAction.splitCue,
+            const PopupMenuItem(height: 34, value: _StudioDockMenuAction.splitCue,
                 child: Text('Split subtitle')),
           if (widget.onMergeCue != null)
-            const PopupMenuItem(value: _StudioDockMenuAction.mergeCue,
+            const PopupMenuItem(height: 34, value: _StudioDockMenuAction.mergeCue,
                 child: Text('Combine subtitles')),
-          const PopupMenuItem(value: _StudioDockMenuAction.notes,
+          const PopupMenuItem(height: 34, value: _StudioDockMenuAction.notes,
               child: Text('Review notes')),
           if (widget.onApplyCueText != null) ...[
             const PopupMenuDivider(),
-            PopupMenuItem(value: _StudioDockMenuAction.boldFormat,
+            PopupMenuItem(height: 34, value: _StudioDockMenuAction.boldFormat,
                 enabled: _cues.isNotEmpty && !_savingDraft,
                 child: const Text('Bold (Ctrl+B)')),
-            PopupMenuItem(value: _StudioDockMenuAction.italicFormat,
+            PopupMenuItem(height: 34, value: _StudioDockMenuAction.italicFormat,
                 enabled: _cues.isNotEmpty && !_savingDraft,
                 child: const Text('Italic (Ctrl+I)')),
-            PopupMenuItem(value: _StudioDockMenuAction.colorPicker,
+            PopupMenuItem(height: 34, value: _StudioDockMenuAction.colorPicker,
                 enabled: _cues.isNotEmpty && !_savingDraft,
                 child: const Text('Text color (Alt+C)…')),
           ],
         ]),
         _desktopMenu('Timing', const ValueKey('studio-timing-menu'), [
-          const PopupMenuItem(value: _StudioDockMenuAction.timing,
+          const PopupMenuItem(height: 34, value: _StudioDockMenuAction.timing,
               child: Text('Edit start and end time')),
           if (widget.onSyncAnchoredCues != null)
-            const PopupMenuItem(value: _StudioDockMenuAction.syncSubtitles,
+            const PopupMenuItem(height: 34, value: _StudioDockMenuAction.syncSubtitles,
                 child: Text('Sync subtitles…')),
           if (widget.onShiftAllCues != null)
-            const PopupMenuItem(value: _StudioDockMenuAction.shiftTools,
+            const PopupMenuItem(height: 34, value: _StudioDockMenuAction.shiftTools,
                 child: Text('Shift subtitle timecodes')),
           if (widget.onShiftSelectedCues != null)
-            PopupMenuItem(value: _StudioDockMenuAction.shiftSelected,
+            PopupMenuItem(height: 34, value: _StudioDockMenuAction.shiftSelected,
                 enabled: _selectedIds.isNotEmpty && !_runningSelectedBatch,
                 child: Text('Shift selected subtitles (${_selectedIds.length})')),
         ]),
         _desktopMenu('Tools', const ValueKey('studio-tools-menu'), [
-          const PopupMenuItem(value: _StudioDockMenuAction.find,
+          const PopupMenuItem(height: 34, value: _StudioDockMenuAction.find,
               child: Text('Find & Replace')),
           if (widget.onApplyCueText != null) ...[
-            PopupMenuItem(value: _StudioDockMenuAction.msoneDictionary,
+            PopupMenuItem(height: 34, value: _StudioDockMenuAction.msoneDictionary,
               enabled: _cues.isNotEmpty && !_savingDraft,
               child: Builder(builder: (popupContext) {
                 _dictionaryMenuRoute = ModalRoute.of(popupContext);
                 return const Text('MSone Dictionary (Alt+M)…');
               })),
-            PopupMenuItem(value: _StudioDockMenuAction.olamDictionary,
+            PopupMenuItem(height: 34, value: _StudioDockMenuAction.olamDictionary,
               enabled: _cues.isNotEmpty && !_savingDraft,
               child: Builder(builder: (popupContext) {
                 _dictionaryMenuRoute = ModalRoute.of(popupContext);
                 return const Text('Olam Dictionary (Alt+O)…');
               })),
-            PopupMenuItem(value: _StudioDockMenuAction.urbanDictionary,
+            PopupMenuItem(height: 34, value: _StudioDockMenuAction.urbanDictionary,
               enabled: _cues.isNotEmpty && !_savingDraft,
               child: Builder(builder: (popupContext) {
                 _dictionaryMenuRoute = ModalRoute.of(popupContext);
                 return const Text('Urban Dictionary (Alt+U)…');
               })),
           ],
-          const PopupMenuItem(value: _StudioDockMenuAction.showTools,
+          const PopupMenuItem(height: 34, value: _StudioDockMenuAction.showTools,
               child: Text('Subtitle tools')),
-          PopupMenuItem(value: _StudioDockMenuAction.showMarkedLines,
+          PopupMenuItem(height: 34, value: _StudioDockMenuAction.showMarkedLines,
             enabled: _cues.isNotEmpty,
             child: Builder(builder: (popupContext) {
               _markedLinesMenuRoute = ModalRoute.of(popupContext);
               return const Text('Show marked lines');
             })),
           if (widget.onRemoveHearingImpaired != null)
-            PopupMenuItem(value: _StudioDockMenuAction.removeHearingImpaired,
+            PopupMenuItem(height: 34, value: _StudioDockMenuAction.removeHearingImpaired,
               enabled: !_openingHearingCleanup && _cues.isNotEmpty,
               child: Builder(builder: (popupContext) {
                 _hearingMenuRoute = ModalRoute.of(popupContext);
                 return const Text('Remove Hearing Impaired…');
               })),
           if (widget.onImportComments != null)
-            PopupMenuItem(value: _StudioDockMenuAction.importComments,
+            PopupMenuItem(height: 34, value: _StudioDockMenuAction.importComments,
               enabled: !_openingCommentImport && _cues.isNotEmpty,
               child: Builder(builder: (popupContext) {
                 _commentsMenuRoute = ModalRoute.of(popupContext);
                 return const Text('Import Comments (.msone)…');
               })),
           if (widget.onLoadSecondarySubtitles != null)
-            PopupMenuItem(value: _StudioDockMenuAction.loadSecondary,
+            PopupMenuItem(height: 34, value: _StudioDockMenuAction.loadSecondary,
               child: Builder(builder: (popupContext) {
                 _secondaryMenuRoute = ModalRoute.of(popupContext);
                 return const Text('Load secondary subtitles');
               })),
           if (widget.onToggleSecondarySubtitles != null)
-            PopupMenuItem(value: _StudioDockMenuAction.toggleSecondary,
+            PopupMenuItem(height: 34, value: _StudioDockMenuAction.toggleSecondary,
               child: Text(widget.showSecondarySubtitles
                   ? 'Hide secondary subtitles'
                   : 'Show secondary subtitles')),
           if (widget.onLoadSourceView != null)
-            const PopupMenuItem(value: _StudioDockMenuAction.sourceView,
+            const PopupMenuItem(height: 34, value: _StudioDockMenuAction.sourceView,
                 child: Text('Source View')),
           if (widget.onLoadHistory != null)
-            const PopupMenuItem(value: _StudioDockMenuAction.history,
+            const PopupMenuItem(height: 34, value: _StudioDockMenuAction.history,
                 child: Text('Edit history')),
           if (widget.onInsertMsoneBanners != null)
-            PopupMenuItem(value: _StudioDockMenuAction.insertMsoneBanners,
+            PopupMenuItem(height: 34, value: _StudioDockMenuAction.insertMsoneBanners,
               enabled: !_openingMsoneTools && _cues.isNotEmpty,
               child: Builder(builder: (popupContext) {
                 _msoneBannerMenuRoute = ModalRoute.of(popupContext);
                 return const Text('Insert MSone Banners…');
               })),
           if (widget.onNormalizeMalayalam != null)
-            PopupMenuItem(value: _StudioDockMenuAction.normalizeMalayalam,
+            PopupMenuItem(height: 34, value: _StudioDockMenuAction.normalizeMalayalam,
               enabled: !_openingMsoneTools && _cues.isNotEmpty,
               child: Builder(builder: (popupContext) {
                 _msoneNormalizeMenuRoute = ModalRoute.of(popupContext);
                 return const Text('Malayalam Normalize…');
               })),
           if (widget.onSubmitToMsone != null)
-            PopupMenuItem(value: _StudioDockMenuAction.submitMsone,
+            PopupMenuItem(height: 34, value: _StudioDockMenuAction.submitMsone,
               enabled: !_openingMsoneSubmission,
               child: Builder(builder: (popupContext) {
                 _msoneMenuRoute = ModalRoute.of(popupContext);
@@ -2645,14 +2645,14 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               })),
         ]),
         _desktopMenu('View', const ValueKey('studio-view-menu'), [
-          const PopupMenuItem(value: _StudioDockMenuAction.explorer,
+          const PopupMenuItem(height: 34, value: _StudioDockMenuAction.explorer,
               child: Text('Toggle project explorer')),
-          const PopupMenuItem(value: _StudioDockMenuAction.inspector,
+          const PopupMenuItem(height: 34, value: _StudioDockMenuAction.inspector,
               child: Text('Toggle line inspector')),
           if (widget.onSaveEditPreference != null) ...[
             const PopupMenuDivider(),
             if (!widget.isEditMode) ...[
-              PopupMenuItem(
+              PopupMenuItem(height: 34,
                 value: _StudioDockMenuAction.showOriginalLine,
                 enabled: !_updatingEditPreference,
                 child: Builder(builder: (popupContext) {
@@ -2668,56 +2668,56 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                 }),
               ),
               if (widget.showOriginalLine)
-                CheckedPopupMenuItem(
+                CheckedPopupMenuItem(height: 34,
                   value: _StudioDockMenuAction.autoSaveWithNavigation,
                   enabled: !_updatingEditPreference,
                   checked: widget.autoSaveWithNavigation,
                   child: const Text('Auto-save with navigation'),
                 ),
             ],
-            CheckedPopupMenuItem(
+            CheckedPopupMenuItem(height: 34,
               value: _StudioDockMenuAction.showOriginalTextField,
               enabled: !_updatingEditPreference,
               checked: widget.showOriginalTextField,
               child: const Text('Show Original Text Field'),
             ),
           ],
-          CheckedPopupMenuItem(
+          CheckedPopupMenuItem(height: 34,
             value: _StudioDockMenuAction.formattedView,
             checked: _formattedView,
             child: const Text('Formatted View'),
           ),
           if (widget.onToggleFullscreen != null)
-            PopupMenuItem(value: _StudioDockMenuAction.toggleFullscreen,
+            PopupMenuItem(height: 34, value: _StudioDockMenuAction.toggleFullscreen,
                 enabled: widget.videoSurface != null,
                 child: const Text('Toggle video fullscreen')),
           if (widget.onUnloadVideo != null && widget.videoSurface != null)
-            PopupMenuItem(value: _StudioDockMenuAction.unloadVideo,
+            PopupMenuItem(height: 34, value: _StudioDockMenuAction.unloadVideo,
                 enabled: !_unloadingVideo && !_savingFile,
                 child: Builder(builder: (popupContext) {
                   _unloadVideoMenuRoute = ModalRoute.of(popupContext);
                   return const Text('Unload video…');
                 })),
           if (widget.onToggleRepeat != null)
-            PopupMenuItem(value: _StudioDockMenuAction.repeatCurrent,
+            PopupMenuItem(height: 34, value: _StudioDockMenuAction.repeatCurrent,
                 enabled: widget.videoSurface != null && _cues.isNotEmpty,
                 child: Text(widget.repeatEnabled
                     ? 'Stop subtitle repeat'
                     : 'Repeat selected subtitle')),
           if (widget.onOpenRepeatRange != null)
-            PopupMenuItem(value: _StudioDockMenuAction.repeatRange,
+            PopupMenuItem(height: 34, value: _StudioDockMenuAction.repeatRange,
                 enabled: widget.videoSurface != null && _cues.isNotEmpty,
                 child: const Text('Repeat subtitle range…')),
           if (widget.videoSurface != null &&
               widget.onTogglePlayback != null && widget.playback != null)
-            PopupMenuItem(
+            PopupMenuItem(height: 34,
               value: _StudioDockMenuAction.floatingPlayback,
               child: Text(_floatingPlaybackVisible
                   ? 'Hide floating playback button'
                   : 'Show floating playback button'),
             ),
           if (widget.onOpenAppSettings != null)
-            const PopupMenuItem(value: _StudioDockMenuAction.settings,
+            const PopupMenuItem(height: 34, value: _StudioDockMenuAction.settings,
                 child: Text('Settings')),
         ]),
         if (widget.onOpenHelp != null)
@@ -3931,9 +3931,10 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         ),
       );
 
-  Widget _paneHeader(IconData icon, String title, {String? trailing}) =>
+  Widget _paneHeader(IconData icon, String title,
+      {String? trailing, double height = 46}) =>
       Container(
-        height: 46,
+        height: height,
         padding: EdgeInsets.symmetric(horizontal: 13),
         decoration: BoxDecoration(
           border: Border(bottom: BorderSide(color: _border))),
@@ -4194,11 +4195,14 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   Widget _subtitleTable() => Column(children: [
     Row(children: [
       Expanded(child: _paneHeader(Icons.view_list_outlined, 'SUBTITLE LINES',
-        trailing: _visible.length.toString() + ' / ' + _cues.length.toString())),
+        trailing: _visible.length.toString() + ' / ' + _cues.length.toString(),
+        height: 34)),
       IconButton(
         key: const ValueKey('studio-go-to-line'),
         tooltip: 'Go to subtitle line',
         icon: const Icon(Icons.numbers, size: 19),
+        constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+        padding: EdgeInsets.zero,
         onPressed: _cues.isEmpty ? null : () => unawaited(_goToLineSafely()),
       ),
       DropdownButtonHideUnderline(child: DropdownButton<_StudioDockReviewFilter>(
@@ -4227,16 +4231,18 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           tooltip: 'Review selected subtitles',
           enabled: _selectedIds.isNotEmpty && !_changingStructure,
           icon: const Icon(Icons.bookmarks_outlined),
+          constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+          padding: EdgeInsets.zero,
           onSelected: (action) => unawaited(_applyReviewSelection(
               _selectedIds.toList(), action: action)),
           itemBuilder: (_) => const [
-            PopupMenuItem(value: StudioDockReviewAction.mark,
+            PopupMenuItem(height: 34, value: StudioDockReviewAction.mark,
                 child: Text('Mark selected for review')),
-            PopupMenuItem(value: StudioDockReviewAction.unmark,
+            PopupMenuItem(height: 34, value: StudioDockReviewAction.unmark,
                 child: Text('Unmark selected')),
-            PopupMenuItem(value: StudioDockReviewAction.resolve,
+            PopupMenuItem(height: 34, value: StudioDockReviewAction.resolve,
                 child: Text('Resolve selected')),
-            PopupMenuItem(value: StudioDockReviewAction.reopen,
+            PopupMenuItem(height: 34, value: StudioDockReviewAction.reopen,
                 child: Text('Reopen selected')),
           ],
         ),
@@ -4244,11 +4250,13 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         key: const ValueKey('studio-dock-follow-playback'),
         tooltip: _followPlayback ? 'Pause subtitle follow' : 'Follow playback',
         icon: Icon(_followPlayback ? Icons.my_location : Icons.location_disabled),
+        constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+        padding: EdgeInsets.zero,
         onPressed: () { setState(() => _followPlayback = !_followPlayback); _onPlaybackPosition(); },
       ),
     ]),
-    SizedBox(height: 43, child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 4),
+    SizedBox(height: 36, child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 2),
       child: TextField(
         key: const ValueKey('desktop-cue-search'),
         controller: _tableSearch,
@@ -4274,8 +4282,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           height: limits.maxHeight,
           child: Column(children: [
             Container(
-              height: 33,
-              color: const Color(0xFF21262B),
+              height: 30,
+              color: Theme.of(context).colorScheme.surfaceContainerHigh,
               padding: EdgeInsets.symmetric(horizontal: 13),
               child: _gridCells(null),
             ),
@@ -4288,7 +4296,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               : ListView.builder(
                   controller: _cueScroll,
                   itemCount: _visible.length,
-                  itemExtent: 40,
+                  itemExtent: 32,
                   itemBuilder: (context, i) {
                     final cue = _visible[i];
                     final selected = _selectedIds.contains(cue.id);
@@ -4296,7 +4304,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                       color: selected ? _accent.withValues(alpha: .14)
                           : cue.id == _playingCueId ? _accent.withValues(alpha: .09)
                           : i.isOdd
-                              ? const Color(0xFF1B1F23)
+                              ? Theme.of(context).colorScheme.surfaceContainerLow
                               : Colors.transparent,
                       child: InkWell(
                         key: ValueKey('desktop-cue-' + cue.id.toString()),
@@ -4352,65 +4360,65 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         Offset.zero & renderObject.size,
       ),
       items: [
-        PopupMenuItem(value: 'select', child: Builder(
+        PopupMenuItem(height: 34, value: 'select', child: Builder(
           builder: (popupContext) {
             popupRoute = ModalRoute.of(popupContext);
             return const Text('Select subtitle');
           },
         )),
         if (widget.onApplyCueText != null)
-          const PopupMenuItem(value: 'edit',
+          const PopupMenuItem(height: 34, value: 'edit',
               child: Text('Edit subtitle…')),
         if (widget.onApplyCueNotes != null)
-          const PopupMenuItem(value: 'notes', child: Text('Review notes')),
+          const PopupMenuItem(height: 34, value: 'notes', child: Text('Review notes')),
         if (widget.onInsertCue != null || widget.onSplitCue != null ||
             widget.onMergeCue != null || widget.onDeleteCue != null) ...[
           const PopupMenuDivider(),
           if (widget.onInsertCue != null)
-            const PopupMenuItem(value: 'insert',
+            const PopupMenuItem(height: 34, value: 'insert',
                 child: Text('Insert subtitle after…')),
           if (widget.onSplitCue != null)
-            const PopupMenuItem(value: 'split',
+            const PopupMenuItem(height: 34, value: 'split',
                 child: Text('Split subtitle…')),
           if (widget.onMergeCue != null && _cues.length > 1)
-            const PopupMenuItem(value: 'merge',
+            const PopupMenuItem(height: 34, value: 'merge',
                 child: Text('Combine adjacent subtitles…')),
           if (widget.onDeleteCue != null && batchSize == 1)
-            const PopupMenuItem(value: 'delete-cue',
+            const PopupMenuItem(height: 34, value: 'delete-cue',
                 child: Text('Delete subtitle…')),
         ],
         const PopupMenuDivider(),
-        PopupMenuItem(value: 'copy-selected',
+        PopupMenuItem(height: 34, value: 'copy-selected',
             child: Text(batchSize == 1
                 ? 'Copy subtitle text'
                 : 'Copy selected subtitles ($batchSize)')),
-        const PopupMenuItem(value: 'copy', child: Text('Copy timecodes')),
+        const PopupMenuItem(height: 34, value: 'copy', child: Text('Copy timecodes')),
         if (widget.onShiftSelectedCues != null)
-          PopupMenuItem(value: 'shift-selected',
+          PopupMenuItem(height: 34, value: 'shift-selected',
               enabled: !_runningSelectedBatch,
               child: Text('Shift selected times ($batchSize)…')),
         if (widget.onDeleteSelectedCues != null)
-          PopupMenuItem(value: 'delete-selected',
+          PopupMenuItem(height: 34, value: 'delete-selected',
               enabled: !_runningSelectedBatch,
               child: Text('Delete selected subtitles ($batchSize)…')),
-        const PopupMenuItem(value: 'select-by-index',
+        const PopupMenuItem(height: 34, value: 'select-by-index',
             child: Text('Select subtitles by index…')),
-        PopupMenuItem(value: 'select-range',
+        PopupMenuItem(height: 34, value: 'select-range',
             child: Text(_rangeSelectionMode
                 ? 'Cancel range selection' : 'Select subtitle range')),
         if (widget.onApplyBulkReview != null) ...const [
           PopupMenuDivider(),
-          PopupMenuItem(value: 'mark-selected',
+          PopupMenuItem(height: 34, value: 'mark-selected',
               child: Text('Mark selected for review')),
-          PopupMenuItem(value: 'unmark-selected',
+          PopupMenuItem(height: 34, value: 'unmark-selected',
               child: Text('Unmark selected')),
-          PopupMenuItem(value: 'resolve-selected',
+          PopupMenuItem(height: 34, value: 'resolve-selected',
               child: Text('Resolve selected')),
-          PopupMenuItem(value: 'reopen-selected',
+          PopupMenuItem(height: 34, value: 'reopen-selected',
               child: Text('Reopen selected')),
         ],
         if (!widget.isLiveSession)
-          const PopupMenuItem(value: 'mark',
+          const PopupMenuItem(height: 34, value: 'mark',
               child: Text('Toggle review mark')),
       ],
     );
@@ -4663,7 +4671,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         _paneHeader(Icons.tune_outlined, 'LINE INSPECTOR',
             trailing: '#' + _selectedId.toString().padLeft(2, '0')),
-        SizedBox(height: 47, child: Row(children: [
+        SizedBox(height: 38, child: Row(children: [
           for (var i = 0; i < tabs.length; i++)
             Expanded(child: TextButton(
               key: ValueKey('inspector-tab-' + tabs[i]),
@@ -4680,14 +4688,14 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         ])),
         Expanded(child: ListView(
           key: ValueKey('inspector-page-' + _inspectorTab.toString()),
-          padding: const EdgeInsets.all(15),
+          padding: const EdgeInsets.all(11),
           children: _inspectorFields(),
         )),
         if (_inspectorTab == 0 &&
             (widget.onApplyCueText != null ||
                 widget.onApplyCueTiming != null))
           Container(
-            padding: const EdgeInsets.fromLTRB(12, 11, 12, 8),
+            padding: const EdgeInsets.fromLTRB(10, 5, 10, 5),
             decoration: BoxDecoration(border: Border(
               top: BorderSide(color: _border),
             )),
@@ -4737,7 +4745,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               ),
             ]),
             Container(
-              padding: EdgeInsets.all(12),
+              padding: EdgeInsets.all(8),
               decoration: BoxDecoration(
                 border: Border.all(color: _border),
                 borderRadius: BorderRadius.circular(7),
@@ -4751,11 +4759,11 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                   : Text(_selected.original,
                       style: const TextStyle(fontSize: 15, height: 1.5)),
             ),
-            const SizedBox(height: 17),
+            const SizedBox(height: 10),
           ],
           if (!widget.isEditMode && !widget.showOriginalTextField) ...[
             Padding(
-              padding: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.only(bottom: 8),
               child: Row(children: [
                 Expanded(child: Text('Original text is hidden',
                     style: TextStyle(color: _muted, fontSize: 13))),
@@ -4785,15 +4793,13 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                 : ValueKey('studio-edit-' + _selected.id.toString() +
                     '-' + _draftRevision.toString()),
             initialValue: _draftCueId == _selectedId && _draftText != null
-                ? _draftText : (!widget.isEditMode &&
-                    widget.showOriginalLine && _selected.edited.isEmpty
-                    ? _selected.original : _selected.edited),
+                ? _draftText : _selected.edited,
             readOnly: _savingDraft ||
                 (widget.isLiveSession && widget.onApplyCueText == null),
             minLines: 3, maxLines: 8,
             style: const TextStyle(fontSize: 15, height: 1.5),
             decoration: InputDecoration(
-              contentPadding: const EdgeInsets.all(12),
+              contentPadding: const EdgeInsets.all(9),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(7)),
             ),
@@ -4810,11 +4816,11 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             ),
           ),
           if (_formattedView) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             _fieldLabel('FORMATTED PREVIEW · READ ONLY'),
             Container(
               key: const ValueKey('studio-formatted-preview'),
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 border: Border.all(color: _border),
                 borderRadius: BorderRadius.circular(7),
@@ -4822,19 +4828,17 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               child: CustomHtmlText(
                 htmlContent: (_draftCueId == _selectedId && _draftText != null
                     ? _draftText!
-                    : (!widget.isEditMode && widget.showOriginalLine &&
-                        _selected.edited.isEmpty
-                        ? _selected.original : _selected.edited))
+                    : _selected.edited)
                     .replaceAll('\n', '<br>'),
                 defaultStyle: const TextStyle(fontSize: 15, height: 1.5),
               ),
             ),
           ],
-          const SizedBox(height: 22),
+          const SizedBox(height: 11),
           Divider(color: _border),
-          const SizedBox(height: 10),
+          const SizedBox(height: 5),
           _fieldLabel('TIMING'),
-          const SizedBox(height: 8),
+          const SizedBox(height: 5),
           _fieldLabel('START TIMECODE'),
           if (widget.onApplyCueTiming == null)
             _readonlyField(_selected.start)
@@ -4854,7 +4858,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                 _draftStart = value;
               }),
             ),
-          const SizedBox(height: 13),
+          const SizedBox(height: 7),
           _fieldLabel('END TIMECODE'),
           if (widget.onApplyCueTiming == null)
             _readonlyField(_selected.end)
@@ -4874,11 +4878,11 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                 _draftEnd = value;
               }),
             ),
-          const SizedBox(height: 13),
+          const SizedBox(height: 7),
           _fieldLabel('DURATION'),
           _readonlyField(_cueDuration(_selected.copyWith(
             start: _timingStart, end: _timingEnd))),
-          const SizedBox(height: 12),
+          const SizedBox(height: 7),
           if (widget.onApplyCueTiming != null && _timingError != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
@@ -5101,13 +5105,13 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   }
 
   Widget _fieldLabel(String text) => Padding(
-    padding: const EdgeInsets.only(bottom: 7),
+    padding: const EdgeInsets.only(bottom: 4),
     child: Text(text, style: TextStyle(
       color: _muted, fontSize: 12, letterSpacing: .5,
       fontWeight: FontWeight.w600)),
   );
   Widget _readonlyField(String text) => Container(
-    padding: EdgeInsets.all(11),
+    padding: EdgeInsets.all(7),
     decoration: BoxDecoration(
       color: Theme.of(context).colorScheme.surfaceContainerLow,
       border: Border.all(color: _border),
