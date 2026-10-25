@@ -137,3 +137,4 @@ DS5 R22 MENU SELECTOR RETRY 2026-10-25: verify disabled repeat actions by visibl
 DS5 R26 EDIT LINE DISPLAY/NAV 2026-10-25: mobile Edit Line preference parity, safe auto-save navigation and formatted preview. Flutter analyzer and focused Studio Dock widget tests only; no native builds.
 
 DS5 R26 MENU WIDTH RETRY 2026-10-25: Show Original Line popup row uses bounded ellipsized label; rerun Studio Dock widget tests and analyzer only, no builds.
+DS5 R27 2026-10-25: guard async waveform regenerate across audio selection, clear and FFmpeg reload; Flutter analyzer/Studio Dock tests only, no platform builds.

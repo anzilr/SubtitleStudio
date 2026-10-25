@@ -8,6 +8,7 @@ import 'package:subtitle_studio/features/waveform/state/waveform_event.dart';
 import 'package:subtitle_studio/features/waveform/widgets/waveform_widget.dart';
 
 import 'studio_dock_playback_link.dart';
+import 'studio_dock_waveform_reload_guard.dart';
 
 /// Waveform uses its own session-scoped Riverpod controller and the existing
 /// waveform/seek coordinator, but NEVER creates a media_kit player.
@@ -132,13 +133,27 @@ class _WaveformBodyState extends ConsumerState<_WaveformBody> {
     });
   }
 
-
   Future<void> _regenerateWaveform() async {
     final selection = widget.playback.audio.value;
     if (_regenerating || selection.status != StudioDockAudioStatus.ready) return;
     final path = widget.videoPath;
     final collection = widget.collectionId;
-    ++_loadRevision; // Cancel an older, post-frame automatic load.
+    final request = StudioDockWaveformReloadSelection(
+      playback: widget.playback,
+      videoPath: path,
+      collectionId: collection,
+      trackId: selection.trackId,
+      streamSelector: selection.streamSelector,
+    );
+    final revision = ++_loadRevision; // Invalidate a queued automatic load.
+    bool isCurrent() =>
+        mounted &&
+        _loadRevision == revision &&
+        request.matches(
+          playback: widget.playback,
+          videoPath: widget.videoPath,
+          collectionId: widget.collectionId,
+        );
     setState(() {
       _regenerating = true;
       _commandError = null;
@@ -146,22 +161,20 @@ class _WaveformBodyState extends ConsumerState<_WaveformBody> {
     });
     try {
       // Match mobile cache invalidation and retain the selected audio stream.
-      await ref.read(waveformPreferencesRepositoryProvider)
-          .clearWaveformCache(collection);
-      if (!mounted || widget.videoPath != path ||
-          widget.collectionId != collection) return;
-      final current = widget.playback.audio.value;
-      if (current.status != StudioDockAudioStatus.ready ||
-          current.trackId != selection.trackId ||
-          current.streamSelector != selection.streamSelector) return;
-      final controller = ref.read(waveformControllerProvider.notifier);
-      await controller.dispatch(const ClearWaveform());
-      if (!mounted) return;
-      await controller.dispatch(LoadAudioFile(path,
-        subtitleCollectionId: collection,
-        audioTrackId: selection.streamSelector,
-        useSavedAudioTrackPreference: false,
-      ));
+      await StudioDockWaveformReloadGuard.run(
+        isCurrent: isCurrent,
+        clearCache: () => ref.read(waveformPreferencesRepositoryProvider)
+            .clearWaveformCache(collection),
+        clearWaveform: () => ref.read(waveformControllerProvider.notifier)
+            .dispatch(const ClearWaveform()),
+        loadWaveform: () => ref.read(waveformControllerProvider.notifier)
+            .dispatch(LoadAudioFile(
+              path,
+              subtitleCollectionId: collection,
+              audioTrackId: selection.streamSelector,
+              useSavedAudioTrackPreference: false,
+            )),
+      );
     } catch (_) {
       if (mounted) {
         setState(() => _commandError =
