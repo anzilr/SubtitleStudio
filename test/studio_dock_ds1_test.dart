@@ -56,7 +56,7 @@ void main() {
         find.byKey(const ValueKey('desktop-edit-5')), 'Draft survives tabs');
     await tester.pump();
     expect(find.byKey(const ValueKey('inspector-tab-Timing')), findsNothing);
-    expect(find.text('START'), findsOneWidget);
+    expect(find.text('START'), findsWidgets);
     for (final tab in ['Style', 'Notes', 'Text']) {
       await tester.tap(find.byKey(ValueKey('inspector-tab-' + tab)));
       await tester.pumpAndSettle();

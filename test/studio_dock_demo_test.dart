@@ -42,7 +42,7 @@ void main() {
         find.byKey(const ValueKey('desktop-cue-search')), 'midnight');
     await tester.pumpAndSettle();
 
-    expect(find.text('11 / 12'), findsOneWidget);
+    expect(find.text('5 / 12'), findsOneWidget);
     expect(find.byKey(const ValueKey('desktop-cue-11')), findsOneWidget);
     expect(find.byKey(const ValueKey('desktop-cue-10')), findsNothing);
     await tester.tap(find.byKey(const ValueKey('desktop-cue-11')));

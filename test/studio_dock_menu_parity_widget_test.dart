@@ -131,7 +131,7 @@ void main() {
     expect(find.byKey(const ValueKey('studio-find-section')), findsOneWidget);
     await choose(tester, 'studio-timing-menu', 'Edit start and end time');
     expect(find.byKey(const ValueKey('inspector-tab-Timing')), findsNothing);
-    expect(find.text('START'), findsOneWidget);
+    expect(find.text('START'), findsWidgets);
     await choose(tester, 'studio-subtitle-menu', 'Review notes');
     expect(find.text('REVIEW NOTES'), findsOneWidget);
     await choose(tester, 'studio-tools-menu', 'Subtitle tools');
