@@ -34,7 +34,7 @@ acceptance. A wired callback is not proof of a working native interaction.
 | Find/replace and raw Source View | Wired to shared tools/parser | Compare regex/case/selection semantics and file fidelity |
 | Marked lines, comments, resolve/reopen and filters | DS5 R18 extends the existing shared fullscreen player: mark/unmark and atomic mark+comment editing route to the desktop Notes checkpoint service; desktop-only Resolve/Reopen button, optimistic draft guard, refreshed player overlays (including comment-only/resolved changes), and unchanged mobile fullscreen defaults | Windows fullscreen mark/comment/Delete/Resolve/Reopen, OverlayEntry focus, Undo/Redo, repeated media transitions, unsaved-draft cancel acceptance |
 | Copy selected subtitle text, select all visible | Wired in DS5 R5f using mobile copy format | Clipboard and multi-selection widget acceptance |
-| Shift/delete selected cues, select by index/range | Wired in DS5 R11: index/range and pointer/keyboard multi-select, mobile-style selected timing stretch with duration preservation, guarded single-checkpoint multi-delete | Native selection, source edits, long-project scrolling, mixed selections and undo/redo acceptance |
+| Shift/delete selected cues, select by index/range | Wired in DS5 R11: index/range and pointer/keyboard multi-select, mobile-style selected timing stretch with duration preservation, guarded single-checkpoint multi-delete. DS5 R24 also exposes all four actions through right-click, preserving or replacing the clicked row selection safely | Native selection, source edits, long-project scrolling, mixed selections and undo/redo acceptance |
 | Go to Line and direct video seek | Wired in DS5 R12 to the Edit menu, grid, and shared `gotoLine` hotkey: 1-based input/slider, unsaved-draft guard, scroll-to-cue and attached-player start +50 ms | Native large-project keyboard input, slider, focus and seek-accuracy acceptance |
 | Import comments from .msone project files | Wired in DS5 R13 to existing `ImportCommentsSheet`, `ProjectCommentImportPlan` and shared checkpoint-backed `ProjectCommentRepository`; successful imports refresh live cues, selected rows and history | Native .msone picker, match counts, Cancel, changed marking/resolution, Undo/Redo, narrow dialog acceptance |
 | Subtitle synchronization | Wired in DS5 R15: first/last proportional anchors (durations preserved), positive/negative millisecond shift, selected-cue stretch, and video-gated framerate conversion (both bounds scaled); optimistic single-checkpoint history saves with canonical SRT range validation | Windows native video FPS detection, actual file sync, precision, selection consistency and Undo/Redo acceptance |
@@ -44,7 +44,7 @@ acceptance. A wired callback is not proof of a working native interaction.
 | Project Settings (encoding, media, secondary subs) | Wired in DS5 R10 to existing `ProjectSettingsSheet`, repository models and live media/secondary/history refresh after close | Native encoding selection/Save As, media unlink/replace, secondary clear, project rename, marked lines and route-return acceptance |
 | App Settings, theme, typography, waveform limits, checkpoints | Wired to **existing** `SettingsSheet` in DS5 R5f | Verify immediate preference propagation and skin changes |
 | Help & Documentation | Wired to **existing** `HelpScreen` in DS5 R5f | Navigation/back-stack widget and native acceptance |
-| Desktop shortcuts | DS5 R17 manager: play/pause, previous/next cue+seek, Go to Line, find, mark/comment draft, split/combine, Save/Save As/Project, Help/Settings. DS5 R19: fullscreen, guarded Shift+Delete, Edit current cue, Show Marked Lines. DS5 R22: repeat current (Ctrl/Cmd+R) and custom range (Ctrl/Cmd+Shift+R). DS5 R23: Bold/Italic, color picker, MSone/Olam/Urban dictionaries and Translation Mode Paste Original wired to shared manager; editing commands guard non-cue fields and modal routes, draft changes require Apply. Copy and Undo/Redo retain Flutter focus-aware shortcuts | Native key-chord registration, dictionary response/select, timecode/search focus, clipboard conflict and menu popup acceptance; context-menu parity remains unaudited |
+| Desktop shortcuts | DS5 R17 manager: play/pause, previous/next cue+seek, Go to Line, find, mark/comment draft, split/combine, Save/Save As/Project, Help/Settings. DS5 R19: fullscreen, guarded Shift+Delete, Edit current cue, Show Marked Lines. DS5 R22: repeat current (Ctrl/Cmd+R) and custom range (Ctrl/Cmd+Shift+R). DS5 R23: Bold/Italic, color picker, MSone/Olam/Urban dictionaries and Translation Mode Paste Original wired to shared manager; editing commands guard non-cue fields and modal routes, draft changes require Apply. DS5 R24: right-click command parity for selected-cue batch operations, edit/insert/split/combine and review; Copy and Undo/Redo retain Flutter focus-aware shortcuts | Native key-chord registration, dictionary response/select, timecode/search focus, clipboard conflict and popup acceptance |
 
 ## DS5 R19 source-level difference audit
 
@@ -65,9 +65,10 @@ Dock's native menubar, shared services, and player controls:
   R21 added optional floating play/pause; R22 added repeat current/custom
   range on the existing player with shared mobile dialog; R23 wires the
   formatting/dictionary/Paste Original hotkeys into the shared draft path.
-  Native loop behavior, actual OS chord handling, dictionary provider selection
-  and context-menu feature visibility are not accepted. Do **not** mark these
-  native behaviors complete.
+  R24 adds the mobile multi-selection commands and per-cue actions to the
+  desktop right-click menu. Native loop behavior, actual OS chord handling,
+  dictionary provider selection and pointer context menu behavior are not
+  accepted. Do **not** mark these native behaviors complete.
 - **Platform-only remaining**: native fullscreen media focus, video/track
   picker behavior, timecode/encoding round trips, player/waveform stability,
   keyboard chord conflicts and all documented platform acceptance checks.
@@ -86,8 +87,8 @@ Dock's native menubar, shared services, and player controls:
 ## Next acceptance order (not optional feature cuts)
 
 1. **P0 implementation + native acceptance:** Validate R23 dictionary/format/
-   paste-original focus and selection on desktop, then audit the remaining
-   mobile context-menu action exposure. Validate waveform time drags, cue creation,
+   paste-original focus and selection on desktop, then exercise the R24
+   context-menu actions with real desktop mouse/trackpad input. Validate waveform time drags, cue creation,
    magnet snap, overlap, selected-cue scrolling and secondary-subtitle
    persistence/playback on a native desktop before declaring playback parity.
 2. **P1:** Verify synchronization and import comments, Go to Line, selected-cue batch operations and the

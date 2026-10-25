@@ -3881,10 +3881,29 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   ]);
 
 
+  /// Right-click actions share the same guarded entry points as the menubar.
+  /// The active multi-selection is preserved when the clicked cue belongs to
+  /// it. A non-selected cue becomes a single-cue target only after its draft
+  /// confirmation succeeds, never before the user chooses a menu action.
+  Future<bool> _targetCueFromContext(int cueId) async {
+    if (!mounted || !_visible.any((cue) => cue.id == cueId)) return false;
+    if (_selectedId == cueId && _selectedIds.length == 1) return true;
+    if (!await _confirmDraftBeforeLeaving() || !mounted) return false;
+    _applyCueSelection(cueId);
+    return true;
+  }
+
+  Future<bool> _prepareContextBatch(int cueId) async {
+    if (_selectedIds.contains(cueId)) return true;
+    return _targetCueFromContext(cueId);
+  }
+
   Future<void> _showCueContextMenu(
       StudioDockCue cue, Offset position) async {
     final renderObject = Overlay.of(context).context.findRenderObject();
     if (renderObject is! RenderBox) return;
+    final batchSize = _selectedIds.contains(cue.id) ? _selectedIds.length : 1;
+    ModalRoute<dynamic>? popupRoute;
     final result = await showMenu<String>(
       context: context,
       position: RelativeRect.fromRect(
@@ -3892,8 +3911,54 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         Offset.zero & renderObject.size,
       ),
       items: [
-        const PopupMenuItem(value: 'select', child: Text('Select cue')),
+        PopupMenuItem(value: 'select', child: Builder(
+          builder: (popupContext) {
+            popupRoute = ModalRoute.of(popupContext);
+            return const Text('Select subtitle');
+          },
+        )),
+        if (widget.onApplyCueText != null)
+          const PopupMenuItem(value: 'edit',
+              child: Text('Edit subtitle…')),
+        if (widget.onApplyCueNotes != null)
+          const PopupMenuItem(value: 'notes', child: Text('Review notes')),
+        if (widget.onInsertCue != null || widget.onSplitCue != null ||
+            widget.onMergeCue != null || widget.onDeleteCue != null) ...[
+          const PopupMenuDivider(),
+          if (widget.onInsertCue != null)
+            const PopupMenuItem(value: 'insert',
+                child: Text('Insert subtitle after…')),
+          if (widget.onSplitCue != null)
+            const PopupMenuItem(value: 'split',
+                child: Text('Split subtitle…')),
+          if (widget.onMergeCue != null && _cues.length > 1)
+            const PopupMenuItem(value: 'merge',
+                child: Text('Combine adjacent subtitles…')),
+          if (widget.onDeleteCue != null && batchSize == 1)
+            const PopupMenuItem(value: 'delete-cue',
+                child: Text('Delete subtitle…')),
+        ],
+        const PopupMenuDivider(),
+        PopupMenuItem(value: 'copy-selected',
+            child: Text(batchSize == 1
+                ? 'Copy subtitle text'
+                : 'Copy selected subtitles ($batchSize)')),
+        const PopupMenuItem(value: 'copy', child: Text('Copy timecodes')),
+        if (widget.onShiftSelectedCues != null)
+          PopupMenuItem(value: 'shift-selected',
+              enabled: !_runningSelectedBatch,
+              child: Text('Shift selected times ($batchSize)…')),
+        if (widget.onDeleteSelectedCues != null)
+          PopupMenuItem(value: 'delete-selected',
+              enabled: !_runningSelectedBatch,
+              child: Text('Delete selected subtitles ($batchSize)…')),
+        const PopupMenuItem(value: 'select-by-index',
+            child: Text('Select subtitles by index…')),
+        PopupMenuItem(value: 'select-range',
+            child: Text(_rangeSelectionMode
+                ? 'Cancel range selection' : 'Select subtitle range')),
         if (widget.onApplyBulkReview != null) ...const [
+          PopupMenuDivider(),
           PopupMenuItem(value: 'mark-selected',
               child: Text('Mark selected for review')),
           PopupMenuItem(value: 'unmark-selected',
@@ -3906,38 +3971,62 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         if (!widget.isLiveSession)
           const PopupMenuItem(value: 'mark',
               child: Text('Toggle review mark')),
-        const PopupMenuItem(value: 'copy-selected',
-            child: Text('Copy selected subtitle text')),
-        const PopupMenuItem(value: 'copy', child: Text('Copy timecodes')),
       ],
     );
+    if (!mounted) return;
+    // showMenu's selection future resolves before its exit animation ends.
+    // Wait for the popup barrier to leave before showing a second dialog.
+    if (result != null && popupRoute != null) await popupRoute!.completed;
     if (!mounted) return;
     switch (result) {
       case 'select':
         _selectCue(cue.id);
+      case 'edit':
+        if (await _targetCueFromContext(cue.id)) {
+          await _openInspectorTab(0);
+        }
+      case 'notes':
+        if (await _targetCueFromContext(cue.id)) {
+          await _openInspectorTab(2);
+        }
+      case 'insert':
+        if (await _targetCueFromContext(cue.id)) await _addCueSafely();
+      case 'split':
+        if (await _targetCueFromContext(cue.id)) await _splitCueSafely();
+      case 'merge':
+        if (await _targetCueFromContext(cue.id)) await _mergeCueSafely();
+      case 'delete-cue':
+        if (await _targetCueFromContext(cue.id)) await _deleteCueSafely();
+      case 'shift-selected':
+        if (await _prepareContextBatch(cue.id)) await _shiftSelectedSafely();
+      case 'delete-selected':
+        if (await _prepareContextBatch(cue.id)) await _deleteSelectedSafely();
+      case 'select-by-index':
+        await _selectByIndexSafely();
+      case 'select-range':
+        _toggleRangeSelectionMode();
       case 'mark':
-        _selectCue(cue.id);
-        _toggleMarkedSelection();
+        if (await _targetCueFromContext(cue.id)) _toggleMarkedSelection();
       case 'mark-selected':
-        unawaited(_applyReviewSelection(
-          _selectedIds.contains(cue.id) ? _selectedIds.toList() : [cue.id],
-          action: StudioDockReviewAction.mark,
-        ));
+        if (await _prepareContextBatch(cue.id)) {
+          await _applyReviewSelection(_selectedIds.toList(),
+              action: StudioDockReviewAction.mark);
+        }
       case 'unmark-selected':
-        unawaited(_applyReviewSelection(
-          _selectedIds.contains(cue.id) ? _selectedIds.toList() : [cue.id],
-          action: StudioDockReviewAction.unmark,
-        ));
+        if (await _prepareContextBatch(cue.id)) {
+          await _applyReviewSelection(_selectedIds.toList(),
+              action: StudioDockReviewAction.unmark);
+        }
       case 'resolve-selected':
-        unawaited(_applyReviewSelection(
-          _selectedIds.contains(cue.id) ? _selectedIds.toList() : [cue.id],
-          action: StudioDockReviewAction.resolve,
-        ));
+        if (await _prepareContextBatch(cue.id)) {
+          await _applyReviewSelection(_selectedIds.toList(),
+              action: StudioDockReviewAction.resolve);
+        }
       case 'reopen-selected':
-        unawaited(_applyReviewSelection(
-          _selectedIds.contains(cue.id) ? _selectedIds.toList() : [cue.id],
-          action: StudioDockReviewAction.reopen,
-        ));
+        if (await _prepareContextBatch(cue.id)) {
+          await _applyReviewSelection(_selectedIds.toList(),
+              action: StudioDockReviewAction.reopen);
+        }
       case 'copy':
         await Clipboard.setData(
           ClipboardData(text: cue.start + ' --> ' + cue.end),
