@@ -131,7 +131,7 @@ class _StudioDockSplitCueDialogState extends State<StudioDockSplitCueDialog> {
     } else {
       setState(() {
         _saving = false;
-        _error = 'Could not split this cue. The project may have changed '
+        _error = 'Could not split this line. The project may have changed '
             'elsewhere. Your draft is preserved.';
       });
     }
@@ -141,7 +141,7 @@ class _StudioDockSplitCueDialogState extends State<StudioDockSplitCueDialog> {
   Widget build(BuildContext context) => PopScope(
     canPop: !_saving,
     child: AlertDialog(
-      title: Text('Split subtitle cue #${widget.cueNumber}'),
+      title: Text('Split subtitle line #${widget.cueNumber}'),
       content: SizedBox(
         width: 540,
         child: SingleChildScrollView(child: Column(
@@ -149,7 +149,7 @@ class _StudioDockSplitCueDialogState extends State<StudioDockSplitCueDialog> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text('Split within ${widget.start} – ${widget.end}. '
-                'Review the text in both new cues before saving.',
+                'Review the text in both new lines before saving.',
                 style: Theme.of(context).textTheme.bodySmall),
             const SizedBox(height: 12),
             TextField(
@@ -162,8 +162,8 @@ class _StudioDockSplitCueDialogState extends State<StudioDockSplitCueDialog> {
             ),
             const SizedBox(height: 16),
             for (final half in [
-              ('First cue', _firstOriginal, _firstEdited, 'first'),
-              ('Second cue', _secondOriginal, _secondEdited, 'second'),
+              ('First line', _firstOriginal, _firstEdited, 'first'),
+              ('Second line', _secondOriginal, _secondEdited, 'second'),
             ]) ...[
               Text(half.$1, style: Theme.of(context).textTheme.titleSmall),
               const SizedBox(height: 8),
@@ -205,7 +205,7 @@ class _StudioDockSplitCueDialogState extends State<StudioDockSplitCueDialog> {
           key: const ValueKey('studio-confirm-split'),
           onPressed: _saving ? null : () => unawaited(_submit()),
           icon: const Icon(Icons.call_split),
-          label: Text(_saving ? 'Splitting…' : 'Split cue'),
+          label: Text(_saving ? 'Splitting…' : 'Split line'),
         ),
       ],
     ),

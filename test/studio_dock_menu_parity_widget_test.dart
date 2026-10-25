@@ -73,7 +73,8 @@ void main() {
       (tester) async {
     var opens = 0;
     await launch(tester, help: () async { opens++; });
-    await choose(tester, 'studio-help-menu', 'Help & Documentation');
+    await tester.tap(find.byKey(const ValueKey('studio-help-menu')));
+    await tester.pumpAndSettle();
     expect(opens, 1);
     expect(tester.takeException(), isNull);
   });
@@ -86,7 +87,7 @@ void main() {
     expect(find.byKey(const ValueKey('palette-shortcut-Find subtitle')),
         findsOneWidget);
     expect(find.text('Ctrl+F'), findsWidgets);
-    expect(find.byKey(const ValueKey('palette-shortcut-Next cue')),
+    expect(find.byKey(const ValueKey('palette-shortcut-Next line')),
         findsOneWidget);
     expect(find.byKey(const ValueKey('palette-shortcut-Subtitle tools')),
         findsNothing, reason: 'Do not advertise a shortcut that is not bound');
@@ -116,6 +117,7 @@ void main() {
         findsNothing);
     await tester.tap(find.byKey(const ValueKey('studio-dock-sidebar-projects')));
     await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('studio-projects-list')), findsOneWidget);
     expect(find.text('First.srt'), findsOneWidget);
     await tester.tap(find.text('Second.srt'));
     await tester.pumpAndSettle();

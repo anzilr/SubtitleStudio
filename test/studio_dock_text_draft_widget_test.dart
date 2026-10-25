@@ -45,7 +45,7 @@ void main() {
       calls.add('$number:$text');
       return true;
     });
-    expect(find.text('LIVE · TEXT EDIT'), findsOneWidget);
+    expect(find.text('LIVE · TEXT EDIT'), findsNothing);
 
     await tester.enterText(
       find.byKey(const ValueKey('studio-edit-1-0')), 'New draft');
@@ -91,16 +91,19 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Reset to original is enabled for live translation text',
+  testWidgets('Original text toolbar can paste into live translation draft',
       (tester) async {
     final edits = <String>[];
     await launch(tester, apply: (cue, text) async {
       edits.add('$cue:$text');
       return true;
     });
-    final reset = find.byKey(const ValueKey('studio-reset-to-original'));
+    final reset = find.byKey(
+        const ValueKey('studio-inspector-paste-original'));
     await tester.ensureVisible(reset);
-    expect(tester.widget<OutlinedButton>(reset).onPressed, isNotNull);
+    expect(tester.widget<IconButton>(reset).onPressed, isNotNull);
+    expect(find.byKey(const ValueKey('studio-reset-to-original')),
+        findsNothing);
     await tester.tap(reset);
     await tester.pumpAndSettle();
     expect(find.text('Original 1'), findsWidgets);

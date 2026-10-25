@@ -110,7 +110,7 @@ class StudioDockCueStructureService {
   static String? validateSplit(String start, String splitAt, String end) {
     if (StudioDockTimingEditService.validate(start, splitAt) != null ||
         StudioDockTimingEditService.validate(splitAt, end) != null) {
-      return 'Split time must be strictly inside the cue (HH:mm:ss,SSS).';
+      return 'Split time must be strictly inside the line (HH:mm:ss,SSS).';
     }
     return null;
   }

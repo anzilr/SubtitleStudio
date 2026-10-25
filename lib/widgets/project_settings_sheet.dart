@@ -298,10 +298,12 @@ class _ProjectSettingsSheetState extends ConsumerState<ProjectSettingsSheet> wit
       // Load marked lines
       _markedLines = await ref.read(subtitleRepositoryProvider).getMarkedLines(widget.session.subtitleCollectionId);
       
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
       });

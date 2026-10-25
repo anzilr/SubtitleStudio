@@ -48,7 +48,7 @@ class StudioDockProjectActions {
       _ => SubtitleParser.parseSrt(decoded.content),
     };
     if (parsed.isEmpty) {
-      throw const FormatException('No valid subtitle cues were found.');
+      throw const FormatException('No valid subtitle lines were found.');
     }
     final lines = [
       for (final cue in parsed)

@@ -1280,16 +1280,16 @@ class _StudioDockSessionViewState
 
   Future<void> _openProjectSettings() async {
     if (!mounted) return;
-    final session = await ref.read(projectRepositoryProvider)
-        .getSession(widget.sessionId);
-    final collection = await ref.read(subtitleRepositoryProvider)
-        .fetchSubtitleCollection(widget.collectionId);
-    if (!mounted) return;
-    if (session == null || collection == null ||
-        session.subtitleCollectionId != collection.id) {
-      throw StateError('The active subtitle project is unavailable.');
-    }
     try {
+      final session = await ref.read(projectRepositoryProvider)
+          .getSession(widget.sessionId);
+      final collection = await ref.read(subtitleRepositoryProvider)
+          .fetchSubtitleCollection(widget.collectionId);
+      if (!mounted) return;
+      if (session == null || collection == null ||
+          session.subtitleCollectionId != collection.id) {
+        throw StateError('The active subtitle project is unavailable.');
+      }
       await showDialog<void>(
         context: context,
         builder: (dialog) => Dialog(
@@ -1312,6 +1312,15 @@ class _StudioDockSessionViewState
           ),
         ),
       );
+    } catch (error, stack) {
+      debugPrint('Studio Dock Project Settings failed: $error');
+      debugPrintStack(stackTrace: stack);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Project Settings could not open. '
+              'See the debug output for details.'),
+        ));
+      }
     } finally {
       if (mounted) await _refreshAfterProjectSettings();
     }

@@ -22,7 +22,7 @@ void main() {
     }
   });
 
-  testWidgets('wide workspace exposes three bands and both subtitle columns',
+  testWidgets('wide workspace hides unconnected media and keeps subtitle columns',
       (tester) async {
     tester.view.physicalSize = const Size(1680, 1000);
     tester.view.devicePixelRatio = 1;
@@ -31,15 +31,11 @@ void main() {
     await tester.pumpWidget(const StudioDockDemoApp());
     await tester.pumpAndSettle();
 
-    final video = tester.getSize(
-        find.byKey(const ValueKey('dock-video-band'))).height;
-    final waveform = tester.getSize(
-        find.byKey(const ValueKey('dock-waveform-band'))).height;
+    expect(find.byKey(const ValueKey('dock-video-band')), findsNothing);
+    expect(find.byKey(const ValueKey('dock-waveform-band')), findsNothing);
     final grid = tester.getSize(
         find.byKey(const ValueKey('dock-table-band'))).height;
-    expect(video, greaterThan(waveform));
-    expect(grid, greaterThan(waveform));
-    expect((video - grid).abs(), lessThan(20));
+    expect(grid, greaterThan(400));
     expect(find.text('ORIGINAL'), findsOneWidget);
     expect(find.text('EDITED'), findsOneWidget);
     // The grid and the combined Text/Timing inspector both show duration.

@@ -38,12 +38,22 @@ extension _WaveformRendering on WaveformWidgetState {
 
   Widget _buildLoadingState(WaveformLoading state) {
     if (widget.compact) {
-      return Center(child: Row(
+      final colors = Theme.of(context).colorScheme;
+      return Center(child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const SizedBox(width: 16, height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2)),
-          const SizedBox(width: 10),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 320),
+              child: SizedBox(height: 31, child: WaveformLoadingBars(
+                fillFraction: state.waveformFillFraction,
+                activeColor: colors.primary,
+                inactiveColor: colors.onSurfaceVariant.withValues(alpha: 0.18),
+              )),
+            ),
+          ),
+          const SizedBox(height: 5),
           Text(state.progress >= 0.35
               ? 'Preparing waveform…' : 'Generating waveform…',
               style: const TextStyle(fontSize: 11)),
@@ -202,6 +212,34 @@ extension _WaveformRendering on WaveformWidgetState {
         padding: EdgeInsets.zero,
         constraints: const BoxConstraints(minWidth: 28, minHeight: 26),
       ),
+      if (limits.maxWidth >= 355) ...[
+        IconButton(
+          key: const ValueKey('waveform-compact-vertical-zoom-out'),
+          tooltip: 'Decrease waveform height',
+          icon: const Icon(Icons.height, size: 15),
+          onPressed: state.verticalZoom > .5
+              ? () => ref.read(waveformControllerProvider.notifier)
+                  .dispatch(UpdateVerticalZoom(
+                      (state.verticalZoom - .1).clamp(.5, 3.0)))
+              : null,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 28, minHeight: 26),
+        ),
+        Text('${(state.verticalZoom * 100).round()}%',
+            style: const TextStyle(fontSize: 10)),
+        IconButton(
+          key: const ValueKey('waveform-compact-vertical-zoom-in'),
+          tooltip: 'Increase waveform height',
+          icon: const Icon(Icons.open_in_full, size: 15),
+          onPressed: state.verticalZoom < 3
+              ? () => ref.read(waveformControllerProvider.notifier)
+                  .dispatch(UpdateVerticalZoom(
+                      (state.verticalZoom + .1).clamp(.5, 3.0)))
+              : null,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 28, minHeight: 26),
+        ),
+      ],
       const Spacer(),
       if (widget.enableTimeEditing && limits.maxWidth >= 365) ...[
         IconButton(
@@ -217,8 +255,13 @@ extension _WaveformRendering on WaveformWidgetState {
         IconButton(
           key: const ValueKey('waveform-compact-magnet'),
           tooltip: state.magnetSnapEnabled ? 'Disable magnet snap' : 'Enable magnet snap',
-          icon: Icon(Icons.align_horizontal_left, size: 16,
-              color: state.magnetSnapEnabled ? WaveformControlColors.magnet : null),
+          icon: SvgPicture.asset('assets/magnet-solid.svg',
+              width: 16, height: 16,
+              colorFilter: ColorFilter.mode(
+                state.magnetSnapEnabled
+                    ? WaveformControlColors.magnet
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
+                BlendMode.srcIn)),
           onPressed: () => ref.read(waveformControllerProvider.notifier)
               .dispatch(const ToggleMagnetSnap()),
           padding: EdgeInsets.zero,

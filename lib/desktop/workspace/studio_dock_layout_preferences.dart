@@ -10,6 +10,8 @@ class StudioDockLayoutSnapshot {
     this.waveformShare = .24,
     this.explorerOpen = true,
     this.inspectorOpen = true,
+    this.videoOpen = false,
+    this.waveformOpen = false,
   });
 
   final double explorerWidth;
@@ -18,6 +20,9 @@ class StudioDockLayoutSnapshot {
   final double waveformShare;
   final bool explorerOpen;
   final bool inspectorOpen;
+  /// Media panels reopen only when explicitly enabled and a source exists.
+  final bool videoOpen;
+  final bool waveformOpen;
 }
 
 class StudioDockLayoutPreferences {
@@ -37,6 +42,8 @@ class StudioDockLayoutPreferences {
       waveformShare: read('waveformShare', .24, .18, .38),
       explorerOpen: p.getBool(prefix + 'explorerOpen') ?? true,
       inspectorOpen: p.getBool(prefix + 'inspectorOpen') ?? true,
+      videoOpen: p.getBool(prefix + 'videoOpen') ?? false,
+      waveformOpen: p.getBool(prefix + 'waveformOpen') ?? false,
     );
   }
 
@@ -48,5 +55,7 @@ class StudioDockLayoutPreferences {
     await p.setDouble(prefix + 'waveformShare', state.waveformShare);
     await p.setBool(prefix + 'explorerOpen', state.explorerOpen);
     await p.setBool(prefix + 'inspectorOpen', state.inspectorOpen);
+    await p.setBool(prefix + 'videoOpen', state.videoOpen);
+    await p.setBool(prefix + 'waveformOpen', state.waveformOpen);
   }
 }

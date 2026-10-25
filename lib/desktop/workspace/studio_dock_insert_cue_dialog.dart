@@ -88,7 +88,7 @@ class _StudioDockInsertCueDialogState extends State<StudioDockInsertCueDialog> {
     } else {
       setState(() {
         _saving = false;
-        _error = 'Could not insert this cue. The project may have changed '
+        _error = 'Could not insert this line. The project may have changed '
             'elsewhere. Your draft is preserved.';
       });
     }
@@ -98,14 +98,14 @@ class _StudioDockInsertCueDialogState extends State<StudioDockInsertCueDialog> {
   Widget build(BuildContext context) => PopScope(
     canPop: !_saving,
     child: AlertDialog(
-      title: const Text('Insert subtitle cue'),
+      title: const Text('Insert subtitle line'),
       content: SizedBox(
         width: 480,
         child: SingleChildScrollView(child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('Cue order follows its start and end timecodes.',
+            const Text('Line order follows its start and end timecodes.',
               style: TextStyle(fontSize: 12)),
             const SizedBox(height: 14),
             Row(children: [
@@ -167,7 +167,7 @@ class _StudioDockInsertCueDialogState extends State<StudioDockInsertCueDialog> {
           key: const ValueKey('studio-confirm-insert'),
           onPressed: _saving ? null : () => unawaited(_submit()),
           icon: const Icon(Icons.add),
-          label: Text(_saving ? 'Inserting…' : 'Insert cue'),
+          label: Text(_saving ? 'Inserting…' : 'Insert line'),
         ),
       ],
     ),

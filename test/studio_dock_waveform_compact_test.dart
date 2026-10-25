@@ -8,6 +8,7 @@ import 'package:subtitle_studio/features/waveform/providers/waveform_controller.
 import 'package:subtitle_studio/features/waveform/state/waveform_state.dart';
 import 'package:subtitle_studio/features/waveform/state/waveform_event.dart';
 import 'package:subtitle_studio/features/waveform/widgets/waveform_widget.dart';
+import 'package:subtitle_studio/features/waveform/widgets/waveform_loading_bars.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 
 class _CompactReadyController extends WaveformController {
@@ -97,6 +98,10 @@ void main() {
         findsOneWidget);
     expect(find.byKey(const ValueKey('waveform-compact-zoom-out')),
         findsOneWidget);
+    expect(find.byKey(const ValueKey('waveform-compact-vertical-zoom-in')),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey('waveform-compact-vertical-zoom-out')),
+        findsOneWidget);
     expect(tester.widget<WaveformWidget>(find.byType(WaveformWidget))
         .enableTimeEditing, isFalse);
     expect(find.byTooltip('Waveform Options'), findsNothing,
@@ -175,6 +180,7 @@ void main() {
     ));
     await tester.pump();
     expect(find.text('Generating waveform…'), findsOneWidget);
+    expect(find.byType(WaveformLoadingBars), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

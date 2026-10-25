@@ -30,7 +30,7 @@ class StudioDockBulkToolsService {
 
   static String formatMilliseconds(int milliseconds) {
     if (milliseconds < 0 || milliseconds > _lastSrtMillisecond) {
-      throw const FormatException('Shift would move a cue beyond 00:00–23:59:59,999.');
+      throw const FormatException('Shift would move a line beyond 00:00–23:59:59,999.');
     }
     final hours = (milliseconds ~/ 3600000).toString().padLeft(2, '0');
     final minutes = ((milliseconds ~/ 60000) % 60).toString().padLeft(2, '0');
@@ -59,7 +59,7 @@ class StudioDockBulkToolsService {
   ) {
     if (cueNumbers.isEmpty ||
         StudioDockTimingEditService.validate(newStart, newEnd) != null) {
-      throw const FormatException('Select cues and valid start/end timecodes.');
+      throw const FormatException('Select lines and valid start/end timecodes.');
     }
     final selected = [
       for (final cue in snapshot.cues)

@@ -54,18 +54,15 @@ class _SettingsButtonState extends State<_SettingsButton> {
   void _showSettingsMenu(BuildContext context, VideoPlayerWidgetState videoPlayerState) {
     // Capture parent context so inner builders can call dialogs/snackbars safely after the sheet is popped
     final BuildContext parentContext = context;
-    // Show settings sheet
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      // Use a distinct name for the sheet's builder context to avoid shadowing the parent
-      builder: (BuildContext sheetContext) {
+    final desktop = Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+    // Use the same controls on every platform, with desktop settings in a
+    // centered dialog rather than a bottom-anchored, draggable mobile sheet.
+    Widget settingsContent(BuildContext sheetContext) {
         return DraggableScrollableSheet(
-          initialChildSize: 0.7,
-          minChildSize: 0.4,
-          maxChildSize: 0.9,
-          expand: false,
+          initialChildSize: desktop ? 1 : 0.7,
+          minChildSize: desktop ? 1 : 0.4,
+          maxChildSize: desktop ? 1 : 0.9,
+          expand: desktop,
           builder: (context, scrollController) {
             // Dynamic color variables for adaptive theming
             final isDark = Theme.of(sheetContext).brightness == Brightness.dark;
@@ -77,7 +74,9 @@ class _SettingsButtonState extends State<_SettingsButton> {
             return Container(
               decoration: BoxDecoration(
                 color: surfaceColor,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                borderRadius: desktop
+                    ? BorderRadius.circular(14)
+                    : const BorderRadius.vertical(top: Radius.circular(20)),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(24.0),
@@ -815,8 +814,28 @@ class _SettingsButtonState extends State<_SettingsButton> {
             );
           },
         );
-      },
-    );
+    }
+    if (desktop) {
+      showDialog<void>(
+        context: context,
+        builder: (dialogContext) => Dialog(
+          insetPadding: const EdgeInsets.all(24),
+          child: SizedBox(
+            width: 760,
+            height: (MediaQuery.sizeOf(dialogContext).height - 64)
+                .clamp(240.0, 760.0).toDouble(),
+            child: settingsContent(dialogContext),
+          ),
+        ),
+      );
+    } else {
+      showModalBottomSheet<void>(
+        context: context,
+        backgroundColor: Colors.transparent,
+        isScrollControlled: true,
+        builder: settingsContent,
+      );
+    }
   }
 }
 
