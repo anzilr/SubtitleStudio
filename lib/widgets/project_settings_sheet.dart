@@ -129,17 +129,6 @@ class _ProjectSettingsSheetState extends ConsumerState<ProjectSettingsSheet> wit
     }
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Refresh data when the widget's dependencies change (like when modal regains focus)
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _refreshDataSilently();
-      }
-    });
-  }
-
   /// Silently refresh data without showing loading indicator
   Future<void> _refreshDataSilently() async {
     if (!mounted) return;
@@ -147,16 +136,19 @@ class _ProjectSettingsSheetState extends ConsumerState<ProjectSettingsSheet> wit
     try {
       bool hasChanges = false;
       
-      // Check video path
-      final currentVideoPath = await ref.read(editorPreferencesRepositoryProvider).getVideoPath(widget.session.subtitleCollectionId);
+      // One preferences read covers video and secondary subtitle fields.
+      final videoPreferences = await ref
+          .read(editorPreferencesRepositoryProvider)
+          .getVideoPreferences(widget.session.subtitleCollectionId);
+      final currentVideoPath = videoPreferences.videoPath;
       if (currentVideoPath != _videoPath) {
         _videoPath = currentVideoPath;
         hasChanges = true;
       }
       
       // Check secondary subtitle settings
-      final currentSecondaryPath = await ref.read(editorPreferencesRepositoryProvider).getSecondarySubtitlePath(widget.session.subtitleCollectionId);
-      final currentIsOriginal = await ref.read(editorPreferencesRepositoryProvider).getSecondaryIsOriginal(widget.session.subtitleCollectionId);
+      final currentSecondaryPath = videoPreferences.secondarySubtitlePath;
+      final currentIsOriginal = videoPreferences.secondaryIsOriginal;
       
       if (currentSecondaryPath != _secondarySubtitlePath || currentIsOriginal != _isSecondaryFromOriginal) {
         _secondarySubtitlePath = currentSecondaryPath;
@@ -217,7 +209,7 @@ class _ProjectSettingsSheetState extends ConsumerState<ProjectSettingsSheet> wit
       });
       
       // Reload all data
-      await _loadProjectData();
+      await _loadProjectData(refreshFromStorage: true);
     } catch (e) {
       if (mounted) {
         SnackbarHelper.showSnackBar(
@@ -240,8 +232,11 @@ class _ProjectSettingsSheetState extends ConsumerState<ProjectSettingsSheet> wit
     if (!mounted) return;
     
     try {
-      _secondarySubtitlePath = await ref.read(editorPreferencesRepositoryProvider).getSecondarySubtitlePath(widget.session.subtitleCollectionId);
-      _isSecondaryFromOriginal = await ref.read(editorPreferencesRepositoryProvider).getSecondaryIsOriginal(widget.session.subtitleCollectionId);
+      final preferences = await ref
+          .read(editorPreferencesRepositoryProvider)
+          .getVideoPreferences(widget.session.subtitleCollectionId);
+      _secondarySubtitlePath = preferences.secondarySubtitlePath;
+      _isSecondaryFromOriginal = preferences.secondaryIsOriginal;
       
       if (mounted) {
         setState(() {});
@@ -283,23 +278,28 @@ class _ProjectSettingsSheetState extends ConsumerState<ProjectSettingsSheet> wit
     }
   }
 
-  Future<void> _loadProjectData() async {
+  Future<void> _loadProjectData({bool refreshFromStorage = false}) async {
     try {
-      // Load session info
-      _sessionInfo = await _getSessionInfo();
-      
-      // Load video path
-      _videoPath = await ref.read(editorPreferencesRepositoryProvider).getVideoPath(widget.session.subtitleCollectionId);
-      
-      // Load secondary subtitle settings
-      _secondarySubtitlePath = await ref.read(editorPreferencesRepositoryProvider).getSecondarySubtitlePath(widget.session.subtitleCollectionId);
-      _isSecondaryFromOriginal = await ref.read(editorPreferencesRepositoryProvider).getSecondaryIsOriginal(widget.session.subtitleCollectionId);
-      
-      // Load marked lines
-      _markedLines = await ref.read(subtitleRepositoryProvider).getMarkedLines(widget.session.subtitleCollectionId);
-      
+      // The caller already fetched this collection before showing the sheet.
+      // Re-fetching all embedded lines here made large projects wait several
+      // seconds behind a spinner, and then repeated the read for review marks.
+      // Only explicit refresh requests need the latest stored lines.
+      final lines = refreshFromStorage
+          ? await ref.read(subtitleRepositoryProvider)
+              .fetchLines(widget.subtitleCollection.id)
+          : widget.subtitleCollection.lines;
+      final stats = _getSessionInfo(lines);
+      final marked = lines.where((line) => line.marked).toList();
+      final preferences = await ref
+          .read(editorPreferencesRepositoryProvider)
+          .getVideoPreferences(widget.session.subtitleCollectionId);
       if (!mounted) return;
       setState(() {
+        _sessionInfo = stats;
+        _markedLines = marked;
+        _videoPath = preferences.videoPath;
+        _secondarySubtitlePath = preferences.secondarySubtitlePath;
+        _isSecondaryFromOriginal = preferences.secondaryIsOriginal;
         _isLoading = false;
       });
     } catch (e) {
@@ -317,11 +317,8 @@ class _ProjectSettingsSheetState extends ConsumerState<ProjectSettingsSheet> wit
     }
   }
 
-  Future<Map<String, dynamic>> _getSessionInfo() async {
+  Map<String, dynamic> _getSessionInfo(List<SubtitleLine> subtitleLines) {
     try {
-      final subtitleLines = await ref
-          .read(subtitleRepositoryProvider)
-          .fetchLines(widget.subtitleCollection.id);
       final editedCount = subtitleLines.where((line) => line.edited != null && line.edited!.isNotEmpty).length;
       final totalLines = subtitleLines.length;
       final progress = totalLines > 0 ? editedCount / totalLines : 0.0;

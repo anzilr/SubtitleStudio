@@ -157,6 +157,11 @@ void main() {
     await tester.tap(find.text('Show Original Text Field'));
     await tester.pumpAndSettle();
     expect(find.text('ORIGINAL TEXT'), findsNothing);
+    expect(find.text('Original text is hidden'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('studio-show-original-text')));
+    await tester.pumpAndSettle();
+    expect(find.text('ORIGINAL TEXT'), findsOneWidget);
+    expect(find.text('Original text is hidden'), findsNothing);
     await viewMenu(tester);
     await tester.tap(find.text('Formatted View'));
     await tester.pumpAndSettle();

@@ -4753,6 +4753,25 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             ),
             const SizedBox(height: 17),
           ],
+          if (!widget.isEditMode && !widget.showOriginalTextField) ...[
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(children: [
+                Expanded(child: Text('Original text is hidden',
+                    style: TextStyle(color: _muted, fontSize: 13))),
+                TextButton.icon(
+                  key: const ValueKey('studio-show-original-text'),
+                  onPressed: widget.onSaveEditPreference == null ||
+                          _updatingEditPreference
+                      ? null
+                      : () => unawaited(_setEditPreference(
+                          StudioDockEditPreference.showOriginalTextField)),
+                  icon: const Icon(Icons.visibility_outlined, size: 17),
+                  label: const Text('Show original'),
+                ),
+              ]),
+            ),
+          ],
           _fieldLabel(widget.isEditMode ? 'SUBTITLE TEXT' : 'EDITED TEXT'),
           CallbackShortcuts(
             bindings: {
