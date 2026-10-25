@@ -110,6 +110,21 @@ class StudioDockCueUpdate {
   final List<int>? selectedCueIds;
 }
 
+/// A saved project in the desktop sidebar, backed by the same session list as
+/// the mobile project selector. No new database or synthetic project copies.
+@immutable
+class StudioDockProjectEntry {
+  const StudioDockProjectEntry({
+    required this.id,
+    required this.title,
+    required this.isEditMode,
+  });
+
+  final int id;
+  final String title;
+  final bool isEditMode;
+}
+
 enum _StudioDockFileMenuAction {
   save, saveAs, export, saveProject, saveProjectAs, projectSettings,
 }
@@ -130,6 +145,9 @@ class StudioDockWorkspace extends StatefulWidget {
     this.projectTitle,
     this.encoding,
     this.onChooseProject,
+    this.projects = const [],
+    this.activeProjectId,
+    this.onSelectProject,
     this.onImportFile,
     this.onNewProject,
     this.onApplyCueText,
@@ -152,6 +170,7 @@ class StudioDockWorkspace extends StatefulWidget {
     this.onMergeCue,
     this.onLoadHistory,
     this.onRestoreHistory,
+    this.checkpointHistoryPanel,
     this.onLoadSourceView,
     this.onApplySourceView,
     this.onSaveFile,
@@ -202,6 +221,9 @@ class StudioDockWorkspace extends StatefulWidget {
   final String? projectTitle;
   final String? encoding;
   final VoidCallback? onChooseProject;
+  final List<StudioDockProjectEntry> projects;
+  final int? activeProjectId;
+  final ValueChanged<int>? onSelectProject;
   final VoidCallback? onImportFile;
   final VoidCallback? onNewProject;
   /// Non-null only when the production checkpoint-backed edit bridge is ready.
@@ -263,6 +285,9 @@ class StudioDockWorkspace extends StatefulWidget {
   final Future<StudioDockCueUpdate?> Function(
       int targetCheckpointId, int expectedHeadId, int preferredCueId)?
       onRestoreHistory;
+  /// Live desktop uses the same full graph/bookmark/branch interface as mobile.
+  /// Demos without a session continue using the local history preview.
+  final Widget? checkpointHistoryPanel;
   /// Loads the authoritative raw SRT snapshot once the inspector is clean.
   final Future<String> Function()? onLoadSourceView;
   /// One guarded full-document history commit; null for read-only sessions.
@@ -808,6 +833,9 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     }
   }
 
+  /// Refresh Undo/Redo pointers after an externally restored checkpoint.
+  Future<void> reloadHistoryFromSession() => _reloadHistory();
+
   HistoryGraphNode? get _currentHistoryPoint {
     final graph = _history;
     if (graph == null) return null;
@@ -1237,6 +1265,24 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     return applied;
   }
 
+  /// Explicit Shift+Enter workflow in the Text inspector: commit the current
+  /// text/timing draft before navigating. A failed save must never advance.
+  Future<void> _applyDraftAndAdvance() async {
+    if (widget.onApplyCueText == null || _savingDraft || _navigatingCue ||
+        _visible.isEmpty) return;
+    final visibleIds = _visible.map((cue) => cue.id).toList();
+    final position = visibleIds.indexOf(_selectedId);
+    if (position < 0) return;
+    if (_hasDirtyDraft && !await _applyDraft()) return;
+    if (!mounted) return;
+    if (position + 1 < visibleIds.length) {
+      _applyCueSelection(visibleIds[position + 1]);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _cueTextFocus.requestFocus();
+      });
+    }
+  }
+
   Future<bool> _applyNotesDraft() async {
     final apply = widget.onApplyCueNotes;
     if (apply == null || _savingDraft) return false;
@@ -1454,6 +1500,21 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   Future<void> _chooseProjectSafely() async {
     if (await _confirmDraftBeforeLeaving() && mounted) {
       widget.onChooseProject?.call();
+    }
+  }
+
+  Future<void> _selectSidebarProject(int id) async {
+    if (id >= 0 && id == widget.activeProjectId) return;
+    if (!await _confirmDraftBeforeLeaving() || !mounted) return;
+    switch (id) {
+      case -1:
+        widget.onChooseProject?.call();
+      case -2:
+        widget.onNewProject?.call();
+      case -3:
+        widget.onImportFile?.call();
+      default:
+        widget.onSelectProject?.call(id);
     }
   }
   Future<void> _importFileSafely() async {
@@ -3222,13 +3283,6 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           tooltip: 'New project',
           onPressed: () => unawaited(_newProjectSafely()),
         ),
-      if (widget.onChooseProject != null)
-        IconButton(
-          key: const ValueKey('studio-dock-switch-project'),
-          icon: const Icon(Icons.folder_open_outlined),
-          tooltip: 'Switch project',
-          onPressed: () => unawaited(_chooseProjectSafely()),
-        ),
       const SizedBox(width: 6),
       IconButton(
         key: const ValueKey('desktop-command-palette'),
@@ -3288,6 +3342,54 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       Border(right: BorderSide(color: _border))),
     child: Column(children: [
       const SizedBox(height: 13),
+      if (widget.onChooseProject != null || widget.projects.isNotEmpty) ...[
+        Tooltip(
+          message: 'Projects · ${widget.projects.length} saved',
+          child: PopupMenuButton<int>(
+            key: const ValueKey('studio-dock-sidebar-projects'),
+            tooltip: 'Projects',
+            icon: Icon(Icons.folder_copy_outlined, color: _accent),
+            onSelected: (id) => unawaited(_selectSidebarProject(id)),
+            itemBuilder: (context) => [
+              for (final project in widget.projects)
+                PopupMenuItem<int>(
+                  key: ValueKey('studio-dock-project-option-${project.id}'),
+                  value: project.id,
+                  child: SizedBox(width: 260, child: Row(children: [
+                    Icon(project.id == widget.activeProjectId
+                        ? Icons.radio_button_checked : Icons.folder_outlined,
+                        size: 18, color: project.id == widget.activeProjectId
+                            ? _accent : _muted),
+                    const SizedBox(width: 10),
+                    Expanded(child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(project.title, maxLines: 1,
+                            overflow: TextOverflow.ellipsis),
+                        Text(project.isEditMode ? 'Edit Mode' : 'Translation Mode',
+                            style: TextStyle(color: _muted, fontSize: 10)),
+                      ],
+                    )),
+                  ])),
+                ),
+              if (widget.projects.isEmpty && widget.onChooseProject != null)
+                const PopupMenuItem<int>(
+                  value: -1, child: Text('Browse projects…'),
+                ),
+              if (widget.onNewProject != null)
+                const PopupMenuItem<int>(
+                  value: -2, child: Text('New project…'),
+                ),
+              if (widget.onImportFile != null)
+                const PopupMenuItem<int>(
+                  value: -3, child: Text('Import project…'),
+                ),
+            ],
+          ),
+        ),
+        Divider(color: _border, indent: 10, endIndent: 10),
+      ],
       _railItem(0, Icons.movie_creation_outlined, 'Editor'),
       _railItem(1, Icons.account_tree_outlined, 'History'),
       if (widget.onLoadSourceView != null)
@@ -3960,23 +4062,21 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   );
 
   Widget _waveformPanel() => Container(
-    padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+    padding: const EdgeInsets.fromLTRB(10, 4, 10, 5),
     color: Theme.of(context).colorScheme.surfaceContainerLow,
     child: Column(children: [
-      Row(children: [
-        Icon(Icons.graphic_eq, size: 15, color: _accent),
-        const SizedBox(width: 8),
-        const Text('WAVEFORM', style: TextStyle(
-            fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: .8)),
-        const SizedBox(width: 10),
-        Text(widget.waveformSurface != null ? 'Synced with video' :
-            (widget.isLiveSession ? 'Audio not connected' : 'Audio track: Auto'),
-            style: TextStyle(fontSize: 10, color: _muted)),
-        const Spacer(),
-        Text('–  00:30  +', style:
-            TextStyle(color: _muted, fontSize: 10)),
-      ]),
-      SizedBox(height: 7),
+      if (widget.waveformSurface == null) ...[
+        Row(children: [
+          Icon(Icons.graphic_eq, size: 15, color: _accent),
+          const SizedBox(width: 8),
+          const Text('WAVEFORM', style: TextStyle(
+              fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: .8)),
+          const SizedBox(width: 10),
+          Text(widget.isLiveSession ? 'Audio not connected' : 'Audio track: Auto',
+              style: TextStyle(fontSize: 10, color: _muted)),
+        ]),
+        const SizedBox(height: 7),
+      ],
       Expanded(child: widget.waveformSurface ?? (widget.isLiveSession
           ? Center(child: Text('Waveform integration pending',
               style: TextStyle(color: _muted, fontSize: 11)))
@@ -4356,6 +4456,12 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                     key: ValueKey('palette-command-' + i.toString()),
                     dense: true,
                     title: Text(visible[i].key),
+                    trailing: _paletteShortcut(visible[i].key) == null
+                        ? null
+                        : Text(_paletteShortcut(visible[i].key)!,
+                            key: ValueKey('palette-shortcut-${visible[i].key}'),
+                            style: TextStyle(color: _muted, fontSize: 11,
+                                fontFeatures: const [FontFeature.tabularFigures()])),
                     onTap: () {
                       Navigator.of(dialogContext).pop();
                       visible[i].value();
@@ -4368,6 +4474,27 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         },
       ),
     );
+  }
+
+  String? _paletteShortcut(String command) {
+    final primary = defaultTargetPlatform == TargetPlatform.macOS
+        ? 'Cmd' : 'Ctrl';
+    return switch (command) {
+      'Find subtitle' || 'Replace subtitle text' => 'Ctrl+F',
+      'Next cue' => '$primary+.',
+      'Previous cue' => '$primary+,',
+      'Undo subtitle edit' => '$primary+Z',
+      'Redo subtitle edit' => '$primary+Shift+Z',
+      'Toggle playback preview' =>
+          defaultTargetPlatform == TargetPlatform.macOS
+              ? 'Shift+Space' : 'Ctrl+Space',
+      'Toggle review mark' => '$primary+M',
+      'Settings' => 'Alt+S',
+      'Help and documentation' =>
+          defaultTargetPlatform == TargetPlatform.macOS
+              ? 'Cmd+Shift+H' : 'Ctrl+H',
+      _ => null,
+    };
   }
 
   Widget _gridCells(StudioDockCue? cue) {
@@ -4527,7 +4654,12 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                   : (widget.isLiveSession
                       ? 'EDITED TEXT · READ ONLY'
                       : 'EDITED TEXT · DEMO ONLY'))),
-          TextFormField(
+          CallbackShortcuts(
+            bindings: {
+              const SingleActivator(LogicalKeyboardKey.enter, shift: true):
+                  () => unawaited(_applyDraftAndAdvance()),
+            },
+            child: TextFormField(
             focusNode: _cueTextFocus,
             key: widget.onApplyCueText == null
                 ? ValueKey('desktop-edit-' + _selected.id.toString())
@@ -4556,6 +4688,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                 _replaceCue(_selected.copyWith(edited: value));
               }
             },
+            ),
           ),
           if (_formattedView) ...[
             const SizedBox(height: 12),
@@ -4581,8 +4714,11 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           if (!widget.isEditMode) ...[
             const SizedBox(height: 14),
             OutlinedButton.icon(
-              onPressed: widget.isLiveSession ? null : () => _replaceCue(
-                  _selected.copyWith(edited: _selected.original)),
+              key: const ValueKey('studio-reset-to-original'),
+              onPressed: widget.onApplyCueText != null && !_savingDraft
+                  ? _pasteOriginalDraft
+                  : widget.isLiveSession ? null : () => _replaceCue(
+                      _selected.copyWith(edited: _selected.original)),
               icon: const Icon(Icons.restore, size: 15),
               label: const Text('Reset to original'),
             ),
@@ -4682,7 +4818,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             ),
           ]),
           const SizedBox(height: 20),
-          _fieldLabel('POSITION (9-GRID)'),
+          _fieldLabel('POSITION'),
           GridView.count(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -5429,6 +5565,9 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   }
 
   Widget _historySection() {
+    if (widget.checkpointHistoryPanel != null) {
+      return widget.checkpointHistoryPanel!;
+    }
     final graph = _history;
     return Padding(
       padding: const EdgeInsets.all(24),

@@ -192,9 +192,6 @@ extension _WaveformRendering on WaveformWidgetState {
         padding: EdgeInsets.zero,
         constraints: const BoxConstraints(minWidth: 28, minHeight: 26),
       ),
-      if (limits.maxWidth >= 250) Text('Waveform', style: TextStyle(
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-          fontSize: 10)),
       IconButton(
         key: const ValueKey('waveform-compact-zoom-in'),
         tooltip: 'Zoom waveform in',
@@ -304,7 +301,11 @@ extension _WaveformRendering on WaveformWidgetState {
         children: [
           // The desktop band has only ~13% of available vertical space.
           // Keep waveform interaction area usable without the full toolbar.
-          if (widget.compact) _buildCompactToolbar(state) else LayoutBuilder(
+          if (widget.compact)
+            widget.compactToolbarBuilder?.call(
+                context, _buildCompactToolbar(state)) ??
+                _buildCompactToolbar(state)
+          else LayoutBuilder(
             builder: (context, constraints) {
               // Calculate width for left section (total width - menu button width)
               final leftSectionWidth = constraints.maxWidth - 48;

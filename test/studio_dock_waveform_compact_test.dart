@@ -47,6 +47,30 @@ class _CompactErrorController extends WaveformController {
 }
 
 void main() {
+  testWidgets('desktop can place waveform actions in its only title row',
+      (tester) async {
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        waveformControllerProvider.overrideWith(_CompactReadyController.new),
+      ],
+      child: MaterialApp(home: Scaffold(body: SizedBox(
+        width: 700, height: 180,
+        child: WaveformWidget(
+          height: 180, compact: true,
+          subtitles: const [], enableTimeEditing: false,
+          compactToolbarBuilder: (context, buttons) => Row(children: [
+            const Text('WAVEFORM'),
+            Expanded(child: buttons),
+          ]),
+        ),
+      ))),
+    ));
+    await tester.pump();
+    expect(find.text('WAVEFORM'), findsOneWidget);
+    expect(find.byKey(const ValueKey('waveform-compact-zoom-in')),
+        findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('compact waveform keeps zoom and playhead usable in 13% band',
       (tester) async {
     tester.view.physicalSize = const Size(1200, 800);

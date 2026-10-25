@@ -261,3 +261,5 @@ DS5 R28 SEEK HANDOFF FULL GATE 2026-10-25: wheel-to-drag transition and quantize
 
 DS5 R29 TIMING HANDLES FULL GATE 2026-10-25: prevent cross-cue snap jumps, keep fixed drag anchors and moving overlay width, validate post-snap overlap; Flutter analyzer and full tests only, never platform builds.
 DS5 R30 REVIEW PARITY FULL GATE 2026-10-25: protect unsaved drafts when changing review filters and expose mobile marked-lines command in Studio Dock Tools; Flutter analyzer and full tests only, never platform builds.
+
+DS5 R32 2026-10-25: one-row desktop waveform toolbar, live checkpoint graph, project sidebar/startup persistence, Shift+Enter, Reset and palette shortcuts. Flutter analyzer/tests only; no builds.

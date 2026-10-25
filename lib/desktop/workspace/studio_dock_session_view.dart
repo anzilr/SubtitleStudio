@@ -24,6 +24,7 @@ import 'package:subtitle_studio/utils/subtitle_parser.dart';
 import 'package:subtitle_studio/widgets/secondary_subtitle_sheet.dart';
 import 'package:subtitle_studio/widgets/video_player_widget.dart';
 import 'package:subtitle_studio/widgets/video/repeat_range_dialog.dart';
+import 'package:subtitle_studio/widgets/checkpoint_history_panel.dart';
 
 import 'studio_dock_workspace.dart';
 import 'studio_dock_session_loader.dart';
@@ -57,6 +58,9 @@ class StudioDockSessionView extends ConsumerStatefulWidget {
     required this.sessionId,
     required this.collectionId,
     this.onChooseProject,
+    this.projects = const [],
+    this.activeProjectId,
+    this.onSelectProject,
     this.onImportFile,
     this.onNewProject,
     this.enableEditing = false,
@@ -67,6 +71,9 @@ class StudioDockSessionView extends ConsumerStatefulWidget {
   final int sessionId;
   final int collectionId;
   final VoidCallback? onChooseProject;
+  final List<StudioDockProjectEntry> projects;
+  final int? activeProjectId;
+  final ValueChanged<int>? onSelectProject;
   final VoidCallback? onImportFile;
   final VoidCallback? onNewProject;
   /// Opt in to checkpoint-backed edits for an existing session.
@@ -1263,6 +1270,15 @@ class _StudioDockSessionViewState
     }
   }
 
+  Future<void> _refreshAfterCheckpointRestore() async {
+    // Shared history actions already committed the HEAD transition. Reload
+    // the authoritative session before permitting further text edits.
+    await _refreshAfterProjectSettings();
+    if (mounted) {
+      await _dockKey.currentState?.reloadHistoryFromSession();
+    }
+  }
+
   Future<void> _openProjectSettings() async {
     if (!mounted) return;
     final session = await ref.read(projectRepositoryProvider)
@@ -1535,6 +1551,9 @@ class _StudioDockSessionViewState
         showOriginalTextField: _lineDisplay.showOriginalTextField,
         onSaveEditPreference: _saveLineDisplayPreference,
         onChooseProject: widget.onChooseProject,
+        projects: widget.projects,
+        activeProjectId: widget.activeProjectId,
+        onSelectProject: widget.onSelectProject,
         onImportFile: widget.onImportFile,
         onNewProject: widget.onNewProject,
         onChooseVideo: widget.allowNativePlayback ? _chooseVideo : null,
@@ -1592,6 +1611,13 @@ class _StudioDockSessionViewState
         onMergeCue: widget.enableEditing ? _mergeCue : null,
         onLoadHistory: widget.enableEditing ? _loadHistory : null,
         onRestoreHistory: widget.enableEditing ? _restoreHistory : null,
+        checkpointHistoryPanel: widget.enableEditing
+            ? CheckpointHistoryPanel(
+                key: ValueKey('studio-dock-checkpoint-graph-${widget.sessionId}'),
+                sessionId: widget.sessionId,
+                onCheckpointRestored: () =>
+                    unawaited(_refreshAfterCheckpointRestore()),
+              ) : null,
         onLoadSourceView: _loadRawSource,
         onApplySourceView: widget.enableEditing ? _applyRawSource : null,
         onSaveFile: widget.enableEditing && widget.allowNativePlayback

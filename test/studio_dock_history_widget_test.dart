@@ -46,6 +46,26 @@ const first = StudioDockCue(
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
+  testWidgets('desktop history can host the full shared checkpoint interface',
+      (tester) async {
+    tester.view.physicalSize = const Size(1680, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(const MaterialApp(home: StudioDockWorkspace(
+      isLiveSession: true,
+      initialCues: [first],
+      checkpointHistoryPanel: Center(
+        child: Text('Shared checkpoint graph and bookmarks'),
+      ),
+    )));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('rail-1')));
+    await tester.pumpAndSettle();
+    expect(find.text('Shared checkpoint graph and bookmarks'), findsOneWidget);
+    expect(find.byKey(const ValueKey('studio-history-list')), findsNothing);
+  });
+
   Future<void> launch(
     WidgetTester tester, {
     required Future<CheckpointHistoryGraph> Function() load,

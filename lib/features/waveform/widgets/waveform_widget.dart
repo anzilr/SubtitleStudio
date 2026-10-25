@@ -41,6 +41,10 @@ class WaveformWidget extends riverpod.ConsumerStatefulWidget {
   /// Opt-in minimal toolbar/zoom UI when embedded in a short desktop band.
   /// The full-sized mobile and classic waveform remains unchanged.
   final bool compact;
+  /// Desktop host can compose the *existing* waveform actions into its main
+  /// header. Mobile/full-size controls and their behavior stay unchanged.
+  final Widget Function(BuildContext context, Widget controls)?
+      compactToolbarBuilder;
   /// Keep waveform timing/add-cue edit gestures unavailable until the caller
   /// supplies a checkpoint-backed persistence flow. Mobile defaults unchanged.
   final bool enableTimeEditing;
@@ -64,6 +68,7 @@ class WaveformWidget extends riverpod.ConsumerStatefulWidget {
     this.onApplyTimeEdit,
     this.height = 180.0,
     this.compact = false,
+    this.compactToolbarBuilder,
     this.enableTimeEditing = true,
     this.subtitleCollectionId,
     this.sessionId,

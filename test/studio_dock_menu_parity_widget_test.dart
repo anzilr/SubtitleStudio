@@ -78,6 +78,50 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('command palette aligns assigned shortcuts beside command names',
+      (tester) async {
+    await launch(tester);
+    await tester.tap(find.byKey(const ValueKey('desktop-command-palette')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('palette-shortcut-Find subtitle')),
+        findsOneWidget);
+    expect(find.text('Ctrl+F'), findsWidgets);
+    expect(find.byKey(const ValueKey('palette-shortcut-Next cue')),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey('palette-shortcut-Subtitle tools')),
+        findsNothing, reason: 'Do not advertise a shortcut that is not bound');
+  });
+
+  testWidgets('Projects is the first sidebar item, replacing Switch project',
+      (tester) async {
+    tester.view.physicalSize = const Size(1680, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    var selected = -1;
+    await tester.pumpWidget(MaterialApp(home: StudioDockWorkspace(
+      initialCues: const [StudioDockCue(
+        id: 1, start: '00:00:01,000', end: '00:00:02,000',
+        original: 'One', edited: 'Edited',
+      )],
+      activeProjectId: 7,
+      projects: const [
+        StudioDockProjectEntry(id: 7, title: 'First.srt', isEditMode: false),
+        StudioDockProjectEntry(id: 8, title: 'Second.srt', isEditMode: true),
+      ],
+      onSelectProject: (id) => selected = id,
+    )));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('studio-dock-switch-project')),
+        findsNothing);
+    await tester.tap(find.byKey(const ValueKey('studio-dock-sidebar-projects')));
+    await tester.pumpAndSettle();
+    expect(find.text('First.srt'), findsOneWidget);
+    await tester.tap(find.text('Second.srt'));
+    await tester.pumpAndSettle();
+    expect(selected, 8);
+  });
+
   testWidgets('desktop menus dispatch actual editor sections',
       (tester) async {
     await launch(tester);

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/app/providers/core_providers.dart';
@@ -9,6 +11,7 @@ import 'package:subtitle_studio/widgets/session_selection/session_project_import
 import 'studio_dock_project_actions.dart';
 
 import 'studio_dock_session_view.dart';
+import 'studio_dock_workspace.dart';
 
 /// Exclusive native desktop shell for Windows, Linux and macOS.
 /// Projects, imports, text editing and media remain in Studio Dock; the
@@ -62,6 +65,27 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
     return StudioDockSessionCatalog(sessions, lastId);
   }
 
+  Future<void> _rememberProject(int sessionId) async {
+    // Injectable catalogs represent independent test data without an Isar
+    // connection. Production remembers the selection across app launches.
+    if (widget.loadSessions != null) return;
+    try {
+      await SessionRepository(ref.read(isarProvider))
+          .setLastEditedSession(sessionId);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _error =
+            'Project opened, but it could not be saved as the startup project.');
+      }
+    }
+  }
+
+  Future<void> _selectProject(int id, StudioDockSessionCatalog snapshot) async {
+    if (_busy || !snapshot.sessions.any((session) => session.id == id)) return;
+    setState(() => _chosenSessionId = id);
+    await _rememberProject(id);
+  }
+
   void _refresh() {
     if (!mounted) return;
     setState(() {
@@ -90,6 +114,7 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
       if (!mounted) return;
       _chosenSessionId = imported.id;
       _refresh();
+      await _rememberProject(imported.id);
     } catch (e) {
       if (mounted) {
         setState(() => _error = 'Unable to open project: $e');
@@ -144,6 +169,7 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
       if (!mounted) return;
       _chosenSessionId = created.id;
       _refresh();
+      await _rememberProject(created.id);
     } catch (e) {
       if (mounted) setState(() => _error = 'Could not create project: $e');
     } finally {
@@ -215,7 +241,7 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
       return;
     }
     if (snapshot.sessions.any((session) => session.id == selectedId)) {
-      setState(() => _chosenSessionId = selectedId);
+      await _selectProject(selectedId, snapshot);
     }
   }
 
@@ -262,6 +288,16 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
           sessionId: active.id,
           collectionId: active.subtitleCollectionId,
           onChooseProject: choose,
+          activeProjectId: activeId,
+          projects: [
+            for (final project in snapshot.sessions)
+              StudioDockProjectEntry(
+                id: project.id,
+                title: project.fileName,
+                isEditMode: project.editMode,
+              ),
+          ],
+          onSelectProject: (id) => unawaited(_selectProject(id, snapshot)),
           onImportFile: () => _importFile(),
           onNewProject: _createProject,
           enableEditing: true,

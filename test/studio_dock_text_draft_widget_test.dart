@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_workspace.dart';
@@ -56,6 +57,58 @@ void main() {
     expect(calls, ['1:New draft']);
     expect(find.text('New draft'), findsWidgets);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Shift+Enter saves current text and advances to next cue',
+      (tester) async {
+    final edits = <String>[];
+    await launch(tester, apply: (cue, content) async {
+      edits.add('$cue:$content');
+      return true;
+    });
+    await tester.enterText(
+        find.byKey(const ValueKey('studio-edit-1-0')), 'Shift edit');
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.pumpAndSettle();
+    expect(edits, ['1:Shift edit']);
+    expect(find.byKey(const ValueKey('studio-edit-2-1')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Shift+Enter never advances after rejected save',
+      (tester) async {
+    await launch(tester, apply: (_, __) async => false);
+    await tester.enterText(
+        find.byKey(const ValueKey('studio-edit-1-0')), 'Keep this draft');
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(find.byKey(const ValueKey('studio-edit-2-1')), findsNothing);
+    expect(find.text('Keep this draft'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Reset to original is enabled for live translation text',
+      (tester) async {
+    final edits = <String>[];
+    await launch(tester, apply: (cue, text) async {
+      edits.add('$cue:$text');
+      return true;
+    });
+    final reset = find.byKey(const ValueKey('studio-reset-to-original'));
+    await tester.ensureVisible(reset);
+    expect(tester.widget<OutlinedButton>(reset).onPressed, isNotNull);
+    await tester.tap(reset);
+    await tester.pumpAndSettle();
+    expect(find.text('Original 1'), findsWidgets);
+    expect(edits, isEmpty, reason: 'Reset is a draft until Apply is pressed');
+    await tester.ensureVisible(find.byKey(const ValueKey('studio-apply-cue')));
+    await tester.tap(find.byKey(const ValueKey('studio-apply-cue')));
+    await tester.pumpAndSettle();
+    expect(edits, ['1:Original 1']);
   });
 
   testWidgets('dirty cue selection supports Cancel and Discard',

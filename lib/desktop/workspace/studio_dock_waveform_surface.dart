@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/features/waveform/providers/waveform_controller.dart';
 import 'package:subtitle_studio/features/waveform/state/waveform_event.dart';
+import 'package:subtitle_studio/features/waveform/state/waveform_state.dart';
 import 'package:subtitle_studio/features/waveform/widgets/waveform_widget.dart';
 
 import 'studio_dock_playback_link.dart';
@@ -186,24 +187,30 @@ class _WaveformBodyState extends ConsumerState<_WaveformBody> {
   }
 
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, limits) => Column(children: [
-      SizedBox(
-        height: 32,
-        child: ValueListenableBuilder<StudioDockAudioSource>(
+  Widget build(BuildContext context) {
+    final waveform = ref.watch(waveformControllerProvider);
+    final controlsInMainHeader = _waveformVisible && waveform is WaveformReady;
+    Widget toolbar({Widget? controls, Duration? position}) =>
+        ValueListenableBuilder<StudioDockAudioSource>(
           valueListenable: widget.playback.audio,
           builder: (context, source, _) => StudioDockWaveformToolbar(
             visible: _waveformVisible,
             canRegenerate: source.status == StudioDockAudioStatus.ready,
             busy: _regenerating,
+            compactControls: controls,
+            position: position,
             onToggleVisibility: () => setState(() {
               _waveformVisible = !_waveformVisible;
               _commandError = null;
             }),
             onRegenerate: () => unawaited(_regenerateWaveform()),
           ),
-        ),
-      ),
+        );
+    return Column(children: [
+      // When ready, the shared waveform actions are composed into this very
+      // same header. A separate fallback header is only for loading/hidden.
+      if (!controlsInMainHeader)
+        SizedBox(height: 32, child: toolbar()),
       if (_commandError != null)
         Text(_commandError!, key: const ValueKey('studio-waveform-command-error'),
             maxLines: 1, overflow: TextOverflow.ellipsis,
@@ -221,6 +228,10 @@ class _WaveformBodyState extends ConsumerState<_WaveformBody> {
                 isVideoPlaying: () => widget.playback.playing.value,
                 height: size.maxHeight,
                 compact: true,
+                compactToolbarBuilder: (context, controls) => SizedBox(
+                  height: 32,
+                  child: toolbar(controls: controls, position: position),
+                ),
                 enableTimeEditing: widget.onApplyTimeEdit != null &&
                     widget.onAddLineConfirmed != null,
                 onApplyTimeEdit: widget.onApplyTimeEdit,
@@ -238,8 +249,8 @@ class _WaveformBodyState extends ConsumerState<_WaveformBody> {
           child: Text('Waveform hidden — use Generate to show it.',
               key: ValueKey('studio-waveform-hidden')),
         )),
-    ]),
-  );
+    ]);
+  }
 }
 
 /// Focusable controls above the existing waveform, independent of media_kit.
@@ -251,6 +262,8 @@ class StudioDockWaveformToolbar extends StatelessWidget {
     required this.busy,
     required this.onToggleVisibility,
     required this.onRegenerate,
+    this.compactControls,
+    this.position,
   });
 
   final bool visible;
@@ -258,27 +271,61 @@ class StudioDockWaveformToolbar extends StatelessWidget {
   final bool busy;
   final VoidCallback onToggleVisibility;
   final VoidCallback onRegenerate;
+  final Widget? compactControls;
+  final Duration? position;
+
+  static String formatTime(Duration value) {
+    final hours = value.inHours.toString().padLeft(2, '0');
+    final minutes = (value.inMinutes % 60).toString().padLeft(2, '0');
+    final seconds = (value.inSeconds % 60).toString().padLeft(2, '0');
+    return '$hours:$minutes:$seconds';
+  }
 
   @override
-  Widget build(BuildContext context) => Row(children: [
-    const SizedBox(width: 8),
-    const Icon(Icons.graphic_eq, size: 15),
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, size) => Row(children: [
+    const SizedBox(width: 4),
+    Icon(Icons.graphic_eq, size: 15, color: Theme.of(context).colorScheme.primary),
     const SizedBox(width: 6),
-    const Expanded(child: Text('Waveform', maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600))),
-    TextButton.icon(
+    const Text('WAVEFORM', style: TextStyle(fontSize: 10,
+        fontWeight: FontWeight.w700, letterSpacing: .8)),
+    if (compactControls != null) ...[
+      const SizedBox(width: 8),
+      Expanded(child: compactControls!),
+    ] else const Spacer(),
+    if (position != null && size.maxWidth >= 570) ...[
+      const SizedBox(width: 8),
+      Text(formatTime(position!),
+          key: const ValueKey('studio-waveform-timecode'),
+          style: const TextStyle(fontSize: 11,
+              fontFeatures: [FontFeature.tabularFigures()])),
+    ],
+    if (size.maxWidth < 650) IconButton(
+      key: const ValueKey('studio-waveform-visibility'),
+      tooltip: visible ? 'Hide waveform' : 'Show waveform',
+      onPressed: busy ? null : onToggleVisibility,
+      icon: Icon(visible ? Icons.visibility_off : Icons.visibility, size: 17),
+      constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+      padding: EdgeInsets.zero,
+    ) else TextButton.icon(
       key: const ValueKey('studio-waveform-visibility'),
       onPressed: busy ? null : onToggleVisibility,
       icon: Icon(visible ? Icons.visibility_off : Icons.visibility, size: 15),
       label: Text(visible ? 'Hide' : 'Generate'),
     ),
-    TextButton.icon(
+    if (size.maxWidth < 650) IconButton(
+      key: const ValueKey('studio-waveform-regenerate'),
+      tooltip: 'Regenerate waveform',
+      onPressed: canRegenerate && !busy ? onRegenerate : null,
+      icon: const Icon(Icons.refresh, size: 17),
+      constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+      padding: EdgeInsets.zero,
+    ) else TextButton.icon(
       key: const ValueKey('studio-waveform-regenerate'),
       onPressed: canRegenerate && !busy ? onRegenerate : null,
       icon: const Icon(Icons.refresh, size: 15),
       label: Text(busy ? 'Loading…' : 'Regenerate'),
     ),
-    const SizedBox(width: 8),
-  ]);
+    const SizedBox(width: 4),
+  ]));
 }
