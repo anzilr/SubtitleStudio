@@ -244,3 +244,5 @@ DS5 R21 PAUSED DETACH FULL RETRY 2026-10-24: explicit playback attachment notifi
 DS5 R21 ANALYZER CLEAN FINAL 2026-10-24: remove duplicate fullscreen review test import; verify floating playback detachment and full suite. pub get/analyze/tests only, no builds.
 
 DS5 R22 REPEAT PLAYBACK FULL GATE 2026-10-24: shared repeat current/range controller and dialog, detachment guards, desktop menu and hotkeys, tests; Flutter pub get/analyze/full tests only, never native platform builds.
+
+DS5 R22 MENU SELECTOR FULL RETRY 2026-10-25: correct typed PopupMenuItem widget-test assertion, run Flutter analysis and full suite only; never platform builds.

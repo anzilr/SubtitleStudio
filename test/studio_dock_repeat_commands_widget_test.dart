@@ -76,16 +76,16 @@ void main() {
     )));
     await tester.pumpAndSettle();
     await openView(tester);
-    final item = tester.widget<PopupMenuItem>(find.ancestor(
-      of: find.text('Repeat selected subtitle'),
-      matching: find.byType(PopupMenuItem),
-    ));
-    expect(item.enabled, false);
-    final range = tester.widget<PopupMenuItem>(find.ancestor(
-      of: find.text('Repeat subtitle range…'),
-      matching: find.byType(PopupMenuItem),
-    ));
-    expect(range.enabled, false);
+    // Typed PopupMenuItem<T> does not match find.byType(PopupMenuItem).
+    // Assert the public disabled behavior through the visible labels.
+    expect(find.text('Repeat selected subtitle'), findsOneWidget);
+    expect(find.text('Repeat subtitle range…'), findsOneWidget);
+    await tester.tap(find.text('Repeat selected subtitle'));
+    await tester.pumpAndSettle();
+    expect(find.text('Repeat selected subtitle'), findsOneWidget);
+    await tester.tap(find.text('Repeat subtitle range…'));
+    await tester.pumpAndSettle();
+    expect(find.text('Repeat subtitle range…'), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
     link.dispose();
   });

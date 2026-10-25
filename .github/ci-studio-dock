@@ -127,3 +127,5 @@ DS5 R21 PAUSED DETACH FOCUSED RETRY 2026-10-24: paused detach/reattach floating 
 DS5 R21 ANALYZER CLEAN FINAL 2026-10-24: focused Flutter analyzer and Studio Dock suite after unnecessary import cleanup; no platform builds.
 
 DS5 R22 REPEAT PLAYBACK 2026-10-24: source-level current cue/custom range repeat using shared position link, dialog and hotkeys; run Flutter analyzer and Studio Dock suite only, no platform builds or live submissions.
+
+DS5 R22 MENU SELECTOR RETRY 2026-10-25: verify disabled repeat actions by visible PopupMenu labels/taps, avoiding typed private generic item matcher; Flutter analyzer and Studio Dock tests only.
