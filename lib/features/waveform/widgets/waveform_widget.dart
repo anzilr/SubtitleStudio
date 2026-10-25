@@ -13,6 +13,7 @@ import 'package:subtitle_studio/features/waveform/widgets/waveform_loading_bars.
 import 'package:subtitle_studio/features/waveform/services/waveform_tile_source.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_decode_progress.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_seek_coordinator.dart';
+import 'package:subtitle_studio/features/waveform/services/waveform_time_range_planner.dart';
 import 'package:subtitle_studio/features/waveform/models/waveform_sample.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/widgets/settings_sheet.dart';

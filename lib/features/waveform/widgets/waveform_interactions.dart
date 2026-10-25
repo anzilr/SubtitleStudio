@@ -104,7 +104,8 @@ extension _WaveformInteractions on WaveformWidgetState {
         newEnd, 
         state, 
         excludeIndex: state.editingSubtitleIndex,
-        isMovingOverlay: true,
+        drag: WaveformTimeDrag.move,
+        originalStart: _overlayDragOriginalStart,
       );
       newStart = constrained.$1;
       newEnd = constrained.$2;
@@ -127,7 +128,8 @@ extension _WaveformInteractions on WaveformWidgetState {
         newStart, 
         newEnd, 
         state,
-        isMovingOverlay: true,
+        drag: WaveformTimeDrag.move,
+        originalStart: _overlayDragOriginalStart,
       );
       newStart = constrained.$1;
       newEnd = constrained.$2;
@@ -152,6 +154,7 @@ extension _WaveformInteractions on WaveformWidgetState {
         currentEnd, 
         state,
         excludeIndex: state.editingSubtitleIndex,
+        drag: WaveformTimeDrag.startHandle,
       );
       adjustedTime = constrained.$1;
       
@@ -171,6 +174,7 @@ extension _WaveformInteractions on WaveformWidgetState {
         adjustedTime, 
         state,
         excludeIndex: state.editingSubtitleIndex,
+        drag: WaveformTimeDrag.endHandle,
       );
       adjustedTime = constrained.$2;
       
@@ -190,6 +194,7 @@ extension _WaveformInteractions on WaveformWidgetState {
         adjustedTime, 
         currentEnd, 
         state,
+        drag: WaveformTimeDrag.startHandle,
       );
       adjustedTime = constrained.$1;
       
@@ -206,6 +211,7 @@ extension _WaveformInteractions on WaveformWidgetState {
         currentStart, 
         adjustedTime, 
         state,
+        drag: WaveformTimeDrag.endHandle,
       );
       adjustedTime = constrained.$2;
       

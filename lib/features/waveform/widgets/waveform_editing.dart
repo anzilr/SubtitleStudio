@@ -1,156 +1,32 @@
 part of 'waveform_widget.dart';
 
 extension _WaveformEditing on WaveformWidgetState {
-  Duration _applyMagnetSnap(Duration time, WaveformReady state, {bool isStart = true, int? excludeIndex}) {
-    if (!state.magnetSnapEnabled) return time;
-    
-    const snapThreshold = Duration(milliseconds: 150); // 150ms snap threshold (reverted to original)
-    const minGap = Duration(milliseconds: 25); // 0.025s minimum gap between subtitles after snapping
-    Duration closestTime = time;
-    Duration minDistance = snapThreshold + const Duration(milliseconds: 1); // Set slightly higher to allow equal distance snaps
-    bool snappedToPlayhead = false;
-    
-    // Check snap to playhead first (priority)
-    final playheadTime = state.playbackPosition;
-    final playheadDistance = (time - playheadTime).abs();
-    if (playheadDistance <= snapThreshold) {
-      closestTime = playheadTime;
-      minDistance = playheadDistance;
-      snappedToPlayhead = true;
-    }
-    
-    // Check snap to subtitle boundaries with minimum gap enforcement
-    // Only override playhead if subtitle boundary is significantly closer (at least 20ms closer)
-    const playheadPriorityMargin = Duration(milliseconds: 20);
-    for (int i = 0; i < _currentSubtitles.length; i++) {
-      // Skip the subtitle being edited
-      if (excludeIndex != null && i == excludeIndex) continue;
-      
-      final subtitle = _currentSubtitles[i];
-      final subStart = parseTimeString(subtitle.startTime);
-      final subEnd = parseTimeString(subtitle.endTime);
-      
-      // Check distance to start
-      final startDistance = (time - subStart).abs();
-      final requiredDistance = snappedToPlayhead ? minDistance - playheadPriorityMargin : minDistance;
-      if (startDistance < requiredDistance) {
-        // Apply minimum gap: if we're snapping start time to a subtitle boundary,
-        // snap to end + minGap; if snapping end time, snap to start - minGap
-        if (isStart) {
-          closestTime = subEnd + minGap;
-        } else {
-          closestTime = subStart - minGap;
-        }
-        minDistance = startDistance;
-        snappedToPlayhead = false;
-      }
-      
-      // Check distance to end
-      final endDistance = (time - subEnd).abs();
-      final requiredDistanceEnd = snappedToPlayhead ? minDistance - playheadPriorityMargin : minDistance;
-      if (endDistance < requiredDistanceEnd) {
-        // Apply minimum gap: if we're snapping start time to a subtitle boundary,
-        // snap to end + minGap; if snapping end time, snap to start - minGap
-        if (isStart) {
-          closestTime = subEnd + minGap;
-        } else {
-          closestTime = subStart - minGap;
-        }
-        minDistance = endDistance;
-        snappedToPlayhead = false;
-      }
-    }
-    
-    return closestTime;
-  }
-
-  /// Constrain time range to avoid overlap (if allowOverlap is false)
-  /// Returns adjusted start and end times
+  /// Keep the dragged handle anchored to its opposite edge; moving a whole
+  /// overlay must preserve its duration even when stopped by another cue.
   (Duration, Duration) _constrainTimeRange(
-    Duration startTime, 
-    Duration endTime, 
-    WaveformReady state, 
-    {int? excludeIndex, 
-    bool isMovingOverlay = false}
-  ) {
-    if (state.allowOverlap) {
-      // Apply magnet snap if enabled
-      final snappedStart = _applyMagnetSnap(startTime, state, isStart: true, excludeIndex: excludeIndex);
-      final snappedEnd = _applyMagnetSnap(endTime, state, isStart: false, excludeIndex: excludeIndex);
-      return (snappedStart, snappedEnd);
-    }
-    
-    Duration constrainedStart = startTime;
-    Duration constrainedEnd = endTime;
-    
-    // Find the closest boundaries that would cause overlap
-    Duration? maxAllowedStart;
-    Duration? minAllowedEnd;
-    
-    for (int i = 0; i < _currentSubtitles.length; i++) {
-      // Skip the subtitle being edited
-      if (excludeIndex != null && i == excludeIndex) continue;
-      
-      final subtitle = _currentSubtitles[i];
-      final subStart = parseTimeString(subtitle.startTime);
-      final subEnd = parseTimeString(subtitle.endTime);
-      
-      // Check if this subtitle would overlap with our range
-      if (startTime < subEnd && endTime > subStart) {
-        // There's an overlap - constrain the range
-        if (isMovingOverlay) {
-          // When moving entire overlay, stop at the nearest boundary
-          if (startTime < subStart && endTime > subStart) {
-            // Moving forward into a subtitle - stop at its start
-            constrainedStart = startTime;
-            constrainedEnd = subStart;
-            return (constrainedStart, constrainedEnd);
-          } else if (startTime < subEnd && endTime > subEnd) {
-            // Moving backward into a subtitle - stop at its end
-            constrainedStart = subEnd;
-            constrainedEnd = endTime;
-            return (constrainedStart, constrainedEnd);
-          }
-        } else {
-          // When adjusting individual boundaries
-          if (subEnd <= startTime) {
-            // Subtitle is before our range - update max start
-            maxAllowedStart = maxAllowedStart == null ? subEnd : (subEnd > maxAllowedStart ? subEnd : maxAllowedStart);
-          }
-          if (subStart >= endTime) {
-            // Subtitle is after our range - update min end
-            minAllowedEnd = minAllowedEnd == null ? subStart : (subStart < minAllowedEnd ? subStart : minAllowedEnd);
-          } else if (subStart > startTime && subStart < endTime) {
-            // Subtitle starts within our range - constrain end
-            minAllowedEnd = subStart;
-          } else if (subEnd > startTime && subEnd < endTime) {
-            // Subtitle ends within our range - constrain start
-            maxAllowedStart = subEnd;
-          }
-        }
-      }
-    }
-    
-    // Apply constraints
-    if (maxAllowedStart != null && constrainedStart < maxAllowedStart) {
-      constrainedStart = maxAllowedStart;
-    }
-    if (minAllowedEnd != null && constrainedEnd > minAllowedEnd) {
-      constrainedEnd = minAllowedEnd;
-    }
-    
-    // Ensure start < end
-    if (constrainedStart >= constrainedEnd) {
-      // If they cross, keep the original end and adjust start
-      constrainedStart = constrainedEnd - const Duration(milliseconds: 100);
-    }
-    
-    // Apply magnet snap to constrained values
-    constrainedStart = _applyMagnetSnap(constrainedStart, state, isStart: true, excludeIndex: excludeIndex);
-    constrainedEnd = _applyMagnetSnap(constrainedEnd, state, isStart: false, excludeIndex: excludeIndex);
-    
-    return (constrainedStart, constrainedEnd);
-  }
+    Duration startTime,
+    Duration endTime,
+    WaveformReady state, {
+    required WaveformTimeDrag drag,
+    int? excludeIndex,
+    Duration? originalStart,
+  }) => WaveformTimeRangePlanner.constrain(
+    start: startTime,
+    end: endTime,
+    playhead: state.playbackPosition,
+    neighbors: [
+      for (var i = 0; i < _currentSubtitles.length; i++)
+        if (i != excludeIndex)
+          WaveformTimeBoundary(
+            parseTimeString(_currentSubtitles[i].startTime),
+            parseTimeString(_currentSubtitles[i].endTime),
+          ),
+    ],
+    drag: drag,
+    allowOverlap: state.allowOverlap,
+    magnetSnapEnabled: state.magnetSnapEnabled,
+    originalStart: originalStart,
+  );
 
   /// Format Duration to SRT timecode string (HH:mm:ss,SSS)
   String _formatDurationToSRT(Duration duration) {

@@ -139,3 +139,4 @@ DS5 R26 EDIT LINE DISPLAY/NAV 2026-10-25: mobile Edit Line preference parity, sa
 DS5 R26 MENU WIDTH RETRY 2026-10-25: Show Original Line popup row uses bounded ellipsized label; rerun Studio Dock widget tests and analyzer only, no builds.
 DS5 R27 2026-10-25: guard async waveform regenerate across audio selection, clear and FFmpeg reload; Flutter analyzer/Studio Dock tests only, no platform builds.
 DS5 R28 2026-10-25: cancel stale wheel seek during drag handoff and deduplicate identical waveform preview targets; include manual waveform seek tests with Studio Dock focused CI, no platform builds.
+DS5 R29 2026-10-25: shared waveform start/end/move range planner, safe magnetic gap snapping, overlap checks after snaps, and nine targeted tests; Flutter analyzer/focused tests only, no native builds.
