@@ -2415,7 +2415,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   }
 
   Widget _menuBar() => Container(
-    height: 27,
+    height: 36,
     padding: const EdgeInsets.symmetric(horizontal: 15),
     decoration: BoxDecoration(
       border: Border(bottom: BorderSide(color: _border)),
@@ -2477,13 +2477,13 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             ],
             child: const Padding(
               padding: EdgeInsets.only(right: 23),
-              child: Text('File', style: TextStyle(fontSize: 11)),
+              child: Text('File', style: TextStyle(fontSize: 14)),
             ),
           )
         else
           const Padding(
             padding: EdgeInsets.only(right: 23),
-            child: Text('File', style: TextStyle(fontSize: 11)),
+            child: Text('File', style: TextStyle(fontSize: 14)),
           ),
         _desktopMenu('Edit', const ValueKey('studio-edit-menu'), [
           PopupMenuItem(value: _StudioDockMenuAction.undo,
@@ -2730,7 +2730,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             ),
             onPressed: () => unawaited(widget.onOpenHelp!()),
             child: Text('Help', style: TextStyle(
-              fontSize: 11, color: Theme.of(context).colorScheme.onSurface)),
+              fontSize: 14, color: Theme.of(context).colorScheme.onSurface)),
           ),
       ]),
     ),
@@ -2745,7 +2745,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         itemBuilder: (_) => items,
         child: Padding(
           padding: const EdgeInsets.only(right: 23),
-          child: Text(title, style: const TextStyle(fontSize: 11)),
+          child: Text(title, style: const TextStyle(fontSize: 14)),
         ),
       );
 
@@ -3221,7 +3221,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       Flexible(child: Text(
         widget.projectTitle ?? 'Night Drive  /  Main subtitles',
         maxLines: 1, overflow: TextOverflow.ellipsis,
-        style: TextStyle(color: _muted, fontSize: 12),
+        style: TextStyle(color: _muted, fontSize: 14),
       )),
       const Spacer(),
       if (widget.onSaveFile != null)
@@ -3255,7 +3255,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       ],
       if (widget.isLiveSession && widget.onApplyCueText == null)
         Text('READ ONLY', style: TextStyle(
-          color: _muted, letterSpacing: 1, fontSize: 10)),
+          color: _muted, letterSpacing: .7, fontSize: 12)),
       if (widget.onChooseVideo != null)
         IconButton(
           key: const ValueKey('studio-dock-toolbar-video'),
@@ -3802,7 +3802,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           trailing: '${widget.projects.length} available'),
       Expanded(child: widget.projects.isEmpty
         ? Center(child: Text('No saved projects',
-            style: TextStyle(color: _muted, fontSize: 12)))
+            style: TextStyle(color: _muted, fontSize: 14)))
         : ListView.builder(
             key: const ValueKey('studio-projects-list'),
             itemCount: widget.projects.length,
@@ -3818,7 +3818,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                 title: Text(project.title, maxLines: 1,
                     overflow: TextOverflow.ellipsis),
                 subtitle: Text(project.isEditMode ? 'Edit mode' : 'Translation mode',
-                    style: const TextStyle(fontSize: 10)),
+                    style: const TextStyle(fontSize: 12)),
                 onTap: () => unawaited(_selectSidebarProject(project.id)),
               );
             },
@@ -3851,7 +3851,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         _sidebarRow(Icons.folder_rounded, 'Night Drive', selected: true),
         Padding(padding: EdgeInsets.fromLTRB(17, 20, 12, 7),
           child: Text('PROJECT FILES', style:
-            TextStyle(fontSize: 10, color: _muted, letterSpacing: 1.2))),
+            TextStyle(fontSize: 12, color: _muted, letterSpacing: .8))),
         _sidebarRow(Icons.subtitles_rounded, 'Main subtitles.srt',
             selected: true, indent: 15),
         _sidebarRow(Icons.subtitles_outlined, 'Secondary subtitles',
@@ -3859,14 +3859,14 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         _sidebarRow(Icons.movie_outlined, 'Night Drive.mp4', indent: 15),
         Padding(padding: EdgeInsets.fromLTRB(17, 23, 12, 7),
           child: Text('VERSIONS', style:
-            TextStyle(fontSize: 10, color: _muted, letterSpacing: 1.2))),
+            TextStyle(fontSize: 12, color: _muted, letterSpacing: .8))),
         _sidebarRow(Icons.fork_right_rounded, 'Current version'),
         _sidebarRow(Icons.bookmark_border_rounded, 'Pinned versions'),
         const Spacer(),
         Padding(
           padding: EdgeInsets.all(14),
           child: Text('Preview project\nNo local files are opened.',
-            style: TextStyle(fontSize: 11, color: _muted, height: 1.5)),
+            style: TextStyle(fontSize: 13, color: _muted, height: 1.5)),
         ),
       ],
     ),
@@ -3890,7 +3890,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                   'No original/translation pair is required.'
               : 'Translation mode · keep the original text alongside your '
                   'edited translation.',
-          style: TextStyle(color: _muted, fontSize: 11, height: 1.5),
+          style: TextStyle(color: _muted, fontSize: 13, height: 1.5),
         ),
       ),
     ]),
@@ -3907,11 +3907,12 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           borderRadius: BorderRadius.circular(7),
         ),
         child: Row(children: [
-          Icon(icon, size: 16, color: selected ? _accent : _muted),
+          Icon(icon, size: 18, color: selected ? _accent : _muted),
           SizedBox(width: 9),
           Expanded(child: Text(label, overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 12,
-                  color: selected ? Colors.white : _muted))),
+              style: TextStyle(fontSize: 14,
+                  color: selected
+                      ? Theme.of(context).colorScheme.onSurface : _muted))),
         ]),
       ),
     );
@@ -3932,19 +3933,19 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
 
   Widget _paneHeader(IconData icon, String title, {String? trailing}) =>
       Container(
-        height: 43,
+        height: 46,
         padding: EdgeInsets.symmetric(horizontal: 13),
         decoration: BoxDecoration(
           border: Border(bottom: BorderSide(color: _border))),
         child: Row(children: [
-          Icon(icon, size: 15, color: _muted),
+          Icon(icon, size: 18, color: _muted),
           const SizedBox(width: 8),
           Text(title, style: const TextStyle(
-              fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: .7)),
+              fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: .4)),
           const Spacer(),
           if (trailing != null) Flexible(child: Text(trailing,
               maxLines: 1, overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: _muted, fontSize: 10))),
+              style: TextStyle(color: _muted, fontSize: 12))),
         ]),
       );
 
@@ -4204,7 +4205,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         key: const ValueKey('studio-review-filter'),
         value: _reviewFilter,
         isDense: true,
-        style: TextStyle(fontSize: 11,
+        style: TextStyle(fontSize: 13,
             color: Theme.of(context).colorScheme.onSurface),
         items: const [
           DropdownMenuItem(value: _StudioDockReviewFilter.all,
@@ -4255,12 +4256,12 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         decoration: InputDecoration(
           isDense: true,
           hintText: 'Find subtitle, timecode or line number…',
-          hintStyle: const TextStyle(fontSize: 12),
+          hintStyle: const TextStyle(fontSize: 14),
           prefixIcon: const Icon(Icons.search, size: 17),
           contentPadding: const EdgeInsets.symmetric(vertical: 8),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(7)),
         ),
-        style: const TextStyle(fontSize: 12),
+        style: const TextStyle(fontSize: 14),
         onChanged: (value) => setState(() => _query = value),
       ),
     )),
@@ -4605,7 +4606,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     final heading = cue == null;
     Text cell(String value, {bool primary = false}) => Text(
       value, maxLines: 1, overflow: TextOverflow.ellipsis,
-      style: TextStyle(fontSize: heading ? 10 : 11,
+      style: TextStyle(fontSize: heading ? 12 : 14,
+        height: 1.2,
         color: heading ? _muted : primary
             ? Theme.of(context).colorScheme.onSurface : _muted),
     );
@@ -4661,7 +4663,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         _paneHeader(Icons.tune_outlined, 'LINE INSPECTOR',
             trailing: '#' + _selectedId.toString().padLeft(2, '0')),
-        SizedBox(height: 43, child: Row(children: [
+        SizedBox(height: 47, child: Row(children: [
           for (var i = 0; i < tabs.length; i++)
             Expanded(child: TextButton(
               key: ValueKey('inspector-tab-' + tabs[i]),
@@ -4673,7 +4675,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                     ? _accent.withValues(alpha: .10) : Colors.transparent,
               ),
               child: Text(tabs[i],
-                  style: const TextStyle(fontSize: 11)),
+                  style: const TextStyle(fontSize: 14)),
             )),
         ])),
         Expanded(child: ListView(
@@ -4744,10 +4746,10 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                   ? CustomHtmlText(
                       key: const ValueKey('studio-formatted-original'),
                       htmlContent: _selected.original.replaceAll('\n', '<br>'),
-                      defaultStyle: const TextStyle(fontSize: 13, height: 1.5),
+                      defaultStyle: const TextStyle(fontSize: 15, height: 1.5),
                     )
                   : Text(_selected.original,
-                      style: const TextStyle(fontSize: 13, height: 1.5)),
+                      style: const TextStyle(fontSize: 15, height: 1.5)),
             ),
             const SizedBox(height: 17),
           ],
@@ -4770,7 +4772,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             readOnly: _savingDraft ||
                 (widget.isLiveSession && widget.onApplyCueText == null),
             minLines: 3, maxLines: 8,
-            style: const TextStyle(fontSize: 13, height: 1.5),
+            style: const TextStyle(fontSize: 15, height: 1.5),
             decoration: InputDecoration(
               contentPadding: const EdgeInsets.all(12),
               border: OutlineInputBorder(
@@ -4805,7 +4807,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                         _selected.edited.isEmpty
                         ? _selected.original : _selected.edited))
                     .replaceAll('\n', '<br>'),
-                defaultStyle: const TextStyle(fontSize: 13, height: 1.5),
+                defaultStyle: const TextStyle(fontSize: 15, height: 1.5),
               ),
             ),
           ],
@@ -4881,7 +4883,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                 onPressed: widget.onApplyCueText != null && !_savingDraft
                     ? () => _toggleStyleTag(tag) : null,
                 icon: Icon(icon, size: 16),
-                label: Text(label, style: const TextStyle(fontSize: 11)),
+                label: Text(label, style: const TextStyle(fontSize: 13)),
               ),
           ]),
           const SizedBox(height: 10),
@@ -4952,13 +4954,13 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                   _styleText).replaceAll('\n', '<br>'),
               defaultStyle: TextStyle(
                 color: Theme.of(context).colorScheme.onSurface,
-                fontSize: 13,
+                fontSize: 15,
               ),
             ),
           ),
           const SizedBox(height: 9),
           SelectableText(_styleText, style: TextStyle(
-            fontFamily: 'monospace', fontSize: 11, color: _muted)),
+            fontFamily: 'monospace', fontSize: 13, color: _muted)),
           const SizedBox(height: 13),
           if (widget.onApplyCueText != null) Row(children: [
             Expanded(child: FilledButton.icon(
@@ -4985,7 +4987,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                   ? 'Review resolved · mark and comments are kept.'
                   : 'Review unresolved · this subtitle needs attention.')
               : 'No review mark on this subtitle.',
-              style: const TextStyle(fontSize: 12)),
+              style: const TextStyle(fontSize: 14)),
           const SizedBox(height: 12),
           if (widget.onApplyCueNotes != null) ...[
             Material(
@@ -5082,7 +5084,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   Widget _fieldLabel(String text) => Padding(
     padding: const EdgeInsets.only(bottom: 7),
     child: Text(text, style: TextStyle(
-      color: _muted, fontSize: 10, letterSpacing: .8,
+      color: _muted, fontSize: 12, letterSpacing: .5,
       fontWeight: FontWeight.w600)),
   );
   Widget _readonlyField(String text) => Container(
@@ -5093,7 +5095,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       borderRadius: BorderRadius.circular(7),
     ),
     child: Text(text, style: const TextStyle(
-      fontSize: 12, fontFeatures: [FontFeature.tabularFigures()])),
+      fontSize: 14, fontFeatures: [FontFeature.tabularFigures()])),
   );
 
   Widget _secondarySection() {
@@ -5720,19 +5722,19 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   }
 
   Widget _statusBar() => Container(
-    height: 28,
+    height: 34,
     padding: const EdgeInsets.symmetric(horizontal: 15),
     decoration: BoxDecoration(border:
         Border(top: BorderSide(color: _border))),
     child: Row(children: [
-      Icon(Icons.info_outline, color: _accent, size: 13),
+      Icon(Icons.info_outline, color: _accent, size: 16),
       const SizedBox(width: 8),
       Expanded(child: Text(widget.projectTitle ?? 'Ready',
-        style: TextStyle(color: _muted, fontSize: 10))),
+        style: TextStyle(color: _muted, fontSize: 12))),
       Text(widget.encoding == null
           ? 'Desktop prototype  •  Windows / macOS / Linux'
           : 'Encoding: ' + widget.encoding!,
-        style: TextStyle(color: _muted, fontSize: 10)),
+        style: TextStyle(color: _muted, fontSize: 12)),
     ]),
   );
 }

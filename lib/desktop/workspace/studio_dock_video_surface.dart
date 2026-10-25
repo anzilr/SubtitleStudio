@@ -93,7 +93,7 @@ class _StudioDockVideoSurfaceState extends State<StudioDockVideoSurface> {
   void didUpdateWidget(covariant StudioDockVideoSurface old) {
     super.didUpdateWidget(old);
     if (old.playback != widget.playback) {
-      old.playback.detach();
+      old.playback.detachAfterFrame();
       widget.playback.attach(_seek);
     }
   }
@@ -102,7 +102,9 @@ class _StudioDockVideoSurfaceState extends State<StudioDockVideoSurface> {
   void dispose() {
     _audioRevision++;
     widget.onPlayerStateChanged?.call(null);
-    widget.playback.detach();
+    // Never notify waveform builders from State.dispose(): unmounting holds
+    // BuildOwner's tree lock until frame finalization has completed.
+    widget.playback.detachAfterFrame();
     super.dispose();
   }
 

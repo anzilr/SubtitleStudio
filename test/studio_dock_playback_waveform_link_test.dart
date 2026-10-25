@@ -54,6 +54,95 @@ void main() {
     link.dispose();
   });
 
+  testWidgets('unmounting video does not notify waveform during tree lock',
+      (tester) async {
+    final link = StudioDockPlaybackLink();
+    Widget frame({required bool showVideo}) => MaterialApp(
+      home: Column(children: [
+        if (showVideo) _RetiringPlaybackSurface(link: link),
+        ValueListenableBuilder<StudioDockAudioSource>(
+          valueListenable: link.audio,
+          builder: (_, audio, __) => Text(audio.status.name),
+        ),
+      ]),
+    );
+
+    await tester.pumpWidget(frame(showVideo: true));
+    link.updateAudioReady('auto', null);
+    await tester.pump();
+    expect(find.text('ready'), findsOneWidget);
+    expect(link.isAttached, true);
+
+    // The builder stays mounted when the video State is unmounted. A direct
+    // detach() in dispose() would throw markNeedsBuild during finalizeTree.
+    await tester.pumpWidget(frame(showVideo: false));
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(link.isAttached, false);
+    expect(link.audio.value.status, StudioDockAudioStatus.waiting);
+    expect(find.text('waiting'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    link.dispose();
+  });
+
+  testWidgets('deferred detach cannot disconnect a replacement video',
+      (tester) async {
+    final link = StudioDockPlaybackLink();
+    final replacementSeeks = <Duration>[];
+    link.attach((_) {});
+    link.updateAudioReady('auto', null);
+    link.detachAfterFrame();
+    link.attach(replacementSeeks.add);
+
+    await tester.pump();
+    expect(link.isAttached, true);
+    expect(link.audio.value.status, StudioDockAudioStatus.ready);
+    link.seek(const Duration(seconds: 7));
+    expect(replacementSeeks, [const Duration(seconds: 7)]);
+    link.detach();
+    link.dispose();
+  });
+
+  testWidgets('desktop menus and subtitle lines use readable text sizes',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    tester.view.physicalSize = const Size(1720, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(const MaterialApp(
+      home: StudioDockWorkspace(
+        isLiveSession: true,
+        initialCues: [
+          StudioDockCue(
+            id: 1,
+            start: '00:00:01,000',
+            end: '00:00:02,000',
+            original: 'Readable subtitle row',
+            edited: 'Readable edited row',
+          ),
+        ],
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    final fileMenu = tester.widget<Text>(find.text('File'));
+    expect(fileMenu.style!.fontSize, greaterThanOrEqualTo(14));
+    final row = find.byKey(const ValueKey('desktop-cue-1'));
+    final lineText = tester.widget<Text>(find.descendant(
+      of: row,
+      matching: find.text('Readable subtitle row'),
+    ));
+    expect(lineText.style!.fontSize, greaterThanOrEqualTo(14));
+    final inspectorTab = tester.widget<Text>(find.descendant(
+      of: find.byKey(const ValueKey('inspector-tab-Text')),
+      matching: find.text('Text'),
+    ));
+    expect(inspectorTab.style!.fontSize, greaterThanOrEqualTo(14));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('attach-video command is available without classic editor',
       (tester) async {
     SharedPreferences.setMockInitialValues({});
@@ -154,6 +243,33 @@ class _TrackedSurface extends StatefulWidget {
 
   @override
   State<_TrackedSurface> createState() => _TrackedSurfaceState();
+}
+
+class _RetiringPlaybackSurface extends StatefulWidget {
+  const _RetiringPlaybackSurface({required this.link});
+
+  final StudioDockPlaybackLink link;
+
+  @override
+  State<_RetiringPlaybackSurface> createState() =>
+      _RetiringPlaybackSurfaceState();
+}
+
+class _RetiringPlaybackSurfaceState extends State<_RetiringPlaybackSurface> {
+  @override
+  void initState() {
+    super.initState();
+    widget.link.attach((_) {});
+  }
+
+  @override
+  void dispose() {
+    widget.link.detachAfterFrame();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => const SizedBox.shrink();
 }
 
 class _TrackedSurfaceState extends State<_TrackedSurface> {
