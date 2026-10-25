@@ -39,8 +39,10 @@ final class WaveformSeekCoordinator {
   int _previews = 0;
 
   void startDrag() {
-    // A new drag supersedes any pending wheel-burst final seek.
-    _wheelIdle?.cancel();
+    // A wheel burst is a separate gesture. It may have preview-seeked to its
+    // last target, but a subsequent drag must not inherit that target or
+    // release a stale wheel final seek if the pointer has not moved yet.
+    if (_wheelIdle != null) cancel();
     _begin();
   }
 
@@ -93,6 +95,10 @@ final class WaveformSeekCoordinator {
   }
 
   void _update(Duration target) {
+    // At coarse zoom, many physical pixel updates map to the same audio
+    // sample. Avoid redundant native previews for an unchanged target, while
+    // retaining the exact target for the eventual final seek.
+    if (_latestTarget == target) return;
     _latestTarget = target;
     _updates++;
     if (!_previewAllowed || (shouldPreview?.call() == false)) return;

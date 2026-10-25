@@ -256,3 +256,5 @@ DS5 R26 EDIT LINE DISPLAY/NAV 2026-10-25: shared mobile Show Original Line, Auto
 DS5 R26 MENU WIDTH RETRY 2026-10-25: constrain Show Original Line popup label within native menu width, preventing RenderFlex overflows in widget testing; rerun analysis/full tests only, no builds.
 
 DS5 R27 WAVEFORM RELOAD FULL GATE 2026-10-25: prevent stale async audio-track regeneration after cache or waveform clear; run Flutter analyzer and full tests only, no platform builds.
+
+DS5 R28 SEEK HANDOFF FULL GATE 2026-10-25: wheel-to-drag transition and quantized-target seek regression tests; Flutter pub get/analyze/full tests only, no native builds.

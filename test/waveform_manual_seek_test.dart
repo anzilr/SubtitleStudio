@@ -150,6 +150,110 @@ void main() {
     expect(completed, hasLength(1));
   });
 
+  testWidgets('drag supersedes wheel burst without releasing its stale target',
+      (tester) async {
+    await tester.pumpWidget(const SizedBox());
+    final previews = <Duration>[];
+    final finals = <Duration>[];
+    var beginnings = 0;
+    var cancellations = 0;
+    final coordinator = WaveformSeekCoordinator(
+      onBegin: () => beginnings++,
+      onPreview: previews.add,
+      onComplete: finals.add,
+      onCancel: () => cancellations++,
+    );
+    addTearDown(coordinator.dispose);
+
+    coordinator.scrollWheel(const Duration(seconds: 1));
+    coordinator.startDrag();
+    coordinator.updateDrag(const Duration(seconds: 2));
+    coordinator.finishDrag();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(beginnings, 2);
+    expect(cancellations, 1);
+    expect(finals, [const Duration(seconds: 2)]);
+    expect(previews, [
+      const Duration(seconds: 1),
+      const Duration(seconds: 2),
+      const Duration(seconds: 2),
+    ]);
+  });
+
+  testWidgets('stationary drag after wheel burst never replays wheel target',
+      (tester) async {
+    await tester.pumpWidget(const SizedBox());
+    final finals = <Duration>[];
+    var cancellations = 0;
+    final coordinator = WaveformSeekCoordinator(
+      onBegin: () {},
+      onPreview: (_) {},
+      onComplete: finals.add,
+      onCancel: () => cancellations++,
+    );
+    addTearDown(coordinator.dispose);
+
+    coordinator.scrollWheel(const Duration(seconds: 7));
+    coordinator.startDrag();
+    coordinator.finishDrag();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(finals, isEmpty);
+    expect(cancellations, 2,
+        reason: 'Wheel handoff and empty drag both cancel without a seek');
+  });
+
+  testWidgets('same quantized target does not repeat native preview seeks',
+      (tester) async {
+    await tester.pumpWidget(const SizedBox());
+    final seeks = <Duration>[];
+    final coordinator = WaveformSeekCoordinator(
+      onBegin: () {},
+      onPreview: seeks.add,
+      onComplete: (_) {},
+      onCancel: () {},
+    );
+    addTearDown(coordinator.dispose);
+
+    coordinator.startDrag();
+    coordinator.updateDrag(const Duration(milliseconds: 1234));
+    await tester.pump(const Duration(milliseconds: 200));
+    for (var i = 0; i < 20; i++) {
+      coordinator.updateDrag(const Duration(milliseconds: 1234));
+    }
+    expect(seeks, [const Duration(milliseconds: 1234)]);
+    coordinator.finishDrag();
+    expect(seeks, [
+      const Duration(milliseconds: 1234),
+      const Duration(milliseconds: 1234),
+    ], reason: 'Only the exact release seek repeats the last preview');
+  });
+
+  testWidgets('padded waveform endpoints produce exact final seek targets',
+      (tester) async {
+    await tester.pumpWidget(const SizedBox());
+    final ready = _ready();
+    final finals = <Duration>[];
+    final coordinator = WaveformSeekCoordinator(
+      shouldPreview: () => false,
+      onBegin: () {},
+      onPreview: (_) {},
+      onComplete: finals.add,
+      onCancel: () {},
+    );
+    addTearDown(coordinator.dispose);
+
+    coordinator.startDrag();
+    coordinator.updateDrag(ready.centerTimeForScroll(-999));
+    coordinator.finishDrag();
+    coordinator.startDrag();
+    coordinator.updateDrag(ready.centerTimeForScroll(999999));
+    coordinator.finishDrag();
+
+    expect(finals, [Duration.zero, const Duration(seconds: 100)]);
+  });
+
   test('manual scroll can place either endpoint under the editing cursor', () {
     final ready = _ready();
     expect(ready.minScrollPosition, -50);
@@ -206,6 +310,49 @@ void main() {
     expect(state.playbackPosition, const Duration(seconds: 100));
     expect(state.playheadViewportX, 50);
     controller.completeManualScrub(state.playbackPosition);
+  });
+
+  test('stale wheel playback update cannot recenter a new drag or its release',
+      () async {
+    final container = ProviderContainer(overrides: [
+      waveformControllerProvider.overrideWith(_ReadyController.new),
+    ]);
+    addTearDown(container.dispose);
+    final controller = container.read(waveformControllerProvider.notifier);
+    final coordinator = WaveformSeekCoordinator(
+      onBegin: controller.beginManualScrub,
+      onPreview: (_) {},
+      onComplete: controller.completeManualScrub,
+      onCancel: controller.cancelManualScrub,
+    );
+    addTearDown(coordinator.dispose);
+
+    coordinator.scrollWheel(const Duration(milliseconds: 1300));
+    await controller.dispatch(const ScrollSeekToTime(80));
+    coordinator.startDrag();
+    coordinator.updateDrag(const Duration(milliseconds: 5500));
+    await controller.dispatch(const ScrollSeekToTime(500));
+
+    await controller.dispatch(
+      const UpdatePlaybackPosition(Duration(milliseconds: 1300)),
+    );
+    var ready = container.read(waveformControllerProvider) as WaveformReady;
+    expect(ready.scrollPosition, 500);
+    expect(ready.playbackPosition, const Duration(milliseconds: 5500));
+
+    coordinator.finishDrag();
+    await controller.dispatch(
+      const UpdatePlaybackPosition(Duration(milliseconds: 1300)),
+    );
+    ready = container.read(waveformControllerProvider) as WaveformReady;
+    expect(ready.scrollPosition, 500);
+    expect(ready.playbackPosition, const Duration(milliseconds: 5500));
+
+    await controller.dispatch(
+      const UpdatePlaybackPosition(Duration(milliseconds: 5480)),
+    );
+    ready = container.read(waveformControllerProvider) as WaveformReady;
+    expect(ready.playbackPosition, const Duration(milliseconds: 5480));
   });
 
   test('stale playback cannot recenter during drag or before final seek ack',
