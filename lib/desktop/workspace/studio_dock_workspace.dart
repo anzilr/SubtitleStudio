@@ -1448,6 +1448,10 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       // The previous TextFormField is disposed when its cue key changes.
       // Let the *new* field claim keyboard focus on mount, rather than
       // requesting focus on the old field during the navigation frame.
+      // A shared FocusNode can remain marked focused while its EditableText
+      // and input connection are replaced. Explicitly blur it first so the
+      // newly mounted editor opens its own keyboard connection.
+      _cueTextFocus.unfocus();
       _focusEditorCueOnMount = visibleIds[position + 1];
       _applyCueSelection(visibleIds[position + 1]);
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -5143,7 +5147,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                   _readonlyField(_selected.end)
                 else
                   TextFormField(
-                    key: ValueKey('studio-timing-end-$_selectedId-$_draftRevision-$_timingFieldRevision'),
+                    key: ValueKey('studio-timing-end-$_selectedId-$_draftRevision'
+                        '${_timingFieldRevision == 0 ? '' : '-$_timingFieldRevision'}'),
                     initialValue: _timingEnd,
                     enabled: !_savingDraft,
                     keyboardType: TextInputType.datetime,
