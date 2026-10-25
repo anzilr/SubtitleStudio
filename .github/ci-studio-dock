@@ -1,3 +1,4 @@
+DS5 R24 SELECTOR RETRY 2026-10-25: verify preserved grid multi-selection through the popup's row count, not a Tools-only status label; focused Flutter analysis/tests only, no builds.
 DS5 R24 2026-10-25: check desktop row context menu actions, selection targeting and draft guards. Flutter analyzer and Studio Dock tests only; no native builds.
 DS5 R23 2026-10-25: verify formatting, dictionaries, and Paste Original hotkey parity. Flutter analyzer and Studio Dock tests only; no native builds.
 DS4 R1 2026-10-24: validate shared-player media plan, stable player slot, and guarded DS3 editing with Flutter analyzer plus Studio Dock tests. No native builds.

@@ -1,6 +1,7 @@
 Warning: truncated output (original token count: 11611)
 Total output lines: 525
 
+DS5 R24 SELECTOR RETRY 2026-10-25: fix two widget assertions that looked for a Tools-only count inside the grid; full Flutter analyze/test gate only, no builds.
 DS5 R24 2026-10-25: context menu parity and safe multi-selection/targeting. Full Flutter analysis and tests only; no platform builds.
 DS5 R23 2026-10-25: formatting/dictionary/Paste Original hotkeys. Full Flutter analysis and tests only; no platform builds.
 SubtitleStudio THEME AUDIT FINAL PASS — October 16, 2026

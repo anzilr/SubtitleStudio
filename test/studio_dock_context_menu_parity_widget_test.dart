@@ -77,7 +77,10 @@ void main() {
     expect(find.text('Delete 2 selected subtitles?'), findsOneWidget);
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('2 of 3 subtitles selected'), findsOneWidget);
+    // Selection count is visible in the Tools panel, not in the cue grid.
+    // Reopen the right-click menu to assert the actual retained batch.
+    await contextMenu(tester, 2);
+    expect(find.text('Copy selected subtitles (2)'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -140,7 +143,8 @@ void main() {
     await tester.tap(find.text('Copy subtitle text'));
     await tester.pumpAndSettle();
     expect(copied, 'First translation');
-    expect(find.textContaining('2 of 3 subtitles selected'), findsOneWidget);
+    await contextMenu(tester, 2);
+    expect(find.text('Copy selected subtitles (2)'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }
