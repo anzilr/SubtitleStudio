@@ -7,6 +7,10 @@ import 'package:subtitle_studio/screens/edit/services/raw_srt_document.dart';
 import 'package:subtitle_studio/screens/edit/widgets/source_view_pane.dart';
 import 'package:subtitle_studio/widgets/custom_text_render.dart';
 import 'package:subtitle_studio/utils/time_input_formatter.dart';
+import 'package:subtitle_studio/utils/text_formatting.dart';
+import 'package:subtitle_studio/widgets/dictionary_search_widget.dart';
+import 'package:subtitle_studio/widgets/olam_dictionary_widget.dart';
+import 'package:subtitle_studio/widgets/urban_dictionary_widget.dart';
 import 'package:subtitle_studio/services/checkpoint_history_graph.dart';
 import 'package:subtitle_studio/services/checkpoint_history_labels.dart';
 import 'studio_dock_geometry.dart';
@@ -31,6 +35,8 @@ enum _StudioDockMenuAction {
   loadSecondary, toggleSecondary,
   shiftSelected, deleteSelected, selectByIndex, rangeSelection, goToLine,
   importComments, removeHearingImpaired, insertMsoneBanners, normalizeMalayalam,
+  boldFormat, italicFormat, colorPicker, pasteOriginal,
+  msoneDictionary, olamDictionary, urbanDictionary,
   explorer, inspector, toggleFullscreen, floatingPlayback,
   repeatCurrent, repeatRange, settings, help,
 }
@@ -322,6 +328,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   final FocusNode _gridFocus = FocusNode(debugLabel: 'Studio Dock grid');
   final FocusNode _searchFocus = FocusNode(debugLabel: 'Studio Dock search');
   final FocusNode _findFocus = FocusNode(debugLabel: 'Studio Dock Find');
+  final FocusNode _cueTextFocus = FocusNode(debugLabel: 'Studio Dock cue text');
   final TextEditingController _commandSearch = TextEditingController();
   final TextEditingController _tableSearch = TextEditingController();
   final TextEditingController _findInput = TextEditingController();
@@ -346,6 +353,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   ModalRoute<dynamic>? _hearingMenuRoute;
   ModalRoute<dynamic>? _msoneMenuRoute;
   ModalRoute<dynamic>? _secondaryMenuRoute;
+  ModalRoute<dynamic>? _dictionaryMenuRoute;
   ModalRoute<dynamic>? _projectSettingsMenuRoute;
   ModalRoute<dynamic>? _commentsMenuRoute;
   String? _findError;
@@ -412,6 +420,13 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     HotkeyAction.toggleFullscreen,
     HotkeyAction.toggleRepeat,
     HotkeyAction.toggleRepeatRange,
+    HotkeyAction.boldFormat,
+    HotkeyAction.italicFormat,
+    HotkeyAction.colorPicker,
+    HotkeyAction.pasteOriginal,
+    HotkeyAction.msoneDictionary,
+    HotkeyAction.olamDictionary,
+    HotkeyAction.urbanDictionary,
     HotkeyAction.delete,
     HotkeyAction.editCurrentLine,
     HotkeyAction.showMarkedLines,
@@ -437,6 +452,15 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       action == HotkeyAction.toggleRepeat && widget.onToggleRepeat != null ||
       action == HotkeyAction.toggleRepeatRange &&
           widget.onOpenRepeatRange != null ||
+      (action == HotkeyAction.boldFormat ||
+          action == HotkeyAction.italicFormat ||
+          action == HotkeyAction.colorPicker ||
+          action == HotkeyAction.msoneDictionary ||
+          action == HotkeyAction.olamDictionary ||
+          action == HotkeyAction.urbanDictionary) &&
+          widget.onApplyCueText != null ||
+      action == HotkeyAction.pasteOriginal &&
+          widget.onApplyCueText != null && !widget.isEditMode ||
       action == HotkeyAction.delete &&
           (widget.onDeleteSelectedCues != null || widget.onDeleteCue != null) ||
       action == HotkeyAction.editCurrentLine &&
@@ -486,11 +510,13 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         // In particular, never save or change cues behind a modal sheet.
         if (!mounted || !(ModalRoute.of(context)?.isCurrent ?? true)) return;
         if (_isEditingText) {
-          // Native EditableText handles Copy, Undo and formatting itself.
-          // Save and Save As continue to work for a focused inspector.
+          // Keep clipboard/native editing and other fields independent. Only
+          // the actual subtitle text field receives format/dictionary/paste
+          // commands; timing, find, notes and search never do.
           if (action != HotkeyAction.save &&
               action != HotkeyAction.saveAs &&
-              action != HotkeyAction.saveProject) return;
+              action != HotkeyAction.saveProject &&
+              !(_cueTextFocus.hasFocus && _isCueTextShortcut(action))) return;
         }
         _dispatchManagedAction(action);
       });
@@ -554,6 +580,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     _gridFocus.dispose();
     _searchFocus.dispose();
     _findFocus.dispose();
+    _cueTextFocus.dispose();
     super.dispose();
   }
 
@@ -624,6 +651,15 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         c.findAncestorWidgetOfExactType<EditableText>() != null;
   }
 
+  static bool _isCueTextShortcut(HotkeyAction action) =>
+      action == HotkeyAction.boldFormat ||
+      action == HotkeyAction.italicFormat ||
+      action == HotkeyAction.colorPicker ||
+      action == HotkeyAction.pasteOriginal ||
+      action == HotkeyAction.msoneDictionary ||
+      action == HotkeyAction.olamDictionary ||
+      action == HotkeyAction.urbanDictionary;
+
   void _dispatchManagedAction(HotkeyAction action) {
     switch (action) {
       case HotkeyAction.nextLine:
@@ -642,6 +678,18 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         widget.onToggleRepeat?.call();
       case HotkeyAction.toggleRepeatRange:
         widget.onOpenRepeatRange?.call();
+      case HotkeyAction.boldFormat:
+        _formatCueShortcut('b');
+      case HotkeyAction.italicFormat:
+        _formatCueShortcut('i');
+      case HotkeyAction.colorPicker:
+        unawaited(_pickStyleColor());
+      case HotkeyAction.pasteOriginal:
+        _pasteOriginalDraft();
+      case HotkeyAction.msoneDictionary:
+      case HotkeyAction.olamDictionary:
+      case HotkeyAction.urbanDictionary:
+        unawaited(_openDictionary(action));
       case HotkeyAction.delete:
         if (_selectedIds.length > 1 && widget.onDeleteSelectedCues != null) {
           unawaited(_deleteSelectedSafely());
@@ -953,11 +1001,103 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       : _selected.edited.isNotEmpty ? _selected.edited : _selected.original;
 
   void _setStyleDraft(String text) {
-    if (widget.onApplyCueText == null || _savingDraft) return;
+    if (widget.onApplyCueText == null || _savingDraft || _cues.isEmpty) return;
     setState(() {
       _draftCueId = _selectedId;
       _draftText = text;
+      // TextFormField.initialValue is only read when its state is mounted.
+      // Recreate it after external actions, not after every user keystroke.
+      _draftRevision++;
     });
+  }
+
+  TextEditingController? get _focusedCueController {
+    if (!_cueTextFocus.hasFocus) return null;
+    return _cueTextFocus.context
+        ?.findAncestorStateOfType<EditableTextState>()?.widget.controller;
+  }
+
+  void _replaceEditedDraft(String replacement) {
+    if (_cues.isEmpty || widget.onApplyCueText == null || _savingDraft) return;
+    final focused = _focusedCueController;
+    if (focused == null) {
+      _setStyleDraft(replacement);
+      return;
+    }
+    focused.value = TextEditingValue(
+      text: replacement,
+      selection: TextSelection.collapsed(offset: replacement.length),
+    );
+    setState(() {
+      _draftCueId = _selectedId;
+      _draftText = replacement;
+    });
+  }
+
+  void _formatCueShortcut(String tag) {
+    if (_cues.isEmpty || widget.onApplyCueText == null || _savingDraft) return;
+    final controller = _focusedCueController;
+    if (controller == null) {
+      _toggleStyleTag(tag);
+      return;
+    }
+    toggleTextFormatting(controller: controller, tag: tag);
+    setState(() {
+      _draftCueId = _selectedId;
+      _draftText = controller.text;
+    });
+  }
+
+  void _pasteOriginalDraft() {
+    // Original text is a separate source only in translation mode.
+    if (!widget.isEditMode && _cues.isNotEmpty) {
+      _replaceEditedDraft(_selected.original);
+    }
+  }
+
+  Future<void> _openDictionary(HotkeyAction action,
+      {ModalRoute<dynamic>? afterMenu}) async {
+    if (afterMenu != null) await afterMenu.completed;
+    if (!mounted || _cues.isEmpty || widget.onApplyCueText == null ||
+        _savingDraft) return;
+    final selectedCue = _selectedId;
+    final lookup = !widget.isEditMode && _selected.original.isNotEmpty
+        ? _selected.original : _styleText;
+    final chosen = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => Dialog(
+        child: SizedBox(
+          width: 720,
+          height: (MediaQuery.sizeOf(dialogContext).height - 64)
+              .clamp(260.0, 760.0).toDouble(),
+          child: switch (action) {
+            HotkeyAction.msoneDictionary => DictionarySearchWidget(
+                initialSearchTerm: lookup,
+                onSelectTranslation: (text) =>
+                    Navigator.of(dialogContext).pop(text),
+              ),
+            HotkeyAction.olamDictionary => OlamDictionaryWidget(
+                initialSearchTerm: lookup,
+                enableResultSelection: true,
+                onSelectTranslation: (text) =>
+                    Navigator.of(dialogContext).pop(text),
+              ),
+            HotkeyAction.urbanDictionary => UrbanDictionaryWidget(
+                initialSearchTerm: lookup,
+                enableResultSelection: true,
+                onSelectTranslation: (text) =>
+                    Navigator.of(dialogContext).pop(text),
+              ),
+            _ => const SizedBox.shrink(),
+          },
+        ),
+      ),
+    );
+    // Modal opening and closing should not commit the project or overwrite a
+    // different cue when a host selection changed while the lookup was open.
+    if (mounted && chosen != null && selectedCue == _selectedId) {
+      _replaceEditedDraft(chosen);
+    }
   }
 
   void _toggleStyleTag(String tag) => _setStyleDraft(
@@ -2117,6 +2257,10 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           PopupMenuItem(value: _StudioDockMenuAction.copySelected,
               enabled: _selectedIds.isNotEmpty,
               child: const Text('Copy selected subtitles')),
+          if (!widget.isEditMode && widget.onApplyCueText != null)
+            PopupMenuItem(value: _StudioDockMenuAction.pasteOriginal,
+                enabled: _cues.isNotEmpty && !_savingDraft,
+                child: const Text('Paste original text (Alt+V)')),
         ]),
         _desktopMenu('Subtitle', const ValueKey('studio-subtitle-menu'), [
           if (widget.onInsertCue != null)
@@ -2137,6 +2281,18 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                 child: Text('Combine subtitles')),
           const PopupMenuItem(value: _StudioDockMenuAction.notes,
               child: Text('Review notes')),
+          if (widget.onApplyCueText != null) ...[
+            const PopupMenuDivider(),
+            PopupMenuItem(value: _StudioDockMenuAction.boldFormat,
+                enabled: _cues.isNotEmpty && !_savingDraft,
+                child: const Text('Bold (Ctrl+B)')),
+            PopupMenuItem(value: _StudioDockMenuAction.italicFormat,
+                enabled: _cues.isNotEmpty && !_savingDraft,
+                child: const Text('Italic (Ctrl+I)')),
+            PopupMenuItem(value: _StudioDockMenuAction.colorPicker,
+                enabled: _cues.isNotEmpty && !_savingDraft,
+                child: const Text('Text color (Alt+C)…')),
+          ],
         ]),
         _desktopMenu('Timing', const ValueKey('studio-timing-menu'), [
           const PopupMenuItem(value: _StudioDockMenuAction.timing,
@@ -2155,6 +2311,26 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         _desktopMenu('Tools', const ValueKey('studio-tools-menu'), [
           const PopupMenuItem(value: _StudioDockMenuAction.find,
               child: Text('Find & Replace')),
+          if (widget.onApplyCueText != null) ...[
+            PopupMenuItem(value: _StudioDockMenuAction.msoneDictionary,
+              enabled: _cues.isNotEmpty && !_savingDraft,
+              child: Builder(builder: (popupContext) {
+                _dictionaryMenuRoute = ModalRoute.of(popupContext);
+                return const Text('MSone Dictionary (Alt+M)…');
+              })),
+            PopupMenuItem(value: _StudioDockMenuAction.olamDictionary,
+              enabled: _cues.isNotEmpty && !_savingDraft,
+              child: Builder(builder: (popupContext) {
+                _dictionaryMenuRoute = ModalRoute.of(popupContext);
+                return const Text('Olam Dictionary (Alt+O)…');
+              })),
+            PopupMenuItem(value: _StudioDockMenuAction.urbanDictionary,
+              enabled: _cues.isNotEmpty && !_savingDraft,
+              child: Builder(builder: (popupContext) {
+                _dictionaryMenuRoute = ModalRoute.of(popupContext);
+                return const Text('Urban Dictionary (Alt+U)…');
+              })),
+          ],
           const PopupMenuItem(value: _StudioDockMenuAction.showTools,
               child: Text('Subtitle tools')),
           if (widget.onRemoveHearingImpaired != null)
@@ -2281,6 +2457,25 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         _toggleRangeSelectionMode();
       case _StudioDockMenuAction.copySelected:
         unawaited(_copySelectedSubtitleText());
+      case _StudioDockMenuAction.pasteOriginal:
+        _pasteOriginalDraft();
+      case _StudioDockMenuAction.boldFormat:
+        _formatCueShortcut('b');
+      case _StudioDockMenuAction.italicFormat:
+        _formatCueShortcut('i');
+      case _StudioDockMenuAction.colorPicker:
+        unawaited(_pickStyleColor());
+      case _StudioDockMenuAction.msoneDictionary:
+      case _StudioDockMenuAction.olamDictionary:
+      case _StudioDockMenuAction.urbanDictionary:
+        final route = _dictionaryMenuRoute;
+        _dictionaryMenuRoute = null;
+        final hotkeyAction = switch (action) {
+          _StudioDockMenuAction.msoneDictionary => HotkeyAction.msoneDictionary,
+          _StudioDockMenuAction.olamDictionary => HotkeyAction.olamDictionary,
+          _ => HotkeyAction.urbanDictionary,
+        };
+        unawaited(_openDictionary(hotkeyAction, afterMenu: route));
       case _StudioDockMenuAction.addCue:
         unawaited(_addCueSafely());
       case _StudioDockMenuAction.deleteCue:
@@ -4002,6 +4197,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                       ? 'EDITED TEXT · READ ONLY'
                       : 'EDITED TEXT · DEMO ONLY'))),
           TextFormField(
+            focusNode: _cueTextFocus,
             key: widget.onApplyCueText == null
                 ? ValueKey('desktop-edit-' + _selected.id.toString())
                 : ValueKey('studio-edit-' + _selected.id.toString() +

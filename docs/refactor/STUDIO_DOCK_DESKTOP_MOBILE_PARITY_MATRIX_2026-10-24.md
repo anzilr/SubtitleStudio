@@ -28,7 +28,7 @@ acceptance. A wired callback is not proof of a working native interaction.
 | Waveform display and selected audio stream | DS5 R20 adds direct Generate/Hide and Regenerate controls using the scoped Riverpod controller, PCM-cache invalidation and player-resolved audio selector; waveform zoom/time editing remain. DS5 R21 exposes the mobile-style optional floating play/pause button through View using the existing playback link, with focus-safe live state and no player remount. **Compact peak-cache regeneration and native floating transport still require verification** | Native waveform generate/regenerate/hide/show, selected-track fidelity, cached/uncached paths, player non-remount, floating-controls verification |
 | Waveform gesture time edits and insertion | Wired in DS5 R9: shared waveform gestures and compact controls call guarded Studio Dock timing/insert services; successful edits reconcile the grid/player and history | Native drag precision, magnet/overlap behavior, cue creation, undo, media stability and synchronized scrolling acceptance |
 | Secondary subtitles, visibility and saved selection | Wired in DS5 R8 through the existing secondary sheet, `VideoRepository` preferences, and shared player; original-text overlay reprojects from current cues | Native external/video-track picker, original-text updates and selection persistence acceptance; Project Settings remains separate |
-| Edit text, start/end timing, formatting, nine-grid alignment | Wired to shared repositories and format tags | Native editor/controller interaction acceptance |
+| Edit text, start/end timing, formatting, nine-grid alignment | Wired to shared repositories and format tags; DS5 R23 adds selection-aware Bold/Italic via the existing formatting helper, a shared color dialog, and draft-first Paste Original | Native editor/controller focus and selection interaction acceptance |
 | Cue insert, delete, split and combine | Wired, guarded, undoable | Compare edge cases and keyboard semantics with mobile |
 | History graph, checkpoints, undo/redo/forks | Wired to shared graph/repository | Native path/bookmark navigation acceptance |
 | Find/replace and raw Source View | Wired to shared tools/parser | Compare regex/case/selection semantics and file fidelity |
@@ -44,7 +44,7 @@ acceptance. A wired callback is not proof of a working native interaction.
 | Project Settings (encoding, media, secondary subs) | Wired in DS5 R10 to existing `ProjectSettingsSheet`, repository models and live media/secondary/history refresh after close | Native encoding selection/Save As, media unlink/replace, secondary clear, project rename, marked lines and route-return acceptance |
 | App Settings, theme, typography, waveform limits, checkpoints | Wired to **existing** `SettingsSheet` in DS5 R5f | Verify immediate preference propagation and skin changes |
 | Help & Documentation | Wired to **existing** `HelpScreen` in DS5 R5f | Navigation/back-stack widget and native acceptance |
-| Desktop shortcuts | DS5 R17 manager: play/pause, previous/next cue+seek, Go to Line, find, mark/comment draft, split/combine, Save/Save As/Project, Help/Settings. DS5 R19: fullscreen, guarded Shift+Delete, Edit current cue, Show Marked Lines. DS5 R22: repeat current (Ctrl/Cmd+R) and custom range (Ctrl/Cmd+Shift+R) through the existing manager, View menu and fullscreen control. Copy, Undo/Redo use focus-aware Flutter shortcuts | **Partial remaining hotkey parity:** line-format Bold/Italic, color picker, dictionaries and paste original; actual native chord registration, editor focus and conflicting OS bindings |
+| Desktop shortcuts | DS5 R17 manager: play/pause, previous/next cue+seek, Go to Line, find, mark/comment draft, split/combine, Save/Save As/Project, Help/Settings. DS5 R19: fullscreen, guarded Shift+Delete, Edit current cue, Show Marked Lines. DS5 R22: repeat current (Ctrl/Cmd+R) and custom range (Ctrl/Cmd+Shift+R). DS5 R23: Bold/Italic, color picker, MSone/Olam/Urban dictionaries and Translation Mode Paste Original wired to shared manager; editing commands guard non-cue fields and modal routes, draft changes require Apply. Copy and Undo/Redo retain Flutter focus-aware shortcuts | Native key-chord registration, dictionary response/select, timecode/search focus, clipboard conflict and menu popup acceptance; context-menu parity remains unaudited |
 
 ## DS5 R19 source-level difference audit
 
@@ -63,9 +63,11 @@ Dock's native menubar, shared services, and player controls:
   an interaction difference, not verified identical behavior.
 - **Open implementation audit**: R20 added waveform Generate/Regenerate/Hide;
   R21 added optional floating play/pause; R22 added repeat current/custom
-  range on the existing player with shared mobile dialog. Native loop behavior,
-  line-format/dictionary/paste-original hotkeys, and context menu feature
-  visibility remain partial. Do **not** mark these complete.
+  range on the existing player with shared mobile dialog; R23 wires the
+  formatting/dictionary/Paste Original hotkeys into the shared draft path.
+  Native loop behavior, actual OS chord handling, dictionary provider selection
+  and context-menu feature visibility are not accepted. Do **not** mark these
+  native behaviors complete.
 - **Platform-only remaining**: native fullscreen media focus, video/track
   picker behavior, timecode/encoding round trips, player/waveform stability,
   keyboard chord conflicts and all documented platform acceptance checks.
@@ -83,9 +85,9 @@ Dock's native menubar, shared services, and player controls:
 
 ## Next acceptance order (not optional feature cuts)
 
-1. **P0 implementation + native acceptance:** Close dictionary/format/paste-original
-   shortcut gaps after R22 repeat player control integration;
-   validate waveform time drags, cue creation,
+1. **P0 implementation + native acceptance:** Validate R23 dictionary/format/
+   paste-original focus and selection on desktop, then audit the remaining
+   mobile context-menu action exposure. Validate waveform time drags, cue creation,
    magnet snap, overlap, selected-cue scrolling and secondary-subtitle
    persistence/playback on a native desktop before declaring playback parity.
 2. **P1:** Verify synchronization and import comments, Go to Line, selected-cue batch operations and the

@@ -1,3 +1,4 @@
+DS5 R23 2026-10-25: verify formatting, dictionaries, and Paste Original hotkey parity. Flutter analyzer and Studio Dock tests only; no native builds.
 DS4 R1 2026-10-24: validate shared-player media plan, stable player slot, and guarded DS3 editing with Flutter analyzer plus Studio Dock tests. No native builds.
 
 DS4 R1 FIX 2026-10-24: first focused CI had 26 passing and 5 failing; fix unmocked Isar downloads in startup widget tests by injecting session catalog/view, key center dock for stable media child, and disambiguate dirty dialog Discard. Re-run analyzer and Studio Dock tests only. NO builds.

@@ -45,11 +45,15 @@ class OlamDictionaryWidget extends ConsumerStatefulWidget {
   
   /// Initial search term to populate the search field
   final String? initialSearchTerm;
+  /// Desktop Studio Dock can insert a result into its unsaved cue draft.
+  /// Existing mobile dictionary sheets keep their original copy-only UI.
+  final bool enableResultSelection;
 
   const OlamDictionaryWidget({
     super.key,
     required this.onSelectTranslation,
     this.initialSearchTerm,
+    this.enableResultSelection = false,
   });
 
   @override
@@ -1147,6 +1151,13 @@ class _OlamDictionaryWidgetState extends ConsumerState<OlamDictionaryWidget>
                     ),
                   ),
                 ),
+                if (widget.enableResultSelection)
+                  IconButton(
+                    key: const ValueKey('olam-use-translation'),
+                    tooltip: 'Use meaning in subtitle draft',
+                    onPressed: () => widget.onSelectTranslation(secondaryText),
+                    icon: const Icon(Icons.input, size: 19),
+                  ),
               ],
             ),
             const SizedBox(height: 8),

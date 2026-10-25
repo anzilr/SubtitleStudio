@@ -22,6 +22,8 @@ void main() {
     Future<StudioDockCueUpdate?> Function(
       int, String?, bool, bool)? onNotes,
     Future<bool> Function(int, String)? onText,
+    Future<bool> Function(int, String, String)? onTiming,
+    bool isEditMode = false,
   }) async {
     tester.view.physicalSize = const Size(1600, 1000);
     tester.view.devicePixelRatio = 1;
@@ -31,6 +33,7 @@ void main() {
       key: dockKey,
       manageLiveHotkeys: true,
       isLiveSession: true,
+      isEditMode: isEditMode,
       initialCues: const [
         StudioDockCue(id: 1, start: '00:00:01,000',
             end: '00:00:02,000', original: 'First', edited: 'First translated'),
@@ -44,6 +47,7 @@ void main() {
       onOpenAppSettings: onSettings,
       onApplyCueNotes: onNotes,
       onApplyCueText: onText,
+      onApplyCueTiming: onTiming,
     )));
     await tester.pumpAndSettle();
   }
@@ -163,6 +167,85 @@ void main() {
     expect(manager.dispatchForTesting(HotkeyAction.settings), isFalse);
     await tester.pumpAndSettle();
     expect(help, 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Bold and italic change only the live cue draft, not persistence',
+      (tester) async {
+    final saved = <String>[];
+    await launch(tester, onText: (_, text) async {
+      saved.add(text);
+      return true;
+    });
+    final input = find.byKey(const ValueKey('studio-edit-1-0'));
+    await tester.enterText(input, 'Hello subtitle');
+    await tester.pump();
+    expect(manager.dispatchForTesting(HotkeyAction.boldFormat), isTrue);
+    await tester.pump();
+    var editor = tester.widget<EditableText>(find.descendant(
+      of: input, matching: find.byType(EditableText)));
+    expect(editor.controller.text, '<b>Hello subtitle</b>');
+
+    expect(manager.dispatchForTesting(HotkeyAction.italicFormat), isTrue);
+    await tester.pump();
+    editor = tester.widget<EditableText>(find.descendant(
+      of: input, matching: find.byType(EditableText)));
+    expect(editor.controller.text, '<i><b>Hello subtitle</b></i>');
+    expect(saved, isEmpty);
+
+    await tester.ensureVisible(find.byKey(const ValueKey('studio-apply-cue')));
+    await tester.tap(find.byKey(const ValueKey('studio-apply-cue')));
+    await tester.pumpAndSettle();
+    expect(saved, ['<i><b>Hello subtitle</b></i>']);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Formatting never modifies a focused timecode field',
+      (tester) async {
+    await launch(tester,
+      onText: (_, __) async => true,
+      onTiming: (_, __, ___) async => true,
+    );
+    final timing = find.byKey(const ValueKey('studio-timing-start-1-0'));
+    await tester.enterText(timing, '00:00:01,250');
+    await tester.pump();
+    expect(manager.dispatchForTesting(HotkeyAction.boldFormat), isTrue);
+    await tester.pump();
+    final timeInput = tester.widget<EditableText>(find.descendant(
+      of: timing, matching: find.byType(EditableText)));
+    expect(timeInput.controller.text, '00:00:01,250');
+    final cueInput = tester.widget<EditableText>(find.descendant(
+      of: find.byKey(const ValueKey('studio-edit-1-0')),
+      matching: find.byType(EditableText)));
+    expect(cueInput.controller.text, 'First translated');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Paste Original is a draft, and is absent from Edit Mode',
+      (tester) async {
+    final saved = <String>[];
+    await launch(tester, onText: (_, text) async {
+      saved.add(text);
+      return true;
+    });
+    expect(manager.dispatchForTesting(HotkeyAction.pasteOriginal), isTrue);
+    await tester.pump();
+    expect(find.byKey(const ValueKey('studio-edit-1-1')), findsOneWidget);
+    final editor = tester.widget<EditableText>(find.descendant(
+      of: find.byKey(const ValueKey('studio-edit-1-1')),
+      matching: find.byType(EditableText)));
+    expect(editor.controller.text, 'First');
+    expect(saved, isEmpty);
+    await tester.ensureVisible(find.byKey(const ValueKey('studio-apply-cue')));
+    await tester.tap(find.byKey(const ValueKey('studio-apply-cue')));
+    await tester.pumpAndSettle();
+    expect(saved, ['First']);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+    await launch(tester, onText: (_, __) async => true, isEditMode: true);
+    expect(manager.dispatchForTesting(HotkeyAction.pasteOriginal), isFalse);
+    expect(find.textContaining('Paste original text'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 }

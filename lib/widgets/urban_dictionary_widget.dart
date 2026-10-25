@@ -55,11 +55,14 @@ class UrbanDictionaryWidget extends StatefulWidget {
   
   /// Initial search term to populate the search field
   final String? initialSearchTerm;
+  /// Opt-in insertion for the desktop subtitle draft; mobile copy remains.
+  final bool enableResultSelection;
 
   const UrbanDictionaryWidget({
     super.key,
     required this.onSelectTranslation,
     this.initialSearchTerm,
+    this.enableResultSelection = false,
   });
 
   @override
@@ -494,6 +497,13 @@ class _UrbanDictionaryWidgetState extends State<UrbanDictionaryWidget> {
                     ),
                   ),
                 ),
+                if (widget.enableResultSelection)
+                  IconButton(
+                    key: const ValueKey('urban-use-translation'),
+                    tooltip: 'Use definition in subtitle draft',
+                    onPressed: () => widget.onSelectTranslation(entry.meaning),
+                    icon: const Icon(Icons.input, size: 19),
+                  ),
               ],
             ),
             
