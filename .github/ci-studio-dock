@@ -135,3 +135,5 @@ DS5 R22 REPEAT PLAYBACK 2026-10-24: source-level current cue/custom range repeat
 DS5 R22 MENU SELECTOR RETRY 2026-10-25: verify disabled repeat actions by visible PopupMenu labels/taps, avoiding typed private generic item matcher; Flutter analyzer and Studio Dock tests only.
 
 DS5 R26 EDIT LINE DISPLAY/NAV 2026-10-25: mobile Edit Line preference parity, safe auto-save navigation and formatted preview. Flutter analyzer and focused Studio Dock widget tests only; no native builds.
+
+DS5 R26 MENU WIDTH RETRY 2026-10-25: Show Original Line popup row uses bounded ellipsized label; rerun Studio Dock widget tests and analyzer only, no builds.

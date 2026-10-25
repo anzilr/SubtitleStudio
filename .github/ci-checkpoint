@@ -252,3 +252,5 @@ DS5 R22 REPEAT PLAYBACK FULL GATE 2026-10-24: shared repeat current/range contro
 DS5 R22 MENU SELECTOR FULL RETRY 2026-10-25: correct typed PopupMenuItem widget-test assertion, run Flutter analysis and full suite only; never platform builds.
 
 DS5 R26 EDIT LINE DISPLAY/NAV 2026-10-25: shared mobile Show Original Line, Auto-save navigation, original-field and formatted-preview UI parity with checkpoint-backed drafts. Flutter pub get/analyze/full tests ONLY; no platform builds.
+
+DS5 R26 MENU WIDTH RETRY 2026-10-25: constrain Show Original Line popup label within native menu width, preventing RenderFlex overflows in widget testing; rerun analysis/full tests only, no builds.

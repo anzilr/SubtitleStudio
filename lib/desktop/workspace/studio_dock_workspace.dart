@@ -2555,8 +2555,9 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                     Icon(widget.showOriginalLine
                         ? Icons.check_box : Icons.check_box_outline_blank,
                         size: 18),
-                    const SizedBox(width: 12),
-                    const Text('Show Original Line'),
+                    const SizedBox(width: 8),
+                    const Expanded(child: Text('Show Original Line',
+                        overflow: TextOverflow.ellipsis)),
                   ]);
                 }),
               ),
