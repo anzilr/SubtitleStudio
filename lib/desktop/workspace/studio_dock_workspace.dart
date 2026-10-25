@@ -39,7 +39,8 @@ enum StudioDockEditPreference {
 
 enum _StudioDockMenuAction {
   undo, redo, find, copySelected, selectAll, addCue, deleteCue, splitCue, mergeCue, notes,
-  timing, shiftTools, showTools, syncSubtitles, sourceView, history, submitMsone,
+  timing, shiftTools, showTools, showMarkedLines, syncSubtitles, sourceView,
+  history, submitMsone,
   loadSecondary, toggleSecondary,
   shiftSelected, deleteSelected, selectByIndex, rangeSelection, goToLine,
   importComments, removeHearingImpaired, insertMsoneBanners, normalizeMalayalam,
@@ -381,6 +382,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   ModalRoute<dynamic>? _unloadVideoMenuRoute;
   ModalRoute<dynamic>? _projectSettingsMenuRoute;
   ModalRoute<dynamic>? _commentsMenuRoute;
+  ModalRoute<dynamic>? _markedLinesMenuRoute;
   String? _findError;
   String? _toolsError;
   int _section = 0;
@@ -2079,7 +2081,10 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     _gridFocus.requestFocus();
   }
 
-  Future<void> _showMarkedLinesFromShortcut() async {
+  Future<void> _showMarkedLinesFromShortcut(
+      {ModalRoute<dynamic>? afterMenu}) async {
+    if (afterMenu != null) await afterMenu.completed;
+    if (!mounted) return;
     if (_cues.isEmpty || !await _confirmDraftBeforeLeaving() || !mounted) return;
     await _switchSection(0);
     if (!mounted || _section != 0) return;
@@ -2094,6 +2099,13 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         _selectedIds..clear()..add(_selectedId);
       }
     });
+  }
+
+  Future<void> _changeReviewFilterSafely(
+      _StudioDockReviewFilter filter) async {
+    if (filter == _reviewFilter ||
+        !await _confirmDraftBeforeLeaving() || !mounted) return;
+    setState(() => _reviewFilter = filter);
   }
 
   Future<void> _openReviewNotesForHotkey() async {
@@ -2485,6 +2497,12 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           ],
           const PopupMenuItem(value: _StudioDockMenuAction.showTools,
               child: Text('Subtitle tools')),
+          PopupMenuItem(value: _StudioDockMenuAction.showMarkedLines,
+            enabled: _cues.isNotEmpty,
+            child: Builder(builder: (popupContext) {
+              _markedLinesMenuRoute = ModalRoute.of(popupContext);
+              return const Text('Show marked lines');
+            })),
           if (widget.onRemoveHearingImpaired != null)
             PopupMenuItem(value: _StudioDockMenuAction.removeHearingImpaired,
               enabled: !_openingHearingCleanup && _cues.isNotEmpty,
@@ -2695,6 +2713,10 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         unawaited(_shiftSelectedSafely());
       case _StudioDockMenuAction.sourceView:
         unawaited(_switchSection(5));
+      case _StudioDockMenuAction.showMarkedLines:
+        final menuRoute = _markedLinesMenuRoute;
+        _markedLinesMenuRoute = null;
+        unawaited(_showMarkedLinesFromShortcut(afterMenu: menuRoute));
       case _StudioDockMenuAction.history:
         unawaited(_switchSection(1));
       case _StudioDockMenuAction.removeHearingImpaired:
@@ -3991,7 +4013,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               child: Text('Resolved')),
         ],
         onChanged: (filter) {
-          if (filter != null) setState(() => _reviewFilter = filter);
+          if (filter != null) unawaited(_changeReviewFilterSafely(filter));
         },
       )),
       if (widget.onApplyBulkReview != null)

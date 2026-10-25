@@ -260,3 +260,4 @@ DS5 R27 WAVEFORM RELOAD FULL GATE 2026-10-25: prevent stale async audio-track re
 DS5 R28 SEEK HANDOFF FULL GATE 2026-10-25: wheel-to-drag transition and quantized-target seek regression tests; Flutter pub get/analyze/full tests only, no native builds.
 
 DS5 R29 TIMING HANDLES FULL GATE 2026-10-25: prevent cross-cue snap jumps, keep fixed drag anchors and moving overlay width, validate post-snap overlap; Flutter analyzer and full tests only, never platform builds.
+DS5 R30 REVIEW PARITY FULL GATE 2026-10-25: protect unsaved drafts when changing review filters and expose mobile marked-lines command in Studio Dock Tools; Flutter analyzer and full tests only, never platform builds.

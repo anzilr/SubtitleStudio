@@ -157,6 +157,98 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('review filter Cancel leaves an unsaved cue draft and filter intact',
+      (tester) async {
+    var saved = 0;
+    await launch(tester, applyText: (_, __) async { saved++; return true; });
+    await tester.enterText(
+        find.byKey(const ValueKey('studio-edit-1-0')), 'Not yet saved');
+    await tester.pump();
+
+    await tester.tap(find.byKey(const ValueKey('studio-review-filter')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Unresolved').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Unsaved subtitle edit'), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+
+    final filter = tester.widget<DropdownButton>(
+        find.byKey(const ValueKey('studio-review-filter')));
+    expect(filter.value.toString(), contains('all'));
+    expect(find.text('Not yet saved'), findsWidgets);
+    expect(find.byKey(const ValueKey('desktop-cue-2')), findsOneWidget);
+    expect(saved, 0);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('review filter Apply persists the draft before hiding rows',
+      (tester) async {
+    final saved = <String>[];
+    await launch(tester, applyText: (id, value) async {
+      saved.add('$id:$value');
+      return true;
+    });
+    await tester.enterText(
+        find.byKey(const ValueKey('studio-edit-1-0')), 'Committed review');
+    await tester.pump();
+
+    await tester.tap(find.byKey(const ValueKey('studio-review-filter')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Marked').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.descendant(
+        of: find.byType(AlertDialog), matching: find.text('Apply')));
+    await tester.pumpAndSettle();
+
+    expect(saved, ['1:Committed review']);
+    expect(tester.widget<DropdownButton>(
+        find.byKey(const ValueKey('studio-review-filter')))
+        .value.toString(), contains('marked'));
+    expect(find.byKey(const ValueKey('desktop-cue-1')), findsOneWidget);
+    expect(find.byKey(const ValueKey('desktop-cue-2')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('failed review-filter Apply keeps the original filter and draft',
+      (tester) async {
+    await launch(tester, applyText: (_, __) async => false);
+    await tester.enterText(
+        find.byKey(const ValueKey('studio-edit-1-0')), 'Conflicted edit');
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('studio-review-filter')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Marked').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.descendant(
+        of: find.byType(AlertDialog), matching: find.text('Apply')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(tester.widget<DropdownButton>(
+        find.byKey(const ValueKey('studio-review-filter')))
+        .value.toString(), contains('all'));
+    expect(find.text('Conflicted edit'), findsWidgets);
+    expect(find.byKey(const ValueKey('desktop-cue-2')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Tools Show marked lines shares mobile review navigation',
+      (tester) async {
+    await launch(tester);
+    await tester.tap(find.byKey(const ValueKey('studio-tools-menu')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Show marked lines'));
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<DropdownButton>(
+        find.byKey(const ValueKey('studio-review-filter')))
+        .value.toString(), contains('marked'));
+    expect(find.byKey(const ValueKey('desktop-cue-1')), findsOneWidget);
+    expect(find.byKey(const ValueKey('desktop-cue-2')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('1100-pixel theme-aware inspector overlays Text and Timing',
       (tester) async {
     await launch(tester,
