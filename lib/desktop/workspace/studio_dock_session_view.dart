@@ -394,6 +394,27 @@ class _StudioDockSessionViewState
     }
   }
 
+  Future<bool> _applyOriginalText(int cueNumber, String originalText) async {
+    final baseline = _latestBaseline;
+    if (baseline == null || !widget.enableEditing) return false;
+    final service = StudioDockTextEditService(
+      ref.read(projectRepositoryProvider),
+      ref.read(subtitleRepositoryProvider),
+    );
+    try {
+      final updated = await service.applyOriginal(
+        baseline: baseline,
+        cueNumber: cueNumber,
+        originalText: originalText,
+      );
+      if (!mounted || updated == null) return false;
+      setState(() => _latestBaseline = updated);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<bool> _applyTiming(int cueNumber, String start, String end) async {
     final baseline = _latestBaseline;
     if (baseline == null || !widget.enableEditing) return false;
@@ -1657,6 +1678,7 @@ class _StudioDockSessionViewState
                 ? null : _toggleSecondaryVisibility,
         showSecondarySubtitles: _showSecondary,
         onApplyCueText: widget.enableEditing ? _applyText : null,
+        onApplyCueOriginal: widget.enableEditing ? _applyOriginalText : null,
         onApplyCueTiming: widget.enableEditing ? _applyTiming : null,
         onApplyCueTextAndTiming:
             widget.enableEditing ? _applyCueContent : null,

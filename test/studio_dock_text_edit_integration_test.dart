@@ -90,6 +90,28 @@ void main() {
     expect(next!.cues.first.edited, 'Next change');
   });
 
+  test('Original editing preserves translation and rejects stale changes',
+      () async {
+    final ids = await seed();
+    final baseline = await loader.load(
+      sessionId: ids.sessionId, collectionId: ids.collectionId);
+    final changed = await editor.applyOriginal(
+      baseline: baseline, cueNumber: 1,
+      originalText: 'Corrected source');
+    expect(changed, isNotNull);
+    expect(changed!.cues.first.original, 'Corrected source');
+    final stored = (await db.isar.subtitleCollections.get(ids.collectionId))!;
+    expect(stored.lines[0].edited, isNull);
+    expect(stored.lines[0].startTime, '00:00:01,000');
+    expect(stored.lines[0].comment, 'Existing note');
+    expect(await editor.applyOriginal(
+      baseline: baseline, cueNumber: 1,
+      originalText: 'Stale source'), isNull);
+    expect(await editor.applyOriginal(
+      baseline: changed, cueNumber: 1,
+      originalText: 'Corrected source'), same(changed));
+  });
+
   test('Unchanged nullable edited text never creates a history commit',
       () async {
     final ids = await seed();

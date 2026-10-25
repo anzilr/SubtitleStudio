@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:subtitle_studio/features/waveform/models/waveform_sample.dart';
@@ -163,6 +164,51 @@ void main() {
     await tester.pump();
     expect(edits, ['1 00:00:01,000 00:00:03,000']);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Escape cancels compact waveform time editing', (tester) async {
+    final line = SubtitleLine()
+      ..index = 1
+      ..startTime = '00:00:01,000'
+      ..endTime = '00:00:02,000'
+      ..original = 'Original';
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        waveformControllerProvider.overrideWith(_CompactReadyController.new),
+      ],
+      child: MaterialApp(home: Scaffold(body: SizedBox(
+        width: 500, height: 96,
+        child: WaveformWidget(compact: true, height: 96,
+          subtitles: [line]),
+      ))),
+    ));
+    final controller = ProviderScope.containerOf(
+        tester.element(find.byType(WaveformWidget)))
+        .read(waveformControllerProvider.notifier);
+    controller.dispatch(const EnterTimeEditMode(0));
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pump();
+    expect((ProviderScope.containerOf(
+        tester.element(find.byType(WaveformWidget)))
+        .read(waveformControllerProvider) as WaveformReady).isEditMode, false);
+    expect(tester.takeException(), isNull);
+  });
+
+  test('fine desktop zoom uses metadata without allocating peak arrays', () {
+    final source = WaveformBuffer(
+      rawData: WaveformData(
+        channels: 1, sampleRate: 44100,
+        totalSamples: 44100 * 600, rawSamples: [Int16List(1)]),
+      zoomLevels: [ZoomLevel.metadata(
+        samplesPerPixel: 700, pixelCount: 37800, channels: 1)],
+    );
+    final extended = WaveformController.extendDesktopFineZoom(source);
+    expect(extended.zoomLevelCount, greaterThan(source.zoomLevelCount));
+    expect(extended.zoomLevels.first.isMetadataOnly, isTrue);
+    expect(extended.zoomLevels.first.materializedPixels, 0);
+    expect(extended.zoomLevels.first.samplesPerPixel, lessThan(300));
+    expect(extended.zoomLevels.last.samplesPerPixel, 700);
   });
 
   testWidgets('compact loading status fits a 65px waveform band',

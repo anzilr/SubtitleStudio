@@ -220,7 +220,7 @@ extension _WaveformRendering on WaveformWidgetState {
           onPressed: state.verticalZoom > .5
               ? () => ref.read(waveformControllerProvider.notifier)
                   .dispatch(UpdateVerticalZoom(
-                      (state.verticalZoom - .1).clamp(.5, 3.0)))
+                      (state.verticalZoom - .25).clamp(.5, 8.0)))
               : null,
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints(minWidth: 28, minHeight: 26),
@@ -231,10 +231,10 @@ extension _WaveformRendering on WaveformWidgetState {
           key: const ValueKey('waveform-compact-vertical-zoom-in'),
           tooltip: 'Increase waveform height',
           icon: const Icon(Icons.open_in_full, size: 15),
-          onPressed: state.verticalZoom < 3
+          onPressed: state.verticalZoom < 8
               ? () => ref.read(waveformControllerProvider.notifier)
                   .dispatch(UpdateVerticalZoom(
-                      (state.verticalZoom + .1).clamp(.5, 3.0)))
+                      (state.verticalZoom + .25).clamp(.5, 8.0)))
               : null,
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints(minWidth: 28, minHeight: 26),
@@ -317,6 +317,13 @@ extension _WaveformRendering on WaveformWidgetState {
   ));
 
   Widget _buildWaveformView(WaveformReady state) {
+    final editing = state.isEditMode || state.isAddLineMode;
+    if (widget.compact && editing && !_wasTimeEditing) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _timeEditFocus.requestFocus();
+      });
+    }
+    _wasTimeEditing = editing;
     // Update viewport width when widget size changes
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -332,7 +339,10 @@ extension _WaveformRendering on WaveformWidgetState {
       }
     });
 
-    return Container(
+    return Focus(
+      focusNode: _timeEditFocus,
+      onKeyEvent: (node, event) => _handleTimeEditKey(node, event, state),
+      child: Container(
       decoration: BoxDecoration(
         border: Border.all(
           color: Theme.of(context).colorScheme.surface,
@@ -638,6 +648,10 @@ extension _WaveformRendering on WaveformWidgetState {
                               }
                             },
                             onPointerDown: (event) {
+                              if (widget.compact && editing &&
+                                  !_timeEditFocus.hasFocus) {
+                                _timeEditFocus.requestFocus();
+                              }
                               // Handle mouse clicks (primary button for double-click, secondary for add line mode)
                               if (event.kind == PointerDeviceKind.mouse) {
                                 if (event.buttons == 1) {
@@ -838,6 +852,7 @@ extension _WaveformRendering on WaveformWidgetState {
             ),
           ),
         ],
+      ),
       ),
     );
   }

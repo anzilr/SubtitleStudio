@@ -17,6 +17,55 @@ class StudioDockTextEditService {
   final ProjectRepository _projects;
   final SubtitleRepository _subtitles;
 
+  /// Original/source text changes are a separate guarded edit. They must not
+  /// silently rewrite translated text or bypass checkpoint history.
+  Future<StudioDockSessionSnapshot?> applyOriginal({
+    required StudioDockSessionSnapshot baseline,
+    required int cueNumber,
+    required String originalText,
+  }) async {
+    final session = await _projects.getSession(baseline.sessionId);
+    if (session == null ||
+        session.subtitleCollectionId != baseline.collectionId) return null;
+    StudioDockLoadedCue? cue;
+    for (final line in baseline.cues) {
+      if (line.index == cueNumber) { cue = line; break; }
+    }
+    if (cue == null || cue.index <= 0) return null;
+    if (cue.original == originalText) return baseline;
+    final before = SubtitleLine()
+      ..index = cue.index
+      ..startTime = cue.start
+      ..endTime = cue.end
+      ..original = cue.original
+      ..edited = cue.storedEdited
+      ..marked = cue.marked
+      ..comment = cue.comment
+      ..resolved = cue.resolved;
+    final after = SubtitleLine()
+      ..index = cue.index
+      ..startTime = cue.start
+      ..endTime = cue.end
+      ..original = originalText
+      ..edited = cue.storedEdited
+      ..marked = cue.marked
+      ..comment = cue.comment
+      ..resolved = cue.resolved;
+    final applied = await _subtitles.updateMultipleLinesWithHistory(
+      collectionId: baseline.collectionId,
+      sessionId: baseline.sessionId,
+      expectedLines: [before],
+      updatedLines: [after],
+      operationType: 'edit',
+      description: 'Edited original text of line $cueNumber',
+    );
+    if (!applied) return null;
+    return StudioDockSessionLoader(_projects, _subtitles).load(
+      sessionId: baseline.sessionId,
+      collectionId: baseline.collectionId,
+    );
+  }
+
   Future<StudioDockSessionSnapshot?> apply({
     required StudioDockSessionSnapshot baseline,
     required int cueNumber,

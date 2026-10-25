@@ -81,12 +81,12 @@ class StudioDockCue {
   final bool resolved;
 
   StudioDockCue copyWith({
-    String? start, String? end, String? edited, bool? marked,
+    String? start, String? end, String? original, String? edited, bool? marked,
     String? comment, bool clearComment = false, bool? resolved,
   }) =>
       StudioDockCue(
         id: id, start: start ?? this.start, end: end ?? this.end,
-        original: original,
+        original: original ?? this.original,
         edited: edited ?? this.edited,
         storedEdited: edited ?? storedEdited,
         marked: marked ?? this.marked,
@@ -152,6 +152,7 @@ class StudioDockWorkspace extends StatefulWidget {
     this.onImportFile,
     this.onNewProject,
     this.onApplyCueText,
+    this.onApplyCueOriginal,
     this.onApplyCueTiming,
     this.onApplyCueTextAndTiming,
     this.onApplyCueNotes,
@@ -229,6 +230,9 @@ class StudioDockWorkspace extends StatefulWidget {
   final VoidCallback? onNewProject;
   /// Non-null only when the production checkpoint-backed edit bridge is ready.
   final Future<bool> Function(int cueNumber, String editedText)? onApplyCueText;
+  /// Explicit source-text editing is separate from translation editing.
+  final Future<bool> Function(int cueNumber, String originalText)?
+      onApplyCueOriginal;
   /// Production timing changes use the same optimistic history boundary as
   /// text edits. Null when timing edits are unavailable.
   final Future<bool> Function(int cueNumber, String start, String end)?
@@ -380,6 +384,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   final FocusNode _searchFocus = FocusNode(debugLabel: 'Studio Dock search');
   final FocusNode _findFocus = FocusNode(debugLabel: 'Studio Dock Find');
   final FocusNode _cueTextFocus = FocusNode(debugLabel: 'Studio Dock cue text');
+  int? _focusEditorCueOnMount;
   final TextEditingController _commandSearch = TextEditingController();
   final TextEditingController _tableSearch = TextEditingController();
   final TextEditingController _findInput = TextEditingController();
@@ -427,9 +432,15 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   _StudioDockReviewFilter _reviewFilter = _StudioDockReviewFilter.all;
   int? _draftCueId;
   String? _draftText;
+  bool _originalEditing = false;
+  int? _draftOriginalCueId;
+  String? _draftOriginal;
   int? _draftTimingCueId;
   String? _draftStart;
   String? _draftEnd;
+  String? _durationError;
+  int _timingFieldRevision = 0;
+  int _durationFieldRevision = 0;
   int? _draftNotesCueId;
   String? _draftNoteText;
   bool? _draftMarked;
@@ -593,6 +604,9 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       // translation/edit-mode form state into the newly selected project.
       _draftCueId = null;
       _draftText = null;
+      _draftOriginalCueId = null;
+      _draftOriginal = null;
+      _originalEditing = false;
       _draftTimingCueId = null;
       _draftStart = null;
       _draftEnd = null;
@@ -641,7 +655,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       if (!mounted || !_cueScroll.hasClients || !_followPlayback) return;
       final index = _visible.indexWhere((cue) => cue.id == active);
       if (index < 0) return;
-      final target = (index * 40.0 - _cueScroll.position.viewportDimension / 2 + 20)
+      final target = (index * 32.0 - _cueScroll.position.viewportDimension / 2 + 16)
           .clamp(0.0, _cueScroll.position.maxScrollExtent).toDouble();
       _cueScroll.animateTo(target,
           duration: const Duration(milliseconds: 180), curve: Curves.easeOut);
@@ -796,7 +810,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         }
       case HotkeyAction.editCurrentLine:
         if (widget.onApplyCueText != null && _cues.isNotEmpty) {
-          unawaited(_openInspectorTab(0));
+          unawaited(_toggleInspectorFromShortcut(0));
         }
       case HotkeyAction.showMarkedLines:
         unawaited(_showMarkedLinesFromShortcut());
@@ -806,7 +820,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         unawaited(_goToLineSafely());
       case HotkeyAction.markLineAndComment:
         if (widget.onApplyCueNotes != null) {
-          unawaited(_openReviewNotesForHotkey());
+          unawaited(_toggleInspectorFromShortcut(2));
         }
       case HotkeyAction.markLine:
         if (widget.onApplyBulkReview != null) {
@@ -1079,10 +1093,14 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
        _draftResolved != null && _draftResolved != _selected.resolved);
 
   bool get _hasDirtyDraft => _hasDirtyTextDraft || _hasDirtyTimingDraft ||
-      _hasDirtyNotesDraft;
+      _hasDirtyNotesDraft || _hasDirtyOriginalDraft;
+
+  bool get _hasDirtyOriginalDraft => widget.onApplyCueOriginal != null &&
+      _draftOriginalCueId == _selectedId && _draftOriginal != null &&
+      _draftOriginal != _selected.original;
 
   bool get _canApplyContentDraft =>
-      (_hasDirtyTextDraft || _hasDirtyTimingDraft) &&
+      (_hasDirtyTextDraft || _hasDirtyTimingDraft || _hasDirtyOriginalDraft) &&
       (!_hasDirtyTextDraft || !_hasDirtyTimingDraft ||
           widget.onApplyCueTextAndTiming != null) &&
       !_savingDraft && !_savingFile &&
@@ -1093,6 +1111,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   String get _timingEnd => _draftTimingCueId == _selectedId
       ? _draftEnd ?? _selected.end : _selected.end;
   String? get _timingError =>
+      _durationError ??
       StudioDockTimingEditService.validate(_timingStart, _timingEnd);
 
   String get _styleText => _draftCueId == _selectedId && _draftText != null
@@ -1144,6 +1163,83 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     setState(() {
       _draftCueId = _selectedId;
       _draftText = controller.text;
+    });
+  }
+
+  Widget _studioTextContextMenu(
+      BuildContext context, EditableTextState editable,
+      {required bool original}) {
+    final canFormat = !_savingDraft &&
+        (original ? _originalEditing && widget.onApplyCueOriginal != null
+                  : widget.onApplyCueText != null);
+    void format(String tag) {
+      toggleTextFormatting(controller: editable.widget.controller, tag: tag);
+      setState(() {
+        if (original) {
+          _draftOriginalCueId = _selectedId;
+          _draftOriginal = editable.widget.controller.text;
+        } else {
+          _draftCueId = _selectedId;
+          _draftText = editable.widget.controller.text;
+        }
+      });
+      ContextMenuController.removeAny();
+    }
+    final items = <ContextMenuButtonItem>[
+      ...editable.contextMenuButtonItems,
+      if (canFormat) for (final (name, tag) in const [
+        ('Bold', 'b'), ('Italic', 'i'), ('Underline', 'u'),
+      ])
+        ContextMenuButtonItem(
+          label: name,
+          onPressed: () => format(tag),
+        ),
+      if (canFormat) ContextMenuButtonItem(
+        label: 'Text color',
+        onPressed: () {
+          final controller = editable.widget.controller;
+          ContextMenuController.removeAny();
+          unawaited(_pickContextTextColor(controller, original: original));
+        },
+      ),
+    ];
+    return AdaptiveTextSelectionToolbar.buttonItems(
+      anchors: editable.contextMenuAnchors,
+      buttonItems: items,
+    );
+  }
+
+  Future<void> _pickContextTextColor(TextEditingController controller,
+      {required bool original}) async {
+    final selection = controller.selection;
+    final text = controller.text;
+    final selected = selection.isValid && !selection.isCollapsed
+        ? selection.textInside(text) : text;
+    if (selected.isEmpty) return;
+    final selectedLine = _selectedId;
+    final chosen = await showDialog<String>(
+      context: context,
+      builder: (_) => StudioDockStyleColorDialog(
+        text: selected,
+        initialColor: Theme.of(context).colorScheme.onSurface,
+        colorHistory: _styleColorHistory,
+      ),
+    );
+    if (chosen == null || !mounted || selectedLine != _selectedId) return;
+    final begin = selection.isValid && !selection.isCollapsed ? selection.start : 0;
+    final end = selection.isValid && !selection.isCollapsed ? selection.end : text.length;
+    controller.value = TextEditingValue(
+      text: text.replaceRange(begin, end, chosen),
+      selection: TextSelection.collapsed(offset: begin + chosen.length),
+    );
+    setState(() {
+      if (original) {
+        _draftOriginalCueId = selectedLine;
+        _draftOriginal = controller.text;
+      } else {
+        _draftCueId = selectedLine;
+        _draftText = controller.text;
+      }
     });
   }
 
@@ -1225,9 +1321,13 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     setState(() {
       _draftCueId = null;
       _draftText = null;
+      _draftOriginalCueId = null;
+      _draftOriginal = null;
+      _originalEditing = false;
       _draftTimingCueId = null;
       _draftStart = null;
       _draftEnd = null;
+      _durationError = null;
       _draftNotesCueId = null;
       _draftNoteText = null;
       _draftMarked = null;
@@ -1239,6 +1339,9 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   Future<bool> _applyDraft() async {
     if (_savingDraft || _savingFile) return false;
     if (!_hasDirtyDraft) return true;
+    if (_hasDirtyOriginalDraft && !await _applyOriginalDraft()) return false;
+    if (!_hasDirtyTextDraft && !_hasDirtyTimingDraft &&
+        !_hasDirtyNotesDraft) return true;
     if (_hasDirtyNotesDraft) {
       if (_hasDirtyTextDraft || _hasDirtyTimingDraft) return false;
       return _applyNotesDraft();
@@ -1285,6 +1388,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         _draftTimingCueId = null;
         _draftStart = null;
         _draftEnd = null;
+        _durationError = null;
         _draftRevision++;
       }
     });
@@ -1298,6 +1402,34 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     return applied;
   }
 
+  Future<bool> _applyOriginalDraft() async {
+    final apply = widget.onApplyCueOriginal;
+    final text = _draftOriginal;
+    if (apply == null || text == null || !_hasDirtyOriginalDraft ||
+        _savingDraft) return false;
+    final cueId = _selectedId;
+    setState(() => _savingDraft = true);
+    bool saved;
+    try { saved = await apply(cueId, text); }
+    catch (_) { saved = false; }
+    if (!mounted) return false;
+    setState(() {
+      _savingDraft = false;
+      if (saved) {
+        final index = _cues.indexWhere((cue) => cue.id == cueId);
+        if (index >= 0) {
+          _cues[index] = _cues[index].copyWith(original: text);
+        }
+        _draftOriginal = null;
+        _draftOriginalCueId = null;
+        _originalEditing = false;
+        _draftRevision++;
+      }
+    });
+    if (saved) unawaited(_reloadHistory());
+    return saved;
+  }
+
   /// Explicit Shift+Enter workflow in the Text inspector: commit the current
   /// text/timing draft before navigating. A failed save must never advance.
   Future<void> _applyDraftAndAdvance() async {
@@ -1309,9 +1441,15 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     if (_hasDirtyDraft && !await _applyDraft()) return;
     if (!mounted) return;
     if (position + 1 < visibleIds.length) {
+      // The previous TextFormField is disposed when its cue key changes.
+      // Let the *new* field claim keyboard focus on mount, rather than
+      // requesting focus on the old field during the navigation frame.
+      _focusEditorCueOnMount = visibleIds[position + 1];
       _applyCueSelection(visibleIds[position + 1]);
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _cueTextFocus.requestFocus();
+        if (!mounted || _focusEditorCueOnMount != _selectedId) return;
+        _cueTextFocus.requestFocus();
+        _focusEditorCueOnMount = null;
       });
     }
   }
@@ -1352,7 +1490,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     if (!_hasDirtyDraft) return true;
     final choice = await showDialog<String>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => _modalKeys<String>(dialogContext,
+        confirm: 'apply', cancel: 'cancel', child: AlertDialog(
         title: const Text('Unsaved subtitle edit'),
         content: const Text('Apply this line edit before leaving it?'),
         actions: [
@@ -1369,7 +1508,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             child: const Text('Apply'),
           ),
         ],
-      ),
+      )),
     );
     if (!mounted) return false;
     if (choice == 'discard') {
@@ -1379,6 +1518,25 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     if (choice == 'apply') return _applyDraft();
     return false;
   }
+
+  /// Explicit desktop dialog actions: Enter activates the primary confirm
+  /// button, Escape takes the safe cancellation path. Focused text inputs
+  /// retain normal editing in dialogs that do not opt into this wrapper.
+  Widget _modalKeys<T>(BuildContext dialogContext, {
+    required T confirm,
+    required T cancel,
+    required Widget child,
+  }) => CallbackShortcuts(
+    bindings: {
+      const SingleActivator(LogicalKeyboardKey.enter):
+          () => Navigator.of(dialogContext).pop<T>(confirm),
+      const SingleActivator(LogicalKeyboardKey.numpadEnter):
+          () => Navigator.of(dialogContext).pop<T>(confirm),
+      const SingleActivator(LogicalKeyboardKey.escape):
+          () => Navigator.of(dialogContext).pop<T>(cancel),
+    },
+    child: child,
+  );
 
   /// Only cue-to-cue navigation follows Edit Line's auto-save preference.
   /// File, project, source, review and media transitions always retain their
@@ -1411,7 +1569,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     if (preference == StudioDockEditPreference.showOriginalLine) {
       final approved = await showDialog<bool>(
         context: context,
-        builder: (dialog) => AlertDialog(
+        builder: (dialog) => _modalKeys<bool>(dialog,
+          confirm: true, cancel: false, child: AlertDialog(
           title: Text(next ? 'Show original line when edit is empty?'
               : 'Stop showing original line in empty edits?'),
           content: Text(next
@@ -1429,7 +1588,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               child: const Text('Continue'),
             ),
           ],
-        ),
+        )),
       );
       if (approved != true || !mounted) return;
     }
@@ -1452,7 +1611,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   Future<bool> _confirmSourceDraftBeforeLeaving() async {
     final choice = await showDialog<String>(
       context: context,
-      builder: (dialog) => AlertDialog(
+      builder: (dialog) => _modalKeys<String>(dialog,
+        confirm: 'apply', cancel: 'cancel', child: AlertDialog(
         title: const Text('Unsaved Source View changes'),
         content: const Text('Apply the raw SRT changes before leaving Source View?'),
         actions: [
@@ -1463,7 +1623,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           FilledButton(onPressed: () => Navigator.pop(dialog, 'apply'),
             child: const Text('Apply')),
         ],
-      ),
+      )),
     );
     if (!mounted) return false;
     if (choice == 'discard') {
@@ -2174,10 +2334,14 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     if (afterMenu != null) await afterMenu.completed;
     if (!mounted) return;
     if (_cues.isEmpty || !await _confirmDraftBeforeLeaving() || !mounted) return;
+    final wasShowingMarked = _section == 0 &&
+        _reviewFilter == _StudioDockReviewFilter.marked;
     await _switchSection(0);
     if (!mounted || _section != 0) return;
     setState(() {
-      _reviewFilter = _StudioDockReviewFilter.marked;
+      _reviewFilter = wasShowingMarked
+          ? _StudioDockReviewFilter.all
+          : _StudioDockReviewFilter.marked;
       _query = '';
       _tableSearch.clear();
       final matches = _visible;
@@ -3494,8 +3658,24 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   }
 
   Future<void> _openFind() async {
+    if (_section == 2) {
+      await _switchSection(0);
+      return;
+    }
     await _switchSection(2);
     if (mounted && _section == 2) _findFocus.requestFocus();
+  }
+
+  Future<void> _toggleInspectorFromShortcut(int tab) async {
+    if (_section == 0 && _inspectorOpen && _inspectorTab == tab) {
+      setState(() {
+        _inspectorOpen = false;
+        _inspectorOverlayOpen = false;
+      });
+      _queueLayoutSave(now: true);
+      return;
+    }
+    await _openInspectorTab(tab);
   }
 
   Future<void> _openInspectorTab(int tab) async {
@@ -4195,7 +4375,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   Widget _subtitleTable() => Column(children: [
     Row(children: [
       Expanded(child: _paneHeader(Icons.view_list_outlined, 'SUBTITLE LINES',
-        trailing: _visible.length.toString() + ' / ' + _cues.length.toString(),
+        trailing: '${_cues.isEmpty ? 0 : _selectedId} / ${_cues.length}',
         height: 34)),
       IconButton(
         key: const ValueKey('studio-go-to-line'),
@@ -4547,7 +4727,14 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           final filter = _commandSearch.text.trim().toLowerCase();
           final visible = commands.where((item) =>
               item.key.toLowerCase().contains(filter)).toList();
-          return AlertDialog(
+          return CallbackShortcuts(
+            bindings: {
+              const SingleActivator(LogicalKeyboardKey.keyK, control: true):
+                  () => Navigator.of(dialogContext).pop(),
+              const SingleActivator(LogicalKeyboardKey.keyK, meta: true):
+                  () => Navigator.of(dialogContext).pop(),
+            },
+            child: AlertDialog(
             title: const Text('Studio Dock commands'),
             content: SizedBox(
               width: 420,
@@ -4582,6 +4769,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                   ),
                 )),
               ]),
+            ),
             ),
           );
         },
@@ -4710,7 +4898,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               const SizedBox(width: 8),
               OutlinedButton(
                 key: const ValueKey('studio-discard-cue'),
-                onPressed: (_hasDirtyTextDraft || _hasDirtyTimingDraft) &&
+                onPressed: (_hasDirtyTextDraft || _hasDirtyOriginalDraft ||
+                        _hasDirtyTimingDraft) &&
                         !_savingDraft ? _discardDraft : null,
                 child: const Text('Discard'),
               ),
@@ -4727,10 +4916,32 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           if (!widget.isEditMode && widget.showOriginalTextField) ...[
             Row(children: [
               Expanded(child: _fieldLabel('ORIGINAL TEXT')),
+              if (widget.onApplyCueOriginal != null) IconButton(
+                key: const ValueKey('studio-original-edit-toggle'),
+                tooltip: _originalEditing
+                    ? 'Save original text' : 'Edit original text',
+                onPressed: _savingDraft ? null : () {
+                  if (_originalEditing) {
+                    if (_hasDirtyOriginalDraft) {
+                      unawaited(_applyOriginalDraft());
+                    } else {
+                      setState(() => _originalEditing = false);
+                    }
+                  } else {
+                    setState(() {
+                      _originalEditing = true;
+                      _formattedView = false;
+                    });
+                  }
+                },
+                icon: Icon(_originalEditing
+                    ? Icons.check_rounded : Icons.edit_outlined, size: 18),
+              ),
               IconButton(
                 key: const ValueKey('studio-inspector-formatted-view'),
                 tooltip: _formattedView ? 'Plain text view' : 'Formatted view',
-                onPressed: () => setState(() => _formattedView = !_formattedView),
+                onPressed: _originalEditing ? null :
+                    () => setState(() => _formattedView = !_formattedView),
                 icon: Icon(Icons.code, size: 18,
                     color: _formattedView ? _accent : _muted),
               ),
@@ -4744,20 +4955,67 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                 icon: const Icon(Icons.content_paste_rounded, size: 18),
               ),
             ]),
-            Container(
-              padding: EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                border: Border.all(color: _border),
-                borderRadius: BorderRadius.circular(7),
-              ),
-              child: _formattedView
-                  ? CustomHtmlText(
-                      key: const ValueKey('studio-formatted-original'),
-                      htmlContent: _selected.original.replaceAll('\n', '<br>'),
-                      defaultStyle: const TextStyle(fontSize: 15, height: 1.5),
+            SizedBox(
+              height: 112,
+              child: _originalEditing
+                  ? TextFormField(
+                      key: ValueKey('studio-original-$_selectedId-$_draftRevision'),
+                      initialValue: _draftOriginalCueId == _selectedId &&
+                              _draftOriginal != null
+                          ? _draftOriginal : _selected.original,
+                      enabled: !_savingDraft,
+                      expands: true,
+                      minLines: null,
+                      maxLines: null,
+                      style: const TextStyle(fontSize: 15, height: 1.5),
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.all(8),
+                      ),
+                      contextMenuBuilder: (context, editable) =>
+                          _studioTextContextMenu(context, editable,
+                              original: true),
+                      onChanged: (text) => setState(() {
+                        _draftOriginalCueId = _selectedId;
+                        _draftOriginal = text;
+                      }),
                     )
-                  : Text(_selected.original,
-                      style: const TextStyle(fontSize: 15, height: 1.5)),
+                  : !_formattedView
+                    ? TextFormField(
+                        key: ValueKey('studio-original-readonly-$_selectedId'),
+                        initialValue: _selected.original,
+                        readOnly: true,
+                        enableInteractiveSelection: true,
+                        expands: true,
+                        minLines: null,
+                        maxLines: null,
+                        style: const TextStyle(fontSize: 15, height: 1.5),
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          contentPadding: EdgeInsets.all(8),
+                        ),
+                        contextMenuBuilder: (context, editable) =>
+                            _studioTextContextMenu(context, editable,
+                                original: true),
+                      )
+                  : Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  border: Border.all(color: _border),
+                  borderRadius: BorderRadius.circular(7),
+                ),
+                child: SingleChildScrollView(
+                  child: SelectionArea(child: _formattedView
+                      ? CustomHtmlText(
+                          key: const ValueKey('studio-formatted-original'),
+                          htmlContent: _selected.original.replaceAll('\n', '<br>'),
+                          defaultStyle: const TextStyle(fontSize: 15, height: 1.5),
+                        )
+                      : Text(_selected.original,
+                          style: const TextStyle(fontSize: 15, height: 1.5))),
+                ),
+              ),
             ),
             const SizedBox(height: 10),
           ],
@@ -4781,13 +5039,14 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             ),
           ],
           _fieldLabel(widget.isEditMode ? 'SUBTITLE TEXT' : 'EDITED TEXT'),
-          CallbackShortcuts(
+          SizedBox(height: 112, child: CallbackShortcuts(
             bindings: {
               const SingleActivator(LogicalKeyboardKey.enter, shift: true):
                   () => unawaited(_applyDraftAndAdvance()),
             },
             child: TextFormField(
             focusNode: _cueTextFocus,
+            autofocus: _focusEditorCueOnMount == _selectedId,
             key: widget.onApplyCueText == null
                 ? ValueKey('desktop-edit-' + _selected.id.toString())
                 : ValueKey('studio-edit-' + _selected.id.toString() +
@@ -4796,13 +5055,16 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                 ? _draftText : _selected.edited,
             readOnly: _savingDraft ||
                 (widget.isLiveSession && widget.onApplyCueText == null),
-            minLines: 3, maxLines: 8,
+            expands: true,
+            minLines: null, maxLines: null,
             style: const TextStyle(fontSize: 15, height: 1.5),
             decoration: InputDecoration(
               contentPadding: const EdgeInsets.all(9),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(7)),
             ),
+            contextMenuBuilder: (context, editable) =>
+                _studioTextContextMenu(context, editable, original: false),
             onChanged: (value) {
               if (widget.onApplyCueText != null) {
                 setState(() {
@@ -4814,7 +5076,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               }
             },
             ),
-          ),
+          )),
           if (_formattedView) ...[
             const SizedBox(height: 8),
             _fieldLabel('FORMATTED PREVIEW · READ ONLY'),
@@ -4839,49 +5101,101 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           const SizedBox(height: 5),
           _fieldLabel('TIMING'),
           const SizedBox(height: 5),
-          _fieldLabel('START TIMECODE'),
-          if (widget.onApplyCueTiming == null)
-            _readonlyField(_selected.start)
-          else
-            TextFormField(
-              key: ValueKey('studio-timing-start-$_selectedId-$_draftRevision'),
-              initialValue: _timingStart,
-              enabled: !_savingDraft,
-              keyboardType: TextInputType.datetime,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                isDense: true,
-                hintText: 'HH:mm:ss,SSS',
-              ),
-              onChanged: (value) => setState(() {
-                _draftTimingCueId = _selectedId;
-                _draftStart = value;
-              }),
-            ),
-          const SizedBox(height: 7),
-          _fieldLabel('END TIMECODE'),
-          if (widget.onApplyCueTiming == null)
-            _readonlyField(_selected.end)
-          else
-            TextFormField(
-              key: ValueKey('studio-timing-end-$_selectedId-$_draftRevision'),
-              initialValue: _timingEnd,
-              enabled: !_savingDraft,
-              keyboardType: TextInputType.datetime,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                isDense: true,
-                hintText: 'HH:mm:ss,SSS',
-              ),
-              onChanged: (value) => setState(() {
-                _draftTimingCueId = _selectedId;
-                _draftEnd = value;
-              }),
-            ),
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Expanded(child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _fieldLabel('START'),
+                if (widget.onApplyCueTiming == null)
+                  _readonlyField(_selected.start)
+                else
+                  TextFormField(
+                    key: ValueKey('studio-timing-start-$_selectedId-$_draftRevision'),
+                    initialValue: _timingStart,
+                    enabled: !_savingDraft,
+                    keyboardType: TextInputType.datetime,
+                    style: const TextStyle(fontSize: 13),
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                      contentPadding: EdgeInsets.symmetric(
+                          horizontal: 7, vertical: 12),
+                    ),
+                    onChanged: (value) => setState(() {
+                      _durationError = null;
+                      _durationFieldRevision++;
+                      _draftTimingCueId = _selectedId;
+                      _draftStart = value;
+                    }),
+                  ),
+              ],
+            )),
+            const SizedBox(width: 8),
+            Expanded(child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _fieldLabel('END'),
+                if (widget.onApplyCueTiming == null)
+                  _readonlyField(_selected.end)
+                else
+                  TextFormField(
+                    key: ValueKey('studio-timing-end-$_selectedId-$_draftRevision-$_timingFieldRevision'),
+                    initialValue: _timingEnd,
+                    enabled: !_savingDraft,
+                    keyboardType: TextInputType.datetime,
+                    style: const TextStyle(fontSize: 13),
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                      contentPadding: EdgeInsets.symmetric(
+                          horizontal: 7, vertical: 12),
+                    ),
+                    onChanged: (value) => setState(() {
+                      _durationError = null;
+                      _durationFieldRevision++;
+                      _draftTimingCueId = _selectedId;
+                      _draftEnd = value;
+                    }),
+                  ),
+              ],
+            )),
+          ]),
           const SizedBox(height: 7),
           _fieldLabel('DURATION'),
-          _readonlyField(_cueDuration(_selected.copyWith(
-            start: _timingStart, end: _timingEnd))),
+          if (widget.onApplyCueTiming == null)
+            _readonlyField(_cueDuration(_selected.copyWith(
+              start: _timingStart, end: _timingEnd)))
+          else
+            TextFormField(
+              key: ValueKey('studio-timing-duration-$_selectedId-$_draftRevision-$_durationFieldRevision'),
+              initialValue: _cueDuration(_selected.copyWith(
+                  start: _timingStart, end: _timingEnd)).replaceAll('s', ''),
+              enabled: !_savingDraft,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                isDense: true,
+                border: OutlineInputBorder(),
+                suffixText: 'seconds',
+                hintText: '1.500',
+              ),
+              onChanged: (value) {
+                final seconds = double.tryParse(value.trim());
+                setState(() {
+                  if (seconds == null || !seconds.isFinite ||
+                      seconds <= 0 || seconds >= 86400) {
+                    _durationError = 'Enter a positive duration in seconds';
+                    return;
+                  }
+                  _durationError = null;
+                  _draftTimingCueId = _selectedId;
+                  _timingFieldRevision++;
+                  _draftEnd = _formatCueTime(
+                    TimeValidator.timeStringToMilliseconds(_timingStart) +
+                        (seconds * 1000).round(),
+                  );
+                });
+              },
+            ),
           const SizedBox(height: 7),
           if (widget.onApplyCueTiming != null && _timingError != null)
             Padding(

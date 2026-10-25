@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'studio_dock_timing_edit_service.dart';
 
@@ -95,7 +96,16 @@ class _StudioDockInsertCueDialogState extends State<StudioDockInsertCueDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => PopScope(
+  Widget build(BuildContext context) => CallbackShortcuts(
+    bindings: {
+      const SingleActivator(LogicalKeyboardKey.enter):
+          () { if (!_saving) unawaited(_submit()); },
+      const SingleActivator(LogicalKeyboardKey.numpadEnter):
+          () { if (!_saving) unawaited(_submit()); },
+      const SingleActivator(LogicalKeyboardKey.escape):
+          () { if (!_saving) Navigator.of(context).pop(); },
+    },
+    child: PopScope(
     canPop: !_saving,
     child: AlertDialog(
       title: const Text('Insert subtitle line'),
@@ -170,6 +180,7 @@ class _StudioDockInsertCueDialogState extends State<StudioDockInsertCueDialog> {
           label: Text(_saving ? 'Inserting…' : 'Insert line'),
         ),
       ],
+    ),
     ),
   );
 }

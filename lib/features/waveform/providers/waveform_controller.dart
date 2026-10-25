@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:subtitle_studio/app/providers/core_providers.dart';
@@ -6,6 +7,7 @@ import 'package:subtitle_studio/features/waveform/state/waveform_state.dart';
 import 'package:subtitle_studio/features/waveform/services/audio_processor.dart';
 import 'package:subtitle_studio/features/waveform/repositories/waveform_subtitle_repository.dart';
 import 'package:subtitle_studio/features/waveform/repositories/waveform_preferences_repository.dart';
+import 'package:subtitle_studio/features/waveform/models/waveform_sample.dart';
 
 /// Disposable audio processor dependency for the Waveform feature.
 final waveformAudioProcessorProvider = Provider<AudioProcessor>((ref) {
@@ -36,6 +38,39 @@ final waveformControllerProvider =
 /// Event classes are retained during migration so gesture behavior can move
 /// from BLoC without simultaneously rewriting every caller.
 class WaveformController extends Notifier<WaveformState> {
+  int _desktopFineZoomCount = 0;
+
+  /// Finer desktop zoom levels use on-demand peak tiles. Allocating eager
+  /// full-track arrays here would multiply memory use for long recordings.
+  static WaveformBuffer extendDesktopFineZoom(WaveformBuffer source) {
+    if (source.zoomLevels.isEmpty || source.sampleRate <= 0) return source;
+    final currentMinimum = source.zoomLevels.first.samplesPerPixel;
+    // Approx. five seconds across an 850px editing viewport. Actual display
+    // width is still accounted for by WaveformReady's time-to-pixel mapping.
+    final target = (source.sampleRate * 5 ~/ 850).clamp(1, currentMinimum);
+    if (target >= currentMinimum) return source;
+    final finer = <int>[target];
+    var next = target;
+    while (next * 3 ~/ 2 < currentMinimum && finer.length < 16) {
+      next = (next * 3 ~/ 2).clamp(next + 1, currentMinimum - 1);
+      finer.add(next);
+    }
+    final newLevels = finer.toSet().toList()..sort();
+    return WaveformBuffer(
+      rawData: source.rawData,
+      defaultZoomIndex: source.defaultZoomIndex + newLevels.length,
+      zoomLevels: [
+        for (final spp in newLevels)
+          ZoomLevel.metadata(
+            samplesPerPixel: spp,
+            pixelCount: (source.rawData.totalSamples + spp - 1) ~/ spp,
+            channels: source.channels,
+          ),
+        ...source.zoomLevels,
+      ],
+    );
+  }
+
   bool _disposed = false;
   int _loadEpoch = 0;
   int _stateWriteGeneration = 0;
@@ -258,7 +293,7 @@ class WaveformController extends Notifier<WaveformState> {
       }
 
       // Process audio in background (with caching if subtitle collection ID provided)
-      final buffer = await _audioProcessor.processAudioFile(
+      final generatedBuffer = await _audioProcessor.processAudioFile(
         event.filePath,
         subtitleCollectionId: event.subtitleCollectionId,
         audioTrackId: audioTrackId,
@@ -283,8 +318,15 @@ class WaveformController extends Notifier<WaveformState> {
       );
 
       if (!isCurrent()) return;
+      // Desktop Studio Dock gains fine-grained zoom without changing the
+      // Android/mobile zoom ladder or its original eager samples.
+      final isDesktop = Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+      final buffer = isDesktop
+          ? extendDesktopFineZoom(generatedBuffer) : generatedBuffer;
+      _desktopFineZoomCount = buffer.zoomLevelCount - generatedBuffer.zoomLevelCount;
       // Start with zoom level 7 (default)
-      int defaultZoomIndex = 7.clamp(0, buffer.zoomLevelCount - 1);
+      int defaultZoomIndex =
+          7.clamp(0, generatedBuffer.zoomLevelCount - 1) + _desktopFineZoomCount;
       double defaultVerticalZoom = 1.7; // Default 170% for better visibility
       
       // Try to load saved zoom levels if subtitle collection ID is provided
@@ -295,8 +337,9 @@ class WaveformController extends Notifier<WaveformState> {
         if (!isCurrent()) return;
         if (savedZoom != null) {
           defaultZoomIndex =
-              savedZoom.zoomIndex.clamp(0, buffer.zoomLevelCount - 1);
-          defaultVerticalZoom = savedZoom.verticalZoom.clamp(0.5, 3.0);
+              savedZoom.zoomIndex.clamp(0, generatedBuffer.zoomLevelCount - 1) +
+                  _desktopFineZoomCount;
+          defaultVerticalZoom = savedZoom.verticalZoom.clamp(0.5, 8.0);
         }
       }
 
@@ -488,8 +531,9 @@ class WaveformController extends Notifier<WaveformState> {
   ) {
     if (state is WaveformReady) {
       final currentState = state as WaveformReady;
-      // Clamp zoom between 0.5x and 3.0x
-      final clampedZoom = event.zoom.clamp(0.5, 3.0);
+      // Desktop compact controls expose more amplitude detail. The mobile UI
+      // continues to stop at 3x.
+      final clampedZoom = event.zoom.clamp(0.5, 8.0);
       final newState = currentState.copyWith(verticalZoom: clampedZoom);
       _setState(newState);
       
@@ -711,7 +755,8 @@ class WaveformController extends Notifier<WaveformState> {
       // Use fire-and-forget pattern to avoid blocking
       _preferences.saveWaveformZoomLevels(
         subtitleCollectionId: state.subtitleCollectionId!,
-        zoomIndex: state.currentZoomIndex,
+        zoomIndex: (state.currentZoomIndex - _desktopFineZoomCount).clamp(
+            0, state.buffer.zoomLevelCount - _desktopFineZoomCount - 1),
         verticalZoom: state.verticalZoom,
       ).catchError((_) {
         // Silently catch errors - zoom preferences are not critical

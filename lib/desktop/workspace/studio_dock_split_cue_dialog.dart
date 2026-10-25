@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:subtitle_studio/utils/time_input_formatter.dart';
 
 import 'studio_dock_cue_structure_service.dart';
@@ -138,7 +139,16 @@ class _StudioDockSplitCueDialogState extends State<StudioDockSplitCueDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => PopScope(
+  Widget build(BuildContext context) => CallbackShortcuts(
+    bindings: {
+      const SingleActivator(LogicalKeyboardKey.enter):
+          () { if (!_saving) unawaited(_submit()); },
+      const SingleActivator(LogicalKeyboardKey.numpadEnter):
+          () { if (!_saving) unawaited(_submit()); },
+      const SingleActivator(LogicalKeyboardKey.escape):
+          () { if (!_saving) Navigator.of(context).pop(); },
+    },
+    child: PopScope(
     canPop: !_saving,
     child: AlertDialog(
       title: Text('Split subtitle line #${widget.cueNumber}'),
@@ -208,6 +218,7 @@ class _StudioDockSplitCueDialogState extends State<StudioDockSplitCueDialog> {
           label: Text(_saving ? 'Splitting…' : 'Split line'),
         ),
       ],
+    ),
     ),
   );
 }

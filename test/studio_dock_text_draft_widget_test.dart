@@ -10,6 +10,7 @@ void main() {
   Future<void> launch(
     WidgetTester tester, {
     required Future<bool> Function(int, String) apply,
+    Future<bool> Function(int, String)? applyOriginal,
     Future<bool> Function(int, String, String)? applyTiming,
     Future<bool> Function(int, String, String, String)? applyCombined,
   }) async {
@@ -21,6 +22,7 @@ void main() {
       home: StudioDockWorkspace(
         isLiveSession: true,
         onApplyCueText: apply,
+        onApplyCueOriginal: applyOriginal,
         onApplyCueTiming: applyTiming,
         onApplyCueTextAndTiming: applyCombined,
         initialCues: const [
@@ -74,6 +76,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(edits, ['1:Shift edit']);
     expect(find.byKey(const ValueKey('studio-edit-2-1')), findsOneWidget);
+    expect(FocusManager.instance.primaryFocus,
+        isNotNull, reason: 'New edited text input should receive focus');
+    await tester.testTextInput.enterText('Typed without clicking');
+    await tester.pump();
+    expect(find.text('Typed without clicking'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
 
@@ -88,6 +95,35 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
     expect(find.byKey(const ValueKey('studio-edit-2-1')), findsNothing);
     expect(find.text('Keep this draft'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Original source can be edited and committed independently',
+      (tester) async {
+    final sources = <String>[];
+    final translations = <String>[];
+    await launch(tester,
+      apply: (line, value) async {
+        translations.add('$line:$value');
+        return true;
+      },
+      applyOriginal: (line, value) async {
+        sources.add('$line:$value');
+        return true;
+      },
+    );
+    final toggle = find.byKey(const ValueKey('studio-original-edit-toggle'));
+    await tester.ensureVisible(toggle);
+    await tester.tap(toggle);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+        find.byKey(const ValueKey('studio-original-1-0')),
+        'Updated original');
+    await tester.pumpAndSettle();
+    await tester.tap(toggle);
+    await tester.pumpAndSettle();
+    expect(sources, ['1:Updated original']);
+    expect(translations, isEmpty);
     expect(tester.takeException(), isNull);
   });
 
@@ -233,6 +269,28 @@ void main() {
     await tester.pumpAndSettle();
     expect(changes, ['1:00:00:03,000->00:00:04,000']);
     expect(find.text('00:00:04,000'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Duration adjusts END and persists the resulting timecode',
+      (tester) async {
+    final changes = <String>[];
+    await launch(tester,
+      apply: (_, __) async => true,
+      applyTiming: (cue, start, end) async {
+        changes.add('$cue:$start->$end');
+        return true;
+      },
+    );
+    final duration = find.byKey(
+        const ValueKey('studio-timing-duration-1-0-0'));
+    await tester.enterText(duration, '2.5');
+    await tester.pumpAndSettle();
+    expect(find.text('00:00:03,500'), findsWidgets);
+    await tester.ensureVisible(find.byKey(const ValueKey('studio-apply-cue')));
+    await tester.tap(find.byKey(const ValueKey('studio-apply-cue')));
+    await tester.pumpAndSettle();
+    expect(changes, ['1:00:00:01,000->00:00:03,500']);
     expect(tester.takeException(), isNull);
   });
 

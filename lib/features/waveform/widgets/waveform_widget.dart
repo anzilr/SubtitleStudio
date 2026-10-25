@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
@@ -87,6 +88,8 @@ class WaveformWidget extends riverpod.ConsumerStatefulWidget {
 }
 
 class WaveformWidgetState extends riverpod.ConsumerState<WaveformWidget> {
+  final FocusNode _timeEditFocus = FocusNode(debugLabel: 'waveform-timing-edit');
+  bool _wasTimeEditing = false;
   // Cache current subtitles for change detection
   List<SubtitleLine> _currentSubtitles = [];
   WaveformBuffer? _tileBuffer;
@@ -165,7 +168,31 @@ class WaveformWidgetState extends riverpod.ConsumerState<WaveformWidget> {
     // In particular, a pending mouse-wheel idle timer may not seek after the
     // editor leaves the screen or changes its video surface.
     _seekCoordinator.dispose();
+    _timeEditFocus.dispose();
     super.dispose();
+  }
+
+  KeyEventResult _handleTimeEditKey(FocusNode node, KeyEvent event,
+      WaveformReady state) {
+    if (event is! KeyDownEvent || !widget.enableTimeEditing ||
+        (!state.isEditMode && !state.isAddLineMode)) {
+      return KeyEventResult.ignored;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.escape) {
+      ref.read(waveformControllerProvider.notifier).dispatch(state.isEditMode
+          ? const ExitTimeEditMode() : const ExitAddLineMode());
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.enter ||
+        event.logicalKey == LogicalKeyboardKey.numpadEnter) {
+      if (state.isEditMode) {
+        unawaited(_applyTimeChanges(state));
+      } else {
+        _confirmAddLine(state);
+      }
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
   }
 
   // Synchronize external playback updates only after the current Flutter
