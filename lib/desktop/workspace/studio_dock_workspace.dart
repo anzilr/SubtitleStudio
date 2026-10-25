@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:subtitle_studio/screens/edit/services/raw_srt_document.dart';
@@ -1495,12 +1496,6 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     if (tab == _inspectorTab) return;
     if (!await _confirmDraftBeforeLeaving() || !mounted) return;
     setState(() => _inspectorTab = tab);
-  }
-
-  Future<void> _chooseProjectSafely() async {
-    if (await _confirmDraftBeforeLeaving() && mounted) {
-      widget.onChooseProject?.call();
-    }
   }
 
   Future<void> _selectSidebarProject(int id) async {

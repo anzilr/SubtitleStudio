@@ -23,7 +23,6 @@ import 'package:subtitle_studio/screens/edit/services/editor_secondary_subtitle_
 import 'package:subtitle_studio/utils/subtitle_parser.dart';
 import 'package:subtitle_studio/widgets/secondary_subtitle_sheet.dart';
 import 'package:subtitle_studio/widgets/video_player_widget.dart';
-import 'package:subtitle_studio/widgets/video/repeat_range_dialog.dart';
 import 'package:subtitle_studio/widgets/checkpoint_history_panel.dart';
 
 import 'studio_dock_workspace.dart';
