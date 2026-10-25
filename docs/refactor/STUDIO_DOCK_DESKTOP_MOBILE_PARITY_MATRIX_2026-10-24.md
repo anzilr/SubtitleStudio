@@ -23,7 +23,7 @@ acceptance. A wired callback is not proof of a working native interaction.
 | Create/open project, SRT/VTT/ASS/.msone import | Wired via desktop Home | Verify native file associations and reopened projects |
 | Save, Save As, SRT export, complete .msone project save | Wired to shared services | Native filename/encoding/round-trip acceptance |
 | Edit Mode (create subtitles from scratch) vs Translation Mode | Wired in DS5 R6 | Native mode-dependent inspector, cue insert/split, Source View and SRT export acceptance |
-| Video attach, playback, fullscreen, repeat | DS5 R19 adds View → Toggle video fullscreen and the existing F11/Cmd+F manager action on the mounted player. DS5 R22 adds current-cue/custom-range repeat (View, fullscreen and shared hotkeys) with mobile-equivalent lead/tail timing and player-attachment guards. Shared `VideoPlayerSection` / `VideoPlayerWidget` remains the only native player | Native fullscreen keyboard/menu, attach/unload/replace, repeat boundary accuracy, playback/seek, OS hotkey conflict and dialog acceptance |
+| Video attach/unload, playback, fullscreen, repeat | DS5 R19 adds View → Toggle video fullscreen and the existing F11/Cmd+F manager action on the mounted player. DS5 R22 adds current-cue/custom-range repeat (View, fullscreen and shared hotkeys) with mobile-equivalent lead/tail timing and player-attachment guards. DS5 R25 adds direct View → Unload video through the existing repository, with cancel/failure preserving media and successful unlink detaching the existing surface. Shared `VideoPlayerSection` / `VideoPlayerWidget` remains the only native player | Native fullscreen keyboard/menu, attach/unload/replace, repeat boundary accuracy, playback/seek, OS hotkey conflict and dialog acceptance |
 | Playback-follow subtitle highlight and seek | Wired through shared playback link | Native bidirectional seek/scroll/accuracy acceptance |
 | Waveform display and selected audio stream | DS5 R20 adds direct Generate/Hide and Regenerate controls using the scoped Riverpod controller, PCM-cache invalidation and player-resolved audio selector; waveform zoom/time editing remain. DS5 R21 exposes the mobile-style optional floating play/pause button through View using the existing playback link, with focus-safe live state and no player remount. **Compact peak-cache regeneration and native floating transport still require verification** | Native waveform generate/regenerate/hide/show, selected-track fidelity, cached/uncached paths, player non-remount, floating-controls verification |
 | Waveform gesture time edits and insertion | Wired in DS5 R9: shared waveform gestures and compact controls call guarded Studio Dock timing/insert services; successful edits reconcile the grid/player and history | Native drag precision, magnet/overlap behavior, cue creation, undo, media stability and synchronized scrolling acceptance |
@@ -57,16 +57,23 @@ Dock's native menubar, shared services, and player controls:
   MSone tools and submission, hearing-impaired cleanup, secondary subtitle
   controls, selected cue actions, waveform editing, media seek/playback,
   subtitle fullscreen, and Help.
-- **Alternative route requiring native acceptance**: mobile Unload Video uses
-  Project Settings for media unlink; mobile Show Marked Lines is a dedicated
-  sheet while Studio Dock uses the grid review filters and shortcut. This is
-  an interaction difference, not verified identical behavior.
+- **Alternative route requiring native acceptance**: R25 closes direct mobile
+  Unload Video access in desktop View (Project Settings remains another path).
+  Mobile Show Marked Lines is a dedicated sheet while Studio Dock uses the
+  grid review filters and shortcut. This is an interaction difference, not
+  verified identical behavior.
 - **Open implementation audit**: R20 added waveform Generate/Regenerate/Hide;
   R21 added optional floating play/pause; R22 added repeat current/custom
   range on the existing player with shared mobile dialog; R23 wires the
   formatting/dictionary/Paste Original hotkeys into the shared draft path.
   R24 adds the mobile multi-selection commands and per-cue actions to the
-  desktop right-click menu. Native loop behavior, actual OS chord handling,
+  desktop right-click menu. R25 adds direct saved-video unlink with draft and
+  media safety guards. Mobile Edit Line's per-user toggles for Show Original
+  Line, Auto-save with navigation, Show Original Text Field and Formatted View
+  have **not** all been given equivalent desktop preferences; the Dock always
+  exposes original/edited columns and uses Apply/Discard draft navigation.
+  This interaction difference still needs a product-level parity decision.
+  Native loop behavior, actual OS chord handling,
   dictionary provider selection and pointer context menu behavior are not
   accepted. Do **not** mark these native behaviors complete.
 - **Platform-only remaining**: native fullscreen media focus, video/track
@@ -88,7 +95,8 @@ Dock's native menubar, shared services, and player controls:
 
 1. **P0 implementation + native acceptance:** Validate R23 dictionary/format/
    paste-original focus and selection on desktop, then exercise the R24
-   context-menu actions with real desktop mouse/trackpad input. Validate waveform time drags, cue creation,
+   context-menu actions and R25 direct Unload Video on real desktop input.
+   Validate waveform time drags, cue creation,
    magnet snap, overlap, selected-cue scrolling and secondary-subtitle
    persistence/playback on a native desktop before declaring playback parity.
 2. **P1:** Verify synchronization and import comments, Go to Line, selected-cue batch operations and the

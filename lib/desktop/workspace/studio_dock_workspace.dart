@@ -37,7 +37,7 @@ enum _StudioDockMenuAction {
   importComments, removeHearingImpaired, insertMsoneBanners, normalizeMalayalam,
   boldFormat, italicFormat, colorPicker, pasteOriginal,
   msoneDictionary, olamDictionary, urbanDictionary,
-  explorer, inspector, toggleFullscreen, floatingPlayback,
+  explorer, inspector, toggleFullscreen, floatingPlayback, unloadVideo,
   repeatCurrent, repeatRange, settings, help,
 }
 
@@ -148,6 +148,7 @@ class StudioDockWorkspace extends StatefulWidget {
     this.waveformSurface,
     this.playback,
     this.onChooseVideo,
+    this.onUnloadVideo,
     this.onTogglePlayback,
     this.onToggleFullscreen,
     this.onToggleRepeat,
@@ -259,6 +260,9 @@ class StudioDockWorkspace extends StatefulWidget {
   final StudioDockPlaybackLink? playback;
   /// Select/change media with the existing native picker and video repository.
   final VoidCallback? onChooseVideo;
+  /// Removes the persisted video link, leaving the original media file intact.
+  /// The live host owns the existing player and repository transaction.
+  final Future<bool> Function()? onUnloadVideo;
   /// Toggle the already-mounted native player; never create another player.
   final VoidCallback? onTogglePlayback;
   /// Toggle fullscreen on the same mounted native video player.
@@ -354,6 +358,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   ModalRoute<dynamic>? _msoneMenuRoute;
   ModalRoute<dynamic>? _secondaryMenuRoute;
   ModalRoute<dynamic>? _dictionaryMenuRoute;
+  ModalRoute<dynamic>? _unloadVideoMenuRoute;
   ModalRoute<dynamic>? _projectSettingsMenuRoute;
   ModalRoute<dynamic>? _commentsMenuRoute;
   String? _findError;
@@ -382,6 +387,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   bool _savingDraft = false;
   bool _changingStructure = false;
   bool _savingFile = false;
+  bool _unloadingVideo = false;
   bool _historyBusy = false;
   bool _historyLoading = false;
   String _sourceText = '';
@@ -1359,6 +1365,46 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     if (await _confirmDraftBeforeLeaving() && mounted) {
       widget.onChooseVideo?.call();
     }
+  }
+
+  Future<void> _unloadVideoSafely(
+      {ModalRoute<dynamic>? afterMenu}) async {
+    if (afterMenu != null) await afterMenu.completed;
+    final unload = widget.onUnloadVideo;
+    if (unload == null || widget.videoSurface == null || _unloadingVideo ||
+        !await _confirmDraftBeforeLeaving() || !mounted) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: const Text('Unload this video?'),
+        content: const Text('The video will be detached from this project. '
+            'The original video file will not be deleted. You can attach '
+            'it again later.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialog, false),
+              child: const Text('Cancel')),
+          FilledButton(
+            key: const ValueKey('studio-confirm-unload-video'),
+            onPressed: () => Navigator.pop(dialog, true),
+            child: const Text('Unload video'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _unloadingVideo = true);
+    var succeeded = false;
+    try {
+      succeeded = await unload();
+    } catch (_) {
+      succeeded = false;
+    } finally {
+      if (mounted) setState(() => _unloadingVideo = false);
+    }
+    if (!mounted || succeeded) return;
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      content: Text('Could not unlink this video. The project is unchanged.'),
+    ));
   }
 
   Future<void> _newProjectSafely() async {
@@ -2395,6 +2441,13 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             PopupMenuItem(value: _StudioDockMenuAction.toggleFullscreen,
                 enabled: widget.videoSurface != null,
                 child: const Text('Toggle video fullscreen')),
+          if (widget.onUnloadVideo != null && widget.videoSurface != null)
+            PopupMenuItem(value: _StudioDockMenuAction.unloadVideo,
+                enabled: !_unloadingVideo && !_savingFile,
+                child: Builder(builder: (popupContext) {
+                  _unloadVideoMenuRoute = ModalRoute.of(popupContext);
+                  return const Text('Unload video…');
+                })),
           if (widget.onToggleRepeat != null)
             PopupMenuItem(value: _StudioDockMenuAction.repeatCurrent,
                 enabled: widget.videoSurface != null && _cues.isNotEmpty,
@@ -2539,6 +2592,10 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         }
       case _StudioDockMenuAction.toggleFullscreen:
         if (widget.videoSurface != null) widget.onToggleFullscreen?.call();
+      case _StudioDockMenuAction.unloadVideo:
+        final route = _unloadVideoMenuRoute;
+        _unloadVideoMenuRoute = null;
+        unawaited(_unloadVideoSafely(afterMenu: route));
       case _StudioDockMenuAction.repeatCurrent:
         if (widget.videoSurface != null && _cues.isNotEmpty) {
           widget.onToggleRepeat?.call();

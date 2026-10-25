@@ -1106,6 +1106,32 @@ class _StudioDockSessionViewState
     }
   }
 
+  /// Mirrors mobile Unload Video through the already-injected video
+  /// repository. Unlink the stored path before changing the mounted player;
+  /// a failed database write must leave playback and waveform untouched.
+  Future<bool> _unloadVideo() async {
+    if (_selectingVideo || !widget.allowNativePlayback) return false;
+    setState(() => _selectingVideo = true);
+    try {
+      final current = await _videoPath;
+      if (!mounted || current == null) return false;
+      final repo = VideoRepository(
+        EditorPreferencesRepository(ref.read(isarProvider)),
+      );
+      await repo.removeVideoPath(widget.collectionId);
+      if (!mounted) return false;
+      setState(() {
+        _repeat.stop();
+        _videoPath = Future<String?>.value(null);
+      });
+      return true;
+    } catch (_) {
+      return false;
+    } finally {
+      if (mounted) setState(() => _selectingVideo = false);
+    }
+  }
+
   Future<String?> _resolveVideoPath() async {
     final repo = VideoRepository(EditorPreferencesRepository(ref.read(isarProvider)));
     try {
@@ -1464,6 +1490,7 @@ class _StudioDockSessionViewState
         onImportFile: widget.onImportFile,
         onNewProject: widget.onNewProject,
         onChooseVideo: widget.allowNativePlayback ? _chooseVideo : null,
+        onUnloadVideo: widget.allowNativePlayback ? _unloadVideo : null,
         onTogglePlayback:
             widget.allowNativePlayback ? _toggleExistingPlayback : null,
         onToggleFullscreen:
