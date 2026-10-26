@@ -41,7 +41,7 @@ import 'studio_dock_quality_dialog.dart';
 import 'studio_dock_bulk_review_service.dart';
 import '../../utils/msone_hotkey_manager.dart';
 
-enum _StudioDockReviewFilter { all, marked, unresolved, resolved }
+enum _StudioDockReviewFilter { all, effects, marked, unresolved, resolved }
 
 enum _StudioDockToolbarOverflow {
   newProject, import, attachVideo,
@@ -204,6 +204,7 @@ class StudioDockWorkspace extends StatefulWidget {
     this.onDeleteSelectedCues,
     this.onClearAllFormatting,
     this.onApplyEffect,
+    this.onRestoreEffect,
     this.onInsertCue,
     this.onDeleteCue,
     this.onSplitCue,
@@ -331,6 +332,9 @@ class StudioDockWorkspace extends StatefulWidget {
   final Future<StudioDockCueUpdate?> Function(
       int cueNumber, String effectType, Map<String, dynamic> config)?
       onApplyEffect;
+  /// One guarded history commit: restore a collapsed effect to a single cue.
+  final Future<StudioDockCueUpdate?> Function(
+      int firstCueId, int frameCount)? onRestoreEffect;
   final Future<StudioDockCueUpdate?> Function(
       int? afterCueNumber, StudioDockNewCueDraft draft)? onInsertCue;
   final Future<StudioDockCueUpdate?> Function(int cueNumber)? onDeleteCue;
@@ -538,9 +542,15 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
 
   StudioDockCue get _selected =>
       _cues.firstWhere((cue) => cue.id == _selectedId);
-  List<StudioDockCue> get _visible => _cues.where((cue) {
+  List<StudioDockCue> get _visible {
+    final effectIds = _reviewFilter == _StudioDockReviewFilter.effects
+        ? {for (final group in _effectGroups)
+            for (final frame in group.frames) frame.id}
+        : const <int>{};
+    return _cues.where((cue) {
     final included = switch (_reviewFilter) {
       _StudioDockReviewFilter.all => true,
+      _StudioDockReviewFilter.effects => effectIds.contains(cue.id),
       _StudioDockReviewFilter.marked => cue.marked,
       _StudioDockReviewFilter.unresolved => cue.marked && !cue.resolved,
       _StudioDockReviewFilter.resolved => cue.marked && cue.resolved,
@@ -550,7 +560,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     return q.isEmpty || cue.original.toLowerCase().contains(q) ||
         cue.edited.toLowerCase().contains(q) ||
         cue.start.contains(q) || cue.id.toString() == q;
-  }).toList(growable: false);
+    }).toList(growable: false);
+  }
 
   List<StudioDockCue>? _effectCacheCues;
   List<StudioDockEffectGroup> _effectCacheGroups = const [];
@@ -587,7 +598,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   List<_StudioDockEffectRow> get _displayRows {
     final visible = _visible;
     if (!_collapseEffects || _query.trim().isNotEmpty ||
-        _reviewFilter != _StudioDockReviewFilter.all) {
+        (_reviewFilter != _StudioDockReviewFilter.all &&
+         _reviewFilter != _StudioDockReviewFilter.effects)) {
       return [for (final cue in visible) _StudioDockEffectRow(cue)];
     }
     final groupById = <int, StudioDockEffectGroup>{};
@@ -719,6 +731,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             ? widget.initialSelectedCueId! : _cues.first.id;
     _selectionAnchor = _selectedId;
     _selectedIds.addAll(_selectedId > 0 ? [_selectedId] : <int>[]);
+    WidgetsBinding.instance.addPostFrameCallback((_) =>
+        _scrollInitialSelectionIntoView());
     // Desktop entrypoint initializes the application's existing hotkey manager.
     // Direct widget tests do not initialize native plugins.
     // An embedded host may be nested in an already-running Editor.
@@ -783,6 +797,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         ..addAll(_selectedId < 0 ? <int>[] : [_selectedId]);
       _selectionAnchor = _selectedId;
       _inspectorTab = 0;
+      WidgetsBinding.instance.addPostFrameCallback((_) =>
+          _scrollInitialSelectionIntoView());
     }
     if (oldWidget.showOriginalLine != widget.showOriginalLine &&
         !_hasDirtyTextDraft) {
@@ -823,6 +839,16 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       _cueScroll.animateTo(target,
           duration: const Duration(milliseconds: 180), curve: Curves.easeOut);
     });
+  }
+
+  void _scrollInitialSelectionIntoView() {
+    if (!mounted || !_cueScroll.hasClients || _selectedId < 0) return;
+    final index = _displayIndexForCue(_selectedId);
+    if (index < 0) return;
+    final target = (index * _cueRowHeight -
+        _cueScroll.position.viewportDimension / 2 + _cueRowHeight / 2)
+        .clamp(0.0, _cueScroll.position.maxScrollExtent).toDouble();
+    _cueScroll.jumpTo(target);
   }
 
   @override
@@ -5234,6 +5260,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               value: filter, checked: _reviewFilter == filter,
               child: Text(switch (filter) {
                 _StudioDockReviewFilter.all => 'All lines',
+                _StudioDockReviewFilter.effects => 'Effects',
                 _StudioDockReviewFilter.marked => 'Marked',
                 _StudioDockReviewFilter.unresolved => 'Unresolved',
                 _StudioDockReviewFilter.resolved => 'Resolved',
@@ -5252,6 +5279,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         items: const [
           DropdownMenuItem(value: _StudioDockReviewFilter.all,
               child: Text('All lines')),
+          DropdownMenuItem(value: _StudioDockReviewFilter.effects,
+              child: Text('Effects')),
           DropdownMenuItem(value: _StudioDockReviewFilter.marked,
               child: Text('Marked')),
           DropdownMenuItem(value: _StudioDockReviewFilter.unresolved,
@@ -5306,13 +5335,13 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
 
   Future<void> _showEffectGroupContextMenu(
       StudioDockEffectGroup group, Offset position) async {
-    if (widget.onApplyBulkReview == null) {
+    if (widget.onApplyBulkReview == null && widget.onRestoreEffect == null) {
       _toggleEffectGroup(group.firstId);
       return;
     }
     final renderObject = Overlay.of(context).context.findRenderObject();
     if (renderObject is! RenderBox) return;
-    final action = await showMenu<StudioDockReviewAction>(
+    final action = await showMenu<String>(
       context: context,
       position: RelativeRect.fromRect(
         Rect.fromLTWH(position.dx, position.dy, 1, 1),
@@ -5320,20 +5349,82 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       ),
       items: [
         if (widget.onApplyBulkReview != null) ...const [
-          PopupMenuItem(value: StudioDockReviewAction.mark,
+          PopupMenuItem(value: 'mark',
               child: Text('Mark entire effect')),
-          PopupMenuItem(value: StudioDockReviewAction.unmark,
+          PopupMenuItem(value: 'unmark',
               child: Text('Unmark entire effect')),
-          PopupMenuItem(value: StudioDockReviewAction.resolve,
+          PopupMenuItem(value: 'resolve',
               child: Text('Resolve entire effect')),
-          PopupMenuItem(value: StudioDockReviewAction.reopen,
+          PopupMenuItem(value: 'reopen',
               child: Text('Reopen entire effect')),
+        ],
+        if (widget.onRestoreEffect != null) ...const [
+          PopupMenuDivider(),
+          PopupMenuItem(value: 'removeEffect',
+              child: Text('Remove effect · restore line')),
         ],
       ],
     );
     if (action == null || !mounted) return;
+    if (action == 'removeEffect') {
+      await _restoreEffectSafely(group);
+      return;
+    }
     await _applyReviewSelection(
-      [for (final frame in group.frames) frame.id], action: action);
+      [for (final frame in group.frames) frame.id],
+      action: switch (action) {
+        'mark' => StudioDockReviewAction.mark,
+        'unmark' => StudioDockReviewAction.unmark,
+        'resolve' => StudioDockReviewAction.resolve,
+        _ => StudioDockReviewAction.reopen,
+      });
+  }
+
+  Future<void> _restoreEffectSafely(StudioDockEffectGroup group) async {
+    if (widget.onRestoreEffect == null || _changingStructure ||
+        !await _confirmDraftBeforeLeaving() || !mounted) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => _modalKeys<bool?>(dialog,
+        confirm: true, cancel: false,
+        child: AlertDialog(
+          title: const Text('Remove effect?'),
+          content: Text('Restore ${group.length} effect frames as one subtitle '
+              'from ${group.start} to ${group.end}? The visible text will '
+              'be restored without the animation formatting. Review marks '
+              'and notes will be kept; you can undo through history.'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialog, false),
+                child: const Text('Cancel')),
+            FilledButton(
+              key: const ValueKey('studio-effect-confirm-remove'),
+              onPressed: () => Navigator.pop(dialog, true),
+              child: const Text('Restore line'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _changingStructure = true);
+    try {
+      final update = await widget.onRestoreEffect?.call(
+          group.firstId, group.length);
+      if (!mounted) return;
+      if (update == null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Could not restore effect. The subtitle may have '
+              'changed elsewhere. Reload the project and try again.'),
+        ));
+      } else {
+        _acceptStructure(update);
+        if (_reviewFilter == _StudioDockReviewFilter.effects) {
+          setState(() => _reviewFilter = _StudioDockReviewFilter.all);
+        }
+      }
+    } finally {
+      if (mounted) setState(() => _changingStructure = false);
+    }
   }
 
   Future<void> _showCueContextMenu(

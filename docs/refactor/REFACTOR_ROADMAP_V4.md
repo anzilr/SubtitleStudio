@@ -1,5 +1,13 @@
 # SubtitleStudio Refactor Roadmap v4
 
+> **FORMAT / SUBTITLE EDIT PARITY BACKLOG — 2026-10-27:** User explicitly
+> requested future editable ASS/SSA and WebVTT support and retention of the
+> earlier Subtitle Edit feature-parity proposals. The detailed format-safe
+> milestones and existing-feature audit are tracked in
+> [the format expansion and Subtitle Edit backlog](SUBTITLE_FORMAT_EXPANSION_AND_SUBTITLE_EDIT_PARITY_BACKLOG_2026-10-27.md).
+> This is a roadmap commitment; editing support for these formats has **not**
+> yet been implemented. Current effect generation is intentionally SRT-only.
+
 > **CP93 R4 targeted waveform seek correction — 2026-10-23:** A paused-video
 > manual drag will now paint immediately without flooding native seeks,
 > finishing with one precise seek. Playing-mode previews are throttled;

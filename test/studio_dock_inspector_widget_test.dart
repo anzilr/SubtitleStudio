@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_workspace.dart';
@@ -13,6 +14,8 @@ void main() {
     Future<StudioDockCueUpdate?> Function(int, String?, bool, bool)? applyNotes,
     Future<StudioDockCueUpdate?> Function(int, String, Map<String, dynamic>)?
         applyEffect,
+    Future<StudioDockCueUpdate?> Function(int, int)? restoreEffect,
+    int? initialSelectedCueId,
     Future<bool> Function(String)? changeEncoding,
     Future<List<String>> Function()? loadEncodings,
     String? encoding,
@@ -33,10 +36,12 @@ void main() {
         id: 1, start: '00:00:01,000', end: '00:00:02,000',
         original: 'Original', edited: 'Edited line',
       )],
+      initialSelectedCueId: initialSelectedCueId,
       onApplyCueText: applyText,
       onApplyCueOriginal: applyOriginal,
       onApplyCueNotes: applyNotes,
       onApplyEffect: applyEffect,
+      onRestoreEffect: restoreEffect,
       encoding: encoding,
       onChangeEncoding: changeEncoding,
       onLoadEncodings: loadEncodings,
@@ -418,6 +423,65 @@ void main() {
     await tester.pumpAndSettle();
     expect(group, findsNothing);
     expect(find.byKey(const ValueKey('desktop-cue-2')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Effects filter keeps bundles collapsed and restore is reversible',
+      (tester) async {
+    const original = [
+      StudioDockCue(id: 1, start: '00:00:01,000', end: '00:00:01,300',
+        original: 'Hey', edited: '<font color="#ff00aa">H</font>'),
+      StudioDockCue(id: 2, start: '00:00:01,300', end: '00:00:01,600',
+        original: 'Hey', edited: '<font color="#ff00aa">He</font>'),
+      StudioDockCue(id: 3, start: '00:00:01,600', end: '00:00:02,000',
+        original: 'Hey', edited: '<font color="#ff00aa">Hey</font>'),
+      StudioDockCue(id: 4, start: '00:00:03,000', end: '00:00:04,000',
+        original: 'Other', edited: 'Other'),
+    ];
+    final requested = <(int, int)>[];
+    await launch(tester, cues: original, restoreEffect: (first, count) async {
+      requested.add((first, count));
+      return const StudioDockCueUpdate(cues: [
+        StudioDockCue(id: 1, start: '00:00:01,000', end: '00:00:02,000',
+          original: 'Hey', edited: 'Hey'),
+        StudioDockCue(id: 2, start: '00:00:03,000', end: '00:00:04,000',
+          original: 'Other', edited: 'Other'),
+      ], selectedCueId: 1);
+    });
+    await tester.tap(find.byKey(const ValueKey('studio-review-filter')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Effects').last);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('studio-effect-group-1')), findsOneWidget);
+    expect(find.byKey(const ValueKey('desktop-cue-4')), findsNothing);
+    final bundle = find.byKey(const ValueKey('studio-effect-group-1'));
+    await tester.tapAt(tester.getCenter(bundle), buttons: kSecondaryMouseButton);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Remove effect · restore line'));
+    await tester.pumpAndSettle();
+    expect(find.text('Remove effect?'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('studio-effect-confirm-remove')));
+    await tester.pumpAndSettle();
+    expect(requested, [(1, 3)]);
+    expect(find.byKey(const ValueKey('studio-effect-group-1')), findsNothing);
+    expect(find.byKey(const ValueKey('desktop-cue-2')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('desktop initially selects and scrolls to saved edited cue',
+      (tester) async {
+    await launch(tester, initialSelectedCueId: 60, cues: [
+      for (var id = 1; id <= 70; id++) StudioDockCue(
+        id: id,
+        start: '00:00:${(id ~/ 60).toString().padLeft(2, '0')},000',
+        end: '00:00:${(id ~/ 60).toString().padLeft(2, '0')},900',
+        original: 'Source $id', edited: 'Line $id',
+      ),
+    ]);
+    final dock = tester.state<StudioDockWorkspaceState>(
+        find.byType(StudioDockWorkspace));
+    expect(dock.selectedCueNumber, 60);
+    expect(find.byKey(const ValueKey('desktop-cue-60')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

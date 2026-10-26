@@ -53,6 +53,7 @@ import 'studio_dock_bulk_review_service.dart';
 import 'studio_dock_search_service.dart';
 import 'studio_dock_bulk_tools_service.dart';
 import 'studio_dock_waveform_edit_plan.dart';
+import 'studio_dock_effect_restore_service.dart';
 
 /// Live Studio Dock host backed by the shared project, subtitle, history,
 /// native media and file services.
@@ -122,6 +123,27 @@ class _StudioDockSessionViewState
   bool _showSecondary = true;
   int _secondaryRevision = 0;
   VideoPlayerWidgetState? _nativePlayerState;
+  Future<void> _selectionWrite = Future<void>.value();
+
+  /// Save the working position in the same Session field as the mobile editor.
+  /// Serialize writes so quick keyboard navigation cannot restore an older
+  /// selection after a newer one has already been saved.
+  void _rememberCue(int cueId) {
+    if (!widget.enableEditing || cueId <= 0) return;
+    final sessionId = widget.sessionId;
+    _selectionWrite = _selectionWrite.then((_) async {
+      if (!mounted || widget.sessionId != sessionId) return;
+      await ref.read(subtitleRepositoryProvider)
+          .updateLastEditedIndex(sessionId, cueId);
+    }).catchError((Object error) {
+      debugPrint('Studio Dock could not save the current line: $error');
+    });
+  }
+
+  void _onSelectedCueChanged(int cueId) {
+    _repeat.selectCue(cueId);
+    _rememberCue(cueId);
+  }
 
   VideoRepository get _videoRepository => VideoRepository(
       EditorPreferencesRepository(ref.read(isarProvider)));
@@ -393,6 +415,7 @@ class _StudioDockSessionViewState
       );
       if (!mounted || updated == null) return false;
       setState(() => _latestBaseline = updated);
+      _rememberCue(cueNumber);
       return true;
     } catch (_) {
       return false;
@@ -414,6 +437,7 @@ class _StudioDockSessionViewState
       );
       if (!mounted || updated == null) return false;
       setState(() => _latestBaseline = updated);
+      _rememberCue(cueNumber);
       return true;
     } catch (_) {
       return false;
@@ -436,6 +460,7 @@ class _StudioDockSessionViewState
       );
       if (!mounted || updated == null) return false;
       setState(() => _latestBaseline = updated);
+      _rememberCue(cueNumber);
       return true;
     } catch (_) {
       return false;
@@ -523,6 +548,7 @@ class _StudioDockSessionViewState
       );
       if (!mounted || updated == null) return false;
       setState(() => _latestBaseline = updated);
+      _rememberCue(cueNumber);
       return true;
     } catch (_) {
       return false;
@@ -843,6 +869,28 @@ class _StudioDockSessionViewState
       final nextSelected = surviving.isEmpty ? -1 :
           surviving[position.clamp(0, surviving.length - 1).toInt()].index;
       return _snapshotUpdate(updated, nextSelected);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<StudioDockCueUpdate?> _restoreEffect(
+      int firstCueId, int frameCount) async {
+    final baseline = _latestBaseline;
+    if (baseline == null || !widget.enableEditing) return null;
+    try {
+      final restored = await StudioDockEffectRestoreService(
+        ref.read(projectRepositoryProvider),
+        ref.read(subtitleRepositoryProvider),
+      ).restore(
+        baseline: baseline,
+        firstCueId: firstCueId,
+        expectedFrameCount: frameCount,
+      );
+      if (!mounted || restored == null) return null;
+      setState(() => _latestBaseline = restored);
+      _rememberCue(firstCueId);
+      return _snapshotUpdate(restored, firstCueId);
     } catch (_) {
       return null;
     }
@@ -1856,6 +1904,7 @@ class _StudioDockSessionViewState
       Widget buildDock(String? validVideoPath) => StudioDockWorkspace(
         key: _dockKey,
         initialCues: cues,
+        initialSelectedCueId: session.lastEditedIndex,
         playback: widget.allowNativePlayback ? _playback : null,
         isLiveSession: true,
         projectTitle: session.fileName,
@@ -1884,7 +1933,7 @@ class _StudioDockSessionViewState
             widget.allowNativePlayback ? _toggleRepeatCurrent : null,
         onOpenRepeatRange:
             widget.allowNativePlayback ? _openRepeatRange : null,
-        onSelectedCueChanged: _repeat.selectCue,
+        onSelectedCueChanged: _onSelectedCueChanged,
         repeatEnabled: _repeat.enabled,
         onOpenAppSettings: _openAppSettings,
         onOpenProjectSettings:
@@ -1927,6 +1976,7 @@ class _StudioDockSessionViewState
             widget.enableEditing ? _shiftSelectedCues : null,
         onDeleteSelectedCues:
             widget.enableEditing ? _deleteSelectedCues : null,
+        onRestoreEffect: widget.enableEditing ? _restoreEffect : null,
         onClearAllFormatting:
             widget.enableEditing ? _clearAllFormatting : null,
         onApplyEffect: widget.enableEditing ? _applyEffect : null,

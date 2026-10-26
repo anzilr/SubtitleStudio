@@ -10,6 +10,7 @@ abstract final class SrtEffectFrames {
     'wordReveal', 'movingKaraoke', 'activeTypewriter',
     'backspace', 'lineReveal', 'colorTransition',
     'blinkFlash', 'rainbowText', 'scrambleReveal',
+    'spotlightKaraoke', 'typewriterCursor', 'centerOutReveal',
   };
 
   static const rainbowColors = <String>[
@@ -66,6 +67,9 @@ abstract final class SrtEffectFrames {
     final steps = switch (effect) {
       'wordReveal' => words.length,
       'movingKaraoke' => movingRanges.length,
+      'spotlightKaraoke' => words.length,
+      'typewriterCursor' => glyphs.length,
+      'centerOutReveal' => glyphs.length,
       'lineReveal' => lines.length,
       'colorTransition' => 12,
       'blinkFlash' => math.max(5, blinkFrames),
@@ -84,6 +88,10 @@ abstract final class SrtEffectFrames {
         'wordReveal' => _font(step == words.length
             ? clean : clean.substring(0, words[step - 1].end), color),
         'movingKaraoke' => _fontMoving(clean, movingRanges[step - 1], color),
+        'spotlightKaraoke' => _spotlight(clean, words[step - 1], color),
+        'typewriterCursor' => _font(glyphs.take(step).join() +
+            (step == glyphs.length ? '' : '▌'), color),
+        'centerOutReveal' => _font(_centerOut(glyphs, step), color),
         'activeTypewriter' => _activeGlyph(glyphs, step, color, alternateColor),
         'backspace' => _font(glyphs.take(math.max(0, glyphs.length - step + 1))
             .join('').isEmpty ? ' ' : glyphs.take(
@@ -109,6 +117,22 @@ abstract final class SrtEffectFrames {
       String color) => '${text.substring(0, range.start)}'
       '${_font(text.substring(range.start, range.end), color)}'
       '${text.substring(range.end)}';
+
+  /// Dim the rest of the cue and emphasize the currently sung whole word.
+  /// Bold is useful even in SRT players that ignore font colors.
+  static String _spotlight(String text, RegExpMatch word, String color) =>
+      '${_font(text.substring(0, word.start), '808080')}'
+      '<b>${_font(text.substring(word.start, word.end), color)}</b>'
+      '${_font(text.substring(word.end), '808080')}';
+
+  /// Reveal from the visual center in a single, properly ordered substring.
+  /// All offsets here are grapheme indices rather than UTF-16 code units.
+  static String _centerOut(List<String> glyphs, int step) {
+    final center = (glyphs.length - 1) ~/ 2;
+    final left = math.max(0, center - (step - 1) ~/ 2);
+    final right = math.min(glyphs.length, center + 1 + step ~/ 2);
+    return glyphs.sublist(left, right).join();
+  }
 
   static String _activeGlyph(List<String> glyphs, int count,
       String color, String alternateColor) {

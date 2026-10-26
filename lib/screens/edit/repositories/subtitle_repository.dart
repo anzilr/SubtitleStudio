@@ -1161,6 +1161,50 @@ class SubtitleRepository {
       return false;
     }
   }
+
+  /// Atomically folds a detected sequence of effect frames back into one
+  /// subtitle. The entire displayed baseline is checked inside the history
+  /// transaction so another editor cannot lose intervening edits or marks.
+  Future<bool> restoreEffectFromSnapshotWithHistory({
+    required int collectionId,
+    required int sessionId,
+    required List<SubtitleLine> expectedLines,
+    required int firstIndex,
+    required int frameCount,
+    required SubtitleLine restoredLine,
+  }) async {
+    if (firstIndex < 0 || frameCount < 2 ||
+        firstIndex + frameCount > expectedLines.length) return false;
+    final expected = CheckpointStateReducer.copyLines(expectedLines);
+    try {
+      await _historyTransaction.commit(
+        sessionId: sessionId,
+        subtitleCollectionId: collectionId,
+        operationType: 'effect',
+        description: 'Removed effect from line ${expected[firstIndex].index}',
+        buildMutation: (currentLines) {
+          if (!CheckpointStateReducer.samePersistedLines(currentLines, expected)) {
+            throw StateError('The effect frames have changed. Reload the project.');
+          }
+          final next = CheckpointStateReducer.copyLines(currentLines)
+            ..replaceRange(firstIndex, firstIndex + frameCount,
+                [CheckpointStateReducer.copyLine(restoredLine)]);
+          for (var i = 0; i < next.length; i++) {
+            next[i].index = i + 1;
+          }
+          return CheckpointMutationPlan(
+            nextLines: next,
+            deltas: CheckpointStateReducer.diffAsIndexDeltas(currentLines, next),
+            forceSnapshot: true,
+          );
+        },
+      );
+      return true;
+    } catch (error) {
+      logError('SubtitleRepository: Failed to restore effect frames: $error');
+      return false;
+    }
+  }
   /// Update only the saved file URI on a freshly loaded collection.
   ///
   /// Callers may have loaded their subtitle collection before a long-running

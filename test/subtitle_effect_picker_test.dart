@@ -16,11 +16,12 @@ void main() {
     ));
     await tester.pump();
 
-    expect(find.byType(ChoiceChip), findsNWidgets(11));
+    expect(find.byType(ChoiceChip), findsNWidgets(14));
     for (final id in const [
       'karaoke', 'typewriter', 'wordReveal', 'movingKaraoke',
       'activeTypewriter', 'backspace', 'lineReveal', 'colorTransition',
       'blinkFlash', 'rainbowText', 'scrambleReveal',
+      'spotlightKaraoke', 'typewriterCursor', 'centerOutReveal',
     ]) {
       expect(find.byKey(ValueKey('srt-effect-$id')), findsOneWidget);
     }

@@ -37,6 +37,7 @@ class StudioDockSessionLoader {
       collectionId: collectionId,
       fileName: collection.fileName,
       encoding: collection.encoding,
+      lastEditedIndex: session.lastEditedIndex,
       isEditMode: session.editMode,
       cues: [
         for (final line in collection.lines)

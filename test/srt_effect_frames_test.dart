@@ -145,6 +145,65 @@ void main() {
     }
   });
 
+  test('batch 3 effects preserve complete graphemes and restore preview', () async {
+    const caption = 'കാ 👩‍👩‍👧‍👦 é Story';
+    const effects = <String, StudioDockEffectKind>{
+      'spotlightKaraoke': StudioDockEffectKind.spotlightKaraoke,
+      'typewriterCursor': StudioDockEffectKind.typewriterCursor,
+      'centerOutReveal': StudioDockEffectKind.centerOutReveal,
+    };
+    for (final entry in effects.entries) {
+      final lines = await SubtitleEffectOperations.generateSrtEffect(
+        originalLine: source(caption), effect: entry.key,
+        color: 'FFAA00', endDelay: .2,
+      );
+      expect(lines.length, greaterThanOrEqualTo(4), reason: entry.key);
+      expect(lines.first.startTime, '00:00:01,000');
+      expect(lines.last.endTime, '00:00:04,000');
+      final groups = StudioDockEffectGroups.detect([
+        for (final line in lines) StudioDockEffectFrame(
+          id: line.index,
+          start: line.startTime,
+          end: line.endTime,
+          original: line.original,
+          edited: line.edited!,
+        ),
+      ]);
+      expect(groups, hasLength(1), reason: entry.key);
+      expect(groups.single.kind, entry.value, reason: entry.key);
+      expect(groups.single.length, lines.length, reason: entry.key);
+      expect(groups.single.previewText, caption, reason: entry.key);
+    }
+  });
+
+  test('cursor animates grapheme clusters and disappears from last frame', () {
+    const caption = 'കാ👩‍👩‍👧‍👦é';
+    final frames = SrtEffectFrames.build(
+      effect: 'typewriterCursor', text: caption, color: 'FFFFFF',
+      availableMilliseconds: 3000,
+    );
+    expect(frames, hasLength(caption.characters.length));
+    for (var i = 0; i < frames.length; i++) {
+      final plain = frames[i].replaceAll(RegExp(r'<[^>]*>'), '');
+      expect(plain, '${caption.characters.take(i + 1).join()}'
+          '${i == frames.length - 1 ? '' : '▌'}');
+    }
+  });
+
+  test('center reveal expands outwards without splitting graphemes', () {
+    const caption = 'കാ👩‍👩‍👧‍👦éAB';
+    final frames = SrtEffectFrames.build(
+      effect: 'centerOutReveal', text: caption, color: 'FFFFFF',
+      availableMilliseconds: 3000,
+    );
+    expect(frames, hasLength(caption.characters.length));
+    expect(frames.last.replaceAll(RegExp(r'<[^>]*>'), ''), caption);
+    for (final frame in frames) {
+      final plain = frame.replaceAll(RegExp(r'<[^>]*>'), '');
+      expect(caption.characters.toList().join().contains(plain), isTrue);
+    }
+  });
+
   test('blink alternates visible and blank timed frames', () {
     final frames = SrtEffectFrames.build(
       effect: 'blinkFlash', text: 'WARNING', color: 'FF0000',

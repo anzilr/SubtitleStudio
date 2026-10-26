@@ -39,7 +39,10 @@ enum StudioDockEffectKind {
   colorAnimation,
   blink,
   rainbow,
-  scrambleReveal;
+  scrambleReveal,
+  spotlightKaraoke,
+  typewriterCursor,
+  centerOutReveal;
 
   String get label => switch (this) {
     StudioDockEffectKind.karaoke => 'Karaoke',
@@ -54,6 +57,9 @@ enum StudioDockEffectKind {
     StudioDockEffectKind.blink => 'Blink',
     StudioDockEffectKind.rainbow => 'Rainbow text',
     StudioDockEffectKind.scrambleReveal => 'Scramble reveal',
+    StudioDockEffectKind.spotlightKaraoke => 'Spotlight karaoke',
+    StudioDockEffectKind.typewriterCursor => 'Typewriter with cursor',
+    StudioDockEffectKind.centerOutReveal => 'Center-out reveal',
   };
 }
 
@@ -151,6 +157,16 @@ class StudioDockEffectGroups {
     }
     var index = 0;
     while (index < frames.length - 1) {
+      final centerEnd = _centerOutEnd(parsed, index);
+      if (centerEnd > index) {
+        groups.add(StudioDockEffectGroup(
+          frames: List.unmodifiable(frames.sublist(index, centerEnd)),
+          kind: StudioDockEffectKind.centerOutReveal,
+          previewText: parsed[centerEnd - 1]!.plainText,
+        ));
+        index = centerEnd;
+        continue;
+      }
       final blinkEnd = _blinkEnd(parsed, index);
       if (blinkEnd > index) {
         groups.add(StudioDockEffectGroup(
@@ -185,6 +201,8 @@ class StudioDockEffectGroups {
         StudioDockEffectKind.blink => 4,
         StudioDockEffectKind.rainbow => 4,
         StudioDockEffectKind.scrambleReveal => 3,
+        StudioDockEffectKind.spotlightKaraoke => 2,
+        StudioDockEffectKind.typewriterCursor => 3,
         _ => formattedReveal ? 2 : 3,
       };
       if (end - index >= minimum) {
@@ -212,6 +230,13 @@ class StudioDockEffectGroups {
     if (aDuration <= 0 || bDuration <= 0) return null;
 
     if (a.plainText == b.plainText) {
+      if (a.boldRange != null && b.boldRange != null &&
+          aDuration <= _maxStyledFrameMs &&
+          bDuration <= _maxStyledFrameMs &&
+          b.boldRange!.start > a.boldRange!.start &&
+          b.boldRange!.end > a.boldRange!.end) {
+        return StudioDockEffectKind.spotlightKaraoke;
+      }
       // Multi-colored per-grapheme frames with an unchanged visible string.
       // Equal range boundaries and changed palettes avoid folding unrelated
       // formatted dialogue into one effect.
@@ -259,6 +284,14 @@ class StudioDockEffectGroups {
 
     // Plain reveals/erases may have no markup at all in imported SRT files.
     // Consistently colored whole-text effects are supported as well.
+    if (a.plainText.endsWith('▌') &&
+        (b.plainText.endsWith('▌') || !b.plainText.contains('▌')) &&
+        b.plainText.replaceFirst(RegExp(r'▌$'), '').startsWith(
+            a.plainText.substring(0, a.plainText.length - 1)) &&
+        b.plainText.characters.length > a.plainText.characters.length - 1 &&
+        aDuration <= _maxStyledFrameMs && bDuration <= _maxStyledFrameMs) {
+      return StudioDockEffectKind.typewriterCursor;
+    }
     if (a.activeCharacter && b.activeCharacter &&
         a.plainText.characters.length < b.plainText.characters.length &&
         b.plainText.startsWith(a.plainText)) {
@@ -306,6 +339,35 @@ class StudioDockEffectGroups {
   static bool _adjacent(_SrtFrame a, _SrtFrame b) =>
       b.cue.id == a.cue.id + 1 && b.startMs >= a.endMs &&
       b.startMs - a.endMs <= _maxGapMs;
+
+  /// Center-out cues alternate expanding a prefix and a suffix of the
+  /// previous visible frame. Require four frames and both directions so an
+  /// ordinary typewriter/reveal remains ungrouped as center-out.
+  static int _centerOutEnd(List<_SrtFrame?> frames, int start) {
+    if (start + 3 >= frames.length) return start;
+    var index = start + 1;
+    bool? previousRight;
+    var movedLeft = false;
+    var movedRight = false;
+    while (index < frames.length) {
+      final a = frames[index - 1];
+      final b = frames[index];
+      if (a == null || b == null || !_adjacent(a, b) ||
+          a.plainText.isEmpty || a.plainText == b.plainText ||
+          a.fullColor != b.fullColor ||
+          a.endMs - a.startMs > _maxStyledFrameMs ||
+          b.endMs - b.startMs > _maxStyledFrameMs) break;
+      final right = b.plainText.startsWith(a.plainText);
+      final left = b.plainText.endsWith(a.plainText);
+      if (right == left ||
+          (previousRight != null && right == previousRight)) break;
+      if (right) movedRight = true;
+      if (left) movedLeft = true;
+      previousRight = right;
+      index++;
+    }
+    return index - start >= 4 && movedLeft && movedRight ? index : start;
+  }
 
   /// Blinking is the only useful SRT effect with empty cues. Four or more
   /// short alternating visible/empty frames prevent collapsing a normal pause
@@ -375,6 +437,7 @@ class _SrtFrame {
     required this.plainText,
     required this.highlight,
     required this.colorRanges,
+    required this.boldRange,
     required this.activeCharacter,
   });
 
@@ -384,6 +447,7 @@ class _SrtFrame {
   final String plainText;
   final _ColorRange? highlight;
   final List<_ColorRange> colorRanges;
+  final _ColorRange? boldRange;
   final bool activeCharacter;
 
   String? get fullColor => highlight?.start == 0 &&
@@ -406,6 +470,8 @@ class _SrtFrame {
     final plain = StringBuffer();
     final ranges = <_ColorRange>[];
     final colorStack = <String?>[];
+    int? boldStart;
+    _ColorRange? boldRange;
     String? activeColor;
     var offset = 0;
     var cursor = 0;
@@ -448,6 +514,16 @@ class _SrtFrame {
             }
           }
           break;
+        case 'b':
+          if (closing) {
+            if (boldStart == null || boldRange != null) return null;
+            boldRange = _ColorRange(boldStart, offset, 'bold');
+            boldStart = null;
+          } else {
+            if (boldStart != null) return null;
+            boldStart = offset;
+          }
+          break;
         default:
           // Bold/italic/underline preserve visible text.
           break;
@@ -455,7 +531,7 @@ class _SrtFrame {
       cursor = token.end;
     }
     append(input.substring(cursor));
-    if (colorStack.isNotEmpty ||
+    if (colorStack.isNotEmpty || boldStart != null ||
         (plain.isEmpty && input.trim().isNotEmpty)) return null;
     return _SrtFrame(
       cue: cue,
@@ -464,6 +540,7 @@ class _SrtFrame {
       plainText: plain.toString(),
       highlight: ranges.length == 1 ? ranges.single : null,
       colorRanges: List.unmodifiable(ranges),
+      boldRange: boldRange,
       activeCharacter: (ranges.length == 1 &&
               plain.toString().characters.length == 1 &&
               ranges.single.start == 0 && ranges.single.end == plain.length) ||

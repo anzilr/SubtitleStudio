@@ -94,6 +94,23 @@ void main() {
     expect(data.cues.single.original, isEmpty);
   });
 
+  test('desktop loader returns the shared last edited cue for reopen', () async {
+    final ids = await seed(name: 'Resume.srt', lines: [
+      cue(1, original: 'One'),
+      cue(2, original: 'Two'),
+      cue(3, original: 'Three'),
+    ]);
+    final subtitles = SubtitleRepository(
+        harness.isar, CheckpointRepository(harness.isar));
+    expect(await subtitles.updateLastEditedIndex(ids.session, 3), isTrue);
+    final loaded = await loader.load(
+        sessionId: ids.session, collectionId: ids.collection);
+    expect(loaded.lastEditedIndex, 3);
+    final reopened = await loader.load(
+        sessionId: ids.session, collectionId: ids.collection);
+    expect(reopened.lastEditedIndex, 3);
+  });
+
   test('loader exposes the already-read collection for desktop settings',
       () async {
     final ids = await seed(name: 'Settings.srt', lines: [

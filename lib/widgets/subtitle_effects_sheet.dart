@@ -175,6 +175,9 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
                   ('blinkFlash', 'Blink / Flash', Icons.flash_on_outlined),
                   ('rainbowText', 'Rainbow text', Icons.gradient_outlined),
                   ('scrambleReveal', 'Scramble reveal', Icons.shuffle_rounded),
+                  ('spotlightKaraoke', 'Spotlight karaoke', Icons.highlight_alt_rounded),
+                  ('typewriterCursor', 'Typewriter + cursor', Icons.edit_note_rounded),
+                  ('centerOutReveal', 'Center-out reveal', Icons.center_focus_strong_rounded),
                 ])
                   ChoiceChip(
                     key: ValueKey('srt-effect-${choice.$1}'),
