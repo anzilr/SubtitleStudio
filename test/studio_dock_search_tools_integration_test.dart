@@ -35,6 +35,7 @@ void main() {
       String firstEnd = '00:00:02,000',
       String secondStart = '00:00:03,000',
       String secondEnd = '00:00:04,000',
+      String thirdStart = '00:00:05,050',
       bool includeThird = false}) async {
     final first = SubtitleLine()
       ..index = 1
@@ -58,7 +59,7 @@ void main() {
     if (includeThird) {
       lines.add(SubtitleLine()
         ..index = 3
-        ..startTime = '00:00:05,050'
+        ..startTime = thirdStart
         ..endTime = '00:00:07,000'
         ..original = 'Third source'
         ..edited = 'Third target');
@@ -249,6 +250,40 @@ void main() {
     expect(current.cues.first.end, '00:00:03,000');
     expect(current.cues.last.edited, 'New edit to following cue');
     expect(await db.isar.checkpoints.count(), 2);
+  });
+
+  test('timing writer declines a proposal shadowed by a longer earlier cue',
+      () async {
+    final ids = await seed(
+      firstEnd: '00:00:08,000',
+      secondStart: '00:00:02,000',
+      secondEnd: '00:00:04,000',
+      thirdStart: '00:00:04,050',
+      includeThird: true,
+    );
+    final baseline = await loader.load(
+        sessionId: ids.sessionId, collectionId: ids.collectionId);
+    final cues = [
+      for (final cue in baseline.cues)
+        SubtitleQualityCue(id: cue.index, start: cue.start,
+            end: cue.end, text: cue.storedEdited ?? cue.original),
+    ];
+    expect(SubtitleQualityChecker.proposeTimingSuggestions(cues), isEmpty);
+    final forged = SubtitleQualityTimingSuggestion(
+      cueId: 2,
+      followingCueId: 3,
+      beforeEnd: '00:00:04,000',
+      proposedEnd: '00:00:03,970',
+      detail: 'Leave 80 ms before subtitle #3; shortens this subtitle by 30 ms.',
+      profile: const SubtitleQualityProfile(),
+    );
+    expect(await tools.applyQualityTimingSuggestions(
+        baseline: baseline, suggestions: [forged]), isNull);
+    expect(await db.isar.checkpoints.count(), 0);
+    final current = await loader.load(
+        sessionId: ids.sessionId, collectionId: ids.collectionId);
+    expect(current.cues[1].end, '00:00:04,000');
+    expect(current.cues.first.end, '00:00:08,000');
   });
 
   test('Replace rejects a stale match and cannot overwrite newer text',

@@ -315,4 +315,50 @@ void main() {
     ];
     expect(SubtitleQualityChecker.proposeTimingSuggestions(tooFast), isEmpty);
   });
+
+  test('timing preview does not hide an earlier overlapping cue', () {
+    const cues = [
+      SubtitleQualityCue(id: 1, start: '00:00:01,000',
+          end: '00:00:08,000', text: 'Long caption'),
+      SubtitleQualityCue(id: 2, start: '00:00:02,000',
+          end: '00:00:04,000', text: 'Short caption'),
+      SubtitleQualityCue(id: 3, start: '00:00:04,050',
+          end: '00:00:06,000', text: 'Another caption'),
+      SubtitleQualityCue(id: 4, start: '00:00:10,000',
+          end: '00:00:12,000', text: 'Later caption'),
+      SubtitleQualityCue(id: 5, start: '00:00:12,050',
+          end: '00:00:14,000', text: 'Final caption'),
+    ];
+    final ideas = SubtitleQualityChecker.proposeTimingSuggestions(cues);
+    // Ending cue 2 at 03,970 would still leave cue 1 running until 08,000.
+    // Independent safe pairs later in the file must still be offered.
+    expect(ideas, hasLength(1));
+    expect(ideas.single.cueId, 4);
+    expect(ideas.single.followingCueId, 5);
+    expect(ideas.single.proposedEnd, '00:00:11,970');
+  });
+
+  test('timing preview checks ties at the preceding end time', () {
+    const tied = [
+      SubtitleQualityCue(id: 1, start: '00:00:01,000',
+          end: '00:00:03,000', text: 'First'),
+      SubtitleQualityCue(id: 2, start: '00:00:01,500',
+          end: '00:00:03,000', text: 'Second'),
+      SubtitleQualityCue(id: 3, start: '00:00:03,050',
+          end: '00:00:05,000', text: 'Third'),
+    ];
+    expect(SubtitleQualityChecker.proposeTimingSuggestions(tied), isEmpty);
+
+    const cleared = [
+      SubtitleQualityCue(id: 1, start: '00:00:01,000',
+          end: '00:00:01,500', text: 'First'),
+      SubtitleQualityCue(id: 2, start: '00:00:01,600',
+          end: '00:00:03,000', text: 'Second'),
+      SubtitleQualityCue(id: 3, start: '00:00:03,050',
+          end: '00:00:05,000', text: 'Third'),
+    ];
+    final ideas = SubtitleQualityChecker.proposeTimingSuggestions(cleared);
+    expect(ideas, hasLength(1));
+    expect(ideas.single.cueId, 2);
+  });
 }

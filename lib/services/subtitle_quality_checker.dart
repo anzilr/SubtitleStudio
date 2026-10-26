@@ -364,7 +364,16 @@ class SubtitleQualityChecker {
     }
     valid.sort((a, b) => a.start.compareTo(b.start));
     final ideas = <SubtitleQualityTimingSuggestion>[];
+    // A cue can overlap multiple later cues. Merely shortening the most
+    // recent cue must not claim to restore the requested gap while an older
+    // cue is still active. Track the latest end *excluding* the pair's
+    // preceding cue, so the proposed end can be checked against every other
+    // earlier cue in O(n) time.
+    var maxOtherEnd = -1;
     for (var i = 1; i < valid.length; i++) {
+      if (i > 1 && valid[i - 2].end > maxOtherEnd) {
+        maxOtherEnd = valid[i - 2].end;
+      }
       final preceding = valid[i - 1];
       final next = valid[i];
       if (!_canonicalTimePattern.hasMatch(preceding.cue.start) ||
@@ -376,6 +385,7 @@ class SubtitleQualityChecker {
       final gap = next.start - preceding.end;
       if (gap < 0 || gap >= profile.minGapMs) continue;
       final proposedEnd = next.start - profile.minGapMs;
+      if (maxOtherEnd > proposedEnd) continue;
       final duration = proposedEnd - preceding.start;
       if (duration < profile.minDurationMs || duration <= 0) continue;
       final visible = visibleText(preceding.cue.text)
