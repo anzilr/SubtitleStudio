@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 65549)
+Total output lines: 6359
+
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -14,6 +17,7 @@ import 'package:subtitle_studio/widgets/olam_dictionary_widget.dart';
 import 'package:subtitle_studio/widgets/urban_dictionary_widget.dart';
 import 'package:subtitle_studio/services/checkpoint_history_graph.dart';
 import 'package:subtitle_studio/services/checkpoint_history_labels.dart';
+import 'package:subtitle_studio/services/subtitle_quality_checker.dart';
 import 'studio_dock_geometry.dart';
 import 'studio_dock_playback_link.dart';
 import 'studio_dock_layout_preferences.dart';
@@ -25,6 +29,7 @@ import 'studio_dock_file_actions.dart';
 import 'studio_dock_style_actions.dart';
 import 'studio_dock_style_color_dialog.dart';
 import 'studio_dock_search_service.dart';
+import 'studio_dock_quality_dialog.dart';
 import 'studio_dock_bulk_review_service.dart';
 import '../../utils/msone_hotkey_manager.dart';
 
@@ -44,7 +49,8 @@ enum StudioDockEditPreference {
 
 enum _StudioDockMenuAction {
   undo, redo, find, copySelected, selectAll, addCue, deleteCue, splitCue, mergeCue, notes,
-  timing, shiftTools, showTools, showMarkedLines, syncSubtitles, sourceView,
+  timing, shiftTools, showTools, qualityCheck, showMarkedLines, syncSubtitles,
+  sourceView,
   history, submitMsone,
   loadSecondary, toggleSecondary,
   shiftSelected, deleteSelected, selectByIndex, rangeSelection, goToLine,
@@ -420,6 +426,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   ModalRoute<dynamic>? _projectSettingsMenuRoute;
   ModalRoute<dynamic>? _commentsMenuRoute;
   ModalRoute<dynamic>? _markedLinesMenuRoute;
+  ModalRoute<dynamic>? _qualityMenuRoute;
   String? _findError;
   String? _toolsError;
   int _section = 0;
@@ -2411,6 +2418,35 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     });
   }
 
+  Future<void> _openQualityReview({ModalRoute<dynamic>? afterMenu}) async {
+    if (afterMenu != null) await afterMenu.completed;
+    if (!mounted || _cues.isEmpty ||
+        !await _confirmDraftBeforeLeaving() || !mounted) return;
+    final report = SubtitleQualityChecker.scan([
+      for (final cue in _cues)
+        SubtitleQualityCue(
+          id: cue.id, start: cue.start, end: cue.end, text: cue.edited,
+        ),
+    ]);
+    final targetId = await showDialog<int>(
+      context: context,
+      builder: (_) => StudioDockQualityDialog(
+        report: report, cueCount: _cues.length,
+      ),
+    );
+    if (!mounted || targetId == null ||
+        !_cues.any((cue) => cue.id == targetId)) return;
+    await _switchSection(0);
+    if (!mounted || _section != 0) return;
+    setState(() {
+      _reviewFilter = _StudioDockReviewFilter.all;
+      _query = '';
+      _tableSearch.clear();
+    });
+    _selectCue(targetId);
+    _gridFocus.requestFocus();
+  }
+
   Future<void> _changeReviewFilterSafely(
       _StudioDockReviewFilter filter) async {
     if (filter == _reviewFilter ||
@@ -2785,6 +2821,12 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         _desktopMenu('Tools', const ValueKey('studio-tools-menu'), [
           const PopupMenuItem(height: 34, value: _StudioDockMenuAction.find,
               child: Text('Find & Replace')),
+          PopupMenuItem(height: 34, value: _StudioDockMenuAction.qualityCheck,
+              enabled: _cues.isNotEmpty,
+              child: Builder(builder: (popupContext) {
+                _qualityMenuRoute = ModalRoute.of(popupContext);
+                return const Text('Check subtitle quality…');
+              })),
           if (widget.onApplyCueText != null) ...[
             PopupMenuItem(height: 34, value: _StudioDockMenuAction.msoneDictionary,
               enabled: _cues.isNotEmpty && !_savingDraft,
@@ -3034,6 +3076,10 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         final menuRoute = _markedLinesMenuRoute;
         _markedLinesMenuRoute = null;
         unawaited(_showMarkedLinesFromShortcut(afterMenu: menuRoute));
+      case _StudioDockMenuAction.qualityCheck:
+        final menuRoute = _qualityMenuRoute;
+        _qualityMenuRoute = null;
+        unawaited(_openQualityReview(afterMenu: menuRoute));
       case _StudioDockMenuAction.history:
         unawaited(_switchSection(1));
       case _StudioDockMenuAction.removeHearingImpaired:
@@ -3182,61 +3228,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       _rangeSelectionMode = false;
       _rangeStartCueId = null;
     });
-    widget.onSelectedCueChanged?.call(_selectedId);
-  }
-
-  Future<void> _selectByIndexSafely() async {
-    if (_cues.isEmpty || !await _confirmDraftBeforeLeaving() || !mounted) return;
-    var firstText = '1';
-    var lastText = '${_cues.length}';
-    String? error;
-    var submitted = false;
-    final chosen = await showDialog<List<int>>(
-      context: context,
-      builder: (dialog) => StatefulBuilder(builder: (dialog, refresh) {
-        void submit() {
-          if (submitted) return;
-          final start = int.tryParse(firstText.trim());
-          final end = int.tryParse(lastText.trim());
-          if (start == null || end == null || start < 1 ||
-              end < start || end > _cues.length) {
-            refresh(() => error =
-                'Enter indices between 1 and ${_cues.length} in order.');
-            return;
-          }
-          submitted = true;
-          Navigator.pop(dialog, <int>[start, end]);
-        }
-        return _modalActions(
-          onConfirm: submit,
-          onCancel: () => Navigator.pop(dialog),
-          child: AlertDialog(
-        title: const Text('Select subtitles by index'),
-        content: SizedBox(width: 390, child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Select an inclusive range from 1 to ${_cues.length}.'),
-            const SizedBox(height: 14),
-            TextFormField(
-              key: const ValueKey('studio-range-start'),
-              initialValue: firstText,
-              onChanged: (value) => firstText = value,
-              onFieldSubmitted: (_) => submit(),
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'First line', border: OutlineInputBorder()),
-            ),
-            const SizedBox(height: 10),
-            TextFormField(
-              key: const ValueKey('studio-range-end'),
-              initialValue: lastText,
-              onChanged: (value) => lastText = value,
-              onFieldSubmitted: (_) => submit(),
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Last line', border: OutlineInputBorder()),
-            ),
-            if (error != null) Padding(
+    widget.onSelectedCueChanged?.cal…549 tokens truncated…            if (error != null) Padding(
               padding: const EdgeInsets.only(top: 10),
               child: Text(error!, style: TextStyle(
                 color: Theme.of(dialog).colorScheme.error)),
