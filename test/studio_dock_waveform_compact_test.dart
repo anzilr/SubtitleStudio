@@ -211,7 +211,7 @@ void main() {
     expect(extended.zoomLevels.last.samplesPerPixel, 700);
   });
 
-  test('finest desktop zoom displays 3–4 seconds at different panel widths', () {
+  test('finest desktop zoom displays 1.5–2 seconds at different panel widths', () {
     final source = WaveformBuffer(
       rawData: WaveformData(
         channels: 1, sampleRate: 44100,
@@ -220,13 +220,13 @@ void main() {
         samplesPerPixel: 700, pixelCount: 37800, channels: 1)],
     );
 
-    for (final width in [640.0, 850.0, 1200.0, 1920.0]) {
+    for (final width in [640.0, 850.0, 1200.0, 1920.0, 2560.0]) {
       final extended = WaveformController.extendDesktopFineZoom(
         source, viewportWidth: width,
       );
       final visibleSeconds = width *
           extended.zoomLevels.first.samplesPerPixel / source.sampleRate;
-      expect(visibleSeconds, inInclusiveRange(3.0, 4.0),
+      expect(visibleSeconds, inInclusiveRange(1.5, 2.0),
           reason: 'Fine zoom must fit $width px desktop waveform');
       expect(visibleSeconds,
           closeTo(WaveformController.desktopFineZoomSeconds, 0.05));
@@ -262,7 +262,7 @@ void main() {
     expect(after.currentZoomIndex, 0);
     expect(after.viewportWidth, 1360);
     expect(1360 * after.samplesPerPixel / source.sampleRate,
-        inInclusiveRange(3.0, 4.0));
+        inInclusiveRange(1.5, 2.0));
     expect((after.centerTimeForScroll(after.scrollPosition) - center)
         .inMilliseconds.abs(), lessThanOrEqualTo(2));
     expect(identical(after.buffer.rawData, source.rawData), isTrue);

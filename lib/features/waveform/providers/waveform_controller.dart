@@ -41,7 +41,7 @@ class WaveformController extends Notifier<WaveformState> {
   int _desktopFineZoomCount = 0;
   bool _desktopFineZoomEnabled = false;
 
-  static const double desktopFineZoomSeconds = 3.5;
+  static const double desktopFineZoomSeconds = 1.75;
 
   /// Finer desktop zoom levels use on-demand peak tiles. Allocating eager
   /// full-track arrays here would multiply memory use for long recordings.
@@ -51,7 +51,7 @@ class WaveformController extends Notifier<WaveformState> {
   }) {
     if (source.zoomLevels.isEmpty || source.sampleRate <= 0) return source;
     final currentMinimum = source.zoomLevels.first.samplesPerPixel;
-    // Keep the finest desktop view at approximately 3.5 seconds regardless of
+    // Keep the finest desktop view at approximately 1.75 seconds regardless of
     // panel width. Subtitle Edit likewise bases horizontal detail on the
     // waveform's pixel-to-time scale, independent of vertical amplitude zoom.
     final safeWidth = viewportWidth.isFinite && viewportWidth > 0
