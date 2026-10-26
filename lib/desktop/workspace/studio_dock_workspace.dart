@@ -792,7 +792,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     if (!_followPlayback || active == null || _query.isNotEmpty) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_cueScroll.hasClients || !_followPlayback) return;
-      final index = _displayIndexForCue(active);
+      final index = _displayIndexForCue(active!);
       if (index < 0) return;
       final target = (index * _cueRowHeight -
               _cueScroll.position.viewportDimension / 2 +
@@ -1492,8 +1492,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     if (widget.onApplyCueText == null || _savingDraft) return;
     final target = _formattingTarget;
     final selected = target != null && !target.controller.selection.isCollapsed;
-    final selection = selected ? target!.controller.selection : null;
-    final before = selected ? target!.controller.text : null;
+    final selection = selected ? target.controller.selection : null;
+    final before = selected ? target.controller.text : null;
     final cueId = _selectedId;
     final current = _styleText;
     final body = selected
@@ -1510,7 +1510,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       ),
     );
     if (chosen == null || !mounted || cueId != _selectedId) return;
-    if (selected && target!.controller.text == before) {
+    if (selected && target.controller.text == before) {
       final replacement = before!.replaceRange(selection!.start,
           selection.end, chosen);
       target.controller.value = TextEditingValue(text: replacement,
