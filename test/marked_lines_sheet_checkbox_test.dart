@@ -31,6 +31,40 @@ SubtitleLine _line(int number, String text,
   ..comment = comment;
 
 void main() {
+  testWidgets('fully marked SRT effect folds as one review card while '
+      'individual frame comments remain accessible', (tester) async {
+    tester.view.physicalSize = const Size(420, 860);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final cues = [
+      for (var i = 1; i <= 3; i++)
+        _line(i, 'Tes${List.filled(i, 't').join()}', marked: true,
+          comment: i == 2 ? 'Frame note' : null)
+          ..startTime = '00:00:0${i - 1},000'
+          ..endTime = '00:00:0$i,000',
+    ];
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        appPreferencesRepositoryProvider.overrideWithValue(_Preferences()),
+      ],
+      child: MaterialApp(home: Scaffold(body: MarkedLinesSheet(
+        markedLines: cues, allSubtitleLines: cues,
+        onLineSelected: (_) {},
+      ))),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('marked-effect-group-1')),
+        findsOneWidget);
+    expect(find.textContaining('3 marked frames'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('marked-effect-group-1')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('marked-effect-frame-2')),
+        findsOneWidget);
+    expect(find.text('Frame note'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('marked lines checkbox toggles unmarked comment rows on and off',
       (tester) async {
     tester.view.physicalSize = const Size(360, 760);

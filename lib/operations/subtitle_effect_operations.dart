@@ -5,8 +5,45 @@ import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/utils/time_parser.dart';
 import 'package:subtitle_studio/operations/subtitle_sync_operations.dart'; // For formatDuration
 import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
+import 'package:subtitle_studio/operations/srt_effect_frames.dart';
 
 class SubtitleEffectOperations {
+  /// Generates an SRT-compatible timed cue sequence for the additional text
+  /// effects. Every preview frame is also an exported cue frame.
+  static Future<List<SubtitleLine>> generateSrtEffect({
+    required SubtitleLine originalLine,
+    required String effect,
+    required String color,
+    String alternateColor = 'FFFF00',
+    double endDelay = 0,
+  }) async {
+    final start = parseTimeString(originalLine.startTime).inMilliseconds;
+    final end = parseTimeString(originalLine.endTime).inMilliseconds;
+    final duration = end - start;
+    final available = duration - (endDelay * 1000).round();
+    if (duration <= 0 || available <= 0) return [];
+    final frames = SrtEffectFrames.build(
+      effect: effect,
+      text: originalLine.edited ?? originalLine.original,
+      color: color,
+      alternateColor: alternateColor,
+      availableMilliseconds: available,
+    );
+    if (frames.isEmpty) return [];
+    return [
+      for (var i = 0; i < frames.length; i++)
+        SubtitleLine()
+          ..index = originalLine.index + i
+          ..original = originalLine.original
+          ..edited = frames[i]
+          ..startTime = SubtitleSyncOperations.formatDuration(Duration(
+            milliseconds: start + (i * available / frames.length).round()))
+          ..endTime = SubtitleSyncOperations.formatDuration(Duration(
+            milliseconds: i == frames.length - 1 ? end :
+                start + ((i + 1) * available / frames.length).round()))
+          ..marked = originalLine.marked,
+    ];
+  }
   /// Builds the forward delta sequence for replacing one subtitle line with
   /// the generated effect lines.
   ///

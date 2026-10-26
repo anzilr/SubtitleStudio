@@ -40,6 +40,15 @@ extension _EditSubtitleActions on _EditScreenState {
           color: color,
           endDelay: endDelay,
         );
+      } else if (SrtEffectFrames.supported.contains(effectType)) {
+        final color = (effectConfig['color'] as String).substring(2);
+        final alternate = effectConfig['alternateColor'];
+        effectLines = await SubtitleEffectOperations.generateSrtEffect(
+          originalLine: currentLine, effect: effectType, color: color,
+          alternateColor: alternate is String && alternate.length == 8
+              ? alternate.substring(2) : 'FFFF00',
+          endDelay: (effectConfig['endDelay'] as num?)?.toDouble() ?? 0,
+        );
       }
       
       if (effectLines.isNotEmpty) {

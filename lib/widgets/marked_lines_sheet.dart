@@ -8,6 +8,18 @@ import 'package:subtitle_studio/utils/time_parser.dart';
 import 'package:subtitle_studio/utils/responsive_layout.dart';
 import 'package:subtitle_studio/widgets/comment_dialog.dart';
 import 'package:subtitle_studio/widgets/marked_lines_filter.dart';
+import 'package:subtitle_studio/desktop/workspace/studio_dock_effect_groups.dart';
+
+class _MarkedEffectEntry {
+  const _MarkedEffectEntry(this.line, {this.group, this.collapsed = false});
+
+  final SubtitleLine line;
+  final StudioDockEffectGroup? group;
+  final bool collapsed;
+
+  bool contains(int lineNumber) => line.index == lineNumber ||
+      (collapsed && group?.contains(lineNumber) == true);
+}
 
 class _HoverableButton extends StatefulWidget {
   final VoidCallback onTap;
@@ -55,9 +67,14 @@ class _HoverableButtonState extends State<_HoverableButton> {
 class MarkedLinesSheet extends ConsumerStatefulWidget {
   final List<SubtitleLine> markedLines;
   final List<SubtitleLine>? allLinesWithComments; // All lines that have comments (marked or unmarked)
+  /// Full source cues are needed to recognize SRT effects without guessing
+  /// from just the bookmarked subset.
+  final List<SubtitleLine>? allSubtitleLines;
   final Function(int) onLineSelected;
   final Function(int, String?)? onCommentUpdated;
   final Function(int)? onLineUnmarked; // Callback for unmarking and deleting comments
+  /// Optional atomic group operation; indices are 0-based database positions.
+  final Future<bool> Function(List<int>)? onGroupUnmarked;
   final Function(int, bool)? onResolvedUpdated; // Callback for updating resolved status
   final Function(int, String)? onTextEdited; // Callback for editing subtitle text
   final int? initialHighlightLineIndex; // Database index (1-based) to highlight on open
@@ -66,9 +83,11 @@ class MarkedLinesSheet extends ConsumerStatefulWidget {
     super.key,
     required this.markedLines,
     this.allLinesWithComments,
+    this.allSubtitleLines,
     required this.onLineSelected,
     this.onCommentUpdated,
     this.onLineUnmarked,
+    this.onGroupUnmarked,
     this.onResolvedUpdated,
     this.onTextEdited,
     this.initialHighlightLineIndex,
@@ -80,6 +99,8 @@ class MarkedLinesSheet extends ConsumerStatefulWidget {
 
 class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
   late List<SubtitleLine> _currentMarkedLines;
+  final Set<int> _expandedEffectIds = {};
+  Map<int, StudioDockEffectGroup>? _effectGroupsByLine;
   bool _showAllComments = false; // Toggle to include unmarked comment lines
   bool _commentFilterTouched = false; // Prevent async saved preference overwriting a tap.
   String _resolvedFilter = 'all'; // Filter: 'all', 'resolved', 'unresolved'
@@ -173,6 +194,49 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
       return lines.where((line) => !line.resolved).toList();
     }
     return lines;
+  }
+
+  List<_MarkedEffectEntry> get _displayedEntries {
+    final lines = _displayedLines;
+    if (widget.allSubtitleLines == null || widget.allSubtitleLines!.isEmpty) {
+      return [for (final line in lines) _MarkedEffectEntry(line)];
+    }
+    final byId = _effectGroupsByLine ??= _detectEffectGroups();
+    final visibleIds = lines.map((line) => line.index).toSet();
+    final markedIds = _currentMarkedLines
+        .where((line) => line.marked).map((line) => line.index).toSet();
+    final entries = <_MarkedEffectEntry>[];
+    for (final line in lines) {
+      final group = byId[line.index];
+      final fullyMarkedAndVisible = group != null &&
+          StudioDockEffectMarks.state(group, markedIds) ==
+              StudioDockEffectMarkState.all &&
+          group.frames.every((frame) => visibleIds.contains(frame.id));
+      if (!fullyMarkedAndVisible || (group != null &&
+          _expandedEffectIds.contains(group.firstId))) {
+        entries.add(_MarkedEffectEntry(line, group: group));
+      } else if (line.index == group!.firstId) {
+        entries.add(_MarkedEffectEntry(line, group: group, collapsed: true));
+      }
+    }
+    return entries;
+  }
+
+  Map<int, StudioDockEffectGroup> _detectEffectGroups() {
+    final detected = StudioDockEffectGroups.detect([
+      for (final line in widget.allSubtitleLines!) StudioDockEffectFrame(
+        id: line.index, start: line.startTime, end: line.endTime,
+        original: line.original, edited: line.edited ?? '',
+        effectiveText: line.edited ?? line.original,
+      ),
+    ]);
+    final byId = <int, StudioDockEffectGroup>{};
+    for (final group in detected) {
+      for (final frame in group.frames) {
+        byId[frame.id] = group;
+      }
+    }
+    return byId;
   }
 
   @override
@@ -466,10 +530,11 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
   }
 
   Widget _buildMarkedLinesList(BuildContext context) {
+    final entries = _displayedEntries;
     
     // Ensure we have enough keys for all items
     // CRITICAL: Only add NEW keys if we don't have enough, don't recreate existing ones
-    final keysNeeded = _displayedLines.length;
+    final keysNeeded = entries.length;
     if (_cardKeys.length < keysNeeded) {
       final keysToAdd = keysNeeded - _cardKeys.length;
       for (int i = 0; i < keysToAdd; i++) {
@@ -485,14 +550,52 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
     return ListView.separated(
       controller: _scrollController,
       padding: const EdgeInsets.all(16),
-      itemCount: _displayedLines.length,
+      itemCount: entries.length,
       separatorBuilder: (context, index) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
-        final line = _displayedLines[index];
+        final entry = entries[index];
+        final line = entry.line;
         final formattedStart = _formatDurationToThreeDigits(parseTimeString(line.startTime));
         final formattedEnd = _formatDurationToThreeDigits(parseTimeString(line.endTime));
         final hasEditedText = line.edited?.isNotEmpty == true;
         final isHighlighted = index == _highlightedIndex;
+
+        if (entry.collapsed) {
+          final group = entry.group!;
+          final comments = group.frames.where((frame) =>
+            _currentMarkedLines.any((marked) => marked.index == frame.id &&
+                (marked.comment?.trim().isNotEmpty ?? false))).length;
+          return Card(
+            key: _cardKeys[index],
+            color: isHighlighted
+                ? Theme.of(context).colorScheme.primaryContainer : null,
+            child: ListTile(
+              key: ValueKey('marked-effect-group-${group.firstId}'),
+              leading: Icon(Icons.bookmark_added,
+                  color: Theme.of(context).colorScheme.error),
+              title: Text('${group.kind.label} · lines '
+                  '${group.firstId}–${group.lastId}'),
+              subtitle: Text('${group.length} marked frames'
+                  '${comments > 0 ? ' · $comments with comments' : ''}\n'
+                  '${group.previewText}', maxLines: 3,
+                  overflow: TextOverflow.ellipsis),
+              trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                if (widget.onGroupUnmarked != null)
+                  IconButton(
+                    key: ValueKey('marked-effect-unmark-${group.firstId}'),
+                    tooltip: 'Unmark all ${group.length} effect frames',
+                    icon: const Icon(Icons.bookmark_remove_outlined),
+                    onPressed: () => _unmarkEffectGroup(group),
+                  ),
+                const Icon(Icons.expand_more),
+              ]),
+              onTap: () => setState(() {
+                _expandedEffectIds.add(group.firstId);
+                _highlightedIndex = index;
+              }),
+            ),
+          );
+        }
         
         return GestureDetector(
           key: _cardKeys[index], // Assign key to enable scrolling
@@ -552,6 +655,20 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
                         color: line.marked ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.primary,
                         size: 18,
                       ),
+                      if (entry.group != null) ...[
+                        const SizedBox(width: 8),
+                        Flexible(child: ActionChip(
+                          key: ValueKey('marked-effect-frame-${line.index}'),
+                          label: Text('${entry.group!.kind.label} '
+                              '${entry.group!.frames.indexWhere((frame) => frame.id == line.index) + 1}'
+                              '/${entry.group!.length}'),
+                          onPressed: () => setState(() {
+                            if (!_expandedEffectIds.add(entry.group!.firstId)) {
+                              _expandedEffectIds.remove(entry.group!.firstId);
+                            }
+                          }),
+                        )),
+                      ],
                       const SizedBox(width: 8),
                       Expanded(
                         child: Align(
@@ -1043,6 +1160,7 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
       final markedLineIndex = _currentMarkedLines.indexWhere((l) => l.index == line.index);
       if (markedLineIndex >= 0) {
         _currentMarkedLines[markedLineIndex].edited = newText;
+        _effectGroupsByLine = null;
       }
       
       // Update in all comments list if it exists
@@ -1056,10 +1174,11 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
   }
 
   void _moveHighlight(int direction) {
-    if (_displayedLines.isEmpty) return;
+    if (_displayedEntries.isEmpty) return;
     
     setState(() {
-      _highlightedIndex = (_highlightedIndex + direction).clamp(0, _displayedLines.length - 1);
+      _highlightedIndex = (_highlightedIndex + direction)
+          .clamp(0, _displayedEntries.length - 1);
     });
     
     // Scroll to the highlighted item after the widget rebuilds
@@ -1074,7 +1193,7 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
     print('DEBUG: _scrollController.hasClients: ${_scrollController.hasClients}');
     print('DEBUG: _highlightedIndex: $_highlightedIndex, _cardKeys.length: ${_cardKeys.length}');
     
-    if (_displayedLines.isEmpty || !_scrollController.hasClients) return;
+    if (_displayedEntries.isEmpty || !_scrollController.hasClients) return;
     if (_highlightedIndex < 0 || _highlightedIndex >= _cardKeys.length) return;
     
     // Get the key for the highlighted card
@@ -1099,7 +1218,8 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
   /// Scroll to and highlight a specific line by its database index (1-based)
   void _scrollToLineByDatabaseIndex(int databaseIndex) {
     // Find the line in the displayed lines
-    final displayedIndex = _displayedLines.indexWhere((line) => line.index == databaseIndex);
+    final displayedIndex = _displayedEntries.indexWhere(
+        (entry) => entry.contains(databaseIndex));
     
     if (displayedIndex != -1) {
       setState(() {
@@ -1115,11 +1235,11 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
 
   /// Scroll to highlighted item using direct offset calculation (more reliable)
   void _scrollToHighlightedItemDirect() {
-    if (_displayedLines.isEmpty || !_scrollController.hasClients) {
+    if (_displayedEntries.isEmpty || !_scrollController.hasClients) {
       return;
     }
     
-    if (_highlightedIndex < 0 || _highlightedIndex >= _displayedLines.length) {
+    if (_highlightedIndex < 0 || _highlightedIndex >= _displayedEntries.length) {
       return;
     }
     
@@ -1154,9 +1274,15 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
   }
 
   void _openCommentDialogForHighlighted() {
-    if (_displayedLines.isEmpty || _highlightedIndex >= _displayedLines.length) return;
+    final entries = _displayedEntries;
+    if (entries.isEmpty || _highlightedIndex >= entries.length) return;
     
-    final line = _displayedLines[_highlightedIndex];
+    final entry = entries[_highlightedIndex];
+    if (entry.collapsed) {
+      setState(() => _expandedEffectIds.add(entry.group!.firstId));
+      return;
+    }
+    final line = entry.line;
     _showCommentDialog(context, line);
   }
 
@@ -1188,6 +1314,7 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
           final markedLineIndex = _currentMarkedLines.indexWhere((l) => l.index == line.index);
           if (markedLineIndex >= 0) {
             _currentMarkedLines[markedLineIndex].edited = newText;
+            _effectGroupsByLine = null;
           }
           
           // Update in all comments list if it exists
@@ -1324,6 +1451,41 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
         }
       });
     }
+  }
+
+  Future<void> _unmarkEffectGroup(StudioDockEffectGroup group) async {
+    final approved = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: const Text('Unmark entire effect?'),
+        content: Text('This removes review marks, comments and resolved '
+            'flags from all ${group.length} effect frames.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialog, false),
+              child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(dialog, true),
+              child: const Text('Unmark effect')),
+        ],
+      ),
+    );
+    if (approved != true || !mounted) return;
+    final removed = await widget.onGroupUnmarked!(
+        [for (final frame in group.frames) frame.id - 1]);
+    if (!mounted || !removed) return;
+    final ids = group.frames.map((frame) => frame.id).toSet();
+    setState(() {
+      _currentMarkedLines.removeWhere((line) => ids.contains(line.index));
+      widget.allLinesWithComments?.removeWhere((line) => ids.contains(line.index));
+      for (final line in widget.allSubtitleLines ?? <SubtitleLine>[]) {
+        if (ids.contains(line.index)) {
+          line.marked = false;
+          line.comment = null;
+          line.resolved = false;
+        }
+      }
+      _expandedEffectIds.remove(group.firstId);
+      _highlightedIndex = 0;
+    });
   }
   
   // Helper method to format Duration with only 3 millisecond digits

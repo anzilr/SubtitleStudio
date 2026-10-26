@@ -279,6 +279,7 @@ extension _EditLineDialogActions on EditSubtitleScreenState {
           height: MediaQuery.of(context).size.height,
           child: MarkedLinesSheet(
             markedLines: markedLines,
+            allSubtitleLines: _subtitle?.lines,
             initialHighlightLineIndex: initialHighlightIndex, // Pass the current line index to highlight
             onLineSelected: (index) {
               // Navigate to the selected line

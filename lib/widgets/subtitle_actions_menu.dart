@@ -5,6 +5,7 @@ import 'package:subtitle_studio/operations/subtitle_operations.dart';
 import 'package:subtitle_studio/widgets/positioning_buttons_widget.dart';
 import 'package:subtitle_studio/widgets/subtitle_effects_sheet.dart';
 import 'package:subtitle_studio/operations/subtitle_effect_operations.dart';
+import 'package:subtitle_studio/operations/srt_effect_frames.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 
@@ -267,6 +268,15 @@ class SubtitleActionsMenu extends StatelessWidget {
           originalLine: currentLine,
           color: color,
           endDelay: endDelay,
+        );
+      } else if (SrtEffectFrames.supported.contains(effectType)) {
+        final color = (effectConfig['color'] as String).substring(2);
+        final alternate = effectConfig['alternateColor'];
+        effectLines = await SubtitleEffectOperations.generateSrtEffect(
+          originalLine: currentLine, effect: effectType, color: color,
+          alternateColor: alternate is String && alternate.length == 8
+              ? alternate.substring(2) : 'FFFF00',
+          endDelay: (effectConfig['endDelay'] as num?)?.toDouble() ?? 0,
         );
       }
       

@@ -39,6 +39,7 @@ import 'package:subtitle_studio/widgets/subtitle_effects_sheet.dart';
 import 'package:subtitle_studio/widgets/comment_dialog.dart';
 import 'package:subtitle_studio/widgets/import_comments_sheet.dart';
 import 'package:subtitle_studio/operations/subtitle_effect_operations.dart';
+import 'package:subtitle_studio/operations/srt_effect_frames.dart';
 import 'package:subtitle_studio/utils/msone_hotkey_manager.dart' as hotkey;
 import 'msone_submission_flow.dart';
 import 'msone_input_diagnostics.dart';

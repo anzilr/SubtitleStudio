@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:subtitle_studio/database/models/models.dart';
+import 'package:subtitle_studio/operations/srt_effect_frames.dart';
+import 'package:characters/characters.dart';
 import '../utils/time_parser.dart';
 
 class SubtitleEffectsSheet extends StatefulWidget {
@@ -28,6 +30,7 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
   String _selectedEffect = 'karaoke';
   Color _karaokeColor = Colors.yellow;
   Color _typewriterColor = Colors.white;
+  Color _alternateColor = Colors.amber;
   double _endDelay = 0.0; // End delay in seconds (0.0 to 1.0)
   String _karaokeEffectType = 'word'; // 'word' or 'character'
   bool _isProcessing = false;
@@ -297,6 +300,24 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
                       ),
                     ),
                   ),
+                  const SizedBox(height: 12),
+                  Wrap(spacing: 8, runSpacing: 8, children: [
+                    for (final choice in const [
+                      ('wordReveal', 'Word reveal', Icons.subject),
+                      ('movingKaraoke', 'Moving karaoke', Icons.music_note),
+                      ('activeTypewriter', 'Active character', Icons.keyboard_alt),
+                      ('backspace', 'Backspace', Icons.backspace_outlined),
+                      ('lineReveal', 'Line reveal', Icons.segment),
+                      ('colorTransition', 'Color transition', Icons.palette_outlined),
+                    ])
+                      ChoiceChip(
+                        key: ValueKey('srt-effect-${choice.$1}'),
+                        label: Text(choice.$2),
+                        avatar: Icon(choice.$3, size: 16),
+                        selected: _selectedEffect == choice.$1,
+                        onSelected: (_) => setState(() => _selectedEffect = choice.$1),
+                      ),
+                  ]),
                 ],
               ),
 
@@ -305,6 +326,8 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
               // Effect Configuration Section
               if (_selectedEffect == 'karaoke') _buildKaraokeConfig(isDark, onSurfaceColor, mutedColor, borderColor),
               if (_selectedEffect == 'typewriter') _buildTypewriterConfig(isDark, onSurfaceColor, mutedColor, borderColor),
+              if (SrtEffectFrames.supported.contains(_selectedEffect))
+                _buildNewEffectConfig(),
 
               const SizedBox(height: 24),
 
@@ -1279,6 +1302,87 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
     _previewProgress = 0.0;
   }
 
+  Widget _buildNewEffectConfig() {
+    final targetColorNeeded = _selectedEffect == 'activeTypewriter' ||
+        _selectedEffect == 'colorTransition';
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text('SRT effect settings', style: Theme.of(context).textTheme.titleMedium),
+      const SizedBox(height: 8),
+      ListTile(
+        contentPadding: EdgeInsets.zero,
+        title: const Text('Text / highlight color'),
+        subtitle: const Text('Uses standard SRT font color tags'),
+        trailing: CircleAvatar(backgroundColor: _typewriterColor, radius: 14),
+        onTap: _showTypewriterColorPicker,
+      ),
+      if (targetColorNeeded) ...[
+        const Text('Active character / destination color'),
+        const SizedBox(height: 8),
+        Wrap(spacing: 8, children: [
+          for (final color in [Colors.amber, Colors.tealAccent,
+            Colors.redAccent, Colors.blueAccent, Colors.white])
+            ChoiceChip(
+              label: const Text('●'),
+              labelStyle: TextStyle(color: color),
+              selected: _alternateColor == color,
+              tooltip: 'Select ${color.toARGB32().toRadixString(16)}',
+              onSelected: (_) => setState(() => _alternateColor = color),
+            ),
+        ]),
+      ],
+      const SizedBox(height: 8),
+      Text('End hold: ${_endDelay.toStringAsFixed(1)} seconds'),
+      Slider(
+        value: _endDelay,
+        min: 0, max: 1, divisions: 10,
+        onChanged: (value) => setState(() {
+          _endDelay = value;
+          _recomputePreviewDurations();
+        }),
+      ),
+      Text('Each visible frame is a real, timed SRT cue. '
+          'Complex characters are never split.',
+          style: Theme.of(context).textTheme.bodySmall),
+    ]);
+  }
+
+  Widget _srtFramePreview(String text) {
+    final frames = SrtEffectFrames.build(
+      effect: _selectedEffect, text: text,
+      color: _typewriterColor.toARGB32().toRadixString(16).padLeft(8, '0')
+          .substring(2),
+      alternateColor: _alternateColor.toARGB32().toRadixString(16)
+          .padLeft(8, '0').substring(2),
+      availableMilliseconds: _animDuration.inMilliseconds,
+    );
+    if (frames.isEmpty) return const Text('Not enough text or time for this effect');
+    final index = (_previewProgress * frames.length).floor()
+        .clamp(0, frames.length - 1).toInt();
+    final frameText = frames[index];
+    final tag = RegExp(r'<font color="#([a-fA-F0-9]{6})">|</font>',
+        caseSensitive: false);
+    final spans = <InlineSpan>[];
+    var current = 0;
+    Color? activeColor;
+    for (final match in tag.allMatches(frameText)) {
+      if (match.start > current) {
+        spans.add(TextSpan(text: frameText.substring(current, match.start),
+            style: TextStyle(color: activeColor)));
+      }
+      final rgb = match.group(1);
+      activeColor = rgb == null ? null : Color(int.parse('FF$rgb', radix: 16));
+      current = match.end;
+    }
+    if (current < frameText.length) {
+      spans.add(TextSpan(text: frameText.substring(current),
+          style: TextStyle(color: activeColor)));
+    }
+    return RichText(text: TextSpan(
+      style: Theme.of(context).textTheme.titleMedium,
+      children: spans,
+    ));
+  }
+
   Widget _buildPreviewCard() {
     final text = _textController.text.isNotEmpty ? _textController.text : (widget.subtitleLines?.first.original ?? 'Sample text for preview');
     return Container(
@@ -1311,7 +1415,10 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
               color: Theme.of(context).brightness == Brightness.dark ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.03) : Theme.of(context).colorScheme.surfaceContainerLow,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: _selectedEffect == 'karaoke' ? _karaokePreview(text) : _typewriterPreview(text),
+            child: SrtEffectFrames.supported.contains(_selectedEffect)
+                ? _srtFramePreview(text)
+                : _selectedEffect == 'karaoke'
+                    ? _karaokePreview(text) : _typewriterPreview(text),
           ),
 
           const SizedBox(height: 12),
@@ -1362,67 +1469,44 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
   }
 
   Widget _karaokePreview(String text) {
-    // split words and compute current index
-    final words = text.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
-    final totalWords = words.isNotEmpty ? words.length : 1;
-    final revealFraction = _previewController.value.clamp(0.0, 1.0);
-
-    // Word mode: color entire word when its turn arrives.
+    // Word endpoints and character endpoints are UTF-16 offsets at complete
+    // boundaries. Spaces and newlines remain exactly as authored.
+    final endpoints = <int>[];
     if (_karaokeEffectType == 'word') {
-      final revealCount = (revealFraction * totalWords).floor();
-      return Wrap(
-        children: List.generate(words.length, (i) {
-          final w = words[i];
-          final isHighlighted = i < revealCount || (i == revealCount && (revealFraction * totalWords - revealCount) > 0.999);
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
-            child: Text(
-              w + (i < words.length - 1 ? ' ' : ''),
-              style: TextStyle(
-                color: isHighlighted ? _karaokeColor : Theme.of(context).colorScheme.onSurface,
-                fontWeight: isHighlighted ? FontWeight.bold : FontWeight.normal,
-              ),
-            ),
-          );
-        }),
-      );
-    }
-
-    // Character mode: reveal characters progressively across words (preserve spaces)
-    final totalChars = words.fold<int>(0, (s, w) => s + w.length);
-    final charsToHighlight = (revealFraction * totalChars).floor();
-    int remaining = charsToHighlight;
-    List<InlineSpan> spans = [];
-    for (int wi = 0; wi < words.length; wi++) {
-      final w = words[wi];
-      final take = remaining > 0 ? remaining.clamp(0, w.length) : 0;
-      if (take > 0) {
-        spans.add(TextSpan(text: w.substring(0, take), style: TextStyle(color: _karaokeColor, fontWeight: FontWeight.w600)));
+      endpoints.addAll(RegExp(r'\S+', unicode: true)
+          .allMatches(text).map((match) => match.end));
+    } else {
+      var offset = 0;
+      for (final grapheme in text.characters) {
+        offset += grapheme.length;
+        endpoints.add(offset);
       }
-      if (take < w.length) {
-        spans.add(TextSpan(text: w.substring(take), style: TextStyle(color: Theme.of(context).colorScheme.onSurface)));
-      }
-      // add space between words
-      if (wi < words.length - 1) spans.add(TextSpan(text: ' ', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)));
-      remaining -= take;
     }
-
+    final count = (_previewProgress * endpoints.length).floor()
+        .clamp(0, endpoints.length).toInt();
+    final boundary = count == 0 ? 0 : endpoints[count - 1];
     return RichText(
-      text: TextSpan(style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 16), children: spans),
+      text: TextSpan(
+        style: Theme.of(context).textTheme.titleMedium,
+        children: [
+          TextSpan(text: text.substring(0, boundary),
+              style: TextStyle(color: _karaokeColor)),
+          TextSpan(text: text.substring(boundary)),
+        ],
+      ),
     );
   }
 
   Widget _typewriterPreview(String text) {
-    final totalChars = text.length > 0 ? text.length : 1;
-    final revealed = (_previewController.value * totalChars).floor();
-    final visible = text.substring(0, revealed.clamp(0, text.length));
-    final remaining = text.substring(revealed.clamp(0, text.length));
+    final clusters = text.characters.toList();
+    final revealed = (_previewProgress * clusters.length).floor()
+        .clamp(0, clusters.length).toInt();
+    final visible = clusters.take(revealed).join();
     return RichText(
       text: TextSpan(
         style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 16),
         children: [
           TextSpan(text: visible, style: TextStyle(color: _typewriterColor)),
-          TextSpan(text: remaining, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))),
         ],
       ),
     );
@@ -1453,6 +1537,13 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
     } else if (_selectedEffect == 'typewriter') {
       effectConfig = {
         'color': _typewriterColor.toARGB32().toRadixString(16).padLeft(8, '0'),
+        'endDelay': _endDelay,
+      };
+    } else if (SrtEffectFrames.supported.contains(_selectedEffect)) {
+      effectConfig = {
+        'color': _typewriterColor.toARGB32().toRadixString(16).padLeft(8, '0'),
+        'alternateColor': _alternateColor.toARGB32()
+            .toRadixString(16).padLeft(8, '0'),
         'endDelay': _endDelay,
       };
     }

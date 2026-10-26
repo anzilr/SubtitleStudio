@@ -1146,20 +1146,40 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
 
   void _toggleMarkedSelection() {
     if (widget.isLiveSession || _selectedIds.isEmpty) return;
+    final targets = _effectReviewTargets(_selectedIds);
+    final allMarked = _cues.where((cue) => targets.contains(cue.id))
+        .every((cue) => cue.marked);
     setState(() {
       for (var i = 0; i < _cues.length; i++) {
         final cue = _cues[i];
-        if (_selectedIds.contains(cue.id)) {
-          _cues[i] = cue.copyWith(marked: !cue.marked);
+        if (targets.contains(cue.id)) {
+          _cues[i] = cue.copyWith(marked: !allMarked);
         }
       }
     });
   }
 
+  List<int> _effectReviewTargets(Iterable<int> cueNumbers) {
+    final selected = cueNumbers.toSet();
+    if (_collapseEffects && _query.trim().isEmpty &&
+        _reviewFilter == _StudioDockReviewFilter.all) {
+      for (final group in _effectGroups) {
+        if (!_expandedEffectGroupIds.contains(group.firstId) &&
+            group.frames.any((frame) => selected.contains(frame.id))) {
+          selected.addAll(StudioDockEffectMarks.targets(group.firstId,
+              collapsedGroup: group));
+        }
+      }
+    }
+    // Preserve source-cue order for stable history, selection and undo.
+    return [for (final cue in _cues) if (selected.contains(cue.id)) cue.id];
+  }
+
   Future<void> _toggleReviewSelection() async {
-    final ids = _selectedIds.isNotEmpty
+    final selectedIds = _selectedIds.isNotEmpty
         ? _selectedIds.toList()
         : (_selectedId > 0 ? [_selectedId] : <int>[]);
+    final ids = _effectReviewTargets(selectedIds);
     if (ids.isEmpty) return;
     final chosen = _cues.where((cue) => ids.contains(cue.id));
     await _applyReviewSelection(ids, action: chosen.every((cue) => cue.marked)
@@ -1168,6 +1188,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
 
   Future<void> _applyReviewSelection(
       List<int> cueNumbers, {required StudioDockReviewAction action}) async {
+    cueNumbers = _effectReviewTargets(cueNumbers);
     final apply = widget.onApplyBulkReview;
     if (apply == null || _changingStructure || _savingDraft ||
         cueNumbers.isEmpty) return;
@@ -5149,7 +5170,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                             ? () => _toggleEffectGroup(group!.firstId)
                             : () => _selectFromPointer(cue.id),
                         onSecondaryTapDown: row.collapsed
-                            ? (_) => _toggleEffectGroup(group!.firstId)
+                            ? (details) => unawaited(_showEffectGroupContextMenu(
+                                group!, details.globalPosition))
                             : (details) => _showCueContextMenu(
                                 cue, details.globalPosition),
                         child: Container(
@@ -5256,6 +5278,38 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   Future<bool> _prepareContextBatch(int cueId) async {
     if (_selectedIds.contains(cueId)) return true;
     return _targetCueFromContext(cueId);
+  }
+
+  Future<void> _showEffectGroupContextMenu(
+      StudioDockEffectGroup group, Offset position) async {
+    if (widget.onApplyBulkReview == null) {
+      _toggleEffectGroup(group.firstId);
+      return;
+    }
+    final renderObject = Overlay.of(context).context.findRenderObject();
+    if (renderObject is! RenderBox) return;
+    final action = await showMenu<StudioDockReviewAction>(
+      context: context,
+      position: RelativeRect.fromRect(
+        Rect.fromLTWH(position.dx, position.dy, 1, 1),
+        Offset.zero & renderObject.size,
+      ),
+      items: [
+        if (widget.onApplyBulkReview != null) ...const [
+          PopupMenuItem(value: StudioDockReviewAction.mark,
+              child: Text('Mark entire effect')),
+          PopupMenuItem(value: StudioDockReviewAction.unmark,
+              child: Text('Unmark entire effect')),
+          PopupMenuItem(value: StudioDockReviewAction.resolve,
+              child: Text('Resolve entire effect')),
+          PopupMenuItem(value: StudioDockReviewAction.reopen,
+              child: Text('Reopen entire effect')),
+        ],
+      ],
+    );
+    if (action == null || !mounted) return;
+    await _applyReviewSelection(
+      [for (final frame in group.frames) frame.id], action: action);
   }
 
   Future<void> _showCueContextMenu(
@@ -5539,7 +5593,10 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       const SizedBox(width: 14),
       Icon(switch (group.kind) {
           StudioDockEffectKind.karaoke => Icons.music_note_outlined,
+          StudioDockEffectKind.movingKaraoke => Icons.music_note_rounded,
           StudioDockEffectKind.typewriter => Icons.keyboard_outlined,
+          StudioDockEffectKind.activeTypewriter => Icons.keyboard_alt_outlined,
+          StudioDockEffectKind.wordReveal => Icons.text_fields,
           StudioDockEffectKind.lineReveal => Icons.view_list_outlined,
           StudioDockEffectKind.reveal => Icons.visibility_outlined,
           StudioDockEffectKind.erase => Icons.backspace_outlined,
@@ -5551,6 +5608,35 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       Text('${group.kind.label} · ${group.length} frames',
         style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
           color: _accent)),
+      const SizedBox(width: 6),
+      Builder(builder: (context) {
+        final status = StudioDockEffectMarks.state(group, {
+          for (final cue in _cues) if (cue.marked) cue.id,
+        });
+        final marked = status == StudioDockEffectMarkState.all;
+        return IconButton(
+          key: ValueKey('studio-effect-mark-${group.firstId}'),
+          tooltip: switch (status) {
+            StudioDockEffectMarkState.all => 'Unmark entire effect',
+            StudioDockEffectMarkState.partial =>
+              'Some frames marked · mark entire effect',
+            StudioDockEffectMarkState.none => 'Mark entire effect',
+          },
+          icon: Icon(switch (status) {
+            StudioDockEffectMarkState.all => Icons.bookmark_added,
+            StudioDockEffectMarkState.partial => Icons.bookmark_border,
+            StudioDockEffectMarkState.none => Icons.bookmark_add_outlined,
+          }, size: 18, color: status == StudioDockEffectMarkState.none
+              ? _muted : Theme.of(context).colorScheme.error),
+          constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+          padding: EdgeInsets.zero,
+          onPressed: widget.onApplyBulkReview == null ? null : () =>
+              unawaited(_applyReviewSelection(
+                [for (final frame in group.frames) frame.id],
+                action: marked ? StudioDockReviewAction.unmark
+                    : StudioDockReviewAction.mark)),
+        );
+      }),
       const SizedBox(width: 12),
       Expanded(child: Text(group.previewText, maxLines: 1,
         overflow: TextOverflow.ellipsis,

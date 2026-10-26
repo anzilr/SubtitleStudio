@@ -27,6 +27,7 @@ import 'package:subtitle_studio/widgets/video_player_widget.dart';
 import 'package:subtitle_studio/widgets/checkpoint_history_panel.dart';
 import 'package:subtitle_studio/widgets/marked_lines_sheet.dart';
 import 'package:subtitle_studio/operations/subtitle_effect_operations.dart';
+import 'package:subtitle_studio/operations/srt_effect_frames.dart';
 import 'package:subtitle_studio/services/subtitle_extended_encoding_service.dart';
 
 import 'studio_dock_workspace.dart';
@@ -1661,6 +1662,7 @@ class _StudioDockSessionViewState
           child: MarkedLinesSheet(
             markedLines: marked,
             allLinesWithComments: withComments,
+            allSubtitleLines: collection.lines,
             initialHighlightLineIndex: preferredCue > 0 ? preferredCue : null,
             onLineSelected: (index) {
               Navigator.pop(dialog);
@@ -1672,6 +1674,8 @@ class _StudioDockSessionViewState
             onLineUnmarked: !widget.enableEditing ? null :
                 (index) => unawaited(_updateMarkedSheetReview(index,
                     comment: null, changeComment: true, marked: false)),
+            onGroupUnmarked: !widget.enableEditing ? null :
+                _unmarkEffectFromMarkedSheet,
             onResolvedUpdated: !widget.enableEditing ? null :
                 (index, resolved) => unawaited(_updateMarkedSheetReview(index,
                     resolved: resolved)),
@@ -1681,6 +1685,17 @@ class _StudioDockSessionViewState
         ),
       ),
     );
+  }
+
+  Future<bool> _unmarkEffectFromMarkedSheet(
+      List<int> zeroBasedIndices) async {
+    if (zeroBasedIndices.isEmpty) return false;
+    final indices = [for (final index in zeroBasedIndices) index + 1];
+    final update = await _applyBulkReview(indices,
+        StudioDockReviewAction.unmark, indices.first);
+    if (update == null || !mounted) return false;
+    _dockKey.currentState?.acceptExternalCueUpdate(update);
+    return true;
   }
 
   Future<void> _updateMarkedSheetText(int zeroBasedIndex, String text) async {
@@ -1740,6 +1755,15 @@ class _StudioDockSessionViewState
           generated = await SubtitleEffectOperations.generateTypewriterEffect(
             originalLine: source,
             color: color,
+            endDelay: delayValue.toDouble(),
+          );
+        case final String effect when SrtEffectFrames.supported.contains(effect):
+          final alternate = config['alternateColor'];
+          generated = await SubtitleEffectOperations.generateSrtEffect(
+            originalLine: source, effect: effect, color: color,
+            alternateColor: alternate is String &&
+                RegExp(r'^[a-fA-F0-9]{8}$').hasMatch(alternate)
+                    ? alternate.substring(2) : 'FFFF00',
             endDelay: delayValue.toDouble(),
           );
         default:

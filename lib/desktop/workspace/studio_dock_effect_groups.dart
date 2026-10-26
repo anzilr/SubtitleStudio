@@ -29,7 +29,10 @@ class StudioDockEffectFrame {
 /// or SRT-compatible inline formatting. ASS/SSA scripts are not interpreted.
 enum StudioDockEffectKind {
   karaoke,
+  movingKaraoke,
   typewriter,
+  activeTypewriter,
+  wordReveal,
   lineReveal,
   reveal,
   erase,
@@ -38,11 +41,14 @@ enum StudioDockEffectKind {
 
   String get label => switch (this) {
     StudioDockEffectKind.karaoke => 'Karaoke',
+    StudioDockEffectKind.movingKaraoke => 'Moving karaoke',
     StudioDockEffectKind.typewriter => 'Typewriter',
+    StudioDockEffectKind.activeTypewriter => 'Active-character typewriter',
+    StudioDockEffectKind.wordReveal => 'Word reveal',
     StudioDockEffectKind.lineReveal => 'Line reveal',
     StudioDockEffectKind.reveal => 'Text reveal',
-    StudioDockEffectKind.erase => 'Text erase',
-    StudioDockEffectKind.colorAnimation => 'Color animation',
+    StudioDockEffectKind.erase => 'Backspace / erase',
+    StudioDockEffectKind.colorAnimation => 'Color transition',
     StudioDockEffectKind.blink => 'Blink',
   };
 }
@@ -69,6 +75,29 @@ class StudioDockEffectGroup {
 
   bool contains(int id) => id >= firstId && id <= lastId &&
       frames.any((frame) => frame.id == id);
+}
+
+/// Review marks remain attached to real SRT cues, never to a synthetic
+/// collapsed row. This projection is shared by the grid and review sheet.
+enum StudioDockEffectMarkState { none, partial, all }
+
+abstract final class StudioDockEffectMarks {
+  static StudioDockEffectMarkState state(
+      StudioDockEffectGroup group, Set<int> markedCueIds) {
+    final count = group.frames
+        .where((frame) => markedCueIds.contains(frame.id)).length;
+    if (count == 0) return StudioDockEffectMarkState.none;
+    return count == group.length
+        ? StudioDockEffectMarkState.all
+        : StudioDockEffectMarkState.partial;
+  }
+
+  /// A collapsed row targets every persisted cue in its detected effect.
+  /// Expanded rows pass no group here and target their one individual cue.
+  static List<int> targets(int cueId, {StudioDockEffectGroup? collapsedGroup}) =>
+      collapsedGroup == null
+          ? [cueId]
+          : [for (final frame in collapsedGroup.frames) frame.id];
 }
 
 /// Conservative pattern recognition for frame-by-frame SRT effects.
@@ -99,6 +128,16 @@ class StudioDockEffectGroups {
     // line reveals contain successive line transitions instead.
     for (var i = 0; i < steps.length; i++) {
       if (rawSteps[i] == StudioDockEffectKind.lineReveal &&
+          ((i > 0 && rawSteps[i - 1] == StudioDockEffectKind.typewriter) ||
+           (i + 1 < rawSteps.length &&
+               rawSteps[i + 1] == StudioDockEffectKind.typewriter))) {
+        steps[i] = StudioDockEffectKind.typewriter;
+      }
+    }
+    // A sampled typewriter frame may happen to finish an entire word; only
+    // consistent word-by-word progression merits its own classification.
+    for (var i = 0; i < steps.length; i++) {
+      if (rawSteps[i] == StudioDockEffectKind.wordReveal &&
           ((i > 0 && rawSteps[i - 1] == StudioDockEffectKind.typewriter) ||
            (i + 1 < rawSteps.length &&
                rawSteps[i + 1] == StudioDockEffectKind.typewriter))) {
@@ -136,6 +175,7 @@ class StudioDockEffectGroups {
           first.fullColor != null && first.fullColor == second.fullColor;
       final minimum = switch (kind) {
         StudioDockEffectKind.karaoke => 2,
+        StudioDockEffectKind.movingKaraoke => 2,
         StudioDockEffectKind.colorAnimation => 3,
         StudioDockEffectKind.blink => 4,
         _ => formattedReveal ? 2 : 3,
@@ -172,7 +212,8 @@ class StudioDockEffectGroups {
           aDuration <= _maxStyledFrameMs &&
           bDuration <= _maxStyledFrameMs &&
           y.start >= x.start && y.end > x.end) {
-        return StudioDockEffectKind.karaoke;
+        return y.start > x.start ? StudioDockEffectKind.movingKaraoke
+            : StudioDockEffectKind.karaoke;
       }
       // Per-cue color fade/pulse/flash. The entire text changes color but
       // not content. We require at least three adjacent frames later.
@@ -184,8 +225,21 @@ class StudioDockEffectGroups {
       return null;
     }
 
+    // A valid final SRT cue containing one space produces the empty screen
+    // after a Backspace effect; keep that final frame in the folded group.
+    if (b.plainText.trim().isEmpty && a.plainText.trim().isNotEmpty &&
+        a.fullColor != null && a.fullColor == b.fullColor &&
+        aDuration <= _maxStyledFrameMs && bDuration <= _maxStyledFrameMs) {
+      return StudioDockEffectKind.erase;
+    }
+
     // Plain reveals/erases may have no markup at all in imported SRT files.
     // Consistently colored whole-text effects are supported as well.
+    if (a.activeCharacter && b.activeCharacter &&
+        a.plainText.characters.length < b.plainText.characters.length &&
+        b.plainText.startsWith(a.plainText)) {
+      return StudioDockEffectKind.activeTypewriter;
+    }
     if (a.fullColor != b.fullColor ||
         (a.highlight != null && a.fullColor == null) ||
         (b.highlight != null && b.fullColor == null) ||
@@ -204,7 +258,14 @@ class StudioDockEffectGroups {
           a.plainText.trim().isNotEmpty) {
         return StudioDockEffectKind.lineReveal;
       }
-      if (_startsWith(after, before)) return StudioDockEffectKind.typewriter;
+      if (_startsWith(after, before)) {
+        final added = b.plainText.substring(a.plainText.length);
+        if (RegExp(r'^\s+\S+$', unicode: true).hasMatch(added) &&
+            !a.plainText.endsWith(' ')) {
+          return StudioDockEffectKind.wordReveal;
+        }
+        return StudioDockEffectKind.typewriter;
+      }
       if (_endsWith(after, before)) return StudioDockEffectKind.reveal;
     } else if (before.length > after.length &&
         (_startsWith(before, after) || _endsWith(before, after))) {
@@ -268,6 +329,7 @@ class _SrtFrame {
     required this.endMs,
     required this.plainText,
     required this.highlight,
+    required this.activeCharacter,
   });
 
   final StudioDockEffectFrame cue;
@@ -275,6 +337,7 @@ class _SrtFrame {
   final int endMs;
   final String plainText;
   final _ColorRange? highlight;
+  final bool activeCharacter;
 
   String? get fullColor => highlight?.start == 0 &&
       highlight?.end == plainText.length ? highlight?.color : null;
@@ -353,6 +416,15 @@ class _SrtFrame {
       endMs: endMs,
       plainText: plain.toString(),
       highlight: ranges.length == 1 ? ranges.single : null,
+      activeCharacter: (ranges.length == 1 &&
+              plain.toString().characters.length == 1 &&
+              ranges.single.start == 0 && ranges.single.end == plain.length) ||
+          (ranges.length == 2 && ranges.first.start == 0 &&
+              ranges.first.end == ranges.last.start &&
+              ranges.last.end == plain.length &&
+              plain.toString().characters.isNotEmpty &&
+              ranges.last.end - ranges.last.start ==
+                  plain.toString().characters.last.length),
     );
   }
 

@@ -148,6 +148,7 @@ extension _EditDialogActions on _EditScreenState {
           child: MarkedLinesSheet(
             markedLines: markedLines,
             allLinesWithComments: allLinesWithComments,
+            allSubtitleLines: subtitleLines,
             onLineSelected: (index) async {
               // Close the modal first using the modal's context
               Navigator.of(modalContext).pop();
@@ -268,6 +269,7 @@ extension _EditDialogActions on _EditScreenState {
           builder: (_, controller) => MarkedLinesSheet(
             markedLines: markedLines,
             allLinesWithComments: allLinesWithComments,
+            allSubtitleLines: subtitleLines,
             initialHighlightLineIndex: databaseIndex, // Pass the database index to highlight
             onLineSelected: (index) {
               Navigator.of(modalContext).pop();

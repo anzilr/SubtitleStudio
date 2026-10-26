@@ -103,7 +103,7 @@ void main() {
             original: source),
       ]);
       expect(groups, hasLength(1));
-      expect(groups.single.kind, StudioDockEffectKind.karaoke);
+      expect(groups.single.kind, StudioDockEffectKind.movingKaraoke);
       expect(groups.single.previewText, source);
     });
 

@@ -3,6 +3,8 @@ part of '../../project_settings_sheet.dart';
 extension _ProjectSettingsMarkedActions on _ProjectSettingsSheetState {
   void _showMarkedLines() async {
     // Get both marked lines and all lines with comments
+    final collection = await ref.read(subtitleRepositoryProvider)
+        .fetchSubtitleCollection(widget.session.subtitleCollectionId);
     final allLinesWithComments = await ref
         .read(subtitleRepositoryProvider)
         .getLinesWithComments(widget.session.subtitleCollectionId);
@@ -20,6 +22,7 @@ extension _ProjectSettingsMarkedActions on _ProjectSettingsSheetState {
         child: MarkedLinesSheet(
           markedLines: _markedLines,
           allLinesWithComments: allLinesWithComments,
+          allSubtitleLines: collection?.lines,
           onLineSelected: (index) {
             // This could navigate to the specific line in the editor
             Navigator.pop(context); // Close project settings
