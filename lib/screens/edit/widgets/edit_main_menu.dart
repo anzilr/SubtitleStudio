@@ -145,6 +145,7 @@ List<PopupMenuEntry<String>> _timelineItems({
       value: 'project_settings',
       child: StudioMenuItemContent(
         icon: Icons.settings,
+        assetIcon: 'assets/project_settings.svg',
         title: 'Project Settings',
       ),
     ),

@@ -15,6 +15,7 @@ import 'package:subtitle_studio/widgets/dictionary_search_widget.dart';
 import 'package:subtitle_studio/widgets/olam_dictionary_widget.dart';
 import 'package:subtitle_studio/widgets/urban_dictionary_widget.dart';
 import 'package:subtitle_studio/widgets/subtitle_effects_sheet.dart';
+import 'package:subtitle_studio/widgets/studio_asset_icon.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/services/subtitle_extended_encoding_service.dart';
 import 'package:subtitle_studio/services/subtitle_text_codec.dart';
@@ -2833,7 +2834,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             if (widget.onOpenProjectSettings != null)
               IconButton(
                 key: const ValueKey('studio-empty-project-settings'),
-                icon: const Icon(Icons.settings_applications_outlined),
+                icon: const StudioAssetIcon(StudioAssetIcons.projectSettings),
                 tooltip: 'Project Settings',
                 onPressed: _openingProjectSettings ? null :
                     () => unawaited(_openProjectSettingsSafely()),
@@ -3040,7 +3041,11 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                   value: _StudioDockFileMenuAction.projectSettings,
                   child: Builder(builder: (popupContext) {
                     _projectSettingsMenuRoute = ModalRoute.of(popupContext);
-                    return const Text('Project Settings');
+                    return const Row(mainAxisSize: MainAxisSize.min, children: [
+                      StudioAssetIcon(StudioAssetIcons.projectSettings, size: 19),
+                      SizedBox(width: 9),
+                      Text('Project Settings'),
+                    ]);
                   }),
                 ),
               ],
@@ -3150,13 +3155,21 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               enabled: _cues.isNotEmpty && !_savingDraft,
               child: Builder(builder: (popupContext) {
                 _dictionaryMenuRoute = ModalRoute.of(popupContext);
-                return const Text('Olam Dictionary (Alt+O)…');
+                return const Row(mainAxisSize: MainAxisSize.min, children: [
+                  StudioAssetIcon(StudioAssetIcons.olam, size: 19),
+                  SizedBox(width: 9),
+                  Text('Olam Dictionary (Alt+O)…'),
+                ]);
               })),
             PopupMenuItem(height: 34, value: _StudioDockMenuAction.urbanDictionary,
               enabled: _cues.isNotEmpty && !_savingDraft,
               child: Builder(builder: (popupContext) {
                 _dictionaryMenuRoute = ModalRoute.of(popupContext);
-                return const Text('Urban Dictionary (Alt+U)…');
+                return const Row(mainAxisSize: MainAxisSize.min, children: [
+                  StudioAssetIcon(StudioAssetIcons.urban, size: 19),
+                  SizedBox(width: 9),
+                  Text('Urban Dictionary (Alt+U)…'),
+                ]);
               })),
           ],
           const PopupMenuItem(height: 34, value: _StudioDockMenuAction.showTools,
@@ -4060,13 +4073,12 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           widget.onApplyCueText == null ? null :
               () => unawaited(_openDictionary(HotkeyAction.msoneDictionary))),
         _railAction('studio-rail-olam-dictionary',
-          SvgPicture.asset('assets/olam_logo.svg', width: 32, height: 20,
-              colorFilter: ColorFilter.mode(_muted, BlendMode.srcIn)),
+          StudioAssetIcon(StudioAssetIcons.olam, size: 23, color: _muted),
           'Olam Dictionary (Alt+O)',
           widget.onApplyCueText == null ? null :
               () => unawaited(_openDictionary(HotkeyAction.olamDictionary))),
         _railAction('studio-rail-urban-dictionary',
-          Icon(Icons.forum_outlined, size: 21, color: _muted),
+          StudioAssetIcon(StudioAssetIcons.urban, size: 23, color: _muted),
           'Urban Dictionary (Alt+U)',
           widget.onApplyCueText == null ? null :
               () => unawaited(_openDictionary(HotkeyAction.urbanDictionary))),
@@ -4081,7 +4093,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                 () => unawaited(_submitMsoneSafely())),
         if (widget.onOpenProjectSettings != null)
           _railAction('studio-rail-project-settings',
-            Icon(Icons.folder_shared_outlined, size: 21, color: _muted),
+            StudioAssetIcon(StudioAssetIcons.projectSettings,
+                size: 23, color: _muted),
             'Project settings', _openingProjectSettings ? null :
                 () => unawaited(_openProjectSettingsSafely())),
       ]))),
@@ -5606,6 +5619,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           StudioDockEffectKind.erase => Icons.backspace_outlined,
           StudioDockEffectKind.colorAnimation => Icons.palette_outlined,
           StudioDockEffectKind.blink => Icons.flash_on_outlined,
+          StudioDockEffectKind.rainbow => Icons.gradient_outlined,
+          StudioDockEffectKind.scrambleReveal => Icons.shuffle_rounded,
         },
         color: _accent, size: 16),
       const SizedBox(width: 5),

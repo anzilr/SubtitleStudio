@@ -9,7 +9,19 @@ abstract final class SrtEffectFrames {
   static const supported = <String>{
     'wordReveal', 'movingKaraoke', 'activeTypewriter',
     'backspace', 'lineReveal', 'colorTransition',
+    'blinkFlash', 'rainbowText', 'scrambleReveal',
   };
+
+  static const rainbowColors = <String>[
+    'FF3B30', 'FF9500', 'FFD60A', '34C759',
+    '00C7BE', '007AFF', 'AF52DE',
+  ];
+
+  /// Unrevealed characters cycle through symbols, never through parts of
+  /// Unicode graphemes. Imported SRT can also be recognized from this pattern.
+  static const scrambleSymbols = <String>[
+    '◈', '◇', '◆', '◉', '◌', '▣', '◍', '•',
+  ];
 
   static List<String> build({
     required String effect,
@@ -24,10 +36,23 @@ abstract final class SrtEffectFrames {
     final glyphs = clean.characters.toList(growable: false);
     final words = RegExp(r'\S+', unicode: true).allMatches(clean).toList();
     final lines = clean.split('\n');
+    if (effect == 'blinkFlash' && availableMilliseconds < 300) return [];
+    if (effect == 'rainbowText' &&
+        (glyphs.length < 2 || availableMilliseconds < 240)) return [];
+    if (effect == 'scrambleReveal' &&
+        (glyphs.length < 3 || availableMilliseconds < 180)) return [];
+    final scramblePalette = scrambleSymbols
+        .where((symbol) => !clean.contains(symbol)).toList(growable: false);
+    if (effect == 'scrambleReveal' && scramblePalette.isEmpty) return [];
+    final blinkLimit = math.min(9, availableMilliseconds ~/ 90);
+    final blinkFrames = blinkLimit.isEven ? blinkLimit - 1 : blinkLimit;
     final steps = switch (effect) {
       'wordReveal' || 'movingKaraoke' => words.length,
       'lineReveal' => lines.length,
       'colorTransition' => 12,
+      'blinkFlash' => math.max(5, blinkFrames),
+      'rainbowText' => 7,
+      'scrambleReveal' => glyphs.where((glyph) => glyph.trim().isNotEmpty).length,
       'backspace' => glyphs.length + 1,
       _ => glyphs.length,
     };
@@ -48,6 +73,10 @@ abstract final class SrtEffectFrames {
         'lineReveal' => _font(lines.take(step).join('\n'), color),
         'colorTransition' => _font(clean, _blend(color, alternateColor,
             count == 1 ? 1 : (frame - 1) / (count - 1))),
+        'blinkFlash' => frame.isOdd ? _font(clean, color) : ' ',
+        'rainbowText' => _rainbow(glyphs, step - 1),
+        'scrambleReveal' => _scramble(glyphs, step, frame, color,
+            scramblePalette),
         _ => clean,
       };
       result.add(content);
@@ -69,6 +98,25 @@ abstract final class SrtEffectFrames {
     if (visible.isEmpty) return '';
     return '${visible.length > 1 ? _font(visible.take(visible.length - 1).join(), color) : ''}'
         '${_font(visible.last, alternateColor)}';
+  }
+
+  static String _rainbow(List<String> glyphs, int phase) =>
+      [for (var i = 0; i < glyphs.length; i++)
+        _font(glyphs[i], rainbowColors[(i + phase) % rainbowColors.length])]
+          .join();
+
+  static String _scramble(List<String> glyphs, int revealed, int frame,
+      String color, List<String> palette) {
+    var meaningful = 0;
+    return _font([
+      for (var i = 0; i < glyphs.length; i++)
+        if (glyphs[i].trim().isEmpty)
+          glyphs[i]
+        else if (++meaningful <= revealed)
+          glyphs[i]
+        else
+          palette[(i * 3 + frame) % palette.length],
+    ].join(), color);
   }
 
   static String _rgb(String raw) {

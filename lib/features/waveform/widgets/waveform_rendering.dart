@@ -216,7 +216,8 @@ extension _WaveformRendering on WaveformWidgetState {
         IconButton(
           key: const ValueKey('waveform-compact-vertical-zoom-out'),
           tooltip: 'Reduce waveform amplitude (vertical scale)',
-          icon: const Icon(Icons.vertical_align_center_rounded, size: 15),
+          icon: const StudioAssetIcon(StudioAssetIcons.amplitudeDecrease,
+              size: 17),
           onPressed: state.verticalZoom > .5
               ? () => ref.read(waveformControllerProvider.notifier)
                   .dispatch(UpdateVerticalZoom(
@@ -230,7 +231,8 @@ extension _WaveformRendering on WaveformWidgetState {
         IconButton(
           key: const ValueKey('waveform-compact-vertical-zoom-in'),
           tooltip: 'Amplify waveform (vertical scale)',
-          icon: const Icon(Icons.height_rounded, size: 15),
+          icon: const StudioAssetIcon(StudioAssetIcons.amplitudeIncrease,
+              size: 17),
           onPressed: state.verticalZoom < 8
               ? () => ref.read(waveformControllerProvider.notifier)
                   .dispatch(UpdateVerticalZoom(
@@ -815,7 +817,8 @@ extension _WaveformRendering on WaveformWidgetState {
                     children: [
                       // Zoom in button (increase amplitude)
                       IconButton(
-                        icon: const Icon(Icons.add, size: 16),
+                        icon: const StudioAssetIcon(StudioAssetIcons.amplitudeIncrease,
+                            size: 19),
                         tooltip: 'Increase Amplitude',
                         onPressed: state.verticalZoom < 3.0
                             ? () {
@@ -834,7 +837,8 @@ extension _WaveformRendering on WaveformWidgetState {
                       const SizedBox(height: 8),
                       // Zoom out button (decrease amplitude)
                       IconButton(
-                        icon: const Icon(Icons.remove, size: 16),
+                        icon: const StudioAssetIcon(StudioAssetIcons.amplitudeDecrease,
+                            size: 19),
                         tooltip: 'Decrease Amplitude',
                         onPressed: state.verticalZoom > 0.5
                             ? () {

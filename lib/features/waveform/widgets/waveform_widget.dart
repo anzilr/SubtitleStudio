@@ -4,6 +4,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:subtitle_studio/widgets/studio_asset_icon.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:subtitle_studio/features/waveform/providers/waveform_controller.dart';
 import 'package:subtitle_studio/features/waveform/state/waveform_state.dart';

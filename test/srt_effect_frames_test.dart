@@ -65,9 +65,114 @@ void main() {
     }
   });
 
+  test('batch 2 effects export timed SRT cues and fold into their own group', () async {
+    const content = 'കാ👩‍👩‍👧‍👦é Hello';
+    const kinds = <String, StudioDockEffectKind>{
+      'blinkFlash': StudioDockEffectKind.blink,
+      'rainbowText': StudioDockEffectKind.rainbow,
+      'scrambleReveal': StudioDockEffectKind.scrambleReveal,
+    };
+    for (final entry in kinds.entries) {
+      final original = source(content);
+      final generated = await SubtitleEffectOperations.generateSrtEffect(
+        originalLine: original,
+        effect: entry.key,
+        color: 'FFFFFF',
+        endDelay: .8,
+      );
+      expect(generated.length, greaterThanOrEqualTo(4), reason: entry.key);
+      expect(generated.first.startTime, original.startTime);
+      expect(generated.last.endTime, original.endTime);
+      expect(generated.every((line) => line.marked), isTrue);
+      for (var i = 0; i < generated.length; i++) {
+        final line = generated[i];
+        expect(line.index, i + 1);
+        expect(parseTimeString(line.endTime).inMilliseconds,
+            greaterThan(parseTimeString(line.startTime).inMilliseconds));
+        if (i > 0) expect(line.startTime, generated[i - 1].endTime);
+      }
+      final groups = StudioDockEffectGroups.detect([
+        for (final line in generated)
+          StudioDockEffectFrame(
+            id: line.index,
+            start: line.startTime,
+            end: line.endTime,
+            original: line.original,
+            edited: line.edited!,
+          ),
+      ]);
+      expect(groups, hasLength(1), reason: entry.key);
+      expect(groups.single.kind, entry.value, reason: entry.key);
+      expect(groups.single.length, generated.length, reason: entry.key);
+      expect(groups.single.previewText, content, reason: entry.key);
+    }
+  });
+
+  test('blink alternates visible and blank timed frames', () {
+    final frames = SrtEffectFrames.build(
+      effect: 'blinkFlash', text: 'WARNING', color: 'FF0000',
+      availableMilliseconds: 1500,
+    );
+    expect(frames.length, isOdd);
+    expect(frames.length, greaterThanOrEqualTo(5));
+    for (var i = 0; i < frames.length; i++) {
+      final visible = frames[i].replaceAll(RegExp(r'<[^>]*>'), '').trim();
+      expect(visible, i.isEven ? 'WARNING' : '');
+    }
+  });
+
+  test('rainbow colors complete graphemes and never changes their text', () {
+    const content = 'കാ👩‍👩‍👧‍👦é';
+    final frames = SrtEffectFrames.build(
+      effect: 'rainbowText', text: content, color: 'FFFFFF',
+      availableMilliseconds: 1500,
+    );
+    expect(frames, hasLength(7));
+    for (final frame in frames) {
+      expect(frame.replaceAll(RegExp(r'<[^>]*>'), ''), content);
+      expect(RegExp(r'<font color=').allMatches(frame).length,
+          content.characters.length);
+    }
+    expect(frames.toSet().length, frames.length);
+  });
+
+  test('scramble varies only unrevealed graphemes, then reveals all', () {
+    const content = 'കാ👩‍👩‍👧‍👦é World';
+    final glyphs = content.characters.toList(growable: false);
+    final frames = SrtEffectFrames.build(
+      effect: 'scrambleReveal', text: content, color: 'FFFFFF',
+      availableMilliseconds: 2400,
+    );
+    expect(frames,
+        hasLength(glyphs.where((glyph) => glyph.trim().isNotEmpty).length));
+    for (var i = 0; i < frames.length; i++) {
+      final visible = frames[i].replaceAll(RegExp(r'<[^>]*>'), '');
+      final chars = visible.characters.toList(growable: false);
+      expect(chars.length, glyphs.length);
+      var revealed = 0;
+      for (var k = 0; k < chars.length; k++) {
+        if (glyphs[k].trim().isEmpty) {
+          expect(chars[k], glyphs[k]);
+        } else if (++revealed <= i + 1) {
+          expect(chars[k], glyphs[k]);
+        } else {
+          expect(SrtEffectFrames.scrambleSymbols, contains(chars[k]));
+        }
+      }
+    }
+    expect(frames.last.replaceAll(RegExp(r'<[^>]*>'), ''), content);
+    expect(frames.first, isNot(frames[1]));
+  });
+
   test('invalid and too-short effects fail closed', () async {
     expect(SrtEffectFrames.build(effect: 'unsupported', text: 'Hello',
         color: 'FFFFFF', availableMilliseconds: 500), isEmpty);
+    expect(SrtEffectFrames.build(effect: 'blinkFlash', text: 'Hi',
+        color: 'FFFFFF', availableMilliseconds: 200), isEmpty);
+    expect(SrtEffectFrames.build(effect: 'rainbowText', text: 'A',
+        color: 'FFFFFF', availableMilliseconds: 2000), isEmpty);
+    expect(SrtEffectFrames.build(effect: 'scrambleReveal', text: 'Hi',
+        color: 'FFFFFF', availableMilliseconds: 2000), isEmpty);
     expect(await SubtitleEffectOperations.generateSrtEffect(
         originalLine: source(''), effect: 'wordReveal', color: 'FFFFFF'),
         isEmpty);

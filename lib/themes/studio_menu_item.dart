@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:subtitle_studio/widgets/studio_asset_icon.dart';
 
 import 'studio_design_tokens.dart';
 
@@ -15,10 +16,12 @@ class StudioMenuItemContent extends StatelessWidget {
     super.key,
     required this.icon,
     required this.title,
+    this.assetIcon,
     this.tone = StudioMenuItemTone.normal,
   });
 
   final IconData icon;
+  final String? assetIcon;
   final String title;
   final StudioMenuItemTone tone;
 
@@ -39,11 +42,10 @@ class StudioMenuItemContent extends StatelessWidget {
             color: tokens.fieldSurface,
             borderRadius: BorderRadius.circular(StudioRadius.input),
           ),
-          child: Icon(
-            icon,
-            color: iconColor,
-            size: StudioSizing.icon,
-          ),
+          child: assetIcon == null
+              ? Icon(icon, color: iconColor, size: StudioSizing.icon)
+              : StudioAssetIcon(assetIcon!, size: StudioSizing.icon,
+                  color: iconColor),
         ),
         const SizedBox(width: StudioSpacing.sm),
         Expanded(

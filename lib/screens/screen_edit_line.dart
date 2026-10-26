@@ -3,6 +3,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:subtitle_studio/widgets/studio_asset_icon.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/themes/studio_cue_field.dart';
 import 'package:subtitle_studio/themes/studio_design_tokens.dart';

@@ -392,12 +392,9 @@ extension _EditLineLayout on EditSubtitleScreenState {
                                                                           ),
                                                                       child: Row(
                                                                         children: [
-                                                                          Icon(
-                                                                            Icons
-                                                                                .book,
-                                                                            color: StudioDesignTokens.of(context).primaryAction, // Purple color for Olam
-                                                                            size:
-                                                                                24,
+                                                                          StudioAssetIcon(
+                                                                            StudioAssetIcons.olam,
+                                                                            color: StudioDesignTokens.of(context).primaryAction,
                                                                           ),
                                                                           const SizedBox(
                                                                             width:
@@ -427,12 +424,9 @@ extension _EditLineLayout on EditSubtitleScreenState {
                                                                         ),
                                                                     child: Row(
                                                                       children: [
-                                                                        Icon(
-                                                                          Icons
-                                                                              .forum,
-                                                                          color: StudioDesignTokens.of(context).primaryAction, // Green color for Urban Dictionary
-                                                                          size:
-                                                                              24,
+                                                                        StudioAssetIcon(
+                                                                          StudioAssetIcons.urban,
+                                                                          color: StudioDesignTokens.of(context).primaryAction,
                                                                         ),
                                                                         const SizedBox(
                                                                           width:

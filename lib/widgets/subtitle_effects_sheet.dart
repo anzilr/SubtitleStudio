@@ -158,168 +158,37 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
 
               const SizedBox(height: 20),
 
-              // Effect Selection Cards
-              Column(
-                children: [
-                  // Karaoke Effect Card
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () => setState(() => _selectedEffect = 'karaoke'),
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: _selectedEffect == 'karaoke' 
-                              ? primaryColor.withValues(alpha: 0.1)
-                              : (isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: _selectedEffect == 'karaoke' 
-                                ? primaryColor.withValues(alpha: 0.3)
-                                : borderColor,
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.yellow,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Icon(
-                                Icons.music_note,
-                                color: onSurfaceColor,
-                                size: 20,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    "Karaoke Effect",
-                                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    "Highlight words as they are spoken",
-                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      color: mutedColor,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            if (_selectedEffect == 'karaoke')
-                              Icon(
-                                Icons.check_circle,
-                                color: primaryColor,
-                                size: 24,
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
+              // Consistent compact choices for all SRT text effects.
+              Text('Choose an effect',
+                style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 10),
+              Wrap(spacing: 8, runSpacing: 8, children: [
+                for (final choice in const [
+                  ('karaoke', 'Karaoke', Icons.music_note),
+                  ('typewriter', 'Typewriter', Icons.keyboard),
+                  ('wordReveal', 'Word reveal', Icons.subject),
+                  ('movingKaraoke', 'Moving karaoke', Icons.music_note),
+                  ('activeTypewriter', 'Active character', Icons.keyboard_alt),
+                  ('backspace', 'Backspace', Icons.backspace_outlined),
+                  ('lineReveal', 'Line reveal', Icons.segment),
+                  ('colorTransition', 'Color transition', Icons.palette_outlined),
+                  ('blinkFlash', 'Blink / Flash', Icons.flash_on_outlined),
+                  ('rainbowText', 'Rainbow text', Icons.gradient_outlined),
+                  ('scrambleReveal', 'Scramble reveal', Icons.shuffle_rounded),
+                ])
+                  ChoiceChip(
+                    key: ValueKey('srt-effect-${choice.$1}'),
+                    label: Text(choice.$2),
+                    avatar: Icon(choice.$3, size: 16),
+                    selected: _selectedEffect == choice.$1,
+                    onSelected: (_) => setState(() {
+                      _selectedEffect = choice.$1;
+                      _previewController.stop();
+                      _previewController.value = 0;
+                      _isPreviewPlaying = false;
+                    }),
                   ),
-
-                  const SizedBox(height: 12),
-
-                  // Typewriter Effect Card
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () => setState(() => _selectedEffect = 'typewriter'),
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: _selectedEffect == 'typewriter' 
-                              ? primaryColor.withValues(alpha: 0.1)
-                              : (isDark ? onSurfaceColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.surfaceContainerLow),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: _selectedEffect == 'typewriter' 
-                                ? primaryColor.withValues(alpha: 0.3)
-                                : borderColor,
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primary,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Icon(
-                                Icons.keyboard,
-                                color: Theme.of(context).colorScheme.onPrimary,
-                                size: 20,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    "Typewriter Effect",
-                                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    "Reveal text character by character",
-                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      color: mutedColor,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            if (_selectedEffect == 'typewriter')
-                              Icon(
-                                Icons.check_circle,
-                                color: primaryColor,
-                                size: 24,
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(spacing: 8, runSpacing: 8, children: [
-                    for (final choice in const [
-                      ('wordReveal', 'Word reveal', Icons.subject),
-                      ('movingKaraoke', 'Moving karaoke', Icons.music_note),
-                      ('activeTypewriter', 'Active character', Icons.keyboard_alt),
-                      ('backspace', 'Backspace', Icons.backspace_outlined),
-                      ('lineReveal', 'Line reveal', Icons.segment),
-                      ('colorTransition', 'Color transition', Icons.palette_outlined),
-                    ])
-                      ChoiceChip(
-                        key: ValueKey('srt-effect-${choice.$1}'),
-                        label: Text(choice.$2),
-                        avatar: Icon(choice.$3, size: 16),
-                        selected: _selectedEffect == choice.$1,
-                        onSelected: (_) => setState(() => _selectedEffect = choice.$1),
-                      ),
-                  ]),
-                ],
-              ),
+              ]),
 
               const SizedBox(height: 24),
 
@@ -1308,7 +1177,10 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text('SRT effect settings', style: Theme.of(context).textTheme.titleMedium),
       const SizedBox(height: 8),
-      ListTile(
+      if (_selectedEffect == 'rainbowText')
+        const Text('Seven bright colors rotate through complete characters. '
+            'The palette is built into this effect.')
+      else ListTile(
         contentPadding: EdgeInsets.zero,
         title: const Text('Text / highlight color'),
         subtitle: const Text('Uses standard SRT font color tags'),
@@ -1341,7 +1213,8 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
         }),
       ),
       Text('Each visible frame is a real, timed SRT cue. '
-          'Complex characters are never split.',
+          'Complex characters are never split. '
+          'Longer effects add subtitle cues to your list.',
           style: Theme.of(context).textTheme.bodySmall),
     ]);
   }

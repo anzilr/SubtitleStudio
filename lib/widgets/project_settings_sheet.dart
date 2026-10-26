@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:subtitle_studio/widgets/studio_asset_icon.dart';
 import 'package:subtitle_studio/themes/studio_design_tokens.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -353,11 +354,8 @@ class _ProjectSettingsSheetState extends ConsumerState<ProjectSettingsSheet> wit
                         color: tokens.primaryAction.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Icon(
-                        Icons.settings,
-                        color: tokens.primaryAction,
-                        size: 28,
-                      ),
+                      child: StudioAssetIcon(StudioAssetIcons.projectSettings,
+                          color: tokens.primaryAction, size: 28),
                     ),
                     const SizedBox(width: 16),
                     Expanded(

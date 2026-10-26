@@ -69,6 +69,11 @@ flutter:
     - assets/movie_off.svg
     - assets/msone.svg
     - assets/olam_logo.svg
+    - assets/olam_dictionary_icon.svg
+    - assets/urban_dictionary_icon.svg
+    - assets/project_settings.svg
+    - assets/vertical_amplitude_zoom_in.svg
+    - assets/vertical_amplitude_zoom_out.svg
     - assets/msone_bg.webp
     - lib/utils/normalization.sed
     - assets/magnet-solid.svg

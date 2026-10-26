@@ -15,6 +15,7 @@
 // Parameters: term, strict, matchCase, limit, page, multiPage
 
 import 'package:flutter/material.dart';
+import 'package:subtitle_studio/widgets/studio_asset_icon.dart';
 import 'package:subtitle_studio/widgets/dictionary_search_action.dart';
 import 'package:flutter/services.dart'; // For Clipboard
 import 'package:dio/dio.dart';
@@ -262,11 +263,8 @@ class _UrbanDictionaryWidgetState extends State<UrbanDictionaryWidget> {
               color: onSurfaceColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
-              Icons.forum,
-              color: onSurfaceColor.withValues(alpha: 0.8),
-              size: 28,
-            ),
+            child: StudioAssetIcon(StudioAssetIcons.urban,
+              color: onSurfaceColor.withValues(alpha: 0.8), size: 28),
           ),
           const SizedBox(width: 16),
           Expanded(

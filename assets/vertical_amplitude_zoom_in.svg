@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" role="img" aria-labelledby="title">
+  <title id="title">Increase waveform amplitude or vertical zoom</title>
+  <g stroke="#263238" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2 12h2l1.9-4.1 2.15 8.2 2.1-11.2 2.05 14.2 1.6-7.1H16"/>
+    <path d="M20 10V3m-2.3 2.3L20 3l2.3 2.3M20 14v7m-2.3-2.3L20 21l2.3-2.3"/>
+  </g>
+</svg>

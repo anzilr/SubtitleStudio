@@ -25,6 +25,7 @@
 import 'dart:io';
 import 'dart:convert'; // For utf8 and latin1 encoding/decoding
 import 'package:flutter/material.dart';
+import 'package:subtitle_studio/widgets/studio_asset_icon.dart';
 import 'package:subtitle_studio/widgets/dictionary_search_action.dart';
 import 'package:subtitle_studio/widgets/dictionary_language_tab_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -704,11 +705,8 @@ class _OlamDictionaryWidgetState extends ConsumerState<OlamDictionaryWidget>
                 color: onSurfaceColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(
-                Icons.book,
-                color: onSurfaceColor.withValues(alpha: 0.8),
-                size: 28,
-              ),
+              child: StudioAssetIcon(StudioAssetIcons.olam,
+                color: onSurfaceColor.withValues(alpha: 0.8), size: 28),
             ),
             const SizedBox(width: 16),
             Expanded(

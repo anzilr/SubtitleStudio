@@ -37,7 +37,9 @@ enum StudioDockEffectKind {
   reveal,
   erase,
   colorAnimation,
-  blink;
+  blink,
+  rainbow,
+  scrambleReveal;
 
   String get label => switch (this) {
     StudioDockEffectKind.karaoke => 'Karaoke',
@@ -50,6 +52,8 @@ enum StudioDockEffectKind {
     StudioDockEffectKind.erase => 'Backspace / erase',
     StudioDockEffectKind.colorAnimation => 'Color transition',
     StudioDockEffectKind.blink => 'Blink',
+    StudioDockEffectKind.rainbow => 'Rainbow text',
+    StudioDockEffectKind.scrambleReveal => 'Scramble reveal',
   };
 }
 
@@ -111,7 +115,8 @@ class StudioDockEffectGroups {
   static const _maxGapMs = 150;
   static const _maxPlainFrameMs = 1200;
   static const _maxStyledFrameMs = 6000;
-  static const _maxColorFrameMs = 1000;
+  // The last exported cue can include up to 1000 ms of intentional end hold.
+  static const _maxColorFrameMs = 1600;
 
   static List<StudioDockEffectGroup> detect(
       List<StudioDockEffectFrame> frames) {
@@ -178,6 +183,8 @@ class StudioDockEffectGroups {
         StudioDockEffectKind.movingKaraoke => 2,
         StudioDockEffectKind.colorAnimation => 3,
         StudioDockEffectKind.blink => 4,
+        StudioDockEffectKind.rainbow => 4,
+        StudioDockEffectKind.scrambleReveal => 3,
         _ => formattedReveal ? 2 : 3,
       };
       if (end - index >= minimum) {
@@ -205,6 +212,23 @@ class StudioDockEffectGroups {
     if (aDuration <= 0 || bDuration <= 0) return null;
 
     if (a.plainText == b.plainText) {
+      // Multi-colored per-grapheme frames with an unchanged visible string.
+      // Equal range boundaries and changed palettes avoid folding unrelated
+      // formatted dialogue into one effect.
+      if (aDuration <= _maxColorFrameMs && bDuration <= _maxColorFrameMs &&
+          a.colorRanges.length >= 2 &&
+          a.colorRanges.length == b.colorRanges.length &&
+          a.colorRanges.first.start == 0 &&
+          a.colorRanges.last.end == a.plainText.length &&
+          b.colorRanges.first.start == 0 &&
+          b.colorRanges.last.end == b.plainText.length &&
+          List.generate(a.colorRanges.length, (i) => i).every((i) =>
+            a.colorRanges[i].start == b.colorRanges[i].start &&
+            a.colorRanges[i].end == b.colorRanges[i].end) &&
+          List.generate(a.colorRanges.length, (i) => i).any((i) =>
+            a.colorRanges[i].color != b.colorRanges[i].color)) {
+        return StudioDockEffectKind.rainbow;
+      }
       // Cumulative highlights and moving word/character karaoke windows.
       final x = a.highlight;
       final y = b.highlight;
@@ -239,6 +263,11 @@ class StudioDockEffectGroups {
         a.plainText.characters.length < b.plainText.characters.length &&
         b.plainText.startsWith(a.plainText)) {
       return StudioDockEffectKind.activeTypewriter;
+    }
+    if (a.fullColor == b.fullColor &&
+        aDuration <= _maxStyledFrameMs && bDuration <= _maxStyledFrameMs &&
+        _isScrambleStep(a.plainText, b.plainText)) {
+      return StudioDockEffectKind.scrambleReveal;
     }
     if (a.fullColor != b.fullColor ||
         (a.highlight != null && a.fullColor == null) ||
@@ -320,6 +349,22 @@ class StudioDockEffectGroups {
     }
     return true;
   }
+
+  static bool _isScrambleStep(String from, String to) {
+    final a = from.characters.toList(growable: false);
+    final b = to.characters.toList(growable: false);
+    if (a.length != b.length || a.length < 3) return false;
+    const placeholders = {'◈', '◇', '◆', '◉', '◌', '▣', '◍', '•'};
+    var resolved = 0;
+    for (var i = 0; i < a.length; i++) {
+      if (placeholders.contains(a[i])) {
+        if (!placeholders.contains(b[i])) resolved++;
+      } else if (a[i] != b[i]) {
+        return false;
+      }
+    }
+    return resolved > 0;
+  }
 }
 
 class _SrtFrame {
@@ -329,6 +374,7 @@ class _SrtFrame {
     required this.endMs,
     required this.plainText,
     required this.highlight,
+    required this.colorRanges,
     required this.activeCharacter,
   });
 
@@ -337,6 +383,7 @@ class _SrtFrame {
   final int endMs;
   final String plainText;
   final _ColorRange? highlight;
+  final List<_ColorRange> colorRanges;
   final bool activeCharacter;
 
   String? get fullColor => highlight?.start == 0 &&
@@ -416,6 +463,7 @@ class _SrtFrame {
       endMs: endMs,
       plainText: plain.toString(),
       highlight: ranges.length == 1 ? ranges.single : null,
+      colorRanges: List.unmodifiable(ranges),
       activeCharacter: (ranges.length == 1 &&
               plain.toString().characters.length == 1 &&
               ranges.single.start == 0 && ranges.single.end == plain.length) ||
