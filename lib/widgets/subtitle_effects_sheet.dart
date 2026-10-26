@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/operations/srt_effect_frames.dart';
-import 'package:characters/characters.dart';
 import '../utils/time_parser.dart';
 
 class SubtitleEffectsSheet extends StatefulWidget {

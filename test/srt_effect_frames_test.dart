@@ -113,7 +113,7 @@ void main() {
       effect: 'blinkFlash', text: 'WARNING', color: 'FF0000',
       availableMilliseconds: 1500,
     );
-    expect(frames.length, isOdd);
+    expect(frames.length.isOdd, isTrue);
     expect(frames.length, greaterThanOrEqualTo(5));
     for (var i = 0; i < frames.length; i++) {
       final visible = frames[i].replaceAll(RegExp(r'<[^>]*>'), '').trim();

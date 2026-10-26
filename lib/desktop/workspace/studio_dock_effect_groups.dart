@@ -417,9 +417,9 @@ class _SrtFrame {
         if (ranges.isNotEmpty && ranges.last.color == activeColor &&
             ranges.last.end == offset) {
           ranges[ranges.length - 1] =
-              _ColorRange(ranges.last.start, offset + text.length, activeColor!);
+              _ColorRange(ranges.last.start, offset + text.length, activeColor);
         } else {
-          ranges.add(_ColorRange(offset, offset + text.length, activeColor!));
+          ranges.add(_ColorRange(offset, offset + text.length, activeColor));
         }
       }
       offset += text.length;

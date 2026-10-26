@@ -212,10 +212,10 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
           StudioDockEffectMarks.state(group, markedIds) ==
               StudioDockEffectMarkState.all &&
           group.frames.every((frame) => visibleIds.contains(frame.id));
-      if (!fullyMarkedAndVisible || (group != null &&
-          _expandedEffectIds.contains(group.firstId))) {
+      if (!fullyMarkedAndVisible ||
+          _expandedEffectIds.contains(group.firstId)) {
         entries.add(_MarkedEffectEntry(line, group: group));
-      } else if (line.index == group!.firstId) {
+      } else if (line.index == group.firstId) {
         entries.add(_MarkedEffectEntry(line, group: group, collapsed: true));
       }
     }
