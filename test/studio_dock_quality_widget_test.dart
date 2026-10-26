@@ -94,6 +94,39 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('custom rules validate and persist across quality dialogs',
+      (tester) async {
+    await launch(tester);
+    await openQuality(tester);
+    await tester.tap(find.byKey(const ValueKey('studio-quality-profile')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Custom').last);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('studio-quality-edit-profile')));
+    await tester.pumpAndSettle();
+    expect(find.text('Custom quality limits'), findsOneWidget);
+    final cps = find.byKey(const ValueKey('quality-custom-reading-speed'));
+    await tester.enterText(cps, '12.5');
+    final save = find.byKey(const ValueKey('quality-custom-save'));
+    await tester.tap(save);
+    await tester.pumpAndSettle();
+    expect(find.text('Custom quality limits'), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('studio-quality-close')));
+    await tester.pumpAndSettle();
+    await openQuality(tester);
+    final dropdown = tester.widget<DropdownButton<SubtitleQualityPreset>>(
+        find.byKey(const ValueKey('studio-quality-profile')));
+    expect(dropdown.value, SubtitleQualityPreset.custom);
+    await tester.tap(find.byKey(const ValueKey('studio-quality-edit-profile')));
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextFormField>(cps).controller!.text, '12.5');
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('safe fix preview requires explicit selection before apply',
       (tester) async {
     final applied = <List<SubtitleQualityFix>>[];

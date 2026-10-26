@@ -133,6 +133,38 @@ void main() {
     expect(relaxed.count(SubtitleQualityIssueType.fastReading), 0);
   });
 
+  test('custom profile round-trip retains each rule', () {
+    const profile = SubtitleQualityProfile(
+      maxCharactersPerSecond: 14.5,
+      maxCharactersPerLine: 38,
+      maxLines: 3,
+      minDurationMs: 800,
+      maxDurationMs: 6200,
+      minGapMs: 130,
+    );
+    final restored = SubtitleQualityProfile.decode(profile.encode());
+    expect(restored.maxCharactersPerSecond, 14.5);
+    expect(restored.maxCharactersPerLine, 38);
+    expect(restored.maxLines, 3);
+    expect(restored.minDurationMs, 800);
+    expect(restored.maxDurationMs, 6200);
+    expect(restored.minGapMs, 130);
+    expect(SubtitleQualityPreset.custom.label, 'Custom');
+  });
+
+  test('invalid saved custom profiles safely restore general limits', () {
+    for (final json in [
+      'garbage',
+      '[]',
+      '{"maxCharactersPerSecond":-2}',
+      '{"maxCharactersPerSecond":20,"maxCharactersPerLine":0,'
+          '"maxLines":2,"minDurationMs":0,"maxDurationMs":7000,'
+          '"minGapMs":80}',
+    ]) {
+      expect(SubtitleQualityProfile.decode(json).maxCharactersPerLine, 42);
+    }
+  });
+
   test('safe whitespace suggestions preserve tags and deliberate blank lines', () {
     const before = 'Hello  <i>world</i>  \n\nNext  line ';
     final fixes = SubtitleQualityChecker.proposeSafeFixes(const [

@@ -16,6 +16,9 @@ import 'package:subtitle_studio/widgets/urban_dictionary_widget.dart';
 import 'package:subtitle_studio/services/checkpoint_history_graph.dart';
 import 'package:subtitle_studio/services/checkpoint_history_labels.dart';
 import 'package:subtitle_studio/services/subtitle_quality_checker.dart';
+import 'package:subtitle_studio/services/subtitle_character_metrics.dart';
+import 'package:subtitle_studio/screens/edit_line/widgets/edit_text_field.dart'
+    show CharacterCountWidget;
 import 'studio_dock_geometry.dart';
 import 'studio_dock_playback_link.dart';
 import 'studio_dock_layout_preferences.dart';
@@ -150,6 +153,7 @@ class StudioDockWorkspace extends StatefulWidget {
     this.showOriginalLine = false,
     this.autoSaveWithNavigation = false,
     this.showOriginalTextField = true,
+    this.maxLineLength = 32,
     this.onSaveEditPreference,
     this.projectTitle,
     this.encoding,
@@ -226,6 +230,7 @@ class StudioDockWorkspace extends StatefulWidget {
   final bool showOriginalLine;
   final bool autoSaveWithNavigation;
   final bool showOriginalTextField;
+  final int maxLineLength;
   /// Null in previews/harnesses without shared persisted Edit Line settings.
   final Future<bool> Function(StudioDockEditPreference preference, bool value)?
       onSaveEditPreference;
@@ -2442,6 +2447,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     if (!mounted) return;
     final savedPreferences = preferences;
     const presetKey = 'studio_quality_preset';
+    const profileKey = 'studio_quality_custom_profile';
     final stored = savedPreferences?.getString(presetKey);
     final preset = SubtitleQualityPreset.values.firstWhere(
       (item) => item.name == stored,
@@ -2452,11 +2458,20 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       builder: (_) => StudioDockQualityDialog(
         cues: cues,
         initialPreset: preset,
+        customProfile: SubtitleQualityProfile.decode(
+            savedPreferences?.getString(profileKey)),
         canApply: widget.onApplyQualityFixes != null,
         onPresetChanged: (chosen) {
           if (savedPreferences != null) {
             unawaited(savedPreferences
                 .setString(presetKey, chosen.name)
+                .then<void>((_) {}, onError: (Object _) {}));
+          }
+        },
+        onCustomProfileChanged: (profile) {
+          if (savedPreferences != null) {
+            unawaited(savedPreferences
+                .setString(profileKey, profile.encode())
                 .then<void>((_) {}, onError: (Object _) {}));
           }
         },
@@ -5136,6 +5151,32 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     return (millis / 1000).toStringAsFixed(3) + 's';
   }
 
+  Widget _inspectorCharacterCount(String text, String field) {
+    final metrics = SubtitleCharacterMetrics.measure(
+      text,
+      maxLineLength: widget.maxLineLength,
+    );
+    return Positioned(
+      bottom: 4,
+      right: 8,
+      child: IgnorePointer(
+        child: Semantics(
+          label: '$field: ${metrics.count} characters'
+              '${metrics.hasLongLine ? ', line too long' : ''}',
+          child: Container(
+            key: ValueKey('studio-${field.toLowerCase()}-char-count'),
+            padding: const EdgeInsets.symmetric(horizontal: 3),
+            color: Theme.of(context).colorScheme.surface,
+            child: CharacterCountWidget(
+              count: metrics.count,
+              hasLongLine: metrics.hasLongLine,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _inspector() {
     const tabs = <String>['Text', 'Style', 'Notes'];
     return Container(
@@ -5241,7 +5282,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             ]),
             SizedBox(
               height: 112,
-              child: _originalEditing
+              child: Stack(children: [Positioned.fill(child: _originalEditing
                   ? TextFormField(
                       key: ValueKey('studio-original-$_selectedId-$_draftRevision'),
                       initialValue: _draftOriginalCueId == _selectedId &&
@@ -5254,7 +5295,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                       style: const TextStyle(fontSize: 15, height: 1.5),
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
-                        contentPadding: EdgeInsets.all(8),
+                        contentPadding: EdgeInsets.fromLTRB(8, 8, 8, 22),
                       ),
                       contextMenuBuilder: (context, editable) =>
                           _studioTextContextMenu(context, editable,
@@ -5276,7 +5317,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                         style: const TextStyle(fontSize: 15, height: 1.5),
                         decoration: const InputDecoration(
                           border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.all(8),
+                          contentPadding: EdgeInsets.fromLTRB(8, 8, 8, 22),
                         ),
                         contextMenuBuilder: (context, editable) =>
                             _studioTextContextMenu(context, editable,
@@ -5299,7 +5340,13 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                       : Text(_selected.original,
                           style: const TextStyle(fontSize: 15, height: 1.5))),
                 ),
+              )),
+              _inspectorCharacterCount(
+                _draftOriginalCueId == _selectedId && _draftOriginal != null
+                    ? _draftOriginal! : _selected.original,
+                'Original',
               ),
+              ]),
             ),
             const SizedBox(height: 7),
           ],
@@ -5323,7 +5370,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             ),
           ],
           _fieldLabel(widget.isEditMode ? 'SUBTITLE TEXT' : 'EDITED TEXT'),
-          SizedBox(height: 112, child: CallbackShortcuts(
+          SizedBox(height: 112, child: Stack(children: [
+            Positioned.fill(child: CallbackShortcuts(
             bindings: {
               const SingleActivator(LogicalKeyboardKey.enter, shift: true):
                   () => unawaited(_applyDraftAndAdvance()),
@@ -5343,7 +5391,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             minLines: null, maxLines: null,
             style: const TextStyle(fontSize: 15, height: 1.5),
             decoration: InputDecoration(
-              contentPadding: const EdgeInsets.all(9),
+              contentPadding: const EdgeInsets.fromLTRB(9, 9, 9, 22),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(7)),
             ),
@@ -5361,6 +5409,12 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             },
             ),
           )),
+            _inspectorCharacterCount(
+              _draftCueId == _selectedId && _draftText != null
+                  ? _draftText! : _selected.edited,
+              'Edited',
+            ),
+          ])),
           if (_formattedView) ...[
             const SizedBox(height: 8),
             _fieldLabel('FORMATTED PREVIEW · READ ONLY'),

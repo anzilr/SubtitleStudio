@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:characters/characters.dart';
 
 /// Read-only subtitle quality checks shared by desktop and mobile callers.
@@ -34,13 +36,14 @@ extension SubtitleQualityIssueLabel on SubtitleQualityIssueType {
       };
 }
 
-enum SubtitleQualityPreset { general, streaming, relaxed }
+enum SubtitleQualityPreset { general, streaming, relaxed, custom }
 
 extension SubtitleQualityPresetDetails on SubtitleQualityPreset {
   String get label => switch (this) {
         SubtitleQualityPreset.general => 'General',
         SubtitleQualityPreset.streaming => 'Streaming',
         SubtitleQualityPreset.relaxed => 'Relaxed',
+        SubtitleQualityPreset.custom => 'Custom',
       };
 
   SubtitleQualityProfile get profile => switch (this) {
@@ -57,6 +60,7 @@ extension SubtitleQualityPresetDetails on SubtitleQualityPreset {
             minDurationMs: 700,
             maxDurationMs: 9000,
             minGapMs: 40),
+        SubtitleQualityPreset.custom => const SubtitleQualityProfile(),
       };
 }
 
@@ -95,6 +99,53 @@ class SubtitleQualityProfile {
   final int minDurationMs;
   final int maxDurationMs;
   final int minGapMs;
+
+  /// Persist custom limits independently of the active built-in preset.
+  String encode() => jsonEncode({
+        'maxCharactersPerSecond': maxCharactersPerSecond,
+        'maxCharactersPerLine': maxCharactersPerLine,
+        'maxLines': maxLines,
+        'minDurationMs': minDurationMs,
+        'maxDurationMs': maxDurationMs,
+        'minGapMs': minGapMs,
+      });
+
+  /// A damaged or outdated stored profile must not break quality review.
+  static SubtitleQualityProfile decode(String? encoded) {
+    if (encoded == null) return const SubtitleQualityProfile();
+    try {
+      final value = jsonDecode(encoded);
+      if (value is! Map<String, dynamic>) {
+        return const SubtitleQualityProfile();
+      }
+      final cps = value['maxCharactersPerSecond'];
+      final line = value['maxCharactersPerLine'];
+      final lines = value['maxLines'];
+      final minMs = value['minDurationMs'];
+      final maxMs = value['maxDurationMs'];
+      final gapMs = value['minGapMs'];
+      if (cps is! num || line is! int || lines is! int ||
+          minMs is! int || maxMs is! int || gapMs is! int ||
+          !cps.isFinite || cps <= 0 || cps > 100 ||
+          line <= 0 || line > 300 || lines <= 0 || lines > 20 ||
+          minMs < 0 || maxMs <= minMs || maxMs > 600000 ||
+          gapMs < 0 || gapMs > 10000) {
+        return const SubtitleQualityProfile();
+      }
+      return SubtitleQualityProfile(
+        maxCharactersPerSecond: cps.toDouble(),
+        maxCharactersPerLine: line,
+        maxLines: lines,
+        minDurationMs: minMs,
+        maxDurationMs: maxMs,
+        minGapMs: gapMs,
+      );
+    } on FormatException {
+      return const SubtitleQualityProfile();
+    } on TypeError {
+      return const SubtitleQualityProfile();
+    }
+  }
 }
 
 class SubtitleQualityIssue {

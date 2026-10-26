@@ -1657,6 +1657,7 @@ class _StudioDockSessionViewState
         showOriginalLine: _lineDisplay.showOriginalLine,
         autoSaveWithNavigation: _lineDisplay.autoSaveWithNavigation,
         showOriginalTextField: _lineDisplay.showOriginalTextField,
+        maxLineLength: _lineDisplay.maxLineLength,
         onSaveEditPreference: _saveLineDisplayPreference,
         onChooseProject: widget.onChooseProject,
         projects: widget.projects,

@@ -13,6 +13,7 @@ import 'package:subtitle_studio/utils/logging_helpers.dart';
 import 'package:subtitle_studio/widgets/video_player_widget.dart';
 import 'package:subtitle_studio/utils/subtitle_parser.dart';
 import 'package:subtitle_studio/database/models/models.dart';
+import 'package:subtitle_studio/services/subtitle_character_metrics.dart';
 
 /// Screen-scoped inputs required by [EditLineController].
 ///
@@ -387,49 +388,18 @@ class EditLineController extends Notifier<EditLineState> {
     String editedText,
     int maxLineLength,
   ) {
-    // Fast normalize and strip tags
-    String normalizeAndStripTags(String text) {
-      if (text.isEmpty) return '';
-
-      // Replace <br> with newlines (case-insensitive)
-      String s = text.replaceAllMapped(
-        RegExp(r'<br>', caseSensitive: false),
-        (_) => '\n',
-      );
-
-      // Remove HTML tags
-      s = s.replaceAll(RegExp(r'<[^>]*>'), '');
-
-      // Remove subtitle tags
-      s = s.replaceAll(RegExp(r'\{[^}]*\}'), '');
-
-      return s;
-    }
-
-    // Fast long line check
-    bool hasLongLine(String text) {
-      final normalized = normalizeAndStripTags(text);
-      if (normalized.isEmpty) return false;
-
-      int lineStart = 0;
-      for (int i = 0; i < normalized.length; i++) {
-        if (normalized[i] == '\n') {
-          if ((i - lineStart) > maxLineLength) return true;
-          lineStart = i + 1;
-        }
-      }
-      // Check last line
-      return (normalized.length - lineStart) > maxLineLength;
-    }
-
-    final strippedOriginal = normalizeAndStripTags(originalText);
-    final strippedEdited = normalizeAndStripTags(editedText);
+    final original = SubtitleCharacterMetrics.measure(
+      originalText, maxLineLength: maxLineLength,
+    );
+    final edited = SubtitleCharacterMetrics.measure(
+      editedText, maxLineLength: maxLineLength,
+    );
 
     return {
-      'originalCount': strippedOriginal.length,
-      'editedCount': strippedEdited.length,
-      'originalHasLongLine': hasLongLine(originalText) ? 1 : 0,
-      'editedHasLongLine': hasLongLine(editedText) ? 1 : 0,
+      'originalCount': original.count,
+      'editedCount': edited.count,
+      'originalHasLongLine': original.hasLongLine ? 1 : 0,
+      'editedHasLongLine': edited.hasLongLine ? 1 : 0,
     };
   }
 

@@ -8,8 +8,10 @@ void main() {
 
   Future<void> launch(WidgetTester tester, {
     Future<bool> Function(int, String)? applyText,
+    Future<bool> Function(int, String)? applyOriginal,
     Future<StudioDockCueUpdate?> Function(int, String?, bool, bool)? applyNotes,
     bool isEditMode = false,
+    int maxLineLength = 32,
   }) async {
     tester.view.physicalSize = const Size(1680, 1000);
     tester.view.devicePixelRatio = 1;
@@ -18,11 +20,13 @@ void main() {
     await tester.pumpWidget(MaterialApp(home: StudioDockWorkspace(
       isLiveSession: true,
       isEditMode: isEditMode,
+      maxLineLength: maxLineLength,
       initialCues: const [StudioDockCue(
         id: 1, start: '00:00:01,000', end: '00:00:02,000',
         original: 'Original', edited: 'Edited line',
       )],
       onApplyCueText: applyText,
+      onApplyCueOriginal: applyOriginal,
       onApplyCueNotes: applyNotes,
     )));
     await tester.pumpAndSettle();
@@ -39,12 +43,49 @@ void main() {
     expect(find.text('ORIGINAL TEXT'), findsNothing);
     expect(find.text('Reset to original'), findsNothing);
     expect(find.text('EDITED'), findsNothing);
+    expect(find.byKey(const ValueKey('studio-original-char-count')),
+        findsNothing);
+    expect(find.byKey(const ValueKey('studio-edited-char-count')),
+        findsOneWidget);
     await tester.enterText(find.byKey(const ValueKey('studio-edit-1-0')),
         'Fresh subtitle');
     await tester.pump();
     await tester.tap(find.byKey(const ValueKey('studio-apply-cue')));
     await tester.pumpAndSettle();
     expect(applied, ['Fresh subtitle']);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('line inspector shows the same counters as mobile, live',
+      (tester) async {
+    await launch(tester, maxLineLength: 10,
+        applyText: (_, __) async => true,
+        applyOriginal: (_, __) async => true);
+
+    final original = find.byKey(const ValueKey('studio-original-char-count'));
+    final edited = find.byKey(const ValueKey('studio-edited-char-count'));
+    expect(original, findsOneWidget);
+    expect(edited, findsOneWidget);
+    expect(find.descendant(of: original, matching: find.text('8 chars')),
+        findsOneWidget);
+    expect(find.descendant(of: edited, matching: find.text('11 chars')),
+        findsOneWidget);
+
+    await tester.enterText(find.byKey(const ValueKey('studio-edit-1-0')),
+        'Hello  <b>world</b>');
+    await tester.pump();
+    final editedText = tester.widget<Text>(find.descendant(
+      of: edited, matching: find.text('12 chars'),
+    ));
+    expect(editedText.style!.fontWeight, FontWeight.bold);
+
+    await tester.tap(find.byKey(const ValueKey('studio-original-edit-toggle')));
+    await tester.pump();
+    await tester.enterText(find.byKey(const ValueKey('studio-original-1-0')),
+        'New<br>source');
+    await tester.pump();
+    expect(find.descendant(of: original, matching: find.text('10 chars')),
+        findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

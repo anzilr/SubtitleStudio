@@ -10,11 +10,13 @@ class EditorLineDisplayPreferences {
     required this.showOriginalLine,
     required this.autoSaveWithNavigation,
     required this.showOriginalTextField,
+    this.maxLineLength = 32,
   });
 
   final bool showOriginalLine;
   final bool autoSaveWithNavigation;
   final bool showOriginalTextField;
+  final int maxLineLength;
 }
 
 /// Isar-backed persistence used by the main Editor's video/layout repository.
@@ -46,6 +48,7 @@ class EditorPreferencesRepository {
       autoSaveWithNavigation: preferences.showOriginalLine
           ? preferences.autoSaveWithNavigation : true,
       showOriginalTextField: preferences.showOriginalTextField,
+      maxLineLength: preferences.maxLineLength,
     );
   }
 

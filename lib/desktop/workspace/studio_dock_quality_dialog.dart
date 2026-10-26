@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:subtitle_studio/services/subtitle_quality_checker.dart';
+import 'studio_dock_quality_profile_dialog.dart';
 
 sealed class StudioDockQualityResult {
   const StudioDockQualityResult();
@@ -22,13 +23,17 @@ class StudioDockQualityDialog extends StatefulWidget {
     super.key,
     required this.cues,
     this.initialPreset = SubtitleQualityPreset.general,
+    this.customProfile = const SubtitleQualityProfile(),
     this.onPresetChanged,
+    this.onCustomProfileChanged,
     this.canApply = false,
   });
 
   final List<SubtitleQualityCue> cues;
   final SubtitleQualityPreset initialPreset;
+  final SubtitleQualityProfile customProfile;
   final ValueChanged<SubtitleQualityPreset>? onPresetChanged;
+  final ValueChanged<SubtitleQualityProfile>? onCustomProfileChanged;
   final bool canApply;
 
   @override
@@ -39,13 +44,29 @@ class StudioDockQualityDialog extends StatefulWidget {
 class _StudioDockQualityDialogState extends State<StudioDockQualityDialog> {
   SubtitleQualityIssueType? _filter;
   late SubtitleQualityPreset _preset = widget.initialPreset;
+  late SubtitleQualityProfile _customProfile = widget.customProfile;
   bool _showSuggestions = false;
   final Set<int> _selectedFixCueIds = {};
+
+  Future<void> _editCustomProfile() async {
+    final updated = await showDialog<SubtitleQualityProfile>(
+      context: context,
+      builder: (_) => StudioDockQualityProfileDialog(profile: _customProfile),
+    );
+    if (!mounted || updated == null) return;
+    setState(() {
+      _customProfile = updated;
+      _filter = null;
+    });
+    widget.onCustomProfileChanged?.call(updated);
+  }
 
   @override
   Widget build(BuildContext context) {
     final report = SubtitleQualityChecker.scan(
-      widget.cues, profile: _preset.profile,
+      widget.cues,
+      profile: _preset == SubtitleQualityPreset.custom
+          ? _customProfile : _preset.profile,
     );
     final suggestions = SubtitleQualityChecker.proposeSafeFixes(widget.cues);
     final types = SubtitleQualityIssueType.values
@@ -111,6 +132,13 @@ class _StudioDockQualityDialogState extends State<StudioDockQualityDialog> {
                   widget.onPresetChanged?.call(value);
                 },
               ),
+              if (_preset == SubtitleQualityPreset.custom)
+                IconButton(
+                  key: const ValueKey('studio-quality-edit-profile'),
+                  tooltip: 'Edit custom quality limits',
+                  icon: const Icon(Icons.tune),
+                  onPressed: _editCustomProfile,
+                ),
             ]),
             const SizedBox(height: 12),
             Row(children: [
