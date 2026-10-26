@@ -32,8 +32,13 @@ Branch: `feature/studio-dock-integration` in fork `anzilr/SubtitleStudio`.
 - Unit/widget tests exercise preview picker choices, SVG asset loading,
   grapheme-safe frame generation, blink alternation, rainbow tags, scramble
   progression, timed cue export with end hold, and collapse detection.
-- Full Flutter analysis/tests and focused Studio Dock CI should run on
-  pushed checkpoint markers; **no platform builds in GitHub Actions**.
+- Final pushed source revision `de336ae31a778717a9c0546530eb72bcbf7e77e2`
+  passed both GitHub Actions workflows: **Flutter analyze 0 issues**;
+  **373 Studio Dock tests** and **1,217 full Flutter tests** passed.
+  No platform builds were run in GitHub Actions.
+- CI found desktop Tools menu Row overflows when dictionary SVGs were added.
+  Dictionary labels now use a bounded, ellipsized flexible text widget;
+  the fully passing rerun includes desktop menu regression tests.
 
 ## Next checkpoint
 
