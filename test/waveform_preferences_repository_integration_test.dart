@@ -80,5 +80,17 @@ void main() {
       expect(zoom!.zoomIndex, 4);
       expect(zoom.verticalZoom, 1.8);
     });
+
+    test('preserves negative indices for desktop-only fine zoom', () async {
+      await repository.saveWaveformZoomLevels(
+        subtitleCollectionId: 8,
+        zoomIndex: -3,
+        verticalZoom: 2.0,
+      );
+
+      final zoom = await repository.getWaveformZoomLevels(8);
+      expect(zoom?.zoomIndex, -3);
+      expect(zoom?.verticalZoom, 2.0);
+    });
   });
 }

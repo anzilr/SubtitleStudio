@@ -39,15 +39,27 @@ final waveformControllerProvider =
 /// from BLoC without simultaneously rewriting every caller.
 class WaveformController extends Notifier<WaveformState> {
   int _desktopFineZoomCount = 0;
+  bool _desktopFineZoomEnabled = false;
+
+  static const double desktopFineZoomSeconds = 3.5;
 
   /// Finer desktop zoom levels use on-demand peak tiles. Allocating eager
   /// full-track arrays here would multiply memory use for long recordings.
-  static WaveformBuffer extendDesktopFineZoom(WaveformBuffer source) {
+  static WaveformBuffer extendDesktopFineZoom(
+    WaveformBuffer source, {
+    double viewportWidth = 850.0,
+  }) {
     if (source.zoomLevels.isEmpty || source.sampleRate <= 0) return source;
     final currentMinimum = source.zoomLevels.first.samplesPerPixel;
-    // Approx. five seconds across an 850px editing viewport. Actual display
-    // width is still accounted for by WaveformReady's time-to-pixel mapping.
-    final target = (source.sampleRate * 5 ~/ 850).clamp(1, currentMinimum);
+    // Keep the finest desktop view at approximately 3.5 seconds regardless of
+    // panel width. Subtitle Edit likewise bases horizontal detail on the
+    // waveform's pixel-to-time scale, independent of vertical amplitude zoom.
+    final safeWidth = viewportWidth.isFinite && viewportWidth > 0
+        ? viewportWidth
+        : 850.0;
+    final target = (source.sampleRate * desktopFineZoomSeconds / safeWidth)
+        .round()
+        .clamp(1, currentMinimum);
     if (target >= currentMinimum) return source;
     final finer = <int>[target];
     var next = target;
@@ -322,7 +334,9 @@ class WaveformController extends Notifier<WaveformState> {
       // Android/mobile zoom ladder or its original eager samples.
       final isDesktop = Platform.isWindows || Platform.isLinux || Platform.isMacOS;
       final buffer = isDesktop
-          ? extendDesktopFineZoom(generatedBuffer) : generatedBuffer;
+          ? extendDesktopFineZoom(generatedBuffer, viewportWidth: 800.0)
+          : generatedBuffer;
+      _desktopFineZoomEnabled = isDesktop;
       _desktopFineZoomCount = buffer.zoomLevelCount - generatedBuffer.zoomLevelCount;
       // Start with zoom level 7 (default)
       int defaultZoomIndex =
@@ -336,9 +350,12 @@ class WaveformController extends Notifier<WaveformState> {
         );
         if (!isCurrent()) return;
         if (savedZoom != null) {
-          defaultZoomIndex =
-              savedZoom.zoomIndex.clamp(0, generatedBuffer.zoomLevelCount - 1) +
-                  _desktopFineZoomCount;
+          // Negative persisted indices represent the desktop-only fine steps.
+          // Mobile still clamps those values to its original zoom ladder.
+          defaultZoomIndex = isDesktop
+              ? (savedZoom.zoomIndex + _desktopFineZoomCount)
+                  .clamp(0, buffer.zoomLevelCount - 1)
+              : savedZoom.zoomIndex.clamp(0, buffer.zoomLevelCount - 1);
           defaultVerticalZoom = savedZoom.verticalZoom.clamp(0.5, 8.0);
         }
       }
@@ -554,6 +571,8 @@ class WaveformController extends Notifier<WaveformState> {
     cancelManualScrub();
     _loadEpoch++; // A cleared screen must not be repopulated by an old load.
     _audioProcessor.cancelActive();
+    _desktopFineZoomEnabled = false;
+    _desktopFineZoomCount = 0;
     _setState(const WaveformInitial());
   }
 
@@ -563,11 +582,69 @@ class WaveformController extends Notifier<WaveformState> {
   ) {
     if (state is WaveformReady) {
       final currentState = state as WaveformReady;
-      final resized = currentState.copyWith(viewportWidth: event.width);
+      final baseLevelCount =
+          currentState.buffer.zoomLevelCount - _desktopFineZoomCount;
+      final resized = _desktopFineZoomEnabled
+          ? resizeDesktopFineZoom(
+              currentState,
+              viewportWidth: event.width,
+              priorFineCount: _desktopFineZoomCount,
+            )
+          : currentState.copyWith(viewportWidth: event.width);
+      if (_desktopFineZoomEnabled) {
+        _desktopFineZoomCount = resized.buffer.zoomLevelCount - baseLevelCount;
+      }
       _setState(resized.copyWith(
         scrollPosition: resized.clampScrollPosition(resized.scrollPosition),
       ));
     }
+  }
+
+  /// Re-target desktop-only metadata zoom steps after a panel resize without
+  /// touching decoded samples, native levels, or the user's timeline anchor.
+  static WaveformReady resizeDesktopFineZoom(
+    WaveformReady currentState, {
+    required double viewportWidth,
+    required int priorFineCount,
+  }) {
+    var resized = currentState.copyWith(viewportWidth: viewportWidth);
+    if (!viewportWidth.isFinite || viewportWidth <= 0 ||
+        priorFineCount < 0 ||
+        priorFineCount >= currentState.buffer.zoomLevelCount) {
+      return resized;
+    }
+    final baseLevels = currentState.buffer.zoomLevels
+        .skip(priorFineCount)
+        .toList(growable: false);
+    final baseBuffer = WaveformBuffer(
+      rawData: currentState.buffer.rawData,
+      defaultZoomIndex: (currentState.buffer.defaultZoomIndex - priorFineCount)
+          .clamp(0, baseLevels.length - 1),
+      zoomLevels: baseLevels,
+    );
+    final nextBuffer = extendDesktopFineZoom(
+      baseBuffer, viewportWidth: viewportWidth,
+    );
+    final nextFineCount = nextBuffer.zoomLevelCount - baseLevels.length;
+    if (nextFineCount == priorFineCount &&
+        nextBuffer.zoomLevels.first.samplesPerPixel ==
+            currentState.buffer.zoomLevels.first.samplesPerPixel) {
+      return resized;
+    }
+    // Preserve the selected native level, or the number of steps away from
+    // maximum fine zoom. The playhead/viewport center stays on the same time.
+    final nextIndex = currentState.currentZoomIndex < priorFineCount
+        ? currentState.currentZoomIndex.clamp(
+            0, (nextFineCount - 1).clamp(0, nextBuffer.zoomLevelCount - 1))
+        : (currentState.currentZoomIndex - priorFineCount + nextFineCount)
+            .clamp(0, nextBuffer.zoomLevelCount - 1);
+    final centerTime = currentState.pixelToTime(
+      currentState.scrollPosition + currentState.viewportWidth / 2,
+    );
+    resized = resized.copyWith(buffer: nextBuffer, currentZoomIndex: nextIndex);
+    return resized.copyWith(
+      scrollPosition: resized.timeToPixel(centerTime) - viewportWidth / 2,
+    );
   }
 
   /// Enter time edit mode for a subtitle
@@ -755,8 +832,9 @@ class WaveformController extends Notifier<WaveformState> {
       // Use fire-and-forget pattern to avoid blocking
       _preferences.saveWaveformZoomLevels(
         subtitleCollectionId: state.subtitleCollectionId!,
-        zoomIndex: (state.currentZoomIndex - _desktopFineZoomCount).clamp(
-            0, state.buffer.zoomLevelCount - _desktopFineZoomCount - 1),
+        // Desktop fine zoom uses negative indices; nonnegative values retain
+        // the original mobile-compatible zoom numbering.
+        zoomIndex: state.currentZoomIndex - _desktopFineZoomCount,
         verticalZoom: state.verticalZoom,
       ).catchError((_) {
         // Silently catch errors - zoom preferences are not critical

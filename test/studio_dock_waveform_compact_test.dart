@@ -211,6 +211,71 @@ void main() {
     expect(extended.zoomLevels.last.samplesPerPixel, 700);
   });
 
+  test('finest desktop zoom displays 3–4 seconds at different panel widths', () {
+    final source = WaveformBuffer(
+      rawData: WaveformData(
+        channels: 1, sampleRate: 44100,
+        totalSamples: 44100 * 600, rawSamples: [Int16List(1)]),
+      zoomLevels: [ZoomLevel.metadata(
+        samplesPerPixel: 700, pixelCount: 37800, channels: 1)],
+    );
+
+    for (final width in [640.0, 850.0, 1200.0, 1920.0]) {
+      final extended = WaveformController.extendDesktopFineZoom(
+        source, viewportWidth: width,
+      );
+      final visibleSeconds = width *
+          extended.zoomLevels.first.samplesPerPixel / source.sampleRate;
+      expect(visibleSeconds, inInclusiveRange(3.0, 4.0),
+          reason: 'Fine zoom must fit $width px desktop waveform');
+      expect(visibleSeconds,
+          closeTo(WaveformController.desktopFineZoomSeconds, 0.05));
+      expect(extended.zoomLevels.first.isMetadataOnly, isTrue);
+      expect(extended.zoomLevels.first.materializedPixels, 0);
+      expect(identical(extended.zoomLevels.last, source.zoomLevels.first), isTrue);
+    }
+  });
+
+  test('desktop resize retains fine zoom and the timeline center', () {
+    final source = WaveformBuffer(
+      rawData: WaveformData(
+        channels: 1, sampleRate: 48000,
+        totalSamples: 48000 * 600, rawSamples: [Int16List(1)]),
+      zoomLevels: [ZoomLevel.metadata(
+        samplesPerPixel: 800, pixelCount: 36000, channels: 1)],
+    );
+    final beforeBuffer = WaveformController.extendDesktopFineZoom(
+      source, viewportWidth: 850,
+    );
+    final fineCount = beforeBuffer.zoomLevelCount - source.zoomLevelCount;
+    final before = WaveformReady(
+      buffer: beforeBuffer,
+      currentZoomIndex: 0,
+      viewportWidth: 850,
+      scrollPosition: 48000 * 100 / beforeBuffer.zoomLevels.first.samplesPerPixel,
+    );
+    final center = before.centerTimeForScroll(before.scrollPosition);
+    final after = WaveformController.resizeDesktopFineZoom(
+      before, viewportWidth: 1360, priorFineCount: fineCount,
+    );
+
+    expect(after.currentZoomIndex, 0);
+    expect(after.viewportWidth, 1360);
+    expect(1360 * after.samplesPerPixel / source.sampleRate,
+        inInclusiveRange(3.0, 4.0));
+    expect((after.centerTimeForScroll(after.scrollPosition) - center)
+        .inMilliseconds.abs(), lessThanOrEqualTo(2));
+    expect(identical(after.buffer.rawData, source.rawData), isTrue);
+    expect(identical(after.buffer.zoomLevels.last, source.zoomLevels.first), isTrue);
+    expect(after.buffer.zoomLevels.first.materializedPixels, 0);
+
+    final nativeSelection = before.copyWith(currentZoomIndex: fineCount);
+    final nativeResized = WaveformController.resizeDesktopFineZoom(
+      nativeSelection, viewportWidth: 1360, priorFineCount: fineCount,
+    );
+    expect(nativeResized.currentZoomLevel, same(source.zoomLevels.first));
+  });
+
   testWidgets('compact loading status fits a 65px waveform band',
       (tester) async {
     await tester.pumpWidget(ProviderScope(
