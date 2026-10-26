@@ -3158,7 +3158,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                 return const Row(mainAxisSize: MainAxisSize.min, children: [
                   StudioAssetIcon(StudioAssetIcons.olam, size: 19),
                   SizedBox(width: 9),
-                  Text('Olam Dictionary (Alt+O)…'),
+                  Flexible(child: Text('Olam Dictionary (Alt+O)…',
+                      maxLines: 1, overflow: TextOverflow.ellipsis)),
                 ]);
               })),
             PopupMenuItem(height: 34, value: _StudioDockMenuAction.urbanDictionary,
@@ -3168,7 +3169,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                 return const Row(mainAxisSize: MainAxisSize.min, children: [
                   StudioAssetIcon(StudioAssetIcons.urban, size: 19),
                   SizedBox(width: 9),
-                  Text('Urban Dictionary (Alt+U)…'),
+                  Flexible(child: Text('Urban Dictionary (Alt+U)…',
+                      maxLines: 1, overflow: TextOverflow.ellipsis)),
                 ]);
               })),
           ],
