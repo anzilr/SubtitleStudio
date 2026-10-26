@@ -88,6 +88,23 @@ class StudioDockEffectGroups {
       List<StudioDockEffectFrame> frames) {
     final groups = <StudioDockEffectGroup>[];
     final parsed = [for (final frame in frames) _SrtFrame.parse(frame)];
+    final rawSteps = <StudioDockEffectKind?>[
+      for (var i = 0; i < parsed.length - 1; i++)
+        _step(parsed[i], parsed[i + 1]),
+    ];
+    final steps = List<StudioDockEffectKind?>.of(rawSteps);
+    // A typewriter can reveal a newline in one frame, followed by the next
+    // glyph in another. That one boundary must not split a single generated
+    // effect into separate Typewriter / Line reveal groups. Genuine line-by-
+    // line reveals contain successive line transitions instead.
+    for (var i = 0; i < steps.length; i++) {
+      if (rawSteps[i] == StudioDockEffectKind.lineReveal &&
+          ((i > 0 && rawSteps[i - 1] == StudioDockEffectKind.typewriter) ||
+           (i + 1 < rawSteps.length &&
+               rawSteps[i + 1] == StudioDockEffectKind.typewriter))) {
+        steps[i] = StudioDockEffectKind.typewriter;
+      }
+    }
     var index = 0;
     while (index < frames.length - 1) {
       final blinkEnd = _blinkEnd(parsed, index);
@@ -102,15 +119,14 @@ class StudioDockEffectGroups {
       }
       final first = parsed[index];
       final second = parsed[index + 1];
-      final kind = _step(first, second);
+      final kind = steps[index];
       if (kind == null) {
         index++;
         continue;
       }
 
       var end = index + 2;
-      while (end < parsed.length &&
-          _step(parsed[end - 1], parsed[end]) == kind) {
+      while (end < parsed.length && steps[end - 1] == kind) {
         end++;
       }
 

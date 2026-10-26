@@ -136,6 +136,19 @@ void main() {
       expect(groups.single.kind, StudioDockEffectKind.lineReveal);
     });
 
+    test('a newline appearing mid-typewriter does not split the group', () {
+      final groups = StudioDockEffectGroups.detect([
+        frame(1, '', original: 'H'),
+        frame(2, '', original: 'He'),
+        frame(3, '', original: 'He\nN'),
+        frame(4, '', original: 'He\nNe'),
+        frame(5, '', original: 'He\nNew'),
+      ]);
+      expect(groups, hasLength(1));
+      expect(groups.single.kind, StudioDockEffectKind.typewriter);
+      expect(groups.single.length, 5);
+    });
+
     test('recognizes timed color animation with equivalent SRT tags', () {
       final groups = StudioDockEffectGroups.detect([
         frame(1, '<b><font color="red">Alert</font></b>', original: 'Alert'),
