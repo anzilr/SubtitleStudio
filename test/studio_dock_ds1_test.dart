@@ -4,11 +4,18 @@ import 'package:subtitle_studio/desktop/workspace/studio_dock_geometry.dart';
 import '../tool/studio_dock_demo.dart';
 
 void main() {
-  test('balanced dock geometry uses 38/24/38 proportions', () {
+  test('balanced dock geometry uses 36/24/40 proportions', () {
     final layout = StudioDockBands.resolve(1010);
-    expect(layout.video, closeTo(380, .001));
+    expect(layout.video, closeTo(360, .001));
     expect(layout.waveform, closeTo(240, .001));
-    expect(layout.table, closeTo(380, .001));
+    expect(layout.table, closeTo(400, .001));
+  });
+
+  test('laptop height maintains both media panels and a compact grid', () {
+    final layout = StudioDockBands.resolve(664);
+    expect(layout.video, greaterThan(230));
+    expect(layout.waveform, greaterThan(150));
+    expect(layout.table, greaterThan(260));
   });
 
   test('short windows retain nonnegative panels without overflow', () {

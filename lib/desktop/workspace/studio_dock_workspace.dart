@@ -30,6 +30,10 @@ import '../../utils/msone_hotkey_manager.dart';
 
 enum _StudioDockReviewFilter { all, marked, unresolved, resolved }
 
+enum _StudioDockToolbarOverflow {
+  merge, delete, attachVideo, import, newProject, projectSettings,
+}
+
 /// Same persisted switches used by mobile Edit Line; formatted preview is
 /// intentionally session-only (mobile also does not persist its toggle).
 enum StudioDockEditPreference {
@@ -359,6 +363,8 @@ class StudioDockWorkspace extends StatefulWidget {
 }
 
 class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
+  static const double _cueRowHeight = 28;
+
   int get selectedCueNumber => _selectedId;
   List<int> get selectedCueNumbers => List.unmodifiable(_selectedIds);
 
@@ -424,8 +430,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   bool _explorerOverlayOpen = false;
   bool _inspectorOverlayOpen = false;
   int _inspectorTab = 0;
-  double _videoShare = .38;
-  double _waveformShare = .24;
+  double _videoShare = StudioDockBands.defaultVideoShare;
+  double _waveformShare = StudioDockBands.defaultWaveformShare;
   bool _showVideo = false;
   bool _showWaveform = false;
   String _query = '';
@@ -655,7 +661,9 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       if (!mounted || !_cueScroll.hasClients || !_followPlayback) return;
       final index = _visible.indexWhere((cue) => cue.id == active);
       if (index < 0) return;
-      final target = (index * 32.0 - _cueScroll.position.viewportDimension / 2 + 16)
+      final target = (index * _cueRowHeight -
+              _cueScroll.position.viewportDimension / 2 +
+              _cueRowHeight / 2)
           .clamp(0.0, _cueScroll.position.maxScrollExtent).toDouble();
       _cueScroll.animateTo(target,
           duration: const Duration(milliseconds: 180), curve: Curves.easeOut);
@@ -742,8 +750,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     setState(() {
       _sidebarWidth = 240;
       _inspectorWidth = 320;
-      _videoShare = .38;
-      _waveformShare = .24;
+      _videoShare = StudioDockBands.defaultVideoShare;
+      _waveformShare = StudioDockBands.defaultWaveformShare;
       _explorerOpen = true;
       _inspectorOpen = true;
       _showVideo = false;
@@ -1934,7 +1942,9 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       if (!mounted || !_cueScroll.hasClients) return;
       final index = _visible.indexWhere((cue) => cue.id == cueId);
       if (index < 0) return;
-      final target = (index * 40.0 - _cueScroll.position.viewportDimension / 2 + 20)
+      final target = (index * _cueRowHeight -
+              _cueScroll.position.viewportDimension / 2 +
+              _cueRowHeight / 2)
           .clamp(0.0, _cueScroll.position.maxScrollExtent).toDouble();
       _cueScroll.animateTo(target,
           duration: const Duration(milliseconds: 180), curve: Curves.easeOut);
@@ -2587,8 +2597,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   }
 
   Widget _menuBar() => Container(
-    height: 36,
-    padding: const EdgeInsets.symmetric(horizontal: 15),
+    height: 32,
+    padding: const EdgeInsets.symmetric(horizontal: 10),
     decoration: BoxDecoration(
       border: Border(bottom: BorderSide(color: _border)),
     ),
@@ -3102,7 +3112,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       if (!mounted || !_cueScroll.hasClients) return;
       final visibleIndex = _visible.indexWhere((item) => item.id == cue.id);
       if (visibleIndex < 0) return;
-      final target = (visibleIndex * 40.0 + 20 -
+      final target = (visibleIndex * _cueRowHeight + _cueRowHeight / 2 -
               _cueScroll.position.viewportDimension / 2)
           .clamp(0.0, _cueScroll.position.maxScrollExtent).toDouble();
       _cueScroll.jumpTo(target);
@@ -3377,24 +3387,36 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   }
 
 
-  Widget _topBar() => Container(
-    height: 55,
-    padding: const EdgeInsets.symmetric(horizontal: 17),
+  // Daily edits first, media/view controls second, project management last.
+  // Less frequent actions move into More on laptop-width windows instead of
+  // forcing the entire toolbar (or the title) off-screen.
+  Widget _topBar() => LayoutBuilder(builder: (context, limits) {
+    final showSecondary = limits.maxWidth >= 1500;
+    final showBrand = limits.maxWidth >= 960;
+    return IconButtonTheme(
+      data: IconButtonThemeData(style: IconButton.styleFrom(
+        visualDensity: VisualDensity.compact,
+      )),
+      child: Container(
+    height: 48,
+    padding: const EdgeInsets.symmetric(horizontal: 8),
     decoration: BoxDecoration(border:
         Border(bottom: BorderSide(color: _border))),
     child: Row(children: [
       Icon(Icons.subtitles_rounded, color: _accent, size: 22),
-      const SizedBox(width: 10),
-      const Text('SubtitleStudio', style:
-          TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-      SizedBox(width: 16),
-      Container(width: 1, height: 23, color: _border),
-      const SizedBox(width: 15),
-      Flexible(child: Text(
-        widget.projectTitle ?? 'Night Drive  /  Main subtitles',
-        maxLines: 1, overflow: TextOverflow.ellipsis,
-        style: TextStyle(color: _muted, fontSize: 14),
-      )),
+      if (showBrand) ...[
+        const SizedBox(width: 8),
+        const Text('SubtitleStudio', style:
+            TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+        const SizedBox(width: 10),
+        Container(width: 1, height: 20, color: _border),
+        const SizedBox(width: 10),
+        Flexible(child: Text(
+          widget.projectTitle ?? 'Night Drive  /  Main subtitles',
+          maxLines: 1, overflow: TextOverflow.ellipsis,
+          style: TextStyle(color: _muted, fontSize: 12),
+        )),
+      ],
       const Spacer(),
       if (widget.onSaveFile != null)
         IconButton(
@@ -3428,13 +3450,41 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       if (widget.isLiveSession && widget.onApplyCueText == null)
         Text('READ ONLY', style: TextStyle(
           color: _muted, letterSpacing: .7, fontSize: 12)),
-      if (widget.onChooseVideo != null)
+      if (widget.onInsertCue != null)
         IconButton(
-          key: const ValueKey('studio-dock-toolbar-video'),
-          icon: const Icon(Icons.video_file_outlined),
-          tooltip: 'Attach or change video',
-          onPressed: () => unawaited(_chooseVideoSafely()),
+          key: const ValueKey('studio-dock-insert-cue'),
+          icon: const Icon(Icons.add_comment_outlined),
+          tooltip: 'Insert subtitle line',
+          onPressed: _changingStructure ? null :
+              () => unawaited(_addCueSafely()),
         ),
+      if (widget.onSplitCue != null)
+        IconButton(
+          key: const ValueKey('studio-dock-split-cue'),
+          icon: const Icon(Icons.call_split_outlined),
+          tooltip: 'Split selected subtitle line',
+          onPressed: _changingStructure || _cues.isEmpty ? null :
+              () => unawaited(_splitCueSafely()),
+        ),
+      if (showSecondary && widget.onMergeCue != null)
+        IconButton(
+          key: const ValueKey('studio-dock-merge-cue'),
+          icon: const Icon(Icons.merge_outlined),
+          tooltip: 'Combine selected line with adjacent line',
+          onPressed: _changingStructure || _cues.length < 2 ? null :
+              () => unawaited(_mergeCueSafely()),
+        ),
+      if (showSecondary && widget.onDeleteCue != null)
+        IconButton(
+          key: const ValueKey('studio-dock-delete-cue'),
+          icon: const Icon(Icons.delete_outline),
+          tooltip: 'Delete selected subtitle line',
+          onPressed: _changingStructure || _cues.isEmpty ? null :
+              () => unawaited(_deleteCueSafely()),
+        ),
+      const SizedBox(width: 6),
+      Container(width: 1, height: 20, color: _border),
+      const SizedBox(width: 6),
       IconButton(
         key: const ValueKey('studio-toggle-video-panel'),
         tooltip: _showVideo ? 'Hide video player' : 'Show video player',
@@ -3455,7 +3505,31 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         icon: Icon(Icons.graphic_eq,
             color: _showWaveform ? _accent : _muted),
       ),
-      if (widget.onOpenProjectSettings != null)
+      const SizedBox(width: 6),
+      Container(width: 1, height: 20, color: _border),
+      const SizedBox(width: 6),
+      if (showSecondary && widget.onChooseVideo != null)
+        IconButton(
+          key: const ValueKey('studio-dock-toolbar-video'),
+          icon: const Icon(Icons.video_file_outlined),
+          tooltip: 'Attach or change video',
+          onPressed: () => unawaited(_chooseVideoSafely()),
+        ),
+      if (showSecondary && widget.onImportFile != null)
+        IconButton(
+          key: const ValueKey('studio-dock-toolbar-import'),
+          icon: const Icon(Icons.file_open_outlined),
+          tooltip: 'Import subtitles or project',
+          onPressed: () => unawaited(_importFileSafely()),
+        ),
+      if (showSecondary && widget.onNewProject != null)
+        IconButton(
+          key: const ValueKey('studio-dock-toolbar-new'),
+          icon: const Icon(Icons.add_box_outlined),
+          tooltip: 'New project',
+          onPressed: () => unawaited(_newProjectSafely()),
+        ),
+      if (showSecondary && widget.onOpenProjectSettings != null)
         IconButton(
           key: const ValueKey('studio-toolbar-project-settings'),
           icon: const Icon(Icons.settings_applications_outlined),
@@ -3463,52 +3537,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           onPressed: _openingProjectSettings ? null :
               () => unawaited(_openProjectSettingsSafely()),
         ),
-      if (widget.onInsertCue != null)
-        IconButton(
-          key: const ValueKey('studio-dock-insert-cue'),
-          icon: const Icon(Icons.add_comment_outlined),
-          tooltip: 'Insert subtitle line',
-          onPressed: _changingStructure ? null :
-              () => unawaited(_addCueSafely()),
-        ),
-      if (widget.onDeleteCue != null)
-        IconButton(
-          key: const ValueKey('studio-dock-delete-cue'),
-          icon: const Icon(Icons.delete_outline),
-          tooltip: 'Delete selected subtitle line',
-          onPressed: _changingStructure || _cues.isEmpty ? null :
-              () => unawaited(_deleteCueSafely()),
-        ),
-      if (widget.onSplitCue != null)
-        IconButton(
-          key: const ValueKey('studio-dock-split-cue'),
-          icon: const Icon(Icons.call_split_outlined),
-          tooltip: 'Split selected subtitle line',
-          onPressed: _changingStructure || _cues.isEmpty ? null :
-              () => unawaited(_splitCueSafely()),
-        ),
-      if (widget.onMergeCue != null)
-        IconButton(
-          key: const ValueKey('studio-dock-merge-cue'),
-          icon: const Icon(Icons.merge_outlined),
-          tooltip: 'Combine selected line with adjacent line',
-          onPressed: _changingStructure || _cues.length < 2 ? null :
-              () => unawaited(_mergeCueSafely()),
-        ),
-      if (widget.onImportFile != null)
-        IconButton(
-          key: const ValueKey('studio-dock-toolbar-import'),
-          icon: const Icon(Icons.file_open_outlined),
-          tooltip: 'Import subtitles or project',
-          onPressed: () => unawaited(_importFileSafely()),
-        ),
-      if (widget.onNewProject != null)
-        IconButton(
-          key: const ValueKey('studio-dock-toolbar-new'),
-          icon: const Icon(Icons.add_box_outlined),
-          tooltip: 'New project',
-          onPressed: () => unawaited(_newProjectSafely()),
-        ),
+      if (!showSecondary) _toolbarOverflowMenu(),
       const SizedBox(width: 6),
       IconButton(
         key: const ValueKey('desktop-command-palette'),
@@ -3533,6 +3562,52 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       const SizedBox(width: 7),
       Icon(Icons.circle, size: 9, color: _accent),
     ]),
+  ));
+  });
+
+  Widget _toolbarOverflowMenu() => PopupMenuButton<_StudioDockToolbarOverflow>(
+    key: const ValueKey('studio-dock-toolbar-more'),
+    tooltip: 'More subtitle and project actions',
+    icon: const Icon(Icons.more_horiz),
+    onSelected: (action) {
+      switch (action) {
+        case _StudioDockToolbarOverflow.merge:
+          unawaited(_mergeCueSafely());
+        case _StudioDockToolbarOverflow.delete:
+          unawaited(_deleteCueSafely());
+        case _StudioDockToolbarOverflow.attachVideo:
+          unawaited(_chooseVideoSafely());
+        case _StudioDockToolbarOverflow.import:
+          unawaited(_importFileSafely());
+        case _StudioDockToolbarOverflow.newProject:
+          unawaited(_newProjectSafely());
+        case _StudioDockToolbarOverflow.projectSettings:
+          unawaited(_openProjectSettingsSafely());
+      }
+    },
+    itemBuilder: (_) => [
+      if (widget.onMergeCue != null)
+        PopupMenuItem(value: _StudioDockToolbarOverflow.merge,
+          enabled: !_changingStructure && _cues.length >= 2,
+          child: const Text('Merge with adjacent line')),
+      if (widget.onDeleteCue != null)
+        PopupMenuItem(value: _StudioDockToolbarOverflow.delete,
+          enabled: !_changingStructure && _cues.isNotEmpty,
+          child: const Text('Delete selected line')),
+      if (widget.onChooseVideo != null)
+        const PopupMenuItem(value: _StudioDockToolbarOverflow.attachVideo,
+          child: Text('Attach or change video')),
+      if (widget.onImportFile != null)
+        const PopupMenuItem(value: _StudioDockToolbarOverflow.import,
+          child: Text('Import subtitles or project')),
+      if (widget.onNewProject != null)
+        const PopupMenuItem(value: _StudioDockToolbarOverflow.newProject,
+          child: Text('New project')),
+      if (widget.onOpenProjectSettings != null)
+        PopupMenuItem(value: _StudioDockToolbarOverflow.projectSettings,
+          enabled: !_openingProjectSettings,
+          child: const Text('Project settings')),
+    ],
   );
 
   void _toggleExplorerPanel() {
@@ -3580,7 +3655,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     decoration: BoxDecoration(border:
       Border(right: BorderSide(color: _border))),
     child: Column(children: [
-      const SizedBox(height: 13),
+      const SizedBox(height: 8),
       if (widget.onChooseProject != null || widget.projects.isNotEmpty) ...[
         Tooltip(
           message: 'Projects · ${widget.projects.length} saved',
@@ -3601,14 +3676,14 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       _railItem(3, Icons.tune_rounded, 'Tools'),
       const Spacer(),
       _railItem(4, Icons.settings_outlined, 'Settings'),
-      const SizedBox(height: 13),
+      const SizedBox(height: 8),
     ]),
   );
 
   Widget _railItem(int index, IconData icon, String title) => Tooltip(
     message: title,
     child: Padding(
-      padding: EdgeInsets.symmetric(vertical: 4),
+      padding: EdgeInsets.symmetric(vertical: 2),
       child: Material(
         color: _section == index ? _accent.withValues(alpha: .18)
             : Colors.transparent,
@@ -4035,9 +4110,9 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     child: Column(crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _paneHeader(Icons.folder_open_rounded, 'PROJECT', trailing: 'DEMO'),
-        SizedBox(height: 10),
+        SizedBox(height: 6),
         _sidebarRow(Icons.folder_rounded, 'Night Drive', selected: true),
-        Padding(padding: EdgeInsets.fromLTRB(17, 20, 12, 7),
+        Padding(padding: EdgeInsets.fromLTRB(14, 12, 10, 5),
           child: Text('PROJECT FILES', style:
             TextStyle(fontSize: 12, color: _muted, letterSpacing: .8))),
         _sidebarRow(Icons.subtitles_rounded, 'Main subtitles.srt',
@@ -4045,14 +4120,14 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         _sidebarRow(Icons.subtitles_outlined, 'Secondary subtitles',
             indent: 15),
         _sidebarRow(Icons.movie_outlined, 'Night Drive.mp4', indent: 15),
-        Padding(padding: EdgeInsets.fromLTRB(17, 23, 12, 7),
+        Padding(padding: EdgeInsets.fromLTRB(14, 14, 10, 5),
           child: Text('VERSIONS', style:
             TextStyle(fontSize: 12, color: _muted, letterSpacing: .8))),
         _sidebarRow(Icons.fork_right_rounded, 'Current version'),
         _sidebarRow(Icons.bookmark_border_rounded, 'Pinned versions'),
         const Spacer(),
         Padding(
-          padding: EdgeInsets.all(14),
+          padding: EdgeInsets.all(10),
           child: Text('Preview project\nNo local files are opened.',
             style: TextStyle(fontSize: 13, color: _muted, height: 1.5)),
         ),
@@ -4066,12 +4141,12 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       _paneHeader(Icons.folder_open_rounded, 'PROJECT',
           trailing: widget.isEditMode ? 'EDIT MODE' : 'TRANSLATION'),
-      const SizedBox(height: 10),
+      const SizedBox(height: 6),
       _sidebarRow(Icons.subtitles_rounded,
           widget.projectTitle ?? 'Subtitle session',
           selected: true),
       Padding(
-        padding: EdgeInsets.all(16),
+        padding: EdgeInsets.all(10),
         child: Text(
           widget.isEditMode
               ? 'Subtitle creation mode · enter subtitle text and timing. '
@@ -4087,16 +4162,16 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   Widget _sidebarRow(IconData icon, String label,
       {bool selected = false, double indent = 0}) =>
     Padding(
-      padding: EdgeInsets.fromLTRB(8 + indent, 2, 8, 2),
+      padding: EdgeInsets.fromLTRB(8 + indent, 1, 8, 1),
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         decoration: BoxDecoration(
           color: selected ? _accent.withValues(alpha: .12) : null,
           borderRadius: BorderRadius.circular(7),
         ),
         child: Row(children: [
           Icon(icon, size: 18, color: selected ? _accent : _muted),
-          SizedBox(width: 9),
+          SizedBox(width: 7),
           Expanded(child: Text(label, overflow: TextOverflow.ellipsis,
               style: TextStyle(fontSize: 14,
                   color: selected
@@ -4120,10 +4195,10 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       );
 
   Widget _paneHeader(IconData icon, String title,
-      {String? trailing, double height = 46}) =>
+      {String? trailing, double height = 42}) =>
       Container(
         height: height,
-        padding: EdgeInsets.symmetric(horizontal: 13),
+        padding: EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
           border: Border(bottom: BorderSide(color: _border))),
         child: Row(children: [
@@ -4196,12 +4271,14 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           key: const ValueKey('splitter-video-waveform'),
           onDelta: (dy) => setState(() {
             final change = dy / limits.maxHeight;
-            _videoShare = (_videoShare + change).clamp(.24, .62);
-            _waveformShare = (_waveformShare - change).clamp(.18, .38);
+            _videoShare = (_videoShare + change)
+                .clamp(StudioDockBands.minVideoShare, .62);
+            _waveformShare = (_waveformShare - change)
+                .clamp(StudioDockBands.minWaveformShare, .38);
           }),
           onReset: () => setState(() {
-            _videoShare = .38;
-            _waveformShare = .24;
+            _videoShare = StudioDockBands.defaultVideoShare;
+            _waveformShare = StudioDockBands.defaultWaveformShare;
           }),
         ),
         if (waveformVisible)
@@ -4218,15 +4295,15 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           onDelta: (dy) => setState(() {
             if (videoVisible && !waveformVisible) {
               _videoShare = (_videoShare + dy / limits.maxHeight)
-                  .clamp(.24, .62);
+                  .clamp(StudioDockBands.minVideoShare, .62);
             } else {
               _waveformShare = (_waveformShare + dy / limits.maxHeight)
-                  .clamp(.18, .38);
+                  .clamp(StudioDockBands.minWaveformShare, .38);
             }
           }),
           onReset: () => setState(() {
-            _videoShare = .38;
-            _waveformShare = .24;
+            _videoShare = StudioDockBands.defaultVideoShare;
+            _waveformShare = StudioDockBands.defaultWaveformShare;
           }),
         ),
         Expanded(
@@ -4265,7 +4342,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   );
 
   Widget _videoPanel() => Container(
-    padding: const EdgeInsets.all(14),
+    padding: const EdgeInsets.all(8),
     color: Theme.of(context).colorScheme.surface,
     child: Column(children: [
       Row(children: [
@@ -4279,7 +4356,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         Text(widget.isLiveSession ? 'Media not connected' : '16:9 · Demo clip',
             style: TextStyle(fontSize: 11, color: _muted)),
       ]),
-      SizedBox(height: 10),
+      SizedBox(height: 6),
       Expanded(
         child: Center(child: AspectRatio(
           aspectRatio: 16 / 9,
@@ -4356,7 +4433,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   );
 
   Widget _waveformPanel() => Container(
-    padding: const EdgeInsets.fromLTRB(10, 4, 10, 5),
+    padding: const EdgeInsets.fromLTRB(6, 2, 6, 2),
     color: Theme.of(context).colorScheme.surfaceContainerLow,
     child: Column(children: [
       if (widget.waveformSurface == null) ...[
@@ -4380,11 +4457,19 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     ]),
   );
 
-  Widget _subtitleTable() => Column(children: [
-    Row(children: [
+  Widget _subtitleTable() => LayoutBuilder(builder: (context, tableLimits) {
+    final searchOnSecondRow = tableLimits.maxWidth < 850;
+    return Column(children: [
+    SizedBox(height: 34, child: Row(children: [
       Expanded(child: _paneHeader(Icons.view_list_outlined, 'SUBTITLE LINES',
         trailing: '${_cues.isEmpty ? 0 : _selectedId} / ${_cues.length}',
-        height: 34)),
+        height: 30)),
+      if (!searchOnSecondRow)
+        SizedBox(
+          width: (tableLimits.maxWidth * .27)
+              .clamp(190.0, 300.0).toDouble(),
+          child: _subtitleSearchField(),
+        ),
       IconButton(
         key: const ValueKey('studio-go-to-line'),
         tooltip: 'Go to subtitle line',
@@ -4442,25 +4527,9 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         padding: EdgeInsets.zero,
         onPressed: () { setState(() => _followPlayback = !_followPlayback); _onPlaybackPosition(); },
       ),
-    ]),
-    SizedBox(height: 36, child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 2),
-      child: TextField(
-        key: const ValueKey('desktop-cue-search'),
-        controller: _tableSearch,
-        focusNode: _searchFocus,
-        decoration: InputDecoration(
-          isDense: true,
-          hintText: 'Find subtitle, timecode or line number…',
-          hintStyle: const TextStyle(fontSize: 14),
-          prefixIcon: const Icon(Icons.search, size: 17),
-          contentPadding: const EdgeInsets.symmetric(vertical: 8),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(7)),
-        ),
-        style: const TextStyle(fontSize: 14),
-        onChanged: (value) => setState(() => _query = value),
-      ),
-    )),
+    ])),
+    if (searchOnSecondRow)
+      SizedBox(height: 34, child: _subtitleSearchField()),
     Expanded(child: LayoutBuilder(builder: (context, limits) {
       final gridWidth = math.max(850.0, limits.maxWidth);
       return SingleChildScrollView(
@@ -4470,9 +4539,9 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           height: limits.maxHeight,
           child: Column(children: [
             Container(
-              height: 30,
+              height: 26,
               color: Theme.of(context).colorScheme.surfaceContainerHigh,
-              padding: EdgeInsets.symmetric(horizontal: 13),
+              padding: EdgeInsets.symmetric(horizontal: 10),
               child: _gridCells(null),
             ),
             Expanded(child: Focus(
@@ -4484,7 +4553,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               : ListView.builder(
                   controller: _cueScroll,
                   itemCount: _visible.length,
-                  itemExtent: 32,
+                  itemExtent: _cueRowHeight,
                   itemBuilder: (context, i) {
                     final cue = _visible[i];
                     final selected = _selectedIds.contains(cue.id);
@@ -4503,7 +4572,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                           decoration: BoxDecoration(border: Border(
                             bottom: BorderSide(color: _border, width: .4),
                           )),
-                          padding: const EdgeInsets.symmetric(horizontal: 13),
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
                           child: _gridCells(cue),
                         ),
                       ),
@@ -4516,6 +4585,27 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       );
     })),
   ]);
+  });
+
+  Widget _subtitleSearchField() => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+    child: TextField(
+      key: const ValueKey('desktop-cue-search'),
+      controller: _tableSearch,
+      focusNode: _searchFocus,
+      decoration: InputDecoration(
+        isDense: true,
+        hintText: 'Find subtitle, timecode or line number…',
+        hintStyle: const TextStyle(fontSize: 12),
+        prefixIcon: const Icon(Icons.search, size: 16),
+        prefixIconConstraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+        contentPadding: const EdgeInsets.symmetric(vertical: 7),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(7)),
+      ),
+      style: const TextStyle(fontSize: 13),
+      onChanged: (value) => setState(() => _query = value),
+    ),
+  );
 
 
   /// Right-click actions share the same guarded entry points as the menubar.
@@ -4810,28 +4900,28 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     final heading = cue == null;
     Text cell(String value, {bool primary = false}) => Text(
       value, maxLines: 1, overflow: TextOverflow.ellipsis,
-      style: TextStyle(fontSize: heading ? 12 : 14,
+      style: TextStyle(fontSize: heading ? 11 : 13,
         height: 1.2,
         color: heading ? _muted : primary
             ? Theme.of(context).colorScheme.onSurface : _muted),
     );
     return Row(children: [
-      SizedBox(width: 32, child: cell(heading ? '#' : cue.id.toString())),
-      SizedBox(width: 108, child: cell(heading ? 'START' : cue.start)),
-      SizedBox(width: 108, child: cell(heading ? 'END' : cue.end)),
-      SizedBox(width: 84, child: cell(heading
+      SizedBox(width: 30, child: cell(heading ? '#' : cue.id.toString())),
+      SizedBox(width: 100, child: cell(heading ? 'START' : cue.start)),
+      SizedBox(width: 100, child: cell(heading ? 'END' : cue.end)),
+      SizedBox(width: 76, child: cell(heading
           ? 'DURATION' : _cueDuration(cue))),
       if (!widget.isEditMode)
         Expanded(child: Padding(
-          padding: const EdgeInsets.only(right: 12),
+          padding: const EdgeInsets.only(right: 8),
           child: cell(heading ? 'ORIGINAL' : cue.original, primary: true),
         )),
       Expanded(child: Padding(
-        padding: const EdgeInsets.only(right: 10),
+        padding: const EdgeInsets.only(right: 6),
         child: cell(heading ? (widget.isEditMode ? 'SUBTITLE TEXT' : 'EDITED')
             : cue.edited, primary: true),
       )),
-      SizedBox(width: 55, child: heading
+      SizedBox(width: 48, child: heading
           ? cell('STATUS')
           : cue.resolved
               ? Tooltip(message: 'Review resolved', child: Icon(
@@ -4884,7 +4974,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         ])),
         Expanded(child: ListView(
           key: ValueKey('inspector-page-' + _inspectorTab.toString()),
-          padding: const EdgeInsets.all(11),
+          padding: const EdgeInsets.all(8),
           children: _inspectorFields(),
         )),
         if (_inspectorTab == 0 &&
@@ -5025,7 +5115,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                 ),
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 7),
           ],
           if (!widget.isEditMode && !widget.showOriginalTextField) ...[
             Padding(
@@ -5104,11 +5194,11 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               ),
             ),
           ],
-          const SizedBox(height: 11),
+          const SizedBox(height: 7),
           Divider(color: _border),
-          const SizedBox(height: 5),
+          const SizedBox(height: 3),
           _fieldLabel('TIMING'),
-          const SizedBox(height: 5),
+          const SizedBox(height: 3),
           Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Expanded(child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -6068,8 +6158,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   }
 
   Widget _statusBar() => Container(
-    height: 34,
-    padding: const EdgeInsets.symmetric(horizontal: 15),
+    height: 24,
+    padding: const EdgeInsets.symmetric(horizontal: 10),
     decoration: BoxDecoration(border:
         Border(top: BorderSide(color: _border))),
     child: Row(children: [

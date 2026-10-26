@@ -31,6 +31,8 @@ class VideoPlayerSection extends StatefulWidget {
   final ValueChanged<bool>? onRepeatModeToggled;
   final bool isRepeatModeEnabled;
   final VoidCallback? onOpenRepeatRange;
+  /// Studio Dock uses a compact video band; mobile retains its normal inset.
+  final EdgeInsetsGeometry contentMargin;
 
   const VideoPlayerSection({
     super.key,
@@ -53,6 +55,7 @@ class VideoPlayerSection extends StatefulWidget {
     this.onRepeatModeToggled,
     this.isRepeatModeEnabled = false,
     this.onOpenRepeatRange,
+    this.contentMargin = const EdgeInsets.all(16),
   });
 
   @override
@@ -83,7 +86,7 @@ class _VideoPlayerSectionState extends State<VideoPlayerSection>
     // RepaintBoundary prevents parent rebuilds from affecting video player
     return RepaintBoundary(
       child: Container(
-        margin: const EdgeInsets.all(16),
+        margin: widget.contentMargin,
         child: VideoPlayerWidget(
           key: widget.videoPlayerKey,
           videoPath: widget.videoPath,

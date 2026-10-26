@@ -10,6 +10,13 @@ void main() {
 
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
+  test('new workspaces default to balanced video and waveform proportions',
+      () async {
+    final layout = await StudioDockLayoutPreferences().load();
+    expect(layout.videoShare, .36);
+    expect(layout.waveformShare, .24);
+  });
+
   test('local dock preferences round-trip widths, splits and visibility',
       () async {
     final repo = StudioDockLayoutPreferences();
@@ -49,7 +56,155 @@ void main() {
     expect(layout.explorerWidth, 340);
     expect(layout.inspectorWidth, 280);
     expect(layout.videoShare, .62);
-    expect(layout.waveformShare, .18);
+    expect(layout.waveformShare, .12);
+  });
+
+  test('legacy default split migrates without losing visibility and widths',
+      () async {
+    SharedPreferences.setMockInitialValues({
+      StudioDockLayoutPreferences.prefix + 'videoShare': .38,
+      StudioDockLayoutPreferences.prefix + 'waveformShare': .24,
+      StudioDockLayoutPreferences.prefix + 'videoOpen': true,
+      StudioDockLayoutPreferences.prefix + 'waveformOpen': true,
+      StudioDockLayoutPreferences.prefix + 'inspectorWidth': 380.0,
+    });
+    final repo = StudioDockLayoutPreferences();
+    final migrated = await repo.load();
+    expect(migrated.videoShare, .36);
+    expect(migrated.waveformShare, .24);
+    expect(migrated.videoOpen, true);
+    expect(migrated.waveformOpen, true);
+    expect(migrated.inspectorWidth, 380);
+    await repo.save(migrated);
+    expect((await repo.load()).videoShare, .36);
+  });
+
+  test('previous list-first default upgrades to balanced split', () async {
+    SharedPreferences.setMockInitialValues({
+      StudioDockLayoutPreferences.prefix + 'verticalPresetVersion': 2,
+      StudioDockLayoutPreferences.prefix + 'videoShare': .26,
+      StudioDockLayoutPreferences.prefix + 'waveformShare': .17,
+      StudioDockLayoutPreferences.prefix + 'videoOpen': true,
+      StudioDockLayoutPreferences.prefix + 'waveformOpen': true,
+    });
+    final layout = await StudioDockLayoutPreferences().load();
+    expect(layout.videoShare, .36);
+    expect(layout.waveformShare, .24);
+    expect(layout.videoOpen, true);
+    expect(layout.waveformOpen, true);
+  });
+
+  test('user-resized legacy splits are retained on upgrade', () async {
+    SharedPreferences.setMockInitialValues({
+      StudioDockLayoutPreferences.prefix + 'videoShare': .48,
+      StudioDockLayoutPreferences.prefix + 'waveformShare': .20,
+    });
+    final restored = await StudioDockLayoutPreferences().load();
+    expect(restored.videoShare, .48);
+    expect(restored.waveformShare, .20);
+  });
+
+  testWidgets('laptop dock with both media panels leaves room for cue rows',
+      (tester) async {
+    tester.view.physicalSize = const Size(1366, 768);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(MaterialApp(home: StudioDockWorkspace(
+      isLiveSession: true,
+      initialCues: List.generate(30, (i) => StudioDockCue(
+        id: i + 1, start: '00:00:01,000', end: '00:00:02,000',
+        original: 'Original $i', edited: 'Edited $i',
+      )),
+      videoSurface: const Center(child: Text('Video panel')),
+      waveformSurface: const Center(child: Text('Waveform panel')),
+    )));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('studio-toggle-video-panel')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('studio-toggle-waveform-panel')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Video panel'), findsOneWidget);
+    expect(find.text('Waveform panel'), findsOneWidget);
+    final tableHeight = tester.getSize(
+        find.byKey(const ValueKey('dock-table-band'))).height;
+    expect(tableHeight, greaterThan(260));
+    // The compact header (34), column labels (26) and 28px cue rows leave
+    // space for at least seven lines at a 768px-tall desktop window.
+    expect((tableHeight - 34 - 26) / 28, greaterThanOrEqualTo(7));
+    expect(find.byKey(const ValueKey('desktop-cue-search')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('narrow toolbar keeps primary actions and offers overflow',
+      (tester) async {
+    tester.view.physicalSize = const Size(820, 850);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    var imports = 0;
+    await tester.pumpWidget(MaterialApp(home: StudioDockWorkspace(
+      isLiveSession: true,
+      initialCues: const [StudioDockCue(
+        id: 1, start: '00:00:01,000', end: '00:00:02,000',
+        original: 'Original', edited: 'Edited',
+      )],
+      onImportFile: () => imports++,
+      onInsertCue: (_, __) async => null,
+    )));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('studio-dock-insert-cue')),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey('desktop-command-palette')),
+        findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('studio-dock-toolbar-more')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Import subtitles or project'));
+    await tester.pumpAndSettle();
+    expect(imports, 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('wide toolbar orders editing before media and project actions',
+      (tester) async {
+    tester.view.physicalSize = const Size(1700, 950);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(MaterialApp(home: StudioDockWorkspace(
+      isLiveSession: true,
+      initialCues: const [StudioDockCue(
+        id: 1, start: '00:00:01,000', end: '00:00:02,000',
+        original: 'Original', edited: 'Edited',
+      )],
+      onInsertCue: (_, __) async => null,
+      onSplitCue: (_, __) async => null,
+      onMergeCue: (_, __) async => null,
+      onDeleteCue: (_) async => null,
+      onChooseVideo: () {},
+      onImportFile: () {},
+      onNewProject: () {},
+    )));
+    await tester.pumpAndSettle();
+    final orderedKeys = [
+      'studio-dock-insert-cue',
+      'studio-dock-split-cue',
+      'studio-dock-merge-cue',
+      'studio-dock-delete-cue',
+      'studio-toggle-video-panel',
+      'studio-toggle-waveform-panel',
+      'studio-dock-toolbar-video',
+      'studio-dock-toolbar-import',
+      'studio-dock-toolbar-new',
+      'desktop-command-palette',
+    ];
+    final positions = orderedKeys.map((key) =>
+        tester.getTopLeft(find.byKey(ValueKey(key))).dx).toList();
+    for (var i = 1; i < positions.length; i++) {
+      expect(positions[i], greaterThan(positions[i - 1]));
+    }
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('wide preview restores hidden explorer and reset restores it',

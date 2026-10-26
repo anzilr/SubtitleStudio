@@ -46,8 +46,12 @@ void main() {
     await launch(tester, theme: lightTheme);
     final first = find.byKey(const ValueKey('desktop-cue-1'));
     final second = find.byKey(const ValueKey('desktop-cue-2'));
-    expect(tester.getSize(first).height, 32);
-    expect(tester.getSize(second).height, 32);
+    expect(tester.getSize(first).height, 28);
+    expect(tester.getSize(second).height, 28);
+    final firstText = tester.widget<Text>(find.descendant(
+      of: first, matching: find.text('First original'),
+    ));
+    expect(firstText.style?.fontSize, 13);
     final rowMaterial = tester.widget<Material>(find.ancestor(
       of: second, matching: find.byType(Material),
     ).first);

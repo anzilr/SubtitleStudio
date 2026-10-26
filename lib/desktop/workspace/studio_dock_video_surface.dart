@@ -125,5 +125,6 @@ class _StudioDockVideoSurfaceState extends State<StudioDockVideoSurface> {
     onRepeatModeToggled: widget.onRepeatModeToggled,
     isRepeatModeEnabled: widget.isRepeatModeEnabled,
     onOpenRepeatRange: widget.onOpenRepeatRange,
+    contentMargin: const EdgeInsets.all(4),
   );
 }
