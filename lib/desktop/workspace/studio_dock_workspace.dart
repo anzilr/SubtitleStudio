@@ -551,13 +551,34 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         cue.start.contains(q) || cue.id.toString() == q;
   }).toList(growable: false);
 
-  List<StudioDockEffectGroup> get _effectGroups =>
-      StudioDockEffectGroups.detect([
+  List<StudioDockCue>? _effectCacheCues;
+  List<StudioDockEffectGroup> _effectCacheGroups = const [];
+
+  List<StudioDockEffectGroup> get _effectGroups {
+    // The inspector, toolbar and subtitle grid can all query groups in one
+    // build. Cues are immutable, so identity detects edited/replaced rows
+    // without rescanning every SRT tag on each lookup.
+    final cached = _effectCacheCues;
+    if (cached != null && cached.length == _cues.length) {
+      var unchanged = true;
+      for (var i = 0; i < cached.length; i++) {
+        if (!identical(cached[i], _cues[i])) {
+          unchanged = false;
+          break;
+        }
+      }
+      if (unchanged) return _effectCacheGroups;
+    }
+    _effectCacheCues = List.unmodifiable(_cues);
+    return _effectCacheGroups = StudioDockEffectGroups.detect([
         for (final cue in _cues) StudioDockEffectFrame(
           id: cue.id, start: cue.start, end: cue.end,
           original: cue.original, edited: cue.edited,
+          effectiveText: cue.storedEdited ??
+              (cue.edited.isEmpty ? cue.original : cue.edited),
         ),
       ]);
+  }
 
   /// Filtering always reveals matching real cues. Unfiltered, collapsed rows
   /// are only summaries; all editing, export, selection and history commands
@@ -5516,16 +5537,22 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       Text('#${group.firstId}–${group.lastId}',
         style: TextStyle(color: _muted, fontSize: 11)),
       const SizedBox(width: 14),
-      Icon(group.kind == StudioDockEffectKind.karaoke
-          ? Icons.music_note_outlined : Icons.keyboard_outlined,
+      Icon(switch (group.kind) {
+          StudioDockEffectKind.karaoke => Icons.music_note_outlined,
+          StudioDockEffectKind.typewriter => Icons.keyboard_outlined,
+          StudioDockEffectKind.lineReveal => Icons.view_list_outlined,
+          StudioDockEffectKind.reveal => Icons.visibility_outlined,
+          StudioDockEffectKind.erase => Icons.backspace_outlined,
+          StudioDockEffectKind.colorAnimation => Icons.palette_outlined,
+          StudioDockEffectKind.blink => Icons.flash_on_outlined,
+        },
         color: _accent, size: 16),
       const SizedBox(width: 5),
-      Text('${group.kind == StudioDockEffectKind.karaoke ? 'Karaoke' : 'Typewriter'}'
-          ' · ${group.length} frames',
+      Text('${group.kind.label} · ${group.length} frames',
         style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
           color: _accent)),
       const SizedBox(width: 12),
-      Expanded(child: Text(group.original, maxLines: 1,
+      Expanded(child: Text(group.previewText, maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: const TextStyle(fontSize: 12))),
       const SizedBox(width: 8),

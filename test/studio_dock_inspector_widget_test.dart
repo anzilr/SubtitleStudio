@@ -421,6 +421,29 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('imported original-only SRT effects fold with full text preview',
+      (tester) async {
+    await launch(tester, cues: const [
+      StudioDockCue(id: 1, start: '00:00:01,000', end: '00:00:01,200',
+        original: 'H', edited: ''),
+      StudioDockCue(id: 2, start: '00:00:01,200', end: '00:00:01,400',
+        original: 'He', edited: ''),
+      StudioDockCue(id: 3, start: '00:00:01,400', end: '00:00:01,600',
+        original: 'Hello', edited: ''),
+      StudioDockCue(id: 4, start: '00:00:02,000', end: '00:00:03,000',
+        original: 'Unrelated', edited: ''),
+    ]);
+    expect(find.byKey(const ValueKey('studio-effect-group-1')),
+        findsOneWidget);
+    expect(find.textContaining('Typewriter · 3 frames'), findsOneWidget);
+    expect(find.text('Hello'), findsOneWidget);
+    expect(find.byKey(const ValueKey('desktop-cue-2')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('studio-effect-group-1')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('desktop-cue-2')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Rail offers dictionary and marked/project commands',
       (tester) async {
     var markedOpenedAt = -1;

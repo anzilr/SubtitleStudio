@@ -1,6 +1,7 @@
 import 'package:characters/characters.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:subtitle_studio/database/models/models.dart';
+import 'package:subtitle_studio/desktop/workspace/studio_dock_effect_groups.dart';
 import 'package:subtitle_studio/operations/subtitle_effect_operations.dart';
 import 'package:subtitle_studio/services/checkpoint_state_reducer.dart';
 import 'package:subtitle_studio/utils/time_parser.dart';
@@ -19,6 +20,36 @@ SubtitleLine _line(int index, String text) {
 
 void main() {
   group('mobile effect generation shared with Studio Dock', () {
+    test('generated Malayalam effects round-trip through SRT recognition',
+        () async {
+      const content = 'നമസ്കാരം  ലോകം\nസുഖമാണോ';
+      final original = _line(1, content);
+      for (final type in ['karaoke', 'typewriter']) {
+        final generated = type == 'karaoke'
+            ? await SubtitleEffectOperations.generateKaraokeEffect(
+                originalLine: original, color: 'ffee11')
+            : await SubtitleEffectOperations.generateTypewriterEffect(
+                originalLine: original, color: 'ffee11');
+        final before = [for (final line in generated) line.edited];
+        final groups = StudioDockEffectGroups.detect([
+          for (final line in generated) StudioDockEffectFrame(
+            id: line.index,
+            start: line.startTime,
+            end: line.endTime,
+            original: line.original,
+            edited: line.edited ?? '',
+          ),
+        ]);
+        expect(groups, hasLength(1), reason: type);
+        expect(groups.single.kind, type == 'karaoke'
+            ? StudioDockEffectKind.karaoke
+            : StudioDockEffectKind.typewriter);
+        expect(groups.single.length, generated.length);
+        expect([for (final line in generated) line.edited], before,
+            reason: 'Recognition must not modify exported subtitle content');
+      }
+    });
+
     test('typewriter creates progressive frames with bounded timestamps',
         () async {
       final source = _line(1, 'AB');
