@@ -354,4 +354,38 @@ void main() {
     expect(find.text('Original translation source'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('media toggles precede the right-edge review filter',
+      (tester) async {
+    tester.view.physicalSize = const Size(1680, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(MaterialApp(home: StudioDockWorkspace(
+      initialCues: const [StudioDockCue(
+        id: 1, start: '00:00:01,000', end: '00:00:02,000',
+        original: 'A', edited: 'B',
+      )],
+      videoSurface: const Text('Video pane'),
+      waveformSurface: const Text('Waveform pane'),
+    )));
+    await tester.pumpAndSettle();
+    final video = find.byKey(const ValueKey('studio-header-toggle-video'));
+    final waveform = find.byKey(const ValueKey('studio-header-toggle-waveform'));
+    final filter = find.byKey(const ValueKey('studio-review-filter'));
+    expect(tester.getTopLeft(video).dx,
+        lessThan(tester.getTopLeft(waveform).dx));
+    expect(tester.getTopLeft(waveform).dx,
+        lessThan(tester.getTopLeft(filter).dx));
+    await tester.tap(video);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('dock-video-band')), findsOneWidget);
+    await tester.tap(waveform);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('dock-waveform-band')), findsOneWidget);
+    await tester.tap(video);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('dock-video-band')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 }

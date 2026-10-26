@@ -10,6 +10,13 @@ void main() {
     Future<bool> Function(int, String)? applyText,
     Future<bool> Function(int, String)? applyOriginal,
     Future<StudioDockCueUpdate?> Function(int, String?, bool, bool)? applyNotes,
+    Future<StudioDockCueUpdate?> Function(int, String, Map<String, dynamic>)?
+        applyEffect,
+    Future<bool> Function(String)? changeEncoding,
+    Future<List<String>> Function()? loadEncodings,
+    String? encoding,
+    Future<void> Function(int)? openMarkedLines,
+    Future<void> Function()? openProjectSettings,
     bool isEditMode = false,
     int maxLineLength = 32,
   }) async {
@@ -28,6 +35,12 @@ void main() {
       onApplyCueText: applyText,
       onApplyCueOriginal: applyOriginal,
       onApplyCueNotes: applyNotes,
+      onApplyEffect: applyEffect,
+      encoding: encoding,
+      onChangeEncoding: changeEncoding,
+      onLoadEncodings: loadEncodings,
+      onOpenMarkedLines: openMarkedLines,
+      onOpenProjectSettings: openProjectSettings,
     )));
     await tester.pumpAndSettle();
   }
@@ -174,36 +187,51 @@ void main() {
     )).controller.text, 'Do not lose this');
   });
 
-  testWidgets('Style formatting and 9-grid use the guarded Text Apply',
+  testWidgets('Edited Text formatting uses the guarded Text Apply',
       (tester) async {
     final edits = <String>[];
     await launch(tester, applyText: (_, value) async {
       edits.add(value);
       return true;
     });
-    await tab(tester, 'Style');
     await tester.tap(find.byKey(const ValueKey('studio-style-b')));
     await tester.pump();
-    expect(find.textContaining('<b>Edited line</b>'), findsWidgets);
+    expect(find.byKey(const ValueKey('studio-style-u')), findsOneWidget);
+    expect(find.byKey(const ValueKey('studio-style-clear')), findsOneWidget);
+    final apply = find.byKey(const ValueKey('studio-apply-cue'));
+    await tester.ensureVisible(apply);
+    await tester.tap(apply);
+    await tester.pumpAndSettle();
+    expect(edits, ['<b>Edited line</b>']);
+    expect(tester.widget<FilledButton>(apply).onPressed, isNull);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Style 9-grid uses guarded Apply', (tester) async {
+    final edits = <String>[];
+    await launch(tester, applyText: (_, text) async {
+      edits.add(text);
+      return true;
+    });
+    await tab(tester, 'Style');
+    expect(find.byKey(const ValueKey('studio-style-b')), findsNothing);
     await tester.tap(find.byKey(const ValueKey('studio-style-align-8')));
     await tester.pump();
     final apply = find.byKey(const ValueKey('studio-apply-style'));
     await tester.ensureVisible(apply);
     await tester.tap(apply);
     await tester.pumpAndSettle();
-    expect(edits, [r'{\an8}<b>Edited line</b>']);
-    expect(tester.widget<FilledButton>(apply).onPressed, isNull);
+    expect(edits, [r'{\an8}Edited line']);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Style tab exposes shared color picker without immediate write',
+  testWidgets('Edited Text exposes shared color picker without immediate write',
       (tester) async {
     var calls = 0;
     await launch(tester, applyText: (_, __) async {
       calls++;
       return true;
     });
-    await tab(tester, 'Style');
     await tester.tap(find.byKey(const ValueKey('studio-style-color')));
     await tester.pumpAndSettle();
     expect(find.text('Subtitle text color'), findsOneWidget);
@@ -212,5 +240,113 @@ void main() {
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
     expect(calls, 0);
+  });
+
+  testWidgets('Style effects reuses mobile sheet and commits returned cues',
+      (tester) async {
+    final effects = <String>[];
+    await launch(tester, applyText: (_, __) async => true,
+        applyEffect: (id, type, config) async {
+      effects.add(type);
+      expect(id, 1);
+      expect(config['color'], isA<String>());
+      expect(config['endDelay'], isA<num>());
+      return const StudioDockCueUpdate(cues: [
+        StudioDockCue(id: 1, start: '00:00:01,000', end: '00:00:01,500',
+            original: 'Original', edited: 'Effect 1'),
+        StudioDockCue(id: 2, start: '00:00:01,500', end: '00:00:02,000',
+            original: 'Original', edited: 'Effect 2'),
+      ], selectedCueId: 1);
+    });
+    await tab(tester, 'Style');
+    final add = find.byKey(const ValueKey('studio-add-effects'));
+    await tester.ensureVisible(add);
+    await tester.tap(add);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('studio-effects-sheet')), findsOneWidget);
+    expect(find.textContaining('beta feature'), findsWidgets);
+    expect(effects, isEmpty);
+    final apply = find.text('Apply').last;
+    await tester.ensureVisible(apply);
+    await tester.tap(apply);
+    await tester.pumpAndSettle();
+    expect(effects, ['karaoke']);
+    expect(find.byKey(const ValueKey('studio-effects-sheet')), findsNothing);
+    expect(find.byKey(const ValueKey('desktop-cue-2')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Effect rejection preserves the beta dialog and cues',
+      (tester) async {
+    var attempts = 0;
+    await launch(tester, applyText: (_, __) async => true,
+        applyEffect: (_, __, ___) async {
+      attempts++;
+      return null;
+    });
+    await tab(tester, 'Style');
+    final add = find.byKey(const ValueKey('studio-add-effects'));
+    await tester.ensureVisible(add);
+    await tester.tap(add);
+    await tester.pumpAndSettle();
+    final apply = find.text('Apply').last;
+    await tester.ensureVisible(apply);
+    await tester.tap(apply);
+    await tester.pumpAndSettle();
+    expect(attempts, 1);
+    expect(find.byKey(const ValueKey('studio-effects-sheet')), findsOneWidget);
+    expect(find.byKey(const ValueKey('desktop-cue-2')), findsNothing);
+    await tester.tap(find.text('Cancel').last);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('studio-effects-sheet')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Status encoding opens shared options and requests persistence',
+      (tester) async {
+    final requests = <String>[];
+    await launch(tester, encoding: 'UTF-8',
+        loadEncodings: () async => ['UTF-8', 'ISO-8859-1'],
+        changeEncoding: (value) async {
+      requests.add(value);
+      return true;
+    });
+    await tester.tap(find.byKey(const ValueKey('studio-project-encoding')));
+    await tester.pumpAndSettle();
+    expect(find.text('Project text encoding'), findsOneWidget);
+    await tester.enterText(find.byKey(
+        const ValueKey('studio-encoding-search')), 'ISO-8859-1');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('studio-encoding-ISO-8859-1')));
+    await tester.pumpAndSettle();
+    expect(requests, ['ISO-8859-1']);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Rail offers dictionary and marked/project commands',
+      (tester) async {
+    var markedOpenedAt = -1;
+    var settingsOpened = 0;
+    await launch(tester, applyText: (_, __) async => true,
+        openMarkedLines: (cue) async { markedOpenedAt = cue; },
+        openProjectSettings: () async { settingsOpened++; });
+    for (final key in [
+      'studio-rail-msone-dictionary', 'studio-rail-olam-dictionary',
+      'studio-rail-urban-dictionary', 'studio-rail-marked-lines',
+      'studio-rail-project-settings',
+    ]) {
+      expect(find.byKey(ValueKey(key)), findsOneWidget);
+    }
+    await tester.ensureVisible(find.byKey(
+        const ValueKey('studio-rail-marked-lines')));
+    await tester.tap(find.byKey(const ValueKey('studio-rail-marked-lines')));
+    await tester.pumpAndSettle();
+    expect(markedOpenedAt, 1);
+    await tester.ensureVisible(find.byKey(
+        const ValueKey('studio-rail-project-settings')));
+    await tester.tap(find.byKey(const ValueKey('studio-rail-project-settings')));
+    await tester.pumpAndSettle();
+    expect(settingsOpened, 1);
+    expect(tester.takeException(), isNull);
   });
 }

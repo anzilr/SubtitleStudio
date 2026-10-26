@@ -25,6 +25,9 @@ import 'package:subtitle_studio/utils/subtitle_parser.dart';
 import 'package:subtitle_studio/widgets/secondary_subtitle_sheet.dart';
 import 'package:subtitle_studio/widgets/video_player_widget.dart';
 import 'package:subtitle_studio/widgets/checkpoint_history_panel.dart';
+import 'package:subtitle_studio/widgets/marked_lines_sheet.dart';
+import 'package:subtitle_studio/operations/subtitle_effect_operations.dart';
+import 'package:subtitle_studio/services/subtitle_extended_encoding_service.dart';
 
 import 'studio_dock_workspace.dart';
 import 'studio_dock_session_loader.dart';
@@ -1600,6 +1603,167 @@ class _StudioDockSessionViewState
     );
   }
 
+  Future<bool> _changeProjectEncoding(String encoding) async {
+    if (!widget.enableEditing) return false;
+    try {
+      final supported = await SubtitleExtendedEncodingService.standard
+          .availableEncodings();
+      if (!supported.contains(encoding)) return false;
+      final updated = await ref.read(subtitleRepositoryProvider).updateEncoding(
+        collectionId: widget.collectionId,
+        sessionId: widget.sessionId,
+        encoding: encoding,
+      );
+      if (!updated || !mounted) return false;
+      final refreshed = await _load();
+      if (!mounted) return false;
+      setState(() => _latestBaseline = refreshed);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _updateMarkedSheetReview(int zeroBasedIndex, {
+      String? comment, bool changeComment = false,
+      bool? marked, bool? resolved}) async {
+    final baseline = _latestBaseline;
+    if (!widget.enableEditing || baseline == null) return;
+    final matching = baseline.cues.where(
+        (cue) => cue.index == zeroBasedIndex + 1);
+    if (matching.isEmpty) return;
+    final cue = matching.first;
+    final updated = await _applyNotes(cue.index,
+        changeComment ? comment : cue.comment,
+        marked ?? cue.marked, resolved ?? cue.resolved);
+    if (updated != null && mounted) {
+      _dockKey.currentState?.acceptExternalCueUpdate(updated);
+    }
+  }
+
+  Future<void> _openMarkedLinesSheet(int preferredCue) async {
+    if (!mounted) return;
+    final collection = await ref.read(subtitleRepositoryProvider)
+        .fetchSubtitleCollection(widget.collectionId);
+    if (collection == null || !mounted) return;
+    final marked = collection.lines.where((line) => line.marked).toList();
+    final withComments = collection.lines.where((line) =>
+        line.marked || (line.comment?.trim().isNotEmpty ?? false)).toList();
+    await showDialog<void>(
+      context: context,
+      builder: (dialog) => Dialog(
+        insetPadding: const EdgeInsets.all(20),
+        child: SizedBox(
+          key: const ValueKey('studio-marked-lines-sheet'),
+          width: 960,
+          height: (MediaQuery.sizeOf(dialog).height - 48)
+              .clamp(260.0, 860.0).toDouble(),
+          child: MarkedLinesSheet(
+            markedLines: marked,
+            allLinesWithComments: withComments,
+            initialHighlightLineIndex: preferredCue > 0 ? preferredCue : null,
+            onLineSelected: (index) {
+              Navigator.pop(dialog);
+              _dockKey.currentState?.highlightCueFromWaveform(index + 1);
+            },
+            onCommentUpdated: !widget.enableEditing ? null :
+                (index, comment) => unawaited(_updateMarkedSheetReview(index,
+                    comment: comment, changeComment: true)),
+            onLineUnmarked: !widget.enableEditing ? null :
+                (index) => unawaited(_updateMarkedSheetReview(index,
+                    comment: null, changeComment: true, marked: false)),
+            onResolvedUpdated: !widget.enableEditing ? null :
+                (index, resolved) => unawaited(_updateMarkedSheetReview(index,
+                    resolved: resolved)),
+            onTextEdited: !widget.enableEditing ? null :
+                (index, text) => unawaited(_updateMarkedSheetText(index, text)),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _updateMarkedSheetText(int zeroBasedIndex, String text) async {
+    if (!await _applyText(zeroBasedIndex + 1, text) || !mounted) return;
+    final baseline = _latestBaseline;
+    if (baseline != null) {
+      _dockKey.currentState?.acceptExternalCueUpdate(
+          _snapshotUpdate(baseline, zeroBasedIndex + 1));
+    }
+  }
+
+  Future<StudioDockCueUpdate?> _applyEffect(
+      int cueNumber, String type, Map<String, dynamic> config) async {
+    final baseline = _latestBaseline;
+    if (!widget.enableEditing || baseline == null ||
+        !baseline.cues.any((line) => line.index == cueNumber)) return null;
+    final colorValue = config['color'];
+    final delayValue = config['endDelay'];
+    if (colorValue is! String ||
+        !RegExp(r'^[a-fA-F0-9]{8}$').hasMatch(colorValue) ||
+        delayValue is! num || !delayValue.toDouble().isFinite ||
+        delayValue < 0) return null;
+    try {
+      final repository = ref.read(subtitleRepositoryProvider);
+      final current = await repository.fetchSubtitleCollection(widget.collectionId);
+      if (current == null) return null;
+      final index = current.lines.indexWhere((line) => line.index == cueNumber);
+      if (index < 0) return null;
+      final source = current.lines[index];
+      // Effects must not be generated from a stale desktop selection.
+      final observed = baseline.cues.firstWhere((cue) => cue.index == cueNumber);
+      if (source.startTime != observed.start ||
+          source.endTime != observed.end ||
+          source.original != observed.original ||
+          source.edited != observed.storedEdited) return null;
+      final color = colorValue.substring(2);
+      final List<SubtitleLine> generated;
+      switch (type) {
+        case 'karaoke':
+          generated = await SubtitleEffectOperations.generateKaraokeEffect(
+            originalLine: source,
+            color: color,
+            endDelay: delayValue.toDouble(),
+            effectType: config['effectType'] == 'character'
+                ? 'character' : 'word',
+            hasTextSelection: config['hasTextSelection'] == true,
+            selectionStart: config['selectionStart'] is int
+                ? config['selectionStart'] as int : 0,
+            selectionEnd: config['selectionEnd'] is int
+                ? config['selectionEnd'] as int : 0,
+            selectedText: config['selectedText'] is String
+                ? config['selectedText'] as String : null,
+            fullText: config['fullText'] is String
+                ? config['fullText'] as String : null,
+          );
+        case 'typewriter':
+          generated = await SubtitleEffectOperations.generateTypewriterEffect(
+            originalLine: source,
+            color: color,
+            endDelay: delayValue.toDouble(),
+          );
+        default:
+          return null;
+      }
+      if (generated.isEmpty) return null;
+      final committed = await repository.replaceLineWithGeneratedLinesWithHistory(
+        collectionId: widget.collectionId,
+        originalIndex: index,
+        replacementLines: generated,
+        sessionId: widget.sessionId,
+        description: 'Applied $type effect to line $cueNumber '
+            '(${generated.length} lines)',
+      );
+      if (!committed || !mounted) return null;
+      final refreshed = await _load();
+      if (!mounted) return null;
+      setState(() => _latestBaseline = refreshed);
+      return _snapshotUpdate(refreshed, cueNumber);
+    } catch (_) {
+      return null;
+    }
+  }
+
   @override
   void didUpdateWidget(covariant StudioDockSessionView oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -1671,6 +1835,8 @@ class _StudioDockSessionViewState
         isLiveSession: true,
         projectTitle: session.fileName,
         encoding: session.encoding,
+        onChangeEncoding:
+            widget.enableEditing ? _changeProjectEncoding : null,
         isEditMode: session.isEditMode,
         showOriginalLine: _lineDisplay.showOriginalLine,
         autoSaveWithNavigation: _lineDisplay.autoSaveWithNavigation,
@@ -1699,6 +1865,7 @@ class _StudioDockSessionViewState
         onOpenProjectSettings:
             widget.enableEditing && widget.allowNativePlayback
                 ? _openProjectSettings : null,
+        onOpenMarkedLines: _openMarkedLinesSheet,
         onImportComments: widget.enableEditing ? _openImportComments : null,
         onRemoveHearingImpaired:
             widget.enableEditing ? _removeHearingImpaired : null,
@@ -1737,6 +1904,7 @@ class _StudioDockSessionViewState
             widget.enableEditing ? _deleteSelectedCues : null,
         onClearAllFormatting:
             widget.enableEditing ? _clearAllFormatting : null,
+        onApplyEffect: widget.enableEditing ? _applyEffect : null,
         onInsertCue: widget.enableEditing ? _insertCue : null,
         onDeleteCue: widget.enableEditing ? _deleteCue : null,
         onSplitCue: widget.enableEditing ? _splitCue : null,

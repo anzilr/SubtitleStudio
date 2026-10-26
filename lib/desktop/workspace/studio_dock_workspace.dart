@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:subtitle_studio/screens/edit/services/raw_srt_document.dart';
 import 'package:subtitle_studio/screens/edit/widgets/source_view_pane.dart';
@@ -13,6 +14,10 @@ import 'package:subtitle_studio/utils/text_formatting.dart';
 import 'package:subtitle_studio/widgets/dictionary_search_widget.dart';
 import 'package:subtitle_studio/widgets/olam_dictionary_widget.dart';
 import 'package:subtitle_studio/widgets/urban_dictionary_widget.dart';
+import 'package:subtitle_studio/widgets/subtitle_effects_sheet.dart';
+import 'package:subtitle_studio/database/models/models.dart';
+import 'package:subtitle_studio/services/subtitle_extended_encoding_service.dart';
+import 'package:subtitle_studio/services/subtitle_text_codec.dart';
 import 'package:subtitle_studio/services/checkpoint_history_graph.dart';
 import 'package:subtitle_studio/services/checkpoint_history_labels.dart';
 import 'package:subtitle_studio/services/subtitle_quality_checker.dart';
@@ -40,7 +45,7 @@ enum _StudioDockToolbarOverflow {
   newProject, import, attachVideo,
 }
 
-enum _StudioDockCueHeaderAction { insert, split, merge, delete }
+enum _StudioDockCueHeaderAction { insert, split, merge, delete, selectByIndex }
 
 /// Same persisted switches used by mobile Edit Line; formatted preview is
 /// intentionally session-only (mobile also does not persist its toggle).
@@ -160,6 +165,8 @@ class StudioDockWorkspace extends StatefulWidget {
     this.onSaveEditPreference,
     this.projectTitle,
     this.encoding,
+    this.onChangeEncoding,
+    this.onLoadEncodings,
     this.onChooseProject,
     this.projects = const [],
     this.activeProjectId,
@@ -183,6 +190,7 @@ class StudioDockWorkspace extends StatefulWidget {
     this.onShiftSelectedCues,
     this.onDeleteSelectedCues,
     this.onClearAllFormatting,
+    this.onApplyEffect,
     this.onInsertCue,
     this.onDeleteCue,
     this.onSplitCue,
@@ -210,6 +218,7 @@ class StudioDockWorkspace extends StatefulWidget {
     this.repeatEnabled = false,
     this.onOpenAppSettings,
     this.onOpenProjectSettings,
+    this.onOpenMarkedLines,
     this.onImportComments,
     this.onRemoveHearingImpaired,
     this.onOpenHelp,
@@ -240,6 +249,10 @@ class StudioDockWorkspace extends StatefulWidget {
       onSaveEditPreference;
   final String? projectTitle;
   final String? encoding;
+  /// Commits the selected charset to the shared project collection.
+  final Future<bool> Function(String encoding)? onChangeEncoding;
+  /// Optional capability-list override for embedders and deterministic tests.
+  final Future<List<String>> Function()? onLoadEncodings;
   final VoidCallback? onChooseProject;
   final List<StudioDockProjectEntry> projects;
   final int? activeProjectId;
@@ -301,6 +314,10 @@ class StudioDockWorkspace extends StatefulWidget {
       List<int> cueNumbers, int preferredCue)? onDeleteSelectedCues;
   final Future<StudioDockCueUpdate?> Function(
       int selectedCueNumber)? onClearAllFormatting;
+  /// Replaces a cue with the existing mobile effect generator's output.
+  final Future<StudioDockCueUpdate?> Function(
+      int cueNumber, String effectType, Map<String, dynamic> config)?
+      onApplyEffect;
   final Future<StudioDockCueUpdate?> Function(
       int? afterCueNumber, StudioDockNewCueDraft draft)? onInsertCue;
   final Future<StudioDockCueUpdate?> Function(int cueNumber)? onDeleteCue;
@@ -356,6 +373,8 @@ class StudioDockWorkspace extends StatefulWidget {
   /// Hosts the existing ProjectSettingsSheet on native desktop. The live
   /// session refreshes paths, encoding, cues and history when it closes.
   final Future<void> Function()? onOpenProjectSettings;
+  /// Presents the same marked-line review sheet as mobile.
+  final Future<void> Function(int preferredCue)? onOpenMarkedLines;
   /// Opens the mobile project's .msone comment importer in a native desktop
   /// dialog and refreshes the shared checkpoint-backed session afterward.
   final Future<void> Function()? onImportComments;
@@ -432,6 +451,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   ModalRoute<dynamic>? _msoneNormalizeMenuRoute;
   bool _floatingPlaybackVisible = false;
   bool _openingProjectSettings = false;
+  bool _changingEncoding = false;
+  bool _applyingEffect = false;
   bool _openingCommentImport = false;
   bool _openingHearingCleanup = false;
   ModalRoute<dynamic>? _hearingMenuRoute;
@@ -1351,6 +1372,10 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
 
   void _toggleStyleTag(String tag) => _setStyleDraft(
     StudioDockStyleActions.toggleTag(_styleText, tag),
+  );
+
+  void _clearCueFormatting() => _setStyleDraft(
+    StudioDockStyleActions.clearSupportedTags(_styleText),
   );
 
   Future<void> _pickStyleColor() async {
@@ -2694,6 +2719,14 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             _showCommandPalette,
         const SingleActivator(LogicalKeyboardKey.keyK, meta: true):
             _showCommandPalette,
+        const SingleActivator(LogicalKeyboardKey.keyU, control: true):
+            () => _formatCueShortcut('u'),
+        const SingleActivator(LogicalKeyboardKey.keyU, meta: true):
+            () => _formatCueShortcut('u'),
+        const SingleActivator(LogicalKeyboardKey.keyX,
+            control: true, alt: true): _clearCueFormatting,
+        const SingleActivator(LogicalKeyboardKey.keyX,
+            meta: true, alt: true): _clearCueFormatting,
         if (widget.onRestoreHistory != null) ...{
           const SingleActivator(LogicalKeyboardKey.keyZ, control: true):
               () => unawaited(_undoHistory()),
@@ -3214,15 +3247,9 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       case _StudioDockMenuAction.inspector:
         _toggleInspectorPanel();
       case _StudioDockMenuAction.toggleVideoPanel:
-        if (widget.videoSurface != null) {
-          setState(() => _showVideo = !_showVideo);
-          _queueLayoutSave(now: true);
-        }
+        _toggleMediaPanel(video: true);
       case _StudioDockMenuAction.toggleWaveformPanel:
-        if (widget.waveformSurface != null) {
-          setState(() => _showWaveform = !_showWaveform);
-          _queueLayoutSave(now: true);
-        }
+        _toggleMediaPanel(video: false);
       case _StudioDockMenuAction.floatingPlayback:
         if (widget.videoSurface != null && widget.playback != null &&
             widget.onTogglePlayback != null) {
@@ -3799,6 +3826,20 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     }
   }
 
+  void _toggleMediaPanel({required bool video}) {
+    if (video ? widget.videoSurface == null : widget.waveformSurface == null) {
+      return;
+    }
+    setState(() {
+      if (video) {
+        _showVideo = !_showVideo;
+      } else {
+        _showWaveform = !_showWaveform;
+      }
+    });
+    _queueLayoutSave(now: true);
+  }
+
   Widget _navigationRail() => Container(
     width: 61,
     decoration: BoxDecoration(border:
@@ -3817,13 +3858,45 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         ),
         Divider(color: _border, indent: 10, endIndent: 10),
       ],
-      _railItem(0, Icons.movie_creation_outlined, 'Editor'),
-      _railItem(1, Icons.account_tree_outlined, 'History'),
-      if (widget.onLoadSourceView != null)
-        _railItem(5, Icons.code_rounded, 'Source View'),
-      _railItem(2, Icons.search_rounded, 'Find'),
-      _railItem(3, Icons.tune_rounded, 'Tools'),
-      const Spacer(),
+      Expanded(child: SingleChildScrollView(child: Column(children: [
+        _railItem(0, Icons.movie_creation_outlined, 'Editor'),
+        _railItem(1, Icons.account_tree_outlined, 'History'),
+        if (widget.onLoadSourceView != null)
+          _railItem(5, Icons.code_rounded, 'Source View'),
+        _railItem(2, Icons.search_rounded, 'Find'),
+        _railItem(3, Icons.tune_rounded, 'Tools'),
+        Divider(color: _border, indent: 10, endIndent: 10),
+        _railAction('studio-rail-msone-dictionary',
+          SvgPicture.asset('assets/msone.svg', width: 20, height: 20,
+              colorFilter: ColorFilter.mode(_muted, BlendMode.srcIn)),
+          'MSone Dictionary (Alt+M)',
+          widget.onApplyCueText == null ? null :
+              () => unawaited(_openDictionary(HotkeyAction.msoneDictionary))),
+        _railAction('studio-rail-olam-dictionary',
+          Icon(Icons.book_outlined, size: 21, color: _muted),
+          'Olam Dictionary (Alt+O)',
+          widget.onApplyCueText == null ? null :
+              () => unawaited(_openDictionary(HotkeyAction.olamDictionary))),
+        _railAction('studio-rail-urban-dictionary',
+          Icon(Icons.forum_outlined, size: 21, color: _muted),
+          'Urban Dictionary (Alt+U)',
+          widget.onApplyCueText == null ? null :
+              () => unawaited(_openDictionary(HotkeyAction.urbanDictionary))),
+        _railAction('studio-rail-marked-lines',
+          Icon(Icons.bookmark_added_outlined, size: 21, color: _muted),
+          'Marked Lines sheet',
+          () => unawaited(_openMarkedLinesFromSidebar())),
+        if (widget.onSubmitToMsone != null)
+          _railAction('studio-rail-submit-msone',
+            Icon(Icons.cloud_upload_outlined, size: 21, color: _muted),
+            'Submit to MSone', _openingMsoneSubmission ? null :
+                () => unawaited(_submitMsoneSafely())),
+        if (widget.onOpenProjectSettings != null)
+          _railAction('studio-rail-project-settings',
+            Icon(Icons.settings_outlined, size: 21, color: _muted),
+            'Project settings', _openingProjectSettings ? null :
+                () => unawaited(_openProjectSettingsSafely())),
+      ]))),
       _railItem(4, Icons.settings_outlined, 'Settings'),
       const SizedBox(height: 8),
     ]),
@@ -3848,6 +3921,28 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       ),
     ),
   );
+
+  Widget _railAction(String key, Widget icon, String tooltip,
+      VoidCallback? onPressed) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 2),
+    child: IconButton(
+      key: ValueKey(key),
+      tooltip: tooltip,
+      onPressed: onPressed,
+      icon: icon,
+      constraints: const BoxConstraints(minWidth: 44, minHeight: 43),
+    ),
+  );
+
+  Future<void> _openMarkedLinesFromSidebar() async {
+    final open = widget.onOpenMarkedLines;
+    if (open == null) {
+      await _showMarkedLinesFromShortcut();
+      return;
+    }
+    if (!await _confirmDraftBeforeLeaving() || !mounted) return;
+    await open(_selectedId);
+  }
 
   Future<void> _switchSection(int index) async {
     if (index == 4 && widget.onOpenAppSettings != null) {
@@ -4633,13 +4728,14 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
 
   Widget _cueStructureHeaderActions({required bool compact}) {
     if (widget.onInsertCue == null && widget.onSplitCue == null &&
-        widget.onMergeCue == null && widget.onDeleteCue == null) {
+        widget.onMergeCue == null && widget.onDeleteCue == null &&
+        _cues.isEmpty) {
       return const SizedBox.shrink();
     }
     if (compact) {
       return PopupMenuButton<_StudioDockCueHeaderAction>(
         key: const ValueKey('studio-cue-header-more'),
-        tooltip: 'Insert, split, combine or delete subtitle lines',
+        tooltip: 'Subtitle line actions and index selection',
         icon: const Icon(Icons.edit_note_outlined, size: 20),
         constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
         padding: EdgeInsets.zero,
@@ -4653,6 +4749,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               unawaited(_mergeCueSafely());
             case _StudioDockCueHeaderAction.delete:
               unawaited(_deleteCueSafely());
+            case _StudioDockCueHeaderAction.selectByIndex:
+              unawaited(_selectByIndexSafely());
           }
         },
         itemBuilder: (_) => [
@@ -4672,6 +4770,9 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             PopupMenuItem(value: _StudioDockCueHeaderAction.delete,
               enabled: !_changingStructure && _cues.isNotEmpty,
               child: const Text('Delete selected subtitle line')),
+          if (_cues.isNotEmpty)
+            const PopupMenuItem(value: _StudioDockCueHeaderAction.selectByIndex,
+              child: Text('Select by index…')),
         ],
       );
     }
@@ -4716,6 +4817,15 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           onPressed: _changingStructure || _cues.isEmpty ? null :
               () => unawaited(_deleteCueSafely()),
         ),
+      if (_cues.isNotEmpty)
+        IconButton(
+          key: const ValueKey('studio-dock-select-by-index'),
+          icon: const Icon(Icons.select_all_rounded, size: 19),
+          tooltip: 'Select subtitle lines by index',
+          constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+          padding: EdgeInsets.zero,
+          onPressed: () => unawaited(_selectByIndexSafely()),
+        ),
     ]);
   }
 
@@ -4756,47 +4866,6 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         padding: EdgeInsets.zero,
         onPressed: _cues.isEmpty ? null : () => unawaited(_goToLineSafely()),
       ),
-      if (compactFilter)
-        PopupMenuButton<_StudioDockReviewFilter>(
-          key: const ValueKey('studio-review-filter'),
-          tooltip: 'Filter subtitle lines',
-          icon: const Icon(Icons.filter_list_rounded, size: 19),
-          constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
-          padding: EdgeInsets.zero,
-          onSelected: (filter) => unawaited(_changeReviewFilterSafely(filter)),
-          itemBuilder: (_) => [
-            for (final filter in _StudioDockReviewFilter.values)
-              CheckedPopupMenuItem(
-                value: filter, checked: _reviewFilter == filter,
-                child: Text(switch (filter) {
-                  _StudioDockReviewFilter.all => 'All lines',
-                  _StudioDockReviewFilter.marked => 'Marked',
-                  _StudioDockReviewFilter.unresolved => 'Unresolved',
-                  _StudioDockReviewFilter.resolved => 'Resolved',
-                }),
-              ),
-          ],
-        )
-      else DropdownButtonHideUnderline(child: DropdownButton<_StudioDockReviewFilter>(
-        key: const ValueKey('studio-review-filter'),
-        value: _reviewFilter,
-        isDense: true,
-        style: TextStyle(fontSize: 13,
-            color: Theme.of(context).colorScheme.onSurface),
-        items: const [
-          DropdownMenuItem(value: _StudioDockReviewFilter.all,
-              child: Text('All lines')),
-          DropdownMenuItem(value: _StudioDockReviewFilter.marked,
-              child: Text('Marked')),
-          DropdownMenuItem(value: _StudioDockReviewFilter.unresolved,
-              child: Text('Unresolved')),
-          DropdownMenuItem(value: _StudioDockReviewFilter.resolved,
-              child: Text('Resolved')),
-        ],
-        onChanged: (filter) {
-          if (filter != null) unawaited(_changeReviewFilterSafely(filter));
-        },
-      )),
       if (widget.onApplyBulkReview != null)
         PopupMenuButton<StudioDockReviewAction>(
           key: const ValueKey('studio-bulk-review-menu'),
@@ -4827,6 +4896,27 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         padding: EdgeInsets.zero,
         onPressed: () { setState(() => _followPlayback = !_followPlayback); _onPlaybackPosition(); },
       ),
+      if (widget.videoSurface != null) IconButton(
+        key: const ValueKey('studio-header-toggle-video'),
+        icon: Icon(_showVideo ? Icons.videocam_rounded
+            : Icons.videocam_off_outlined, size: 19),
+        tooltip: _showVideo ? 'Hide video panel' : 'Show video panel',
+        color: _showVideo ? _accent : _muted,
+        constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+        padding: EdgeInsets.zero,
+        onPressed: () => _toggleMediaPanel(video: true),
+      ),
+      if (widget.waveformSurface != null) IconButton(
+        key: const ValueKey('studio-header-toggle-waveform'),
+        icon: Icon(_showWaveform ? Icons.graphic_eq_rounded
+            : Icons.graphic_eq_outlined, size: 19),
+        tooltip: _showWaveform ? 'Hide waveform panel' : 'Show waveform panel',
+        color: _showWaveform ? _accent : _muted,
+        constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+        padding: EdgeInsets.zero,
+        onPressed: () => _toggleMediaPanel(video: false),
+      ),
+      _reviewFilterControl(compact: compactFilter),
     ])),
     Expanded(child: LayoutBuilder(builder: (context, limits) {
       final gridWidth = math.max(850.0, limits.maxWidth);
@@ -4884,6 +4974,53 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     })),
   ]);
   });
+
+  Widget _reviewFilterControl({required bool compact}) {
+    if (compact) {
+      return PopupMenuButton<_StudioDockReviewFilter>(
+        key: const ValueKey('studio-review-filter'),
+        tooltip: 'Filter subtitle lines',
+        icon: const Icon(Icons.filter_list_rounded, size: 19),
+        constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+        padding: EdgeInsets.zero,
+        onSelected: (filter) => unawaited(_changeReviewFilterSafely(filter)),
+        itemBuilder: (_) => [
+          for (final filter in _StudioDockReviewFilter.values)
+            CheckedPopupMenuItem(
+              value: filter, checked: _reviewFilter == filter,
+              child: Text(switch (filter) {
+                _StudioDockReviewFilter.all => 'All lines',
+                _StudioDockReviewFilter.marked => 'Marked',
+                _StudioDockReviewFilter.unresolved => 'Unresolved',
+                _StudioDockReviewFilter.resolved => 'Resolved',
+              }),
+            ),
+        ],
+      );
+    }
+    return DropdownButtonHideUnderline(
+      child: DropdownButton<_StudioDockReviewFilter>(
+        key: const ValueKey('studio-review-filter'),
+        value: _reviewFilter,
+        isDense: true,
+        style: TextStyle(fontSize: 13,
+            color: Theme.of(context).colorScheme.onSurface),
+        items: const [
+          DropdownMenuItem(value: _StudioDockReviewFilter.all,
+              child: Text('All lines')),
+          DropdownMenuItem(value: _StudioDockReviewFilter.marked,
+              child: Text('Marked')),
+          DropdownMenuItem(value: _StudioDockReviewFilter.unresolved,
+              child: Text('Unresolved')),
+          DropdownMenuItem(value: _StudioDockReviewFilter.resolved,
+              child: Text('Resolved')),
+        ],
+        onChanged: (filter) {
+          if (filter != null) unawaited(_changeReviewFilterSafely(filter));
+        },
+      ),
+    );
+  }
 
   Widget _subtitleSearchField() => Padding(
     padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
@@ -5331,6 +5468,109 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     );
   }
 
+  Widget _textFormattingToolbar() {
+    final enabled = widget.onApplyCueText != null && !_savingDraft;
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, bottom: 3),
+      child: Align(alignment: Alignment.centerLeft,
+        child: Wrap(spacing: 2, runSpacing: 2, children: [
+          for (final (tag, icon, title) in const [
+            ('b', Icons.format_bold, 'Bold (Ctrl/Cmd+B)'),
+            ('i', Icons.format_italic, 'Italic (Ctrl/Cmd+I)'),
+            ('u', Icons.format_underline, 'Underline (Ctrl/Cmd+U)'),
+          ])
+            IconButton(
+              key: ValueKey('studio-style-$tag'),
+              tooltip: title,
+              onPressed: enabled ? () => _formatCueShortcut(tag) : null,
+              icon: Icon(icon, size: 19),
+              constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+              padding: EdgeInsets.zero,
+            ),
+          IconButton(
+            key: const ValueKey('studio-style-color'),
+            tooltip: 'Text color (Alt+C)',
+            onPressed: enabled ? () => unawaited(_pickStyleColor()) : null,
+            icon: const Icon(Icons.palette_outlined, size: 19),
+            constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+            padding: EdgeInsets.zero,
+          ),
+          IconButton(
+            key: const ValueKey('studio-style-clear'),
+            tooltip: 'Clear formatting (Ctrl/Cmd+Alt+X)',
+            onPressed: enabled ? _clearCueFormatting : null,
+            icon: const Icon(Icons.format_clear, size: 19),
+            constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+            padding: EdgeInsets.zero,
+          ),
+        ])),
+    );
+  }
+
+  Future<void> _openEffectsSafely() async {
+    final apply = widget.onApplyEffect;
+    if (apply == null || _cues.isEmpty || _applyingEffect ||
+        !await _confirmDraftBeforeLeaving() || !mounted) return;
+    final selectedCue = _selected;
+    final line = SubtitleLine()
+      ..index = selectedCue.id
+      ..startTime = selectedCue.start
+      ..endTime = selectedCue.end
+      ..original = selectedCue.original
+      ..edited = selectedCue.storedEdited;
+    await showDialog<void>(
+      context: context,
+      builder: (dialog) => Dialog(
+        child: SizedBox(
+          width: 650,
+          height: (MediaQuery.sizeOf(dialog).height - 64)
+              .clamp(260.0, 790.0).toDouble(),
+          child: SubtitleEffectsSheet(
+            key: const ValueKey('studio-effects-sheet'),
+            selectedIndices: [selectedCue.id - 1],
+            subtitleLines: [line],
+            lineText: selectedCue.edited.isNotEmpty
+                ? selectedCue.edited : selectedCue.original,
+            onApplyEffect: (type, config) => unawaited(
+              _applySelectedEffect(dialog, selectedCue.id, type, config, apply)),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _applySelectedEffect(BuildContext dialogContext,
+      int cueId, String type,
+      Map<String, dynamic> config,
+      Future<StudioDockCueUpdate?> Function(
+          int cueNumber, String type, Map<String, dynamic> config) apply) async {
+    if (_applyingEffect || !mounted || cueId != _selectedId) return;
+    setState(() => _applyingEffect = true);
+    StudioDockCueUpdate? updated;
+    try {
+      updated = await apply(cueId, type, config);
+    } catch (_) {
+      updated = null;
+    } finally {
+      if (mounted) setState(() => _applyingEffect = false);
+    }
+    if (!mounted) return;
+    if (updated == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Effect could not be applied. Your subtitle is unchanged.'),
+      ));
+      return;
+    }
+    if (dialogContext.mounted &&
+        ModalRoute.of(dialogContext)?.isCurrent == true) {
+      Navigator.of(dialogContext).pop();
+    }
+    _acceptStructure(updated);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('$type effect added to project history.'),
+    ));
+  }
+
   List<Widget> _inspectorFields() {
     switch (_inspectorTab) {
       case 0:
@@ -5512,6 +5752,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               'Edited',
             ),
           ])),
+          _textFormattingToolbar(),
           if (_formattedView) ...[
             const SizedBox(height: 8),
             _fieldLabel('FORMATTED PREVIEW · READ ONLY'),
@@ -5641,41 +5882,6 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         ];
       case 1:
         return [
-          _fieldLabel('TEXT FORMATTING'),
-          Wrap(spacing: 7, runSpacing: 7, children: [
-            for (final (tag, label, icon) in const [
-              ('b', 'Bold', Icons.format_bold),
-              ('i', 'Italic', Icons.format_italic),
-              ('u', 'Underline', Icons.format_underline),
-            ])
-              OutlinedButton.icon(
-                key: ValueKey('studio-style-$tag'),
-                onPressed: widget.onApplyCueText != null && !_savingDraft
-                    ? () => _toggleStyleTag(tag) : null,
-                icon: Icon(icon, size: 16),
-                label: Text(label, style: const TextStyle(fontSize: 13)),
-              ),
-          ]),
-          const SizedBox(height: 10),
-          Row(children: [
-            Expanded(child: OutlinedButton.icon(
-              key: const ValueKey('studio-style-color'),
-              onPressed: widget.onApplyCueText != null && !_savingDraft
-                  ? () => unawaited(_pickStyleColor()) : null,
-              icon: const Icon(Icons.palette_outlined, size: 16),
-              label: const Text('Text color'),
-            )),
-            const SizedBox(width: 6),
-            OutlinedButton(
-              key: const ValueKey('studio-style-clear'),
-              onPressed: widget.onApplyCueText != null && !_savingDraft
-                  ? () => _setStyleDraft(
-                      StudioDockStyleActions.clearSupportedTags(_styleText))
-                  : null,
-              child: const Text('Clear tags'),
-            ),
-          ]),
-          const SizedBox(height: 20),
           _fieldLabel('POSITION'),
           GridView.count(
             shrinkWrap: true,
@@ -5709,6 +5915,15 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                   ),
                 ),
             ],
+          ),
+          const SizedBox(height: 18),
+          _fieldLabel('EFFECTS'),
+          OutlinedButton.icon(
+            key: const ValueKey('studio-add-effects'),
+            onPressed: widget.onApplyEffect == null || _applyingEffect ||
+                    _savingDraft ? null : () => unawaited(_openEffectsSafely()),
+            icon: const Icon(Icons.auto_awesome, size: 18),
+            label: const Text('Add effects (beta)'),
           ),
           const SizedBox(height: 18),
           _fieldLabel('DRAFT PREVIEW'),
@@ -6512,14 +6727,106 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       // footer can be narrower than either text when a panel is overlaid.
       Flexible(fit: FlexFit.loose, child: Align(
         alignment: Alignment.centerRight,
-        child: Text(widget.encoding == null
-            ? 'Desktop prototype  •  Windows / macOS / Linux'
-            : 'Encoding: ' + widget.encoding!,
-          maxLines: 1, overflow: TextOverflow.ellipsis,
-          style: TextStyle(color: _muted, fontSize: 12)),
+        child: widget.onChangeEncoding == null
+          ? Text(widget.encoding == null
+              ? 'Desktop prototype  •  Windows / macOS / Linux'
+              : 'Encoding: ${widget.encoding}',
+              maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: _muted, fontSize: 12))
+          : Tooltip(message: 'Choose project-wide text encoding', child: TextButton(
+              key: const ValueKey('studio-project-encoding'),
+              onPressed: _changingEncoding ? null :
+                  () => unawaited(_openEncodingPicker()),
+              style: TextButton.styleFrom(
+                minimumSize: Size.zero,
+                padding: const EdgeInsets.symmetric(horizontal: 5),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: Text(_changingEncoding ? 'Saving encoding…'
+                  : 'Encoding: ${widget.encoding ?? 'UTF-8'}',
+                maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12)),
+            )),
       )),
     ]),
   );
+
+  Future<void> _openEncodingPicker() async {
+    final update = widget.onChangeEncoding;
+    if (update == null || _changingEncoding || !mounted ||
+        !await _confirmDraftBeforeLeaving() || !mounted) return;
+    final Future<List<String>> optionsFuture;
+    try {
+      optionsFuture = (widget.onLoadEncodings?.call() ??
+          SubtitleExtendedEncodingService.standard.availableEncodings())
+          .catchError((Object _) => SubtitleTextCodec.supportedEncodings);
+    } catch (_) {
+      optionsFuture = Future.value(SubtitleTextCodec.supportedEncodings);
+    }
+    var search = '';
+    final chosen = await showDialog<String>(
+      context: context,
+      builder: (dialog) => StatefulBuilder(builder: (dialog, refresh) =>
+        AlertDialog(
+          title: const Text('Project text encoding'),
+          content: SizedBox(width: 410, height: 410, child: Column(children: [
+            TextField(
+              key: const ValueKey('studio-encoding-search'),
+              decoration: const InputDecoration(
+                prefixIcon: Icon(Icons.search),
+                hintText: 'Find encoding', isDense: true,
+              ),
+              onChanged: (value) => refresh(() => search = value),
+            ),
+            const SizedBox(height: 8),
+            Expanded(child: FutureBuilder<List<String>>(
+              future: optionsFuture,
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  if (snapshot.hasError) return const Center(
+                    child: Text('Could not load available encodings.'));
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final available = snapshot.data!;
+                final matches = available.where((choice) => choice
+                    .toLowerCase().contains(search.trim().toLowerCase())).toList();
+                return ListView.builder(
+                  itemCount: matches.length,
+                  itemBuilder: (context, index) {
+                    final option = matches[index];
+                    return ListTile(
+                      key: ValueKey('studio-encoding-$option'),
+                      dense: true,
+                      title: Text(option),
+                      trailing: option == widget.encoding
+                          ? const Icon(Icons.check_rounded) : null,
+                      onTap: () => Navigator.pop(dialog, option),
+                    );
+                  },
+                );
+              },
+            )),
+          ])),
+          actions: [TextButton(onPressed: () => Navigator.pop(dialog),
+              child: const Text('Cancel'))],
+        )),
+    );
+    if (chosen == null || !mounted || chosen == widget.encoding) return;
+    setState(() => _changingEncoding = true);
+    var saved = false;
+    try {
+      saved = await update(chosen);
+    } catch (_) {
+      saved = false;
+    } finally {
+      if (mounted) setState(() => _changingEncoding = false);
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(saved ? 'Project encoding set to $chosen'
+          : 'Encoding could not be saved. The project is unchanged.'),
+    ));
+  }
 }
 
 /// A schematic video backdrop: no user video, no downloaded imagery.
