@@ -228,4 +228,91 @@ void main() {
     ]);
     expect(report.count(SubtitleQualityIssueType.unnecessaryWhitespace), 1);
   });
+
+  test('balanced line-break fix preserves words without touching markup', () {
+    const before = 'Alpha beta gamma delta epsilon zeta eta theta';
+    final fixes = SubtitleQualityChecker.proposeSafeFixes(const [
+      SubtitleQualityCue(id: 1, start: '00:00:01,000',
+          end: '00:00:04,000', text: before),
+    ], profile: const SubtitleQualityProfile(maxCharactersPerLine: 24));
+    expect(fixes, hasLength(1));
+    final fix = fixes.single;
+    expect(fix.kind, SubtitleQualityFixKind.balancedLineBreak);
+    expect(fix.maxCharactersPerLine, 24);
+    expect(fix.after.split('\n'), hasLength(2));
+    expect(fix.after.replaceAll('\n', ' '), before);
+    for (final line in fix.after.split('\n')) {
+      expect(line.length, lessThanOrEqualTo(24));
+    }
+    expect(SubtitleQualityChecker.balancedLineBreak(before,
+        maxCharactersPerLine: 24), fix.after);
+  });
+
+  test('line-break fixes decline styled, multiline and spaced captions', () {
+    for (final value in [
+      '<b>Alpha beta gamma delta epsilon zeta eta theta</b>',
+      'Alpha beta gamma\ndelta epsilon zeta eta theta',
+      'Alpha  beta gamma delta epsilon zeta eta theta',
+      'OneSuperLongUnbreakableWordBecauseThereIsNoSpace',
+    ]) {
+      expect(SubtitleQualityChecker.balancedLineBreak(value,
+          maxCharactersPerLine: 24), isNull);
+    }
+    const original = 'Alpha  beta gamma delta epsilon zeta eta theta';
+    final fixes = SubtitleQualityChecker.proposeSafeFixes(const [
+      SubtitleQualityCue(id: 3, start: '00:00:01,000',
+          end: '00:00:04,000', text: original),
+    ], profile: const SubtitleQualityProfile(maxCharactersPerLine: 24));
+    expect(fixes.single.kind, SubtitleQualityFixKind.whitespace);
+    expect(fixes.single.after, isNot(contains('\n')));
+    expect(SubtitleQualityChecker.proposeSafeFixes(const [
+      SubtitleQualityCue(id: 4, start: '00:00:01,000',
+          end: '00:00:04,000',
+          text: 'Alpha beta gamma delta epsilon zeta eta theta'),
+    ], profile: const SubtitleQualityProfile(
+        maxLines: 1, maxCharactersPerLine: 24)), isEmpty);
+  });
+
+  test('safe timing ideas only shorten a cue when readability remains valid', () {
+    const cues = [
+      SubtitleQualityCue(id: 1, start: '00:00:01,000',
+          end: '00:00:03,000', text: 'Hello'),
+      SubtitleQualityCue(id: 2, start: '00:00:03,050',
+          end: '00:00:05,000', text: 'World'),
+    ];
+    final ideas = SubtitleQualityChecker.proposeTimingSuggestions(cues);
+    expect(ideas, hasLength(1));
+    expect(ideas.single.cueId, 1);
+    expect(ideas.single.followingCueId, 2);
+    expect(ideas.single.beforeEnd, '00:00:03,000');
+    expect(ideas.single.proposedEnd, '00:00:02,970');
+    expect(cues.first.end, '00:00:03,000');
+    expect(SubtitleQualityChecker.proposeTimingSuggestions(cues,
+        profile: const SubtitleQualityProfile(minGapMs: 30)), isEmpty);
+  });
+
+  test('timing preview refuses overlap and unsafe duration or CPS', () {
+    const overlap = [
+      SubtitleQualityCue(id: 1, start: '00:00:01,000',
+          end: '00:00:03,100', text: 'A'),
+      SubtitleQualityCue(id: 2, start: '00:00:03,000',
+          end: '00:00:05,000', text: 'B'),
+    ];
+    expect(SubtitleQualityChecker.proposeTimingSuggestions(overlap), isEmpty);
+    const tooShort = [
+      SubtitleQualityCue(id: 1, start: '00:00:02,000',
+          end: '00:00:03,000', text: 'A'),
+      SubtitleQualityCue(id: 2, start: '00:00:03,050',
+          end: '00:00:05,000', text: 'B'),
+    ];
+    expect(SubtitleQualityChecker.proposeTimingSuggestions(tooShort), isEmpty);
+    const tooFast = [
+      SubtitleQualityCue(id: 1, start: '00:00:01,000',
+          end: '00:00:03,000',
+          text: 'This is a very long subtitle that will be too fast'),
+      SubtitleQualityCue(id: 2, start: '00:00:03,050',
+          end: '00:00:05,000', text: 'B'),
+    ];
+    expect(SubtitleQualityChecker.proposeTimingSuggestions(tooFast), isEmpty);
+  });
 }

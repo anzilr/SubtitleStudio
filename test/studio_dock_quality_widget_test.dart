@@ -185,4 +185,61 @@ void main() {
     expect(applied.single.single.after, 'Overlapping subtitle');
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('balanced line break previews and applies by explicit checkbox',
+      (tester) async {
+    const source = 'Alpha beta gamma delta epsilon zeta eta theta';
+    final applied = <SubtitleQualityFix>[];
+    await launch(tester, initialCues: const [
+      StudioDockCue(id: 1, start: '00:00:01,000',
+          end: '00:00:04,000', original: 'Original', edited: source),
+    ], onApplyQualityFixes: (fixes) async {
+      applied.addAll(fixes);
+      return StudioDockCueUpdate(selectedCueId: 1, cues: [
+        StudioDockCue(id: 1, start: '00:00:01,000',
+            end: '00:00:04,000', original: 'Original',
+            edited: fixes.single.after),
+      ]);
+    });
+    await openQuality(tester);
+    await tester.tap(find.byKey(const ValueKey('studio-quality-fixes-tab')));
+    await tester.pumpAndSettle();
+    final fix = find.byKey(const ValueKey('studio-quality-fix-1'));
+    expect(fix, findsOneWidget);
+    expect(find.textContaining('Balance text over two lines'), findsOneWidget);
+    final apply = find.byKey(const ValueKey('studio-quality-apply-fixes'));
+    expect(tester.widget<FilledButton>(apply).onPressed, isNull);
+    await tester.tap(fix);
+    await tester.pumpAndSettle();
+    await tester.tap(apply);
+    await tester.pumpAndSettle();
+    expect(applied, hasLength(1));
+    expect(applied.single.kind, SubtitleQualityFixKind.balancedLineBreak);
+    expect(applied.single.after, contains('\n'));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('timing ideas preview end changes but cannot batch apply',
+      (tester) async {
+    await launch(tester, initialCues: const [
+      StudioDockCue(id: 1, start: '00:00:01,000',
+          end: '00:00:03,000', original: 'Hello', edited: 'Hello'),
+      StudioDockCue(id: 2, start: '00:00:03,050',
+          end: '00:00:05,000', original: 'World', edited: 'World'),
+    ]);
+    await openQuality(tester);
+    await tester.tap(find.byKey(const ValueKey('studio-quality-timing-tab')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('studio-quality-timing-1')),
+        findsOneWidget);
+    expect(find.textContaining('00:00:03,000 → 00:00:02,970'),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey('studio-quality-apply-fixes')),
+        findsNothing);
+    await tester.tap(find.byKey(const ValueKey('studio-quality-timing-1')));
+    await tester.pumpAndSettle();
+    expect(find.text('Subtitle Quality'), findsNothing);
+    expect(find.text('Hello'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
 }

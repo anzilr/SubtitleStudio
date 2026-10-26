@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:subtitle_studio/services/subtitle_quality_checker.dart';
 import 'studio_dock_quality_profile_dialog.dart';
 
+enum _QualityView { issues, fixes, timing }
+
 sealed class StudioDockQualityResult {
   const StudioDockQualityResult();
 }
@@ -45,7 +47,7 @@ class _StudioDockQualityDialogState extends State<StudioDockQualityDialog> {
   SubtitleQualityIssueType? _filter;
   late SubtitleQualityPreset _preset = widget.initialPreset;
   late SubtitleQualityProfile _customProfile = widget.customProfile;
-  bool _showSuggestions = false;
+  _QualityView _view = _QualityView.issues;
   final Set<int> _selectedFixCueIds = {};
 
   Future<void> _editCustomProfile() async {
@@ -57,18 +59,23 @@ class _StudioDockQualityDialogState extends State<StudioDockQualityDialog> {
     setState(() {
       _customProfile = updated;
       _filter = null;
+      _selectedFixCueIds.clear();
     });
     widget.onCustomProfileChanged?.call(updated);
   }
 
   @override
   Widget build(BuildContext context) {
+    final profile = _preset == SubtitleQualityPreset.custom
+        ? _customProfile : _preset.profile;
     final report = SubtitleQualityChecker.scan(
       widget.cues,
-      profile: _preset == SubtitleQualityPreset.custom
-          ? _customProfile : _preset.profile,
+      profile: profile,
     );
-    final suggestions = SubtitleQualityChecker.proposeSafeFixes(widget.cues);
+    final suggestions = SubtitleQualityChecker.proposeSafeFixes(
+        widget.cues, profile: profile);
+    final timingIdeas = SubtitleQualityChecker.proposeTimingSuggestions(
+        widget.cues, profile: profile);
     final types = SubtitleQualityIssueType.values
         .where((type) => report.count(type) > 0)
         .toList(growable: false);
@@ -128,6 +135,7 @@ class _StudioDockQualityDialogState extends State<StudioDockQualityDialog> {
                   setState(() {
                     _preset = value;
                     _filter = null;
+                    _selectedFixCueIds.clear();
                   });
                   widget.onPresetChanged?.call(value);
                 },
@@ -141,23 +149,28 @@ class _StudioDockQualityDialogState extends State<StudioDockQualityDialog> {
                 ),
             ]),
             const SizedBox(height: 12),
-            Row(children: [
+            Wrap(spacing: 8, runSpacing: 2, children: [
               TextButton.icon(
                 key: const ValueKey('studio-quality-issues-tab'),
-                onPressed: () => setState(() => _showSuggestions = false),
-                icon: Icon(_showSuggestions
+                onPressed: () => setState(() => _view = _QualityView.issues),
+                icon: Icon(_view != _QualityView.issues
                     ? Icons.list_alt_outlined : Icons.fact_check_outlined),
                 label: Text('Issues (${report.issues.length})'),
               ),
-              const SizedBox(width: 12),
               TextButton.icon(
                 key: const ValueKey('studio-quality-fixes-tab'),
-                onPressed: () => setState(() => _showSuggestions = true),
+                onPressed: () => setState(() => _view = _QualityView.fixes),
                 icon: const Icon(Icons.auto_fix_high_outlined),
                 label: Text('Suggested fixes (${suggestions.length})'),
               ),
+              TextButton.icon(
+                key: const ValueKey('studio-quality-timing-tab'),
+                onPressed: () => setState(() => _view = _QualityView.timing),
+                icon: const Icon(Icons.schedule_outlined),
+                label: Text('Timing ideas (${timingIdeas.length})'),
+              ),
             ]),
-            if (!_showSuggestions && types.isNotEmpty)
+            if (_view == _QualityView.issues && types.isNotEmpty)
               Row(children: [
                 const Text('Show: '),
                 const SizedBox(width: 8),
@@ -180,7 +193,7 @@ class _StudioDockQualityDialogState extends State<StudioDockQualityDialog> {
                 )),
               ]),
             const SizedBox(height: 8),
-            Flexible(child: _showSuggestions
+            Flexible(child: _view == _QualityView.fixes
                 ? suggestions.isEmpty
                     ? const Center(child: Text('No safe fixes to suggest.'))
                     : ListView.separated(
@@ -212,6 +225,33 @@ class _StudioDockQualityDialogState extends State<StudioDockQualityDialog> {
                           );
                         },
                       )
+                : _view == _QualityView.timing
+                    ? timingIdeas.isEmpty
+                        ? const Center(child: Text(
+                            'No conservative timing suggestions available.'))
+                        : ListView.separated(
+                            key: const ValueKey('studio-quality-timing-ideas'),
+                            shrinkWrap: true,
+                            itemCount: timingIdeas.length,
+                            separatorBuilder: (_, __) => const Divider(height: 1),
+                            itemBuilder: (context, index) {
+                              final idea = timingIdeas[index];
+                              return ListTile(
+                                key: ValueKey('studio-quality-timing-${idea.cueId}'),
+                                dense: true,
+                                leading: const Icon(Icons.schedule_outlined),
+                                title: Text('#${idea.cueId} · End-time preview'),
+                                subtitle: Text(
+                                  'END: ${idea.beforeEnd} → ${idea.proposedEnd}'
+                                  '\n${idea.detail}'
+                                  '\nPreview only — tap to inspect manually.',
+                                ),
+                                trailing: const Icon(Icons.chevron_right),
+                                onTap: () => Navigator.pop(context,
+                                    StudioDockQualityNavigate(idea.cueId)),
+                              );
+                            },
+                          )
                 : visible.isEmpty
                     ? const Center(child: Padding(
                         padding: EdgeInsets.symmetric(vertical: 45),
@@ -256,7 +296,7 @@ class _StudioDockQualityDialogState extends State<StudioDockQualityDialog> {
                 onPressed: () => Navigator.pop(context),
                 child: const Text('Close'),
               ),
-              if (_showSuggestions) ...[
+              if (_view == _QualityView.fixes) ...[
                 const SizedBox(width: 8),
                 FilledButton(
                   key: const ValueKey('studio-quality-apply-fixes'),

@@ -138,6 +138,41 @@ void main() {
     expect(await db.isar.checkpoints.count(), 2);
   });
 
+  test('line-break fix is one guarded checkpoint and rejects forged splits',
+      () async {
+    const source = 'Alpha beta gamma delta epsilon zeta eta theta';
+    final ids = await seed(secondEdited: source);
+    final baseline = await loader.load(
+        sessionId: ids.sessionId, collectionId: ids.collectionId);
+    final fixes = SubtitleQualityChecker.proposeSafeFixes([
+      for (final cue in baseline.cues)
+        SubtitleQualityCue(id: cue.index, start: cue.start,
+            end: cue.end, text: cue.storedEdited ?? cue.original),
+    ], profile: const SubtitleQualityProfile(maxCharactersPerLine: 24));
+    expect(fixes, hasLength(1));
+    expect(fixes.single.kind, SubtitleQualityFixKind.balancedLineBreak);
+    final updated = await tools.applyQualityFixes(
+        baseline: baseline, fixes: fixes);
+    expect(updated, isNotNull);
+    expect(updated!.cues.last.edited.split('\n'), hasLength(2));
+    expect(updated.cues.last.original, 'No matching original');
+    expect(await db.isar.checkpoints.count(), 2);
+
+    expect(await tools.applyQualityFixes(
+        baseline: updated, fixes: fixes), isNull);
+    final forged = SubtitleQualityFix(
+      cueId: 2,
+      before: updated.cues.last.edited,
+      after: 'Changed words\nwithout approval',
+      description: 'Forged split',
+      kind: SubtitleQualityFixKind.balancedLineBreak,
+      maxCharactersPerLine: 24,
+    );
+    expect(await tools.applyQualityFixes(
+        baseline: updated, fixes: [forged]), isNull);
+    expect(await db.isar.checkpoints.count(), 2);
+  });
+
   test('Replace rejects a stale match and cannot overwrite newer text',
       () async {
     final ids = await seed();

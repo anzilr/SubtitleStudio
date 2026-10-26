@@ -180,18 +180,42 @@ class SubtitleQualityReport {
 
 /// One exact-before/exact-after proposal, safe to preview or select. The
 /// writer must revalidate [before] against the current persisted cue.
+enum SubtitleQualityFixKind { whitespace, balancedLineBreak }
+
 class SubtitleQualityFix {
   const SubtitleQualityFix({
     required this.cueId,
     required this.before,
     required this.after,
     required this.description,
+    this.kind = SubtitleQualityFixKind.whitespace,
+    this.maxCharactersPerLine = 42,
   });
 
   final int cueId;
   final String before;
   final String after;
   final String description;
+  final SubtitleQualityFixKind kind;
+  final int maxCharactersPerLine;
+}
+
+/// An advisory proposal only. Timing changes need cross-cue confirmation and
+/// are intentionally not accepted by the text-fix checkpoint writer.
+class SubtitleQualityTimingSuggestion {
+  const SubtitleQualityTimingSuggestion({
+    required this.cueId,
+    required this.followingCueId,
+    required this.beforeEnd,
+    required this.proposedEnd,
+    required this.detail,
+  });
+
+  final int cueId;
+  final int followingCueId;
+  final String beforeEnd;
+  final String proposedEnd;
+  final String detail;
 }
 
 class SubtitleQualityChecker {
@@ -237,17 +261,127 @@ class SubtitleQualityChecker {
   static String _normalizePlainSpaces(String text) => text
       .replaceAll(RegExp(r' {2,}'), ' ');
 
+  /// Suggest a two-line split only for a single, unformatted, well-spaced
+  /// paragraph. Split on an existing word boundary; never alter text or tags.
+  static String? balancedLineBreak(
+    String text, {
+    int maxCharactersPerLine = 42,
+  }) {
+    final totalCharacters = text.characters.length;
+    if (maxCharactersPerLine < 8 || maxCharactersPerLine > 300 ||
+        text.isEmpty || text.trim() != text ||
+        text.contains('\n') || text.contains('\r') || text.contains('\t') ||
+        text.contains('\\') || text.contains('<') ||
+        text.contains('{') || text.contains('}') ||
+        normalizeSpaces(text) != text ||
+        totalCharacters <= maxCharactersPerLine ||
+        totalCharacters > maxCharactersPerLine * 2 + 1) {
+      return null;
+    }
+    final words = text.split(' ');
+    if (words.length < 4) return null;
+    String? result;
+    var bestDifference = 1 << 30;
+    for (var i = 2; i <= words.length - 2; i++) {
+      final left = words.take(i).join(' ');
+      final right = words.skip(i).join(' ');
+      final leftLength = left.characters.length;
+      final rightLength = right.characters.length;
+      if (leftLength > maxCharactersPerLine ||
+          rightLength > maxCharactersPerLine) continue;
+      final difference = (leftLength - rightLength).abs();
+      if (difference < bestDifference) {
+        result = '$left\n$right';
+        bestDifference = difference;
+      }
+    }
+    return result;
+  }
+
   static List<SubtitleQualityFix> proposeSafeFixes(
-      List<SubtitleQualityCue> cues) => List.unmodifiable([
-        for (final cue in cues)
-          if (normalizeSpaces(cue.text) != cue.text)
-            SubtitleQualityFix(
-              cueId: cue.id,
-              before: cue.text,
-              after: normalizeSpaces(cue.text),
-              description: 'Remove repeated and trailing spaces',
-            ),
-      ]);
+      List<SubtitleQualityCue> cues, {
+      SubtitleQualityProfile profile = const SubtitleQualityProfile(),
+    }) {
+    final suggestions = <SubtitleQualityFix>[];
+    for (final cue in cues) {
+      final whitespaceFix = normalizeSpaces(cue.text);
+      if (whitespaceFix != cue.text) {
+        suggestions.add(SubtitleQualityFix(
+          cueId: cue.id,
+          before: cue.text,
+          after: whitespaceFix,
+          description: 'Remove repeated and trailing spaces',
+        ));
+        continue;
+      }
+      if (profile.maxLines < 2) continue;
+      final split = balancedLineBreak(cue.text,
+          maxCharactersPerLine: profile.maxCharactersPerLine);
+      if (split != null) {
+        suggestions.add(SubtitleQualityFix(
+          cueId: cue.id,
+          before: cue.text,
+          after: split,
+          description: 'Balance text over two lines',
+          kind: SubtitleQualityFixKind.balancedLineBreak,
+          maxCharactersPerLine: profile.maxCharactersPerLine,
+        ));
+      }
+    }
+    return List.unmodifiable(suggestions);
+  }
+
+  static String _formatMilliseconds(int ms) {
+    final hours = ms ~/ 3600000;
+    final minutes = (ms ~/ 60000) % 60;
+    final seconds = (ms ~/ 1000) % 60;
+    final milliseconds = ms % 1000;
+    return '${hours.toString().padLeft(2, '0')}:'
+        '${minutes.toString().padLeft(2, '0')}:'
+        '${seconds.toString().padLeft(2, '0')},'
+        '${milliseconds.toString().padLeft(3, '0')}';
+  }
+
+  /// Preview how an insufficient positive gap *could* be corrected by ending
+  /// the preceding cue sooner. No change is applied or included in text fixes.
+  /// Declines candidates that would violate minimum duration or CPS rules.
+  static List<SubtitleQualityTimingSuggestion> proposeTimingSuggestions(
+    List<SubtitleQualityCue> cues, {
+    SubtitleQualityProfile profile = const SubtitleQualityProfile(),
+  }) {
+    final valid = <({SubtitleQualityCue cue, int start, int end})>[];
+    for (final cue in cues) {
+      final start = _milliseconds(cue.start);
+      final end = _milliseconds(cue.end);
+      if (start == null || end == null || start >= end) continue;
+      valid.add((cue: cue, start: start, end: end));
+    }
+    valid.sort((a, b) => a.start.compareTo(b.start));
+    final ideas = <SubtitleQualityTimingSuggestion>[];
+    for (var i = 1; i < valid.length; i++) {
+      final preceding = valid[i - 1];
+      final next = valid[i];
+      final gap = next.start - preceding.end;
+      if (gap < 0 || gap >= profile.minGapMs) continue;
+      final proposedEnd = next.start - profile.minGapMs;
+      final duration = proposedEnd - preceding.start;
+      if (duration < profile.minDurationMs || duration <= 0) continue;
+      final visible = visibleText(preceding.cue.text)
+          .replaceAll('\n', ' ').trim();
+      if (visible.characters.length * 1000 / duration >
+          profile.maxCharactersPerSecond) continue;
+      ideas.add(SubtitleQualityTimingSuggestion(
+        cueId: preceding.cue.id,
+        followingCueId: next.cue.id,
+        beforeEnd: preceding.cue.end,
+        proposedEnd: _formatMilliseconds(proposedEnd),
+        detail: 'Leave ${profile.minGapMs} ms before subtitle '
+            '#${next.cue.id}; shortens this subtitle by '
+            '${profile.minGapMs - gap} ms.',
+      ));
+    }
+    return List.unmodifiable(ideas);
+  }
 
   static SubtitleQualityReport scan(
     List<SubtitleQualityCue> cues, {

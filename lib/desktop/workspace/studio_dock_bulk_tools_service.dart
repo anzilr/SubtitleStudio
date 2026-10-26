@@ -329,7 +329,7 @@ class StudioDockBulkToolsService {
     );
   }
 
-  /// Apply only explicitly selected whitespace proposals in one guarded
+  /// Apply only explicitly selected deterministic text proposals in one guarded
   /// checkpoint. Re-check both the source and the deterministic result to
   /// reject stale or forged previews before touching persisted data.
   Future<StudioDockSessionSnapshot?> applyQualityFixes({
@@ -342,9 +342,16 @@ class StudioDockBulkToolsService {
     final updated = <SubtitleLine>[];
     for (final fix in fixes) {
       final cue = cuesById[fix.cueId];
+      final expectedAfter = switch (fix.kind) {
+        SubtitleQualityFixKind.whitespace =>
+          SubtitleQualityChecker.normalizeSpaces(fix.before),
+        SubtitleQualityFixKind.balancedLineBreak =>
+          SubtitleQualityChecker.balancedLineBreak(fix.before,
+              maxCharactersPerLine: fix.maxCharactersPerLine),
+      };
       if (cue == null || !seen.add(fix.cueId) ||
           (cue.storedEdited ?? cue.original) != fix.before ||
-          SubtitleQualityChecker.normalizeSpaces(fix.before) != fix.after ||
+          expectedAfter == null || expectedAfter != fix.after ||
           fix.before == fix.after) {
         return null;
       }
@@ -354,7 +361,7 @@ class StudioDockBulkToolsService {
       baseline: baseline,
       updated: updated,
       operationType: 'edit',
-      description: 'Corrected spaces in ${updated.length} subtitles',
+      description: 'Applied quality text fixes to ${updated.length} subtitles',
     );
   }
 
