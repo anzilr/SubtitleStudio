@@ -32,6 +32,11 @@ Date: 2026-10-27. Branch: `feature/studio-dock-integration`.
   last-edited line on session load and long-grid initial scrolling.
 - Run focused Studio Dock tests and full Flutter analysis/tests on GitHub
   Actions; never platform builds in Actions.
+- **Verified source commit `5be845da873c83b3fdcb9f046d207bd4088b0ab5`:**
+  Studio Dock Flutter quality [run 40405488846](https://github.com/anzilr/SubtitleStudio/actions/runs/40405488846):
+  **380 passed**, analyzer clean. Migration quality
+  [run 40405488690](https://github.com/anzilr/SubtitleStudio/actions/runs/40405488690):
+  **1,229 passed**, analyzer clean.
 - Pending physical Windows + Android visual acceptance (colors, cursor
   timing, effect folding, right-click behavior and restore).
 
