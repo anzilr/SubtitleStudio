@@ -1180,12 +1180,15 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
       if (_selectedEffect == 'rainbowText')
         const Text('Seven bright colors rotate through complete characters. '
             'The palette is built into this effect.')
-      else ListTile(
-        contentPadding: EdgeInsets.zero,
-        title: const Text('Text / highlight color'),
-        subtitle: const Text('Uses standard SRT font color tags'),
-        trailing: CircleAvatar(backgroundColor: _typewriterColor, radius: 14),
-        onTap: _showTypewriterColorPicker,
+      else Material(
+        color: Colors.transparent,
+        child: ListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Text / highlight color'),
+          subtitle: const Text('Uses standard SRT font color tags'),
+          trailing: CircleAvatar(backgroundColor: _typewriterColor, radius: 14),
+          onTap: _showTypewriterColorPicker,
+        ),
       ),
       if (_selectedEffect == 'movingKaraoke') ...[
         const SizedBox(height: 12),
