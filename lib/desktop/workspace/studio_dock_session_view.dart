@@ -12,6 +12,7 @@ import 'package:subtitle_studio/screens/edit/providers/subtitle_repository_provi
 import 'package:subtitle_studio/utils/msone_hotkey_manager.dart';
 import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
 import 'package:subtitle_studio/services/checkpoint_history_graph.dart';
+import 'package:subtitle_studio/services/subtitle_quality_checker.dart';
 import 'package:subtitle_studio/screens/screen_help.dart';
 import 'package:subtitle_studio/widgets/settings_sheet.dart';
 import 'package:subtitle_studio/widgets/project_settings_sheet.dart';
@@ -704,6 +705,22 @@ class _StudioDockSessionViewState
       if (!mounted || updated == null) return null;
       setState(() => _latestBaseline = updated);
       return _snapshotUpdate(updated, hits.first.cueNumber);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<StudioDockCueUpdate?> _applyQualityFixes(
+      List<SubtitleQualityFix> fixes) async {
+    final baseline = _latestBaseline;
+    if (baseline == null || !widget.enableEditing || fixes.isEmpty) return null;
+    try {
+      final updated = await _bulkTools.applyQualityFixes(
+        baseline: baseline, fixes: fixes,
+      );
+      if (!mounted || updated == null) return null;
+      setState(() => _latestBaseline = updated);
+      return _snapshotUpdate(updated, fixes.first.cueId);
     } catch (_) {
       return null;
     }
@@ -1687,6 +1704,8 @@ class _StudioDockSessionViewState
             widget.enableEditing ? _applyBulkReview : null,
         onFindCues: _findCues,
         onReplaceMatches: widget.enableEditing ? _replaceMatches : null,
+        onApplyQualityFixes:
+            widget.enableEditing ? _applyQualityFixes : null,
         onShiftAllCues: widget.enableEditing ? _shiftAllCues : null,
         onSyncAnchoredCues: widget.enableEditing ? _syncAnchoredCues : null,
         onConvertFramerate: widget.enableEditing ? _convertFramerateCues : null,

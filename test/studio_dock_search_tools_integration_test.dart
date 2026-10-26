@@ -7,6 +7,7 @@ import 'package:subtitle_studio/desktop/workspace/studio_dock_session_loader.dar
 import 'package:subtitle_studio/desktop/workspace/studio_dock_text_edit_service.dart';
 import 'package:subtitle_studio/screens/edit/repositories/subtitle_repository.dart';
 import 'package:subtitle_studio/services/checkpoint_repository.dart';
+import 'package:subtitle_studio/services/subtitle_quality_checker.dart';
 
 import 'support/test_isar_harness.dart';
 
@@ -29,7 +30,8 @@ void main() {
   });
   tearDown(() async => db.close());
 
-  Future<({int sessionId, int collectionId})> seed() async {
+  Future<({int sessionId, int collectionId})> seed({
+      String secondEdited = 'Fish and fish'}) async {
     final first = SubtitleLine()
       ..index = 1
       ..startTime = '00:00:01,000'
@@ -44,7 +46,7 @@ void main() {
       ..startTime = '00:00:03,000'
       ..endTime = '00:00:04,000'
       ..original = 'No matching original'
-      ..edited = 'Fish and fish'
+      ..edited = secondEdited
       ..marked = false
       ..comment = null
       ..resolved = false;
@@ -101,6 +103,38 @@ void main() {
     expect(updated.cues.first.comment, 'Keep review note');
     expect(updated.cues.first.resolved, isTrue);
     expect(updated.cues.last.edited, 'Fish and fish');
+    expect(await db.isar.checkpoints.count(), 2);
+  });
+
+  test('quality fixes apply in one guarded checkpoint and reject stale edits',
+      () async {
+    final ids = await seed(secondEdited: 'Fish  and fish ');
+    final baseline = await loader.load(
+        sessionId: ids.sessionId, collectionId: ids.collectionId);
+    final fixes = SubtitleQualityChecker.proposeSafeFixes([
+      for (final cue in baseline.cues)
+        SubtitleQualityCue(id: cue.index, start: cue.start,
+            end: cue.end, text: cue.storedEdited ?? cue.original),
+    ]);
+    expect(fixes, hasLength(1));
+    expect(fixes.single.before, 'Fish  and fish ');
+    final updated = await tools.applyQualityFixes(
+      baseline: baseline, fixes: fixes,
+    );
+    expect(updated?.cues.last.edited, 'Fish and fish');
+    expect(updated?.cues.last.original, 'No matching original');
+    expect(await db.isar.checkpoints.count(), 2);
+
+    expect(await tools.applyQualityFixes(baseline: updated!, fixes: fixes),
+        isNull, reason: 'A previously applied preview is stale');
+    final forged = SubtitleQualityFix(
+      cueId: 2,
+      before: 'Fish and fish',
+      after: 'Something else',
+      description: 'Forged replacement',
+    );
+    expect(await tools.applyQualityFixes(
+        baseline: updated, fixes: [forged]), isNull);
     expect(await db.isar.checkpoints.count(), 2);
   });
 

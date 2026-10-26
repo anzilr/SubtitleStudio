@@ -1,3 +1,5 @@
+import 'package:characters/characters.dart';
+
 /// Read-only subtitle quality checks shared by desktop and mobile callers.
 ///
 /// The checker never rewrites text or timing. A future fix planner must present
@@ -13,6 +15,7 @@ enum SubtitleQualityIssueType {
   longLine,
   tooManyLines,
   emptyText,
+  unnecessaryWhitespace,
 }
 
 extension SubtitleQualityIssueLabel on SubtitleQualityIssueType {
@@ -27,6 +30,33 @@ extension SubtitleQualityIssueLabel on SubtitleQualityIssueType {
         SubtitleQualityIssueType.longLine => 'Line too long',
         SubtitleQualityIssueType.tooManyLines => 'Too many lines',
         SubtitleQualityIssueType.emptyText => 'Empty text',
+        SubtitleQualityIssueType.unnecessaryWhitespace => 'Unnecessary spaces',
+      };
+}
+
+enum SubtitleQualityPreset { general, streaming, relaxed }
+
+extension SubtitleQualityPresetDetails on SubtitleQualityPreset {
+  String get label => switch (this) {
+        SubtitleQualityPreset.general => 'General',
+        SubtitleQualityPreset.streaming => 'Streaming',
+        SubtitleQualityPreset.relaxed => 'Relaxed',
+      };
+
+  SubtitleQualityProfile get profile => switch (this) {
+        SubtitleQualityPreset.general => const SubtitleQualityProfile(),
+        SubtitleQualityPreset.streaming => const SubtitleQualityProfile(
+            maxCharactersPerSecond: 17,
+            maxCharactersPerLine: 42,
+            minDurationMs: 1000,
+            maxDurationMs: 7000,
+            minGapMs: 83),
+        SubtitleQualityPreset.relaxed => const SubtitleQualityProfile(
+            maxCharactersPerSecond: 25,
+            maxCharactersPerLine: 50,
+            minDurationMs: 700,
+            maxDurationMs: 9000,
+            minGapMs: 40),
       };
 }
 
@@ -93,12 +123,29 @@ class SubtitleQualityReport {
       issues.where((issue) => issue.type == type).length;
 }
 
+/// One exact-before/exact-after proposal, safe to preview or select. The
+/// writer must revalidate [before] against the current persisted cue.
+class SubtitleQualityFix {
+  const SubtitleQualityFix({
+    required this.cueId,
+    required this.before,
+    required this.after,
+    required this.description,
+  });
+
+  final int cueId;
+  final String before;
+  final String after;
+  final String description;
+}
+
 class SubtitleQualityChecker {
   static final RegExp _timePattern = RegExp(
     r'^\s*(\d{1,3}):([0-5]\d):([0-5]\d)[,.](\d{3})\s*$',
   );
   static final RegExp _htmlTags = RegExp(r'<[^>]*>');
   static final RegExp _assTags = RegExp(r'\{\\[^}]*\}');
+  static final RegExp _formatTags = RegExp(r'<[^>]*>|\{\\[^}]*\}');
 
   static int? _milliseconds(String value) {
     final match = _timePattern.firstMatch(value);
@@ -117,6 +164,35 @@ class SubtitleQualityChecker {
       .replaceAll(r'\N', '\n')
       .replaceAll(_htmlTags, '')
       .replaceAll(_assTags, '');
+
+  /// Normalize only plain-text spans; tags are copied byte-for-byte. Line
+  /// breaks are also retained, including deliberately empty subtitle rows.
+  static String normalizeSpaces(String text) {
+    final out = StringBuffer();
+    var cursor = 0;
+    for (final tag in _formatTags.allMatches(text)) {
+      out.write(_normalizePlainSpaces(text.substring(cursor, tag.start)));
+      out.write(tag.group(0));
+      cursor = tag.end;
+    }
+    out.write(_normalizePlainSpaces(text.substring(cursor)));
+    return out.toString().replaceAll(RegExp(r'[ \t]+(?=\r?\n|$)'), '');
+  }
+
+  static String _normalizePlainSpaces(String text) => text
+      .replaceAll(RegExp(r' {2,}'), ' ');
+
+  static List<SubtitleQualityFix> proposeSafeFixes(
+      List<SubtitleQualityCue> cues) => List.unmodifiable([
+        for (final cue in cues)
+          if (normalizeSpaces(cue.text) != cue.text)
+            SubtitleQualityFix(
+              cueId: cue.id,
+              before: cue.text,
+              after: normalizeSpaces(cue.text),
+              description: 'Remove repeated and trailing spaces',
+            ),
+      ]);
 
   static SubtitleQualityReport scan(
     List<SubtitleQualityCue> cues, {
@@ -153,7 +229,7 @@ class SubtitleQualityChecker {
               '$duration ms · maximum ${profile.maxDurationMs} ms');
         }
         if (text.trim().isNotEmpty) {
-          final charCount = text.replaceAll('\n', ' ').trim().runes.length;
+          final charCount = text.replaceAll('\n', ' ').trim().characters.length;
           final cps = charCount * 1000 / duration;
           if (cps > profile.maxCharactersPerSecond) {
             add(SubtitleQualityIssueType.fastReading,
@@ -171,12 +247,16 @@ class SubtitleQualityChecker {
           add(SubtitleQualityIssueType.tooManyLines,
               '${lines.length} lines · maximum ${profile.maxLines}');
         }
-        final longest = lines.map((line) => line.trim().runes.length)
+        final longest = lines.map((line) => line.trim().characters.length)
             .reduce((a, b) => a > b ? a : b);
         if (longest > profile.maxCharactersPerLine) {
           add(SubtitleQualityIssueType.longLine,
               '$longest characters · limit ${profile.maxCharactersPerLine}');
         }
+      }
+      if (normalizeSpaces(cue.text) != cue.text) {
+        add(SubtitleQualityIssueType.unnecessaryWhitespace,
+            'Repeated or trailing spaces can be simplified.');
       }
     }
 

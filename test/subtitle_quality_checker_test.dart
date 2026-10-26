@@ -111,4 +111,44 @@ void main() {
     ], profile: checker);
     expect(report.issues, isEmpty);
   });
+
+  test('reading speed and width use grapheme clusters for Malayalam', () {
+    const text = 'കി'; // Consonant plus vowel sign, one visible character.
+    final report = SubtitleQualityChecker.scan(const [
+      SubtitleQualityCue(id: 1, start: '00:00:01,000',
+          end: '00:00:02,000', text: text),
+    ], profile: const SubtitleQualityProfile(maxCharactersPerLine: 1));
+    expect(report.count(SubtitleQualityIssueType.longLine), 0);
+    expect(report.count(SubtitleQualityIssueType.fastReading), 0);
+  });
+
+  test('streaming and relaxed profiles use different CPS limits', () {
+    const cue = SubtitleQualityCue(id: 1, start: '00:00:01,000',
+        end: '00:00:02,000', text: 'Eighteen characters');
+    final strict = SubtitleQualityChecker.scan(const [cue],
+        profile: SubtitleQualityPreset.streaming.profile);
+    final relaxed = SubtitleQualityChecker.scan(const [cue],
+        profile: SubtitleQualityPreset.relaxed.profile);
+    expect(strict.count(SubtitleQualityIssueType.fastReading), 1);
+    expect(relaxed.count(SubtitleQualityIssueType.fastReading), 0);
+  });
+
+  test('safe whitespace suggestions preserve tags and deliberate blank lines', () {
+    const before = 'Hello  <i>world</i>  \n\nNext  line ';
+    final fixes = SubtitleQualityChecker.proposeSafeFixes(const [
+      SubtitleQualityCue(id: 7, start: '00:00:01,000',
+          end: '00:00:03,000', text: before),
+    ]);
+    expect(fixes, hasLength(1));
+    expect(fixes.single.before, before);
+    expect(fixes.single.after, 'Hello <i>world</i>\n\nNext line');
+    expect(fixes.single.after, contains('\n\n'));
+    expect(SubtitleQualityChecker.normalizeSpaces(fixes.single.after),
+        fixes.single.after);
+    final report = SubtitleQualityChecker.scan(const [
+      SubtitleQualityCue(id: 7, start: '00:00:01,000',
+          end: '00:00:03,000', text: before),
+    ]);
+    expect(report.count(SubtitleQualityIssueType.unnecessaryWhitespace), 1);
+  });
 }

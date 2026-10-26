@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:subtitle_studio/screens/edit/services/raw_srt_document.dart';
 import 'package:subtitle_studio/screens/edit/widgets/source_view_pane.dart';
 import 'package:subtitle_studio/widgets/custom_text_render.dart';
@@ -166,6 +167,7 @@ class StudioDockWorkspace extends StatefulWidget {
     this.onApplyBulkReview,
     this.onFindCues,
     this.onReplaceMatches,
+    this.onApplyQualityFixes,
     this.onShiftAllCues,
     this.onSyncAnchoredCues,
     this.onConvertFramerate,
@@ -262,6 +264,10 @@ class StudioDockWorkspace extends StatefulWidget {
   final Future<StudioDockCueUpdate?> Function(
       List<StudioDockSearchHit> matches, String term,
       String replacement, bool caseSensitive)? onReplaceMatches;
+  /// Whitespace suggestions are checked against the current source and
+  /// committed in a single checkpoint by the live session bridge.
+  final Future<StudioDockCueUpdate?> Function(List<SubtitleQualityFix> fixes)?
+      onApplyQualityFixes;
   final Future<StudioDockCueUpdate?> Function(
       int selectedCueNumber, int deltaMilliseconds)? onShiftAllCues;
   /// Mobile Sync Subtitles: first/last anchors, duration-preserving scaling.
@@ -424,6 +430,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   ModalRoute<dynamic>? _commentsMenuRoute;
   ModalRoute<dynamic>? _markedLinesMenuRoute;
   ModalRoute<dynamic>? _qualityMenuRoute;
+  bool _applyingQualityFixes = false;
   String? _findError;
   String? _toolsError;
   int _section = 0;
@@ -2418,21 +2425,69 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   Future<void> _openQualityReview({ModalRoute<dynamic>? afterMenu}) async {
     if (afterMenu != null) await afterMenu.completed;
     if (!mounted || _cues.isEmpty ||
+        _applyingQualityFixes ||
         !await _confirmDraftBeforeLeaving() || !mounted) return;
-    final report = SubtitleQualityChecker.scan([
+    final cues = [
       for (final cue in _cues)
         SubtitleQualityCue(
           id: cue.id, start: cue.start, end: cue.end, text: cue.edited,
         ),
-    ]);
-    final targetId = await showDialog<int>(
+    ];
+    SharedPreferences? preferences;
+    try {
+      preferences = await SharedPreferences.getInstance();
+    } catch (_) {
+      // Quality review works with defaults even when preferences are absent.
+    }
+    if (!mounted) return;
+    final savedPreferences = preferences;
+    const presetKey = 'studio_quality_preset';
+    final stored = savedPreferences?.getString(presetKey);
+    final preset = SubtitleQualityPreset.values.firstWhere(
+      (item) => item.name == stored,
+      orElse: () => SubtitleQualityPreset.general,
+    );
+    final result = await showDialog<StudioDockQualityResult>(
       context: context,
       builder: (_) => StudioDockQualityDialog(
-        report: report, cueCount: _cues.length,
+        cues: cues,
+        initialPreset: preset,
+        canApply: widget.onApplyQualityFixes != null,
+        onPresetChanged: (chosen) {
+          if (savedPreferences != null) {
+            unawaited(savedPreferences
+                .setString(presetKey, chosen.name)
+                .then<void>((_) {}, onError: (Object _) {}));
+          }
+        },
       ),
     );
-    if (!mounted || targetId == null ||
-        !_cues.any((cue) => cue.id == targetId)) return;
+    if (!mounted || result == null) return;
+    if (result is StudioDockQualityApply) {
+      final apply = widget.onApplyQualityFixes;
+      if (apply == null || result.fixes.isEmpty) return;
+      setState(() => _applyingQualityFixes = true);
+      try {
+        final update = await apply(result.fixes);
+        if (!mounted) return;
+        if (update == null) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Quality fixes were not applied. '
+                'Refresh the project and review the suggestions again.'),
+          ));
+        } else {
+          _acceptStructure(update);
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Applied ${result.fixes.length} quality fixes.'),
+          ));
+        }
+      } finally {
+        if (mounted) setState(() => _applyingQualityFixes = false);
+      }
+      return;
+    }
+    if (result is! StudioDockQualityNavigate ||
+        !_cues.any((cue) => cue.id == result.cueId)) return;
     await _switchSection(0);
     if (!mounted || _section != 0) return;
     setState(() {
@@ -2440,7 +2495,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       _query = '';
       _tableSearch.clear();
     });
-    _selectCue(targetId);
+    _selectCue(result.cueId);
     _gridFocus.requestFocus();
   }
 

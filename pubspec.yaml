@@ -7,6 +7,7 @@ environment:
   sdk: ^3.7.2
 
 dependencies:
+  characters: ^1.4.1                  # Grapheme-aware subtitle quality metrics
   charset_converter: ^2.3.0
   crypto: ^3.0.7
   # chewie: ^1.11.0 # Replaced with media_kit

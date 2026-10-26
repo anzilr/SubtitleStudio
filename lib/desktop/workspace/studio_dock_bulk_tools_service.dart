@@ -2,6 +2,7 @@ import 'package:subtitle_studio/app/repositories/project_repository.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/screens/edit/repositories/subtitle_repository.dart';
 import 'package:subtitle_studio/utils/time_input_formatter.dart';
+import 'package:subtitle_studio/services/subtitle_quality_checker.dart';
 
 import 'studio_dock_session_loader.dart';
 import 'studio_dock_session_snapshot.dart';
@@ -325,6 +326,35 @@ class StudioDockBulkToolsService {
       updated: updated,
       operationType: 'effect',
       description: 'Removed formatting tags from ${updated.length} subtitles',
+    );
+  }
+
+  /// Apply only explicitly selected whitespace proposals in one guarded
+  /// checkpoint. Re-check both the source and the deterministic result to
+  /// reject stale or forged previews before touching persisted data.
+  Future<StudioDockSessionSnapshot?> applyQualityFixes({
+    required StudioDockSessionSnapshot baseline,
+    required List<SubtitleQualityFix> fixes,
+  }) async {
+    if (fixes.isEmpty) return baseline;
+    final cuesById = {for (final cue in baseline.cues) cue.index: cue};
+    final seen = <int>{};
+    final updated = <SubtitleLine>[];
+    for (final fix in fixes) {
+      final cue = cuesById[fix.cueId];
+      if (cue == null || !seen.add(fix.cueId) ||
+          (cue.storedEdited ?? cue.original) != fix.before ||
+          SubtitleQualityChecker.normalizeSpaces(fix.before) != fix.after ||
+          fix.before == fix.after) {
+        return null;
+      }
+      updated.add(_copy(cue)..edited = fix.after);
+    }
+    return _commit(
+      baseline: baseline,
+      updated: updated,
+      operationType: 'edit',
+      description: 'Corrected spaces in ${updated.length} subtitles',
     );
   }
 
