@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_workspace.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_playback_link.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_layout_preferences.dart';
+import 'package:subtitle_studio/widgets/studio_asset_icon.dart';
 
 void main() {
   test('waveform seeks through the attached native player only', () {
@@ -143,7 +144,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('subtitle header uses line navigation and follow-sync icons',
+  testWidgets('subtitle header uses line navigation and follow-flow SVGs',
       (tester) async {
     SharedPreferences.setMockInitialValues({});
     tester.view.physicalSize = const Size(1600, 900);
@@ -164,16 +165,16 @@ void main() {
       of: find.byKey(const ValueKey('studio-go-to-line')),
       matching: find.byType(Icon),
     )).icon, Icons.format_list_numbered_rounded);
-    expect(tester.widget<Icon>(find.descendant(
+    expect(tester.widget<StudioAssetIcon>(find.descendant(
       of: find.byKey(const ValueKey('studio-dock-follow-playback')),
-      matching: find.byType(Icon),
-    )).icon, Icons.sync_rounded);
+      matching: find.byType(StudioAssetIcon),
+    )).asset, StudioAssetIcons.pauseSubtitleFlow);
     await tester.tap(find.byKey(const ValueKey('studio-dock-follow-playback')));
     await tester.pump();
-    expect(tester.widget<Icon>(find.descendant(
+    expect(tester.widget<StudioAssetIcon>(find.descendant(
       of: find.byKey(const ValueKey('studio-dock-follow-playback')),
-      matching: find.byType(Icon),
-    )).icon, Icons.sync_disabled_rounded);
+      matching: find.byType(StudioAssetIcon),
+    )).asset, StudioAssetIcons.resumeSubtitleFlow);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
     link.dispose();
