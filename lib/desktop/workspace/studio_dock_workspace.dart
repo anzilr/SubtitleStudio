@@ -4721,7 +4721,9 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
 
   Widget _subtitleTable() => LayoutBuilder(builder: (context, tableLimits) {
     final compactActions = tableLimits.maxWidth < 690;
-    final compactFilter = tableLimits.maxWidth < 515;
+    // A text dropdown still reserves its widest item on smaller panels;
+    // switch to the icon filter before it squeezes the search/action row.
+    final compactFilter = tableLimits.maxWidth < 750;
     return Column(children: [
     Container(
       height: 34,

@@ -32,7 +32,8 @@ Branch: `feature/studio-dock-integration`
 - Subtitle search no longer jumps to a second 34px row below 850px panel
   width, preserving additional subtitle-list height on narrow layouts.
   The search now yields width to the header actions rather than retaining a
-  fixed minimum size that could overflow small editor panes.
+  fixed minimum size that could overflow small editor panes. The full-width
+  text review dropdown likewise becomes a compact filter icon under 750px.
 
 ## Verification
 
