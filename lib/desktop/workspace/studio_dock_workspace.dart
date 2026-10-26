@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 65549)
-Total output lines: 6359
-
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -3228,7 +3225,61 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       _rangeSelectionMode = false;
       _rangeStartCueId = null;
     });
-    widget.onSelectedCueChanged?.cal…549 tokens truncated…            if (error != null) Padding(
+    widget.onSelectedCueChanged?.call(_selectedId);
+  }
+
+  Future<void> _selectByIndexSafely() async {
+    if (_cues.isEmpty || !await _confirmDraftBeforeLeaving() || !mounted) return;
+    var firstText = '1';
+    var lastText = '${_cues.length}';
+    String? error;
+    var submitted = false;
+    final chosen = await showDialog<List<int>>(
+      context: context,
+      builder: (dialog) => StatefulBuilder(builder: (dialog, refresh) {
+        void submit() {
+          if (submitted) return;
+          final start = int.tryParse(firstText.trim());
+          final end = int.tryParse(lastText.trim());
+          if (start == null || end == null || start < 1 ||
+              end < start || end > _cues.length) {
+            refresh(() => error =
+                'Enter indices between 1 and ${_cues.length} in order.');
+            return;
+          }
+          submitted = true;
+          Navigator.pop(dialog, <int>[start, end]);
+        }
+        return _modalActions(
+          onConfirm: submit,
+          onCancel: () => Navigator.pop(dialog),
+          child: AlertDialog(
+        title: const Text('Select subtitles by index'),
+        content: SizedBox(width: 390, child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Select an inclusive range from 1 to ${_cues.length}.'),
+            const SizedBox(height: 14),
+            TextFormField(
+              key: const ValueKey('studio-range-start'),
+              initialValue: firstText,
+              onChanged: (value) => firstText = value,
+              onFieldSubmitted: (_) => submit(),
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'First line', border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 10),
+            TextFormField(
+              key: const ValueKey('studio-range-end'),
+              initialValue: lastText,
+              onChanged: (value) => lastText = value,
+              onFieldSubmitted: (_) => submit(),
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Last line', border: OutlineInputBorder()),
+            ),
+            if (error != null) Padding(
               padding: const EdgeInsets.only(top: 10),
               child: Text(error!, style: TextStyle(
                 color: Theme.of(dialog).colorScheme.error)),
