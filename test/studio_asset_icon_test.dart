@@ -14,6 +14,13 @@ void main() {
       StudioAssetIcons.projectSettings,
       StudioAssetIcons.amplitudeIncrease,
       StudioAssetIcons.amplitudeDecrease,
+      StudioAssetIcons.showWaveform,
+      StudioAssetIcons.hideWaveform,
+      StudioAssetIcons.showVideo,
+      StudioAssetIcons.hideVideo,
+      StudioAssetIcons.resumeSubtitleFlow,
+      StudioAssetIcons.pauseSubtitleFlow,
+      StudioAssetIcons.markedLinesSheet,
     ];
     for (final path in icons) {
       expect(File(path).existsSync(), isTrue, reason: path);
@@ -30,5 +37,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(StudioAssetIcon), findsNWidgets(icons.length));
     expect(tester.takeException(), isNull);
+    // The provided Add Effects artwork must not replace the established icon.
+    expect(pubspec, isNot(contains('- assets/add_effects.svg')));
   });
 }

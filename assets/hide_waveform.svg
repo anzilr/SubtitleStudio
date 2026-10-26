@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" role="img" aria-labelledby="title">
+  <title id="title">Hide waveform</title>
+  <g stroke="#263238" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2.5 12h2m15 0h2"/>
+    <path d="M6.25 9.2v5.6M10.1 5.4v13.2M13.9 3.8v16.4M17.75 8.1v7.8"/>
+    <path d="M3.4 3.4 20.6 20.6" stroke-width="2.15"/>
+  </g>
+</svg>

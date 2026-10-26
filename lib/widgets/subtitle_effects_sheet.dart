@@ -32,6 +32,7 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
   Color _alternateColor = Colors.amber;
   double _endDelay = 0.0; // End delay in seconds (0.0 to 1.0)
   String _karaokeEffectType = 'word'; // 'word' or 'character'
+  String _movingKaraokeUnit = 'word';
   bool _isProcessing = false;
   // Preview animation
   late AnimationController _previewController;
@@ -1186,6 +1187,33 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
         trailing: CircleAvatar(backgroundColor: _typewriterColor, radius: 14),
         onTap: _showTypewriterColorPicker,
       ),
+      if (_selectedEffect == 'movingKaraoke') ...[
+        const SizedBox(height: 12),
+        Text('Move the highlight by',
+            style: Theme.of(context).textTheme.bodyMedium),
+        const SizedBox(height: 8),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          for (final choice in const [
+            ('word', 'Word'),
+            ('character', 'Character / letter'),
+          ])
+            ChoiceChip(
+              key: ValueKey('moving-karaoke-unit-${choice.$1}'),
+              label: Text(choice.$2),
+              selected: _movingKaraokeUnit == choice.$1,
+              onSelected: (_) => setState(() {
+                _movingKaraokeUnit = choice.$1;
+                _previewController.stop();
+                _previewController.value = 0;
+                _isPreviewPlaying = false;
+              }),
+            ),
+        ]),
+        const SizedBox(height: 8),
+        Text('Characters follow complete Unicode graphemes, including '
+            'Malayalam combinations and joined emoji.',
+            style: Theme.of(context).textTheme.bodySmall),
+      ],
       if (targetColorNeeded) ...[
         const Text('Active character / destination color'),
         const SizedBox(height: 8),
@@ -1221,6 +1249,7 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
   Widget _srtFramePreview(String text) {
     final frames = SrtEffectFrames.build(
       effect: _selectedEffect, text: text,
+      unit: _movingKaraokeUnit,
       color: _typewriterColor.toARGB32().toRadixString(16).padLeft(8, '0')
           .substring(2),
       alternateColor: _alternateColor.toARGB32().toRadixString(16)
@@ -1417,6 +1446,8 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
         'alternateColor': _alternateColor.toARGB32()
             .toRadixString(16).padLeft(8, '0'),
         'endDelay': _endDelay,
+        if (_selectedEffect == 'movingKaraoke')
+          'unit': _movingKaraokeUnit,
       };
     }
 

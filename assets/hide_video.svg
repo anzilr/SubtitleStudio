@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" role="img" aria-labelledby="title">
+  <title id="title">Hide video</title>
+  <g stroke="#263238" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="2.6" y="4.8" width="18.8" height="14.4" rx="2.35"/>
+    <path d="m10 8.7 5.4 3.3-5.4 3.3Z"/>
+    <path d="M3.4 3.4 20.6 20.6" stroke-width="2.15"/>
+  </g>
+</svg>

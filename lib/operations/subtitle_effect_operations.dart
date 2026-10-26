@@ -14,6 +14,7 @@ class SubtitleEffectOperations {
     required SubtitleLine originalLine,
     required String effect,
     required String color,
+    String unit = 'word',
     String alternateColor = 'FFFF00',
     double endDelay = 0,
   }) async {
@@ -26,6 +27,7 @@ class SubtitleEffectOperations {
       effect: effect,
       text: originalLine.edited ?? originalLine.original,
       color: color,
+      unit: unit,
       alternateColor: alternateColor,
       availableMilliseconds: available,
     );

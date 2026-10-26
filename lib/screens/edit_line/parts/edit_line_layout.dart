@@ -98,6 +98,7 @@ extension _EditLineLayout on EditSubtitleScreenState {
                     const ThemeSwitcherButton(),
                     if (_isVideoLoaded)
                       IconButton(
+                        tooltip: _isVideoVisible ? 'Hide video' : 'Show video',
                         onPressed: () {
                           _setEditLineState(() {
                             _isVideoVisible = !_isVideoVisible;
@@ -115,15 +116,9 @@ extension _EditLineLayout on EditSubtitleScreenState {
                             });
                           }
                         },
-                        icon:
-                            _isVideoVisible
-                                ? SvgPicture.asset(
-                                  'assets/movie_off.svg',
-                                  semanticsLabel: 'Movie off',
-                                  height: 25,
-                                  width: 35,
-                                )
-                                : const Icon(Icons.movie_outlined),
+                        icon: StudioAssetIcon(_isVideoVisible
+                            ? StudioAssetIcons.hideVideo
+                            : StudioAssetIcons.showVideo, size: 24),
                       ),
                     if (_isVideoLoaded && _isVideoVisible)
                       IconButton(

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" role="img" aria-labelledby="title">
+  <title id="title">Pause subtitle flow</title>
+  <g stroke="#263238" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 5.8h10M3 9.9h7.6M3 14h7.6M3 18.1h8.6"/>
+    <circle cx="17.3" cy="14" r="5.05"/>
+    <path d="M16.1 11.8v4.4M18.5 11.8v4.4"/>
+  </g>
+</svg>

@@ -1761,6 +1761,7 @@ class _StudioDockSessionViewState
           final alternate = config['alternateColor'];
           generated = await SubtitleEffectOperations.generateSrtEffect(
             originalLine: source, effect: effect, color: color,
+            unit: config['unit'] == 'character' ? 'character' : 'word',
             alternateColor: alternate is String &&
                 RegExp(r'^[a-fA-F0-9]{8}$').hasMatch(alternate)
                     ? alternate.substring(2) : 'FFFF00',

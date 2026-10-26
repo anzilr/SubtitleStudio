@@ -45,6 +45,7 @@ extension _EditSubtitleActions on _EditScreenState {
         final alternate = effectConfig['alternateColor'];
         effectLines = await SubtitleEffectOperations.generateSrtEffect(
           originalLine: currentLine, effect: effectType, color: color,
+          unit: effectConfig['unit'] == 'character' ? 'character' : 'word',
           alternateColor: alternate is String && alternate.length == 8
               ? alternate.substring(2) : 'FFFF00',
           endDelay: (effectConfig['endDelay'] as num?)?.toDouble() ?? 0,

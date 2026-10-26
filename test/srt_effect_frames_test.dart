@@ -65,6 +65,43 @@ void main() {
     }
   });
 
+  test('moving karaoke supports word and grapheme-by-grapheme highlight',
+      () async {
+    const caption = 'കാ👩‍👩‍👧‍👦 é!';
+    final meaningful = caption.characters
+        .where((glyph) => glyph.trim().isNotEmpty).toList();
+    final byWord = SrtEffectFrames.build(effect: 'movingKaraoke',
+        text: caption, color: '22FF33', availableMilliseconds: 3000);
+    expect(byWord, hasLength(2));
+
+    final byCharacter = SrtEffectFrames.build(effect: 'movingKaraoke',
+        text: caption, color: '22FF33', unit: 'character',
+        availableMilliseconds: 3000);
+    expect(byCharacter, hasLength(meaningful.length));
+    final highlight = RegExp(r'<font color="#22FF33">(.*?)</font>', dotAll: true);
+    for (var i = 0; i < byCharacter.length; i++) {
+      expect(byCharacter[i].replaceAll(RegExp(r'<[^>]*>'), ''), caption);
+      expect(highlight.firstMatch(byCharacter[i])?.group(1), meaningful[i]);
+      expect(highlight.allMatches(byCharacter[i]), hasLength(1));
+    }
+
+    final generated = await SubtitleEffectOperations.generateSrtEffect(
+        originalLine: source(caption), effect: 'movingKaraoke',
+        unit: 'character', color: '22FF33', endDelay: .5);
+    expect(generated, hasLength(meaningful.length));
+    expect(generated.first.startTime, '00:00:01,000');
+    expect(generated.last.endTime, '00:00:04,000');
+    final groups = StudioDockEffectGroups.detect([
+      for (final line in generated) StudioDockEffectFrame(
+          id: line.index, start: line.startTime, end: line.endTime,
+          original: line.original, edited: line.edited!),
+    ]);
+    expect(groups, hasLength(1));
+    expect(groups.single.kind, StudioDockEffectKind.movingKaraoke);
+    expect(groups.single.length, meaningful.length);
+    expect(groups.single.previewText, caption);
+  });
+
   test('batch 2 effects export timed SRT cues and fold into their own group', () async {
     const content = 'കാ👩‍👩‍👧‍👦é Hello';
     const kinds = <String, StudioDockEffectKind>{

@@ -7,6 +7,7 @@ import 'package:subtitle_studio/features/waveform/providers/waveform_controller.
 import 'package:subtitle_studio/features/waveform/state/waveform_event.dart';
 import 'package:subtitle_studio/features/waveform/state/waveform_state.dart';
 import 'package:subtitle_studio/features/waveform/widgets/waveform_widget.dart';
+import 'package:subtitle_studio/widgets/studio_asset_icon.dart';
 
 import 'studio_dock_playback_link.dart';
 import 'studio_dock_waveform_reload_guard.dart';
@@ -304,13 +305,15 @@ class StudioDockWaveformToolbar extends StatelessWidget {
       key: const ValueKey('studio-waveform-visibility'),
       tooltip: visible ? 'Hide waveform' : 'Show waveform',
       onPressed: busy ? null : onToggleVisibility,
-      icon: Icon(visible ? Icons.visibility_off : Icons.visibility, size: 17),
+      icon: StudioAssetIcon(visible ? StudioAssetIcons.hideWaveform
+          : StudioAssetIcons.showWaveform, size: 17),
       constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
       padding: EdgeInsets.zero,
     ) else TextButton.icon(
       key: const ValueKey('studio-waveform-visibility'),
       onPressed: busy ? null : onToggleVisibility,
-      icon: Icon(visible ? Icons.visibility_off : Icons.visibility, size: 15),
+      icon: StudioAssetIcon(visible ? StudioAssetIcons.hideWaveform
+          : StudioAssetIcons.showWaveform, size: 15),
       label: Text(visible ? 'Hide' : 'Generate'),
     ),
     if (size.maxWidth < 650) IconButton(

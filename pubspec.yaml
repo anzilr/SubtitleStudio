@@ -74,6 +74,13 @@ flutter:
     - assets/project_settings.svg
     - assets/vertical_amplitude_zoom_in.svg
     - assets/vertical_amplitude_zoom_out.svg
+    - assets/show_waveform.svg
+    - assets/hide_waveform.svg
+    - assets/show_video.svg
+    - assets/hide_video.svg
+    - assets/resume_subtitle_flow.svg
+    - assets/pause_subtitle_flow.svg
+    - assets/marked_lines_sheet.svg
     - assets/msone_bg.webp
     - lib/utils/normalization.sed
     - assets/magnet-solid.svg

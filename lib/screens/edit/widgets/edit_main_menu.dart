@@ -87,6 +87,8 @@ List<PopupMenuEntry<String>> _timelineItems({
         value: 'generate_waveform',
         child: StudioMenuItemContent(
           icon: Icons.graphic_eq,
+          assetIcon: isWaveformVisible
+              ? 'assets/hide_waveform.svg' : 'assets/show_waveform.svg',
           title: isWaveformLoaded
               ? (isWaveformVisible ? 'Hide Waveform' : 'Show Waveform')
               : 'Generate Waveform',
@@ -168,6 +170,7 @@ List<PopupMenuEntry<String>> _timelineItems({
       value: 'marked_lines',
       child: StudioMenuItemContent(
         icon: Icons.bookmark_added,
+        assetIcon: 'assets/marked_lines_sheet.svg',
         title: 'Show Marked Lines',
       ),
     ),

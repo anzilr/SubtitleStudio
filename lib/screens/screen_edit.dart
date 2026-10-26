@@ -24,7 +24,7 @@ import 'package:subtitle_studio/screens/edit_line/edit_line_host.dart'; // EditS
 import 'package:subtitle_studio/utils/time_parser.dart';
 import 'package:subtitle_studio/utils/subtitle_index.dart';
 import 'package:subtitle_studio/utils/video_player_readiness.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:subtitle_studio/widgets/studio_asset_icon.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:subtitle_studio/widgets/bottom_modal_sheet.dart';
 import 'package:subtitle_studio/operations/subtitle_operations.dart';
@@ -644,6 +644,7 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
                   const ThemeSwitcherButton(),
                   if (_isVideoLoaded && !_isSourceView) // Hide video toggle in source view
                     IconButton(
+                      tooltip: _isVideoVisible ? 'Hide video' : 'Show video',
                       onPressed: () {
                         if (_isVideoVisible &&
                             _videoPlayerKey.currentState != null) {
@@ -660,23 +661,19 @@ class _EditScreenState extends riverpod.ConsumerState<EditScreen> with TickerPro
                           });
                         }
                       },
-                      icon: _isVideoVisible
-                          ? SvgPicture.asset(
-                              'assets/movie_off.svg',
-                              semanticsLabel: 'Movie off',
-                              height: 25,
-                              width: 35,
-                            )                          : Icon(Icons.movie_outlined),
+                      icon: StudioAssetIcon(_isVideoVisible
+                          ? StudioAssetIcons.hideVideo
+                          : StudioAssetIcons.showVideo, size: 24),
                     ),
                   if (_isVideoLoaded && !_isSourceView) // Hide waveform toggle in source view
                     IconButton(
                       tooltip: _isWaveformVisible ? 'Hide Waveform' : 'Show Waveform',
                       onPressed: _toggleWaveform,
-                      icon: Icon(
-                        _isWaveformVisible ? Icons.graphic_eq : Icons.graphic_eq_outlined,
-                        color: Theme.of(context).appBarTheme.foregroundColor?.withValues(alpha: _isWaveformVisible ? 1.0 : 0.75)
-                            ?? Theme.of(context).colorScheme.onSurface,
-                      ),
+                      icon: StudioAssetIcon(_isWaveformVisible
+                          ? StudioAssetIcons.hideWaveform
+                          : StudioAssetIcons.showWaveform, size: 24,
+                        color: Theme.of(context).appBarTheme.foregroundColor ??
+                            Theme.of(context).colorScheme.onSurface),
                     ),
                   IconButton(
                     tooltip: 'Main menu',

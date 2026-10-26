@@ -27,6 +27,7 @@ abstract final class SrtEffectFrames {
     required String effect,
     required String text,
     required String color,
+    String unit = 'word',
     String alternateColor = 'FFFF00',
     required int availableMilliseconds,
   }) {
@@ -35,6 +36,22 @@ abstract final class SrtEffectFrames {
     if (clean.trim().isEmpty) return [];
     final glyphs = clean.characters.toList(growable: false);
     final words = RegExp(r'\S+', unicode: true).allMatches(clean).toList();
+    final movingRanges = <({int start, int end})>[];
+    if (effect == 'movingKaraoke' && unit == 'character') {
+      // Dart offsets are UTF-16 code units. Calculate them only at complete
+      // grapheme boundaries, never in the middle of Malayalam or emoji.
+      var offset = 0;
+      for (final glyph in glyphs) {
+        if (glyph.trim().isNotEmpty) {
+          movingRanges.add((start: offset, end: offset + glyph.length));
+        }
+        offset += glyph.length;
+      }
+    } else {
+      for (final word in words) {
+        movingRanges.add((start: word.start, end: word.end));
+      }
+    }
     final lines = clean.split('\n');
     if (effect == 'blinkFlash' && availableMilliseconds < 300) return [];
     if (effect == 'rainbowText' &&
@@ -47,7 +64,8 @@ abstract final class SrtEffectFrames {
     final blinkLimit = math.min(9, availableMilliseconds ~/ 90);
     final blinkFrames = blinkLimit.isEven ? blinkLimit - 1 : blinkLimit;
     final steps = switch (effect) {
-      'wordReveal' || 'movingKaraoke' => words.length,
+      'wordReveal' => words.length,
+      'movingKaraoke' => movingRanges.length,
       'lineReveal' => lines.length,
       'colorTransition' => 12,
       'blinkFlash' => math.max(5, blinkFrames),
@@ -65,7 +83,7 @@ abstract final class SrtEffectFrames {
       final content = switch (effect) {
         'wordReveal' => _font(step == words.length
             ? clean : clean.substring(0, words[step - 1].end), color),
-        'movingKaraoke' => _fontMoving(clean, words[step - 1], color),
+        'movingKaraoke' => _fontMoving(clean, movingRanges[step - 1], color),
         'activeTypewriter' => _activeGlyph(glyphs, step, color, alternateColor),
         'backspace' => _font(glyphs.take(math.max(0, glyphs.length - step + 1))
             .join('').isEmpty ? ' ' : glyphs.take(
@@ -87,10 +105,10 @@ abstract final class SrtEffectFrames {
   static String _font(String text, String color) =>
       '<font color="#${_rgb(color)}">$text</font>';
 
-  static String _fontMoving(String text, RegExpMatch match, String color) =>
-      '${text.substring(0, match.start)}'
-      '${_font(text.substring(match.start, match.end), color)}'
-      '${text.substring(match.end)}';
+  static String _fontMoving(String text, ({int start, int end}) range,
+      String color) => '${text.substring(0, range.start)}'
+      '${_font(text.substring(range.start, range.end), color)}'
+      '${text.substring(range.end)}';
 
   static String _activeGlyph(List<String> glyphs, int count,
       String color, String alternateColor) {

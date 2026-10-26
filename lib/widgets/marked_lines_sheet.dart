@@ -9,6 +9,7 @@ import 'package:subtitle_studio/utils/responsive_layout.dart';
 import 'package:subtitle_studio/widgets/comment_dialog.dart';
 import 'package:subtitle_studio/widgets/marked_lines_filter.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_effect_groups.dart';
+import 'package:subtitle_studio/widgets/studio_asset_icon.dart';
 
 class _MarkedEffectEntry {
   const _MarkedEffectEntry(this.line, {this.group, this.collapsed = false});
@@ -325,11 +326,13 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
-                            _showAllComments ? Icons.comment : Icons.bookmark_added,
-                            color: Theme.of(context).colorScheme.error,
-                            size: 16,
-                          ),
+                          _showAllComments
+                              ? Icon(Icons.comment,
+                                  color: Theme.of(context).colorScheme.error,
+                                  size: 16)
+                              : StudioAssetIcon(StudioAssetIcons.markedLinesSheet,
+                                  color: Theme.of(context).colorScheme.error,
+                                  size: 16),
                           const SizedBox(width: 4),
                           Text(
                             '${_displayedLines.length}',
@@ -502,11 +505,13 @@ class MarkedLinesSheetState extends ConsumerState<MarkedLinesSheet> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            _showAllComments ? Icons.comment_outlined : Icons.bookmark_border,
-            size: 64,
-            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-          ),
+          _showAllComments
+              ? Icon(Icons.comment_outlined, size: 64,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant
+                      .withValues(alpha: 0.5))
+              : StudioAssetIcon(StudioAssetIcons.markedLinesSheet, size: 64,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant
+                      .withValues(alpha: 0.5)),
           const SizedBox(height: 24),
           Text(
             _showAllComments ? 'No lines with comments' : 'No marked lines',

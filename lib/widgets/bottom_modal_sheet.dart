@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:subtitle_studio/themes/studio_design_tokens.dart';
+import 'package:subtitle_studio/widgets/studio_asset_icon.dart';
 
 class BottomModalSheet extends StatelessWidget {
   final VoidCallback onEdit;
@@ -102,6 +103,7 @@ class BottomModalSheet extends StatelessWidget {
               _buildActionCard(
                 context: context,
                 icon: Icons.bookmark_border,
+                assetIcon: StudioAssetIcons.markedLinesSheet,
                 title: "Show in Marked Lines",
                 description: "Open marked lines sheet and highlight this line",
                 themeColor: StudioDesignTokens.of(context).primaryAction,
@@ -141,6 +143,7 @@ class BottomModalSheet extends StatelessWidget {
   Widget _buildActionCard({
     required BuildContext context,
     required IconData icon,
+    String? assetIcon,
     required String title,
     required String description,
     required Color themeColor,
@@ -166,11 +169,9 @@ class BottomModalSheet extends StatelessWidget {
                   color: tokens.fieldSurface,
                   borderRadius: BorderRadius.circular(StudioRadius.input),
                 ),
-                child: Icon(
-                  icon,
-                  color: themeColor,
-                  size: 18,
-                ),
+                child: assetIcon == null
+                    ? Icon(icon, color: themeColor, size: 18)
+                    : StudioAssetIcon(assetIcon, color: themeColor, size: 18),
               ),
               const SizedBox(width: 12),
               Expanded(

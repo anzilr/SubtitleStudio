@@ -142,6 +142,7 @@ Future<String?> showEditLineMenu({
         value: 'showMarkedLines',
         child: StudioMenuItemContent(
           icon: Icons.bookmark,
+          assetIcon: 'assets/marked_lines_sheet.svg',
           title: 'Show in Marked Lines',
         ),
       ),

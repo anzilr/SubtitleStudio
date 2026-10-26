@@ -4085,7 +4085,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           widget.onApplyCueText == null ? null :
               () => unawaited(_openDictionary(HotkeyAction.urbanDictionary))),
         _railAction('studio-rail-marked-lines',
-          Icon(Icons.bookmark_added_outlined, size: 21, color: _muted),
+          StudioAssetIcon(StudioAssetIcons.markedLinesSheet,
+              size: 21, color: _muted),
           'Marked Lines sheet',
           () => unawaited(_openMarkedLinesFromSidebar())),
         if (widget.onSubmitToMsone != null)
@@ -5111,7 +5112,9 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       if (widget.playback != null) IconButton(
         key: const ValueKey('studio-dock-follow-playback'),
         tooltip: _followPlayback ? 'Pause subtitle follow' : 'Resume subtitle follow',
-        icon: Icon(_followPlayback ? Icons.sync_rounded : Icons.sync_disabled_rounded,
+        icon: StudioAssetIcon(_followPlayback
+            ? StudioAssetIcons.pauseSubtitleFlow
+            : StudioAssetIcons.resumeSubtitleFlow,
             size: 19, color: _followPlayback ? _accent : _muted),
         constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
         padding: EdgeInsets.zero,
@@ -5119,8 +5122,9 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       ),
       if (widget.videoSurface != null) IconButton(
         key: const ValueKey('studio-header-toggle-video'),
-        icon: Icon(_showVideo ? Icons.videocam_rounded
-            : Icons.videocam_off_outlined, size: 19),
+        icon: StudioAssetIcon(_showVideo ? StudioAssetIcons.hideVideo
+            : StudioAssetIcons.showVideo, size: 19,
+            color: _showVideo ? _accent : _muted),
         tooltip: _showVideo ? 'Hide video panel' : 'Show video panel',
         color: _showVideo ? _accent : _muted,
         constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
@@ -5129,8 +5133,9 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       ),
       if (widget.waveformSurface != null) IconButton(
         key: const ValueKey('studio-header-toggle-waveform'),
-        icon: Icon(_showWaveform ? Icons.graphic_eq_rounded
-            : Icons.graphic_eq_outlined, size: 19),
+        icon: StudioAssetIcon(_showWaveform ? StudioAssetIcons.hideWaveform
+            : StudioAssetIcons.showWaveform, size: 19,
+            color: _showWaveform ? _accent : _muted),
         tooltip: _showWaveform ? 'Hide waveform panel' : 'Show waveform panel',
         color: _showWaveform ? _accent : _muted,
         constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
