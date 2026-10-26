@@ -137,7 +137,8 @@ void main() {
     final edited = find.byKey(const ValueKey('studio-edit-1-0'));
     expect(tester.getSize(source).height, 112);
     expect(tester.getSize(edited).height, 112);
-    final readOnly = tester.widget<TextFormField>(source);
+    final readOnly = tester.widget<TextField>(find.descendant(
+      of: source, matching: find.byType(TextField)));
     expect(readOnly.readOnly, isTrue);
     expect(readOnly.enableInteractiveSelection, isTrue);
 
@@ -145,7 +146,8 @@ void main() {
     await tester.pumpAndSettle();
     final originalEdit = find.byKey(const ValueKey('studio-original-1-0'));
     expect(tester.getSize(originalEdit).height, 112);
-    expect(tester.widget<TextFormField>(originalEdit).readOnly, isFalse);
+    expect(tester.widget<TextField>(find.descendant(
+      of: originalEdit, matching: find.byType(TextField))).readOnly, isFalse);
     expect(tester.getSize(edited).height, 112);
     expect(tester.takeException(), isNull);
   });
