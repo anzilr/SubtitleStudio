@@ -104,7 +104,7 @@ void main() {
     link.dispose();
   });
 
-  testWidgets('desktop menus and subtitle lines use readable text sizes',
+  testWidgets('desktop menus and compact subtitle rows use intended sizes',
       (tester) async {
     SharedPreferences.setMockInitialValues({});
     tester.view.physicalSize = const Size(1720, 1000);
@@ -134,7 +134,7 @@ void main() {
       of: row,
       matching: find.text('Readable subtitle row'),
     ));
-    expect(lineText.style!.fontSize, greaterThanOrEqualTo(14));
+    expect(lineText.style!.fontSize, 13);
     final inspectorTab = tester.widget<Text>(find.descendant(
       of: find.byKey(const ValueKey('inspector-tab-Text')),
       matching: find.text('Text'),
