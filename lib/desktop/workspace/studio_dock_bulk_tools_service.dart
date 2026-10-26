@@ -365,6 +365,80 @@ class StudioDockBulkToolsService {
     );
   }
 
+  /// Recompute every approved timing idea from the exact source snapshot.
+  /// Include the following cue *unchanged* in the atomic updated set: the
+  /// history writer checks it inside the same transaction without generating
+  /// a delta, so a concurrent edit to either side rejects the whole batch.
+  Future<StudioDockSessionSnapshot?> applyQualityTimingSuggestions({
+    required StudioDockSessionSnapshot baseline,
+    required List<SubtitleQualityTimingSuggestion> suggestions,
+  }) async {
+    if (suggestions.isEmpty) return null;
+    final cuesById = {for (final cue in baseline.cues) cue.index: cue};
+    final approved = <int>{};
+    final guardedFollowing = <int>{};
+    final updated = <int, SubtitleLine>{};
+    final plannedByProfile = <String,
+        Map<int, SubtitleQualityTimingSuggestion>>{};
+    final qualityCues = [
+      for (final cue in baseline.cues)
+        SubtitleQualityCue(
+          id: cue.index,
+          start: cue.start,
+          end: cue.end,
+          text: cue.storedEdited ?? cue.original,
+        ),
+    ];
+
+    for (final suggestion in suggestions) {
+      final p = suggestion.profile;
+      if (!p.maxCharactersPerSecond.isFinite ||
+          p.maxCharactersPerSecond <= 0 ||
+          p.maxCharactersPerSecond > 100 ||
+          p.maxCharactersPerLine < 1 || p.maxCharactersPerLine > 300 ||
+          p.maxLines < 1 || p.maxLines > 20 ||
+          p.minDurationMs < 0 || p.maxDurationMs <= p.minDurationMs ||
+          p.maxDurationMs > 600000 ||
+          p.minGapMs < 0 || p.minGapMs > 10000) return null;
+
+      final cue = cuesById[suggestion.cueId];
+      final following = cuesById[suggestion.followingCueId];
+      if (cue == null || following == null ||
+          suggestion.cueId == suggestion.followingCueId ||
+          !approved.add(suggestion.cueId) ||
+          cue.end != suggestion.beforeEnd) return null;
+
+      final expected = plannedByProfile.putIfAbsent(p.encode(), () => {
+        for (final item in SubtitleQualityChecker.proposeTimingSuggestions(
+            qualityCues, profile: p))
+          item.cueId: item,
+      })[suggestion.cueId];
+      if (expected == null ||
+          expected.followingCueId != suggestion.followingCueId ||
+          expected.beforeEnd != suggestion.beforeEnd ||
+          expected.proposedEnd != suggestion.proposedEnd ||
+          expected.detail != suggestion.detail ||
+          StudioDockTimingEditService.validate(
+              cue.start, expected.proposedEnd) != null ||
+          StudioDockTimingEditService.validate(
+              following.start, following.end) != null) return null;
+
+      updated[cue.index] = _copy(cue)..endTime = expected.proposedEnd;
+      guardedFollowing.add(following.index);
+    }
+
+    for (final followingId in guardedFollowing) {
+      updated.putIfAbsent(followingId,
+          () => _copy(cuesById[followingId]!));
+    }
+    return _commit(
+      baseline: baseline,
+      updated: updated.values.toList(growable: false),
+      operationType: 'timing',
+      description: 'Adjusted gaps for ${approved.length} subtitles',
+    );
+  }
+
   Future<StudioDockSessionSnapshot?> _commit({
     required StudioDockSessionSnapshot baseline,
     required List<SubtitleLine> updated,

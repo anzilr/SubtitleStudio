@@ -209,6 +209,7 @@ class SubtitleQualityTimingSuggestion {
     required this.beforeEnd,
     required this.proposedEnd,
     required this.detail,
+    required this.profile,
   });
 
   final int cueId;
@@ -216,11 +217,16 @@ class SubtitleQualityTimingSuggestion {
   final String beforeEnd;
   final String proposedEnd;
   final String detail;
+  /// Exact rule set that produced the proposal, for writer-side regeneration.
+  final SubtitleQualityProfile profile;
 }
 
 class SubtitleQualityChecker {
   static final RegExp _timePattern = RegExp(
     r'^\s*(\d{1,3}):([0-5]\d):([0-5]\d)[,.](\d{3})\s*$',
+  );
+  static final RegExp _canonicalTimePattern = RegExp(
+    r'^\d{2}:[0-5]\d:[0-5]\d,\d{3}$',
   );
   static final RegExp _htmlTags = RegExp(r'<[^>]*>');
   static final RegExp _assTags = RegExp(r'\{\\[^}]*\}');
@@ -361,6 +367,12 @@ class SubtitleQualityChecker {
     for (var i = 1; i < valid.length; i++) {
       final preceding = valid[i - 1];
       final next = valid[i];
+      if (!_canonicalTimePattern.hasMatch(preceding.cue.start) ||
+          !_canonicalTimePattern.hasMatch(preceding.cue.end) ||
+          !_canonicalTimePattern.hasMatch(next.cue.start) ||
+          !_canonicalTimePattern.hasMatch(next.cue.end) ||
+          preceding.start >= 86400000 || next.start >= 86400000 ||
+          preceding.end >= 86400000 || next.end >= 86400000) continue;
       final gap = next.start - preceding.end;
       if (gap < 0 || gap >= profile.minGapMs) continue;
       final proposedEnd = next.start - profile.minGapMs;
@@ -375,6 +387,7 @@ class SubtitleQualityChecker {
         followingCueId: next.cue.id,
         beforeEnd: preceding.cue.end,
         proposedEnd: _formatMilliseconds(proposedEnd),
+        profile: profile,
         detail: 'Leave ${profile.minGapMs} ms before subtitle '
             '#${next.cue.id}; shortens this subtitle by '
             '${profile.minGapMs - gap} ms.',

@@ -18,6 +18,11 @@ class StudioDockQualityApply extends StudioDockQualityResult {
   final List<SubtitleQualityFix> fixes;
 }
 
+class StudioDockQualityApplyTiming extends StudioDockQualityResult {
+  const StudioDockQualityApplyTiming(this.suggestions);
+  final List<SubtitleQualityTimingSuggestion> suggestions;
+}
+
 /// Studio Dock's quality review is a preview, not an editor. The parent owns
 /// guarded navigation and the single-history-transaction apply callback.
 class StudioDockQualityDialog extends StatefulWidget {
@@ -29,6 +34,7 @@ class StudioDockQualityDialog extends StatefulWidget {
     this.onPresetChanged,
     this.onCustomProfileChanged,
     this.canApply = false,
+    this.canApplyTiming = false,
   });
 
   final List<SubtitleQualityCue> cues;
@@ -37,6 +43,7 @@ class StudioDockQualityDialog extends StatefulWidget {
   final ValueChanged<SubtitleQualityPreset>? onPresetChanged;
   final ValueChanged<SubtitleQualityProfile>? onCustomProfileChanged;
   final bool canApply;
+  final bool canApplyTiming;
 
   @override
   State<StudioDockQualityDialog> createState() =>
@@ -49,6 +56,7 @@ class _StudioDockQualityDialogState extends State<StudioDockQualityDialog> {
   late SubtitleQualityProfile _customProfile = widget.customProfile;
   _QualityView _view = _QualityView.issues;
   final Set<int> _selectedFixCueIds = {};
+  final Set<int> _selectedTimingCueIds = {};
 
   Future<void> _editCustomProfile() async {
     final updated = await showDialog<SubtitleQualityProfile>(
@@ -60,6 +68,7 @@ class _StudioDockQualityDialogState extends State<StudioDockQualityDialog> {
       _customProfile = updated;
       _filter = null;
       _selectedFixCueIds.clear();
+      _selectedTimingCueIds.clear();
     });
     widget.onCustomProfileChanged?.call(updated);
   }
@@ -86,6 +95,9 @@ class _StudioDockQualityDialogState extends State<StudioDockQualityDialog> {
             .toList(growable: false);
     final selected = suggestions
         .where((fix) => _selectedFixCueIds.contains(fix.cueId))
+        .toList(growable: false);
+    final selectedTiming = timingIdeas
+        .where((idea) => _selectedTimingCueIds.contains(idea.cueId))
         .toList(growable: false);
     final theme = Theme.of(context);
 
@@ -136,6 +148,7 @@ class _StudioDockQualityDialogState extends State<StudioDockQualityDialog> {
                     _preset = value;
                     _filter = null;
                     _selectedFixCueIds.clear();
+                    _selectedTimingCueIds.clear();
                   });
                   widget.onPresetChanged?.call(value);
                 },
@@ -236,16 +249,43 @@ class _StudioDockQualityDialogState extends State<StudioDockQualityDialog> {
                             separatorBuilder: (_, __) => const Divider(height: 1),
                             itemBuilder: (context, index) {
                               final idea = timingIdeas[index];
+                              final title = Text('#${idea.cueId} · End-time preview');
+                              final details = Text(
+                                'END: ${idea.beforeEnd} → ${idea.proposedEnd}'
+                                '\n${idea.detail}'
+                                '\n${widget.canApplyTiming
+                                    ? 'Select to apply, or inspect manually.'
+                                    : 'Preview only — tap to inspect manually.'}',
+                              );
+                              if (widget.canApplyTiming) {
+                                return CheckboxListTile(
+                                  key: ValueKey('studio-quality-timing-${idea.cueId}'),
+                                  dense: true,
+                                  value: _selectedTimingCueIds.contains(idea.cueId),
+                                  onChanged: (checked) => setState(() {
+                                    if (checked == true) {
+                                      _selectedTimingCueIds.add(idea.cueId);
+                                    } else {
+                                      _selectedTimingCueIds.remove(idea.cueId);
+                                    }
+                                  }),
+                                  secondary: IconButton(
+                                    key: ValueKey('studio-quality-timing-open-${idea.cueId}'),
+                                    tooltip: 'Inspect subtitle ${idea.cueId}',
+                                    icon: const Icon(Icons.chevron_right),
+                                    onPressed: () => Navigator.pop(context,
+                                        StudioDockQualityNavigate(idea.cueId)),
+                                  ),
+                                  title: title,
+                                  subtitle: details,
+                                );
+                              }
                               return ListTile(
                                 key: ValueKey('studio-quality-timing-${idea.cueId}'),
                                 dense: true,
                                 leading: const Icon(Icons.schedule_outlined),
-                                title: Text('#${idea.cueId} · End-time preview'),
-                                subtitle: Text(
-                                  'END: ${idea.beforeEnd} → ${idea.proposedEnd}'
-                                  '\n${idea.detail}'
-                                  '\nPreview only — tap to inspect manually.',
-                                ),
+                                title: title,
+                                subtitle: details,
                                 trailing: const Icon(Icons.chevron_right),
                                 onTap: () => Navigator.pop(context,
                                     StudioDockQualityNavigate(idea.cueId)),
@@ -305,6 +345,17 @@ class _StudioDockQualityDialogState extends State<StudioDockQualityDialog> {
                           StudioDockQualityApply(selected))
                       : null,
                   child: Text('Apply ${selected.length} fixes'),
+                ),
+              ],
+              if (_view == _QualityView.timing && widget.canApplyTiming) ...[
+                const SizedBox(width: 8),
+                FilledButton(
+                  key: const ValueKey('studio-quality-apply-timing'),
+                  onPressed: selectedTiming.isNotEmpty
+                      ? () => Navigator.pop(context,
+                          StudioDockQualityApplyTiming(selectedTiming))
+                      : null,
+                  child: Text('Apply ${selectedTiming.length} timing changes'),
                 ),
               ],
             ]),

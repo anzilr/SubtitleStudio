@@ -11,7 +11,9 @@ void main() {
       {ValueChanged<int>? onSelectedCueChanged,
       List<StudioDockCue>? initialCues,
       Future<StudioDockCueUpdate?> Function(List<SubtitleQualityFix>)?
-          onApplyQualityFixes}) async {
+          onApplyQualityFixes,
+      Future<StudioDockCueUpdate?> Function(
+          List<SubtitleQualityTimingSuggestion>)? onApplyTiming}) async {
     tester.view.physicalSize = const Size(1680, 1000);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -21,6 +23,7 @@ void main() {
         isLiveSession: true,
         onSelectedCueChanged: onSelectedCueChanged,
         onApplyQualityFixes: onApplyQualityFixes,
+        onApplyQualityTimingSuggestions: onApplyTiming,
         initialCues: initialCues ?? const [
           StudioDockCue(id: 1, start: '00:00:01,000',
               end: '00:00:03,000', original: 'First original',
@@ -240,6 +243,43 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Subtitle Quality'), findsNothing);
     expect(find.text('Hello'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('timing changes require selection and use the guarded callback',
+      (tester) async {
+    final applied = <SubtitleQualityTimingSuggestion>[];
+    await launch(tester, initialCues: const [
+      StudioDockCue(id: 1, start: '00:00:01,000',
+          end: '00:00:03,000', original: 'Hello', edited: 'Hello'),
+      StudioDockCue(id: 2, start: '00:00:03,050',
+          end: '00:00:05,000', original: 'World', edited: 'World'),
+    ], onApplyTiming: (suggestions) async {
+      applied.addAll(suggestions);
+      return const StudioDockCueUpdate(
+        selectedCueId: 1,
+        cues: [
+          StudioDockCue(id: 1, start: '00:00:01,000',
+              end: '00:00:02,970', original: 'Hello', edited: 'Hello'),
+          StudioDockCue(id: 2, start: '00:00:03,050',
+              end: '00:00:05,000', original: 'World', edited: 'World'),
+        ],
+      );
+    });
+    await openQuality(tester);
+    await tester.tap(find.byKey(const ValueKey('studio-quality-timing-tab')));
+    await tester.pumpAndSettle();
+    final apply = find.byKey(const ValueKey('studio-quality-apply-timing'));
+    expect(tester.widget<FilledButton>(apply).onPressed, isNull);
+    await tester.tap(find.byKey(const ValueKey('studio-quality-timing-1')));
+    await tester.pumpAndSettle();
+    expect(tester.widget<FilledButton>(apply).onPressed, isNotNull);
+    await tester.tap(apply);
+    await tester.pumpAndSettle();
+    expect(applied, hasLength(1));
+    expect(applied.single.beforeEnd, '00:00:03,000');
+    expect(applied.single.proposedEnd, '00:00:02,970');
+    expect(find.text('Subtitle Quality'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 }

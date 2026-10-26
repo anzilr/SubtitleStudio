@@ -31,11 +31,15 @@ void main() {
   tearDown(() async => db.close());
 
   Future<({int sessionId, int collectionId})> seed({
-      String secondEdited = 'Fish and fish'}) async {
+      String secondEdited = 'Fish and fish',
+      String firstEnd = '00:00:02,000',
+      String secondStart = '00:00:03,000',
+      String secondEnd = '00:00:04,000',
+      bool includeThird = false}) async {
     final first = SubtitleLine()
       ..index = 1
       ..startTime = '00:00:01,000'
-      ..endTime = '00:00:02,000'
+      ..endTime = firstEnd
       ..original = '<b>Red fish</b> red FISH'
       ..edited = null
       ..marked = true
@@ -43,16 +47,25 @@ void main() {
       ..resolved = true;
     final second = SubtitleLine()
       ..index = 2
-      ..startTime = '00:00:03,000'
-      ..endTime = '00:00:04,000'
+      ..startTime = secondStart
+      ..endTime = secondEnd
       ..original = 'No matching original'
       ..edited = secondEdited
       ..marked = false
       ..comment = null
       ..resolved = false;
+    final lines = <SubtitleLine>[first, second];
+    if (includeThird) {
+      lines.add(SubtitleLine()
+        ..index = 3
+        ..startTime = '00:00:05,050'
+        ..endTime = '00:00:07,000'
+        ..original = 'Third source'
+        ..edited = 'Third target');
+    }
     final collection = SubtitleCollection(
       fileName: 'Search.srt', encoding: 'UTF-8',
-      lines: [first, second],
+      lines: lines,
     );
     await db.isar.writeTxn(() async {
       await db.isar.subtitleCollections.put(collection);
@@ -170,6 +183,71 @@ void main() {
     );
     expect(await tools.applyQualityFixes(
         baseline: updated, fixes: [forged]), isNull);
+    expect(await db.isar.checkpoints.count(), 2);
+  });
+
+  test('timing gaps apply atomically with unchanged following-cue guards',
+      () async {
+    final ids = await seed(firstEnd: '00:00:03,000',
+        secondStart: '00:00:03,050', secondEnd: '00:00:05,000',
+        includeThird: true);
+    final baseline = await loader.load(
+        sessionId: ids.sessionId, collectionId: ids.collectionId);
+    final ideas = SubtitleQualityChecker.proposeTimingSuggestions([
+      for (final cue in baseline.cues)
+        SubtitleQualityCue(id: cue.index, start: cue.start,
+            end: cue.end, text: cue.storedEdited ?? cue.original),
+    ]);
+    expect(ideas, hasLength(2));
+    final updated = await tools.applyQualityTimingSuggestions(
+        baseline: baseline, suggestions: ideas);
+    expect(updated, isNotNull);
+    expect(updated!.cues[0].end, '00:00:02,970');
+    expect(updated.cues[1].start, '00:00:03,050');
+    expect(updated.cues[1].end, '00:00:04,970');
+    expect(updated.cues[2].start, '00:00:05,050');
+    expect(updated.cues.first.original, '<b>Red fish</b> red FISH');
+    expect(updated.cues.first.marked, isTrue);
+    expect(updated.cues.first.comment, 'Keep review note');
+    expect(await db.isar.checkpoints.count(), 2);
+    expect(await tools.applyQualityTimingSuggestions(
+        baseline: updated, suggestions: ideas), isNull);
+    expect(await db.isar.checkpoints.count(), 2);
+  });
+
+  test('timing batch rejects changed neighbor and forged output', () async {
+    final ids = await seed(firstEnd: '00:00:03,000',
+        secondStart: '00:00:03,050');
+    final baseline = await loader.load(
+        sessionId: ids.sessionId, collectionId: ids.collectionId);
+    final ideas = SubtitleQualityChecker.proposeTimingSuggestions([
+      for (final cue in baseline.cues)
+        SubtitleQualityCue(id: cue.index, start: cue.start,
+            end: cue.end, text: cue.storedEdited ?? cue.original),
+    ]);
+    expect(ideas, hasLength(1));
+    final originalIdea = ideas.single;
+    final forged = SubtitleQualityTimingSuggestion(
+      cueId: originalIdea.cueId,
+      followingCueId: originalIdea.followingCueId,
+      beforeEnd: originalIdea.beforeEnd,
+      proposedEnd: '00:00:02,900',
+      detail: originalIdea.detail,
+      profile: originalIdea.profile,
+    );
+    expect(await tools.applyQualityTimingSuggestions(
+        baseline: baseline, suggestions: [forged]), isNull);
+    expect(await db.isar.checkpoints.count(), 0);
+
+    expect(await edit.apply(baseline: baseline, cueNumber: 2,
+        editedText: 'New edit to following cue'), isNotNull);
+    expect(await tools.applyQualityTimingSuggestions(
+        baseline: baseline, suggestions: ideas), isNull,
+        reason: 'An unchanged following cue is an optimistic transaction guard');
+    final current = await loader.load(
+        sessionId: ids.sessionId, collectionId: ids.collectionId);
+    expect(current.cues.first.end, '00:00:03,000');
+    expect(current.cues.last.edited, 'New edit to following cue');
     expect(await db.isar.checkpoints.count(), 2);
   });
 

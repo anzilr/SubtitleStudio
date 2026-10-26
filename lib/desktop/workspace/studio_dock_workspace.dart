@@ -172,6 +172,7 @@ class StudioDockWorkspace extends StatefulWidget {
     this.onFindCues,
     this.onReplaceMatches,
     this.onApplyQualityFixes,
+    this.onApplyQualityTimingSuggestions,
     this.onShiftAllCues,
     this.onSyncAnchoredCues,
     this.onConvertFramerate,
@@ -273,6 +274,10 @@ class StudioDockWorkspace extends StatefulWidget {
   /// committed in a single checkpoint by the live session bridge.
   final Future<StudioDockCueUpdate?> Function(List<SubtitleQualityFix> fixes)?
       onApplyQualityFixes;
+  /// Guarded multi-cue timing-gap correction through one checkpoint.
+  final Future<StudioDockCueUpdate?> Function(
+      List<SubtitleQualityTimingSuggestion> suggestions)?
+      onApplyQualityTimingSuggestions;
   final Future<StudioDockCueUpdate?> Function(
       int selectedCueNumber, int deltaMilliseconds)? onShiftAllCues;
   /// Mobile Sync Subtitles: first/last anchors, duration-preserving scaling.
@@ -2461,6 +2466,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         customProfile: SubtitleQualityProfile.decode(
             savedPreferences?.getString(profileKey)),
         canApply: widget.onApplyQualityFixes != null,
+        canApplyTiming: widget.onApplyQualityTimingSuggestions != null,
         onPresetChanged: (chosen) {
           if (savedPreferences != null) {
             unawaited(savedPreferences
@@ -2478,6 +2484,29 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       ),
     );
     if (!mounted || result == null) return;
+    if (result is StudioDockQualityApplyTiming) {
+      final apply = widget.onApplyQualityTimingSuggestions;
+      if (apply == null || result.suggestions.isEmpty) return;
+      setState(() => _applyingQualityFixes = true);
+      try {
+        final update = await apply(result.suggestions);
+        if (!mounted) return;
+        if (update == null) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Timing changes were not applied. '
+                'Refresh the project and review the suggestions again.'),
+          ));
+        } else {
+          _acceptStructure(update);
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Applied ${result.suggestions.length} timing changes.'),
+          ));
+        }
+      } finally {
+        if (mounted) setState(() => _applyingQualityFixes = false);
+      }
+      return;
+    }
     if (result is StudioDockQualityApply) {
       final apply = widget.onApplyQualityFixes;
       if (apply == null || result.fixes.isEmpty) return;

@@ -726,6 +726,24 @@ class _StudioDockSessionViewState
     }
   }
 
+  Future<StudioDockCueUpdate?> _applyQualityTimingSuggestions(
+      List<SubtitleQualityTimingSuggestion> suggestions) async {
+    final baseline = _latestBaseline;
+    if (baseline == null || !widget.enableEditing || suggestions.isEmpty) {
+      return null;
+    }
+    try {
+      final updated = await _bulkTools.applyQualityTimingSuggestions(
+        baseline: baseline, suggestions: suggestions,
+      );
+      if (!mounted || updated == null) return null;
+      setState(() => _latestBaseline = updated);
+      return _snapshotUpdate(updated, suggestions.first.cueId);
+    } catch (_) {
+      return null;
+    }
+  }
+
   StudioDockBulkToolsService get _bulkTools => StudioDockBulkToolsService(
     ref.read(projectRepositoryProvider),
     ref.read(subtitleRepositoryProvider),
@@ -1707,6 +1725,8 @@ class _StudioDockSessionViewState
         onReplaceMatches: widget.enableEditing ? _replaceMatches : null,
         onApplyQualityFixes:
             widget.enableEditing ? _applyQualityFixes : null,
+        onApplyQualityTimingSuggestions:
+            widget.enableEditing ? _applyQualityTimingSuggestions : null,
         onShiftAllCues: widget.enableEditing ? _shiftAllCues : null,
         onSyncAnchoredCues: widget.enableEditing ? _syncAnchoredCues : null,
         onConvertFramerate: widget.enableEditing ? _convertFramerateCues : null,
