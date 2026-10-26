@@ -6755,7 +6755,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     final update = widget.onChangeEncoding;
     if (update == null || _changingEncoding || !mounted ||
         !await _confirmDraftBeforeLeaving() || !mounted) return;
-    final Future<List<String>> optionsFuture;
+    late Future<List<String>> optionsFuture;
     try {
       optionsFuture = (widget.onLoadEncodings?.call() ??
           SubtitleExtendedEncodingService.standard.availableEncodings())
