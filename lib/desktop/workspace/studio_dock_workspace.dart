@@ -34,6 +34,7 @@ import 'studio_dock_go_to_line_dialog.dart';
 import 'studio_dock_file_actions.dart';
 import 'studio_dock_style_actions.dart';
 import 'studio_dock_style_color_dialog.dart';
+import 'studio_dock_effect_groups.dart';
 import 'studio_dock_search_service.dart';
 import 'studio_dock_quality_dialog.dart';
 import 'studio_dock_bulk_review_service.dart';
@@ -128,6 +129,17 @@ class StudioDockCueUpdate {
   /// Optional multi-selection restored by a group operation. Legacy single-
   /// cue edits continue selecting only [selectedCueId].
   final List<int>? selectedCueIds;
+}
+
+class _StudioDockEffectRow {
+  const _StudioDockEffectRow(this.cue, {this.group, this.collapsed = false});
+
+  final StudioDockCue cue;
+  final StudioDockEffectGroup? group;
+  final bool collapsed;
+
+  bool represents(int cueId) => cue.id == cueId ||
+      (collapsed && group?.contains(cueId) == true);
 }
 
 /// A saved project in the desktop sidebar, backed by the same session list as
@@ -426,6 +438,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   final ScrollController _cueScroll = ScrollController();
   int? _playingCueId;
   bool _followPlayback = true;
+  bool _collapseEffects = true;
+  final Set<int> _expandedEffectGroupIds = {};
   final List<Color> _styleColorHistory = [];
   final FocusNode _gridFocus = FocusNode(debugLabel: 'Studio Dock grid');
   final FocusNode _searchFocus = FocusNode(debugLabel: 'Studio Dock search');
@@ -536,6 +550,55 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         cue.edited.toLowerCase().contains(q) ||
         cue.start.contains(q) || cue.id.toString() == q;
   }).toList(growable: false);
+
+  List<StudioDockEffectGroup> get _effectGroups =>
+      StudioDockEffectGroups.detect([
+        for (final cue in _cues) StudioDockEffectFrame(
+          id: cue.id, start: cue.start, end: cue.end,
+          original: cue.original, edited: cue.edited,
+        ),
+      ]);
+
+  /// Filtering always reveals matching real cues. Unfiltered, collapsed rows
+  /// are only summaries; all editing, export, selection and history commands
+  /// still operate on the unchanged _cues list.
+  List<_StudioDockEffectRow> get _displayRows {
+    final visible = _visible;
+    if (!_collapseEffects || _query.trim().isNotEmpty ||
+        _reviewFilter != _StudioDockReviewFilter.all) {
+      return [for (final cue in visible) _StudioDockEffectRow(cue)];
+    }
+    final groupById = <int, StudioDockEffectGroup>{};
+    for (final group in _effectGroups) {
+      for (final frame in group.frames) {
+        groupById[frame.id] = group;
+      }
+    }
+    final rows = <_StudioDockEffectRow>[];
+    for (final cue in visible) {
+      final group = groupById[cue.id];
+      if (group == null) {
+        rows.add(_StudioDockEffectRow(cue));
+      } else if (_expandedEffectGroupIds.contains(group.firstId)) {
+        rows.add(_StudioDockEffectRow(cue,
+            group: cue.id == group.firstId ? group : null));
+      } else if (cue.id == group.firstId) {
+        rows.add(_StudioDockEffectRow(cue, group: group, collapsed: true));
+      }
+    }
+    return rows;
+  }
+
+  int _displayIndexForCue(int cueId) =>
+      _displayRows.indexWhere((row) => row.represents(cueId));
+
+  void _toggleEffectGroup(int groupFirstId) {
+    setState(() {
+      if (!_expandedEffectGroupIds.add(groupFirstId)) {
+        _expandedEffectGroupIds.remove(groupFirstId);
+      }
+    });
+  }
 
   String get _subtitleCountLabel {
     final total = _cues.length;
@@ -681,6 +744,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       _draftOriginalCueId = null;
       _draftOriginal = null;
       _originalEditing = false;
+      _expandedEffectGroupIds.clear();
       _draftTimingCueId = null;
       _draftStart = null;
       _draftEnd = null;
@@ -728,7 +792,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     if (!_followPlayback || active == null || _query.isNotEmpty) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_cueScroll.hasClients || !_followPlayback) return;
-      final index = _visible.indexWhere((cue) => cue.id == active);
+      final index = _displayIndexForCue(active);
       if (index < 0) return;
       final target = (index * _cueRowHeight -
               _cueScroll.position.viewportDimension / 2 +
@@ -779,6 +843,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         _inspectorOpen = saved.inspectorOpen;
         _showVideo = saved.videoOpen;
         _showWaveform = saved.waveformOpen;
+        _collapseEffects = saved.collapseEffects;
       });
     } catch (error) {
       debugPrint('Studio Dock layout preferences unavailable: $error');
@@ -794,6 +859,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     inspectorOpen: _inspectorOpen,
     videoOpen: _showVideo,
     waveformOpen: _showWaveform,
+    collapseEffects: _collapseEffects,
   );
 
   Future<void> _persistLayout() async {
@@ -826,6 +892,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       _inspectorOpen = true;
       _showVideo = false;
       _showWaveform = false;
+      _collapseEffects = true;
+      _expandedEffectGroupIds.clear();
       _projectsSidebar = false;
       _explorerOverlayOpen = false;
       _inspectorOverlayOpen = false;
@@ -2037,6 +2105,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   void _acceptStructure(StudioDockCueUpdate update) {
     setState(() {
       _cues..clear()..addAll(update.cues);
+      _expandedEffectGroupIds.clear();
       _selectedId = update.selectedCueId;
       _selectionAnchor = _selectedId;
       _selectedIds
@@ -2082,7 +2151,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     _selectCue(cueId);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_cueScroll.hasClients) return;
-      final index = _visible.indexWhere((cue) => cue.id == cueId);
+      final index = _displayIndexForCue(cueId);
       if (index < 0) return;
       final target = (index * _cueRowHeight -
               _cueScroll.position.viewportDimension / 2 +
@@ -2412,6 +2481,16 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     final visibleIds = _visible.map((cue) => cue.id).toList();
     if (!visibleIds.contains(id)) return;
     setState(() {
+      // Explicitly choosing a cue (waveform, Go to Line, shortcut) reveals it
+      // even if its effect group was collapsed. Passive playback does not.
+      if (_collapseEffects) {
+        for (final group in _effectGroups) {
+          if (group.firstId != id && group.contains(id)) {
+            _expandedEffectGroupIds.add(group.firstId);
+            break;
+          }
+        }
+      }
       if (range) {
         final from = visibleIds.indexOf(_selectionAnchor);
         final to = visibleIds.indexOf(id);
@@ -2463,8 +2542,9 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       _ => 0,
     };
     if (change == 0) return KeyEventResult.ignored;
-    final ids = _visible.map((cue) => cue.id).toList();
-    final current = ids.indexOf(_selectedId);
+    final rows = _displayRows;
+    final ids = rows.map((row) => row.cue.id).toList();
+    final current = rows.indexWhere((row) => row.represents(_selectedId));
     final target = ids[(current + change).clamp(0, ids.length - 1)];
     _selectCue(target, range: HardwareKeyboard.instance.isShiftPressed);
     return KeyEventResult.handled;
@@ -2481,9 +2561,11 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     if (_visible.isEmpty ||
         !await _confirmDraftBeforeLeaving() || !mounted ||
         _visible.isEmpty) return;
-    final index = _visible.indexWhere((cue) => cue.id == _selectedId);
-    final targetIndex = (index + change).clamp(0, _visible.length - 1);
-    final cue = _visible[targetIndex];
+    final rows = _displayRows;
+    if (rows.isEmpty) return;
+    final index = rows.indexWhere((row) => row.represents(_selectedId));
+    final targetIndex = (index + change).clamp(0, rows.length - 1);
+    final cue = rows[targetIndex].cue;
     _applyCueSelection(cue.id);
     final playback = widget.playback;
     if (playback?.isAttached == true) {
@@ -2651,9 +2733,11 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
 
   void _selectRelative(int change) {
     if (_visible.isEmpty) return;
-    final index = _visible.indexWhere((cue) => cue.id == _selectedId);
-    final target = (index + change).clamp(0, _visible.length - 1).toInt();
-    _selectCue(_visible[target].id);
+    final rows = _displayRows;
+    if (rows.isEmpty) return;
+    final index = rows.indexWhere((row) => row.represents(_selectedId));
+    final target = (index + change).clamp(0, rows.length - 1).toInt();
+    _selectCue(rows[target].cue.id);
     _gridFocus.requestFocus();
   }
 
@@ -3389,7 +3473,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_cueScroll.hasClients) return;
-      final visibleIndex = _visible.indexWhere((item) => item.id == cue.id);
+      final visibleIndex = _displayIndexForCue(cue.id);
       if (visibleIndex < 0) return;
       final target = (visibleIndex * _cueRowHeight + _cueRowHeight / 2 -
               _cueScroll.position.viewportDimension / 2)
@@ -4945,6 +5029,20 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                 child: Text('Reopen selected')),
           ],
         ),
+      if (_effectGroups.isNotEmpty) IconButton(
+        key: const ValueKey('studio-effect-fold-toggle'),
+        tooltip: _collapseEffects
+            ? 'Show every effect frame' : 'Collapse effect frames into groups',
+        icon: Icon(_collapseEffects ? Icons.unfold_more_rounded
+            : Icons.unfold_less_rounded, size: 19,
+          color: _collapseEffects ? _accent : _muted),
+        constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+        padding: EdgeInsets.zero,
+        onPressed: () {
+          setState(() => _collapseEffects = !_collapseEffects);
+          _queueLayoutSave(now: true);
+        },
+      ),
       const Spacer(),
       // The right-aligned playback/view/filter controls are one distinct group.
       Container(width: 1, height: 20, margin: const EdgeInsets.symmetric(horizontal: 5),
@@ -4983,6 +5081,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     ])),
     Expanded(child: LayoutBuilder(builder: (context, limits) {
       final gridWidth = math.max(850.0, limits.maxWidth);
+      final displayRows = _displayRows;
       return SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: SizedBox(
@@ -4998,33 +5097,48 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             Expanded(child: Focus(
               focusNode: _gridFocus,
               onKeyEvent: _handleGridKey,
-              child: _visible.isEmpty
+              child: displayRows.isEmpty
               ? Center(child: Text('No matching subtitle lines',
                   style: TextStyle(color: _muted)))
               : ListView.builder(
                   controller: _cueScroll,
-                  itemCount: _visible.length,
+                  itemCount: displayRows.length,
                   itemExtent: _cueRowHeight,
                   itemBuilder: (context, i) {
-                    final cue = _visible[i];
-                    final selected = _selectedIds.contains(cue.id);
+                    final row = displayRows[i];
+                    final cue = row.cue;
+                    final group = row.group;
+                    final selected = _selectedIds.contains(cue.id) ||
+                        (row.collapsed && group != null &&
+                            group.frames.any((c) => _selectedIds.contains(c.id)));
+                    final playing = cue.id == _playingCueId ||
+                        (row.collapsed && _playingCueId != null &&
+                            group?.contains(_playingCueId!) == true);
                     return Material(
                       color: selected ? _accent.withValues(alpha: .14)
-                          : cue.id == _playingCueId ? _accent.withValues(alpha: .09)
+                          : playing ? _accent.withValues(alpha: .09)
                           : i.isOdd
                               ? Theme.of(context).colorScheme.surfaceContainerLow
                               : Colors.transparent,
                       child: InkWell(
-                        key: ValueKey('desktop-cue-' + cue.id.toString()),
-                        onTap: () => _selectFromPointer(cue.id),
-                        onSecondaryTapDown: (details) =>
-                            _showCueContextMenu(cue, details.globalPosition),
+                        key: row.collapsed
+                            ? ValueKey('studio-effect-group-${group!.firstId}')
+                            : ValueKey('desktop-cue-${cue.id}'),
+                        onTap: row.collapsed
+                            ? () => _toggleEffectGroup(group!.firstId)
+                            : () => _selectFromPointer(cue.id),
+                        onSecondaryTapDown: row.collapsed
+                            ? (_) => _toggleEffectGroup(group!.firstId)
+                            : (details) => _showCueContextMenu(
+                                cue, details.globalPosition),
                         child: Container(
                           decoration: BoxDecoration(border: Border(
                             bottom: BorderSide(color: _border, width: .4),
                           )),
                           padding: const EdgeInsets.symmetric(horizontal: 10),
-                          child: _gridCells(cue),
+                          child: row.collapsed
+                              ? _effectGroupSummary(group!)
+                              : _gridCells(cue, effectGroup: group),
                         ),
                       ),
                     );
@@ -5394,7 +5508,33 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     };
   }
 
-  Widget _gridCells(StudioDockCue? cue) {
+  Widget _effectGroupSummary(StudioDockEffectGroup group) => Tooltip(
+    message: 'Expand ${group.length} effect frames for individual editing',
+    child: Row(children: [
+      Icon(Icons.chevron_right_rounded, size: 20, color: _accent),
+      const SizedBox(width: 5),
+      Text('#${group.firstId}–${group.lastId}',
+        style: TextStyle(color: _muted, fontSize: 11)),
+      const SizedBox(width: 14),
+      Icon(group.kind == StudioDockEffectKind.karaoke
+          ? Icons.music_note_outlined : Icons.keyboard_outlined,
+        color: _accent, size: 16),
+      const SizedBox(width: 5),
+      Text('${group.kind == StudioDockEffectKind.karaoke ? 'Karaoke' : 'Typewriter'}'
+          ' · ${group.length} frames',
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
+          color: _accent)),
+      const SizedBox(width: 12),
+      Expanded(child: Text(group.original, maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(fontSize: 12))),
+      const SizedBox(width: 8),
+      Text('${group.start} – ${group.end}',
+        style: TextStyle(fontSize: 11, color: _muted)),
+    ]),
+  );
+
+  Widget _gridCells(StudioDockCue? cue, {StudioDockEffectGroup? effectGroup}) {
     final heading = cue == null;
     Text cell(String value, {bool primary = false}) => Text(
       value, maxLines: 1, overflow: TextOverflow.ellipsis,
@@ -5404,7 +5544,20 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             ? Theme.of(context).colorScheme.onSurface : _muted),
     );
     return Row(children: [
-      SizedBox(width: 30, child: cell(heading ? '#' : cue.id.toString())),
+      SizedBox(width: 54, child: !heading && effectGroup != null
+          ? Row(children: [
+              IconButton(
+                key: ValueKey('studio-effect-collapse-${effectGroup.firstId}'),
+                tooltip: 'Collapse effect frames',
+                icon: const Icon(Icons.expand_less_rounded, size: 17),
+                color: _accent,
+                onPressed: () => _toggleEffectGroup(effectGroup.firstId),
+                constraints: const BoxConstraints(minWidth: 24, minHeight: 25),
+                padding: EdgeInsets.zero,
+              ),
+              Expanded(child: cell(cue.id.toString())),
+            ])
+          : cell(heading ? '#' : cue.id.toString())),
       SizedBox(width: 100, child: cell(heading ? 'START' : cue.start)),
       SizedBox(width: 100, child: cell(heading ? 'END' : cue.end)),
       SizedBox(width: 76, child: cell(heading

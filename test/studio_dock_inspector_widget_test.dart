@@ -7,6 +7,7 @@ void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
   Future<void> launch(WidgetTester tester, {
+    List<StudioDockCue>? cues,
     Future<bool> Function(int, String)? applyText,
     Future<bool> Function(int, String)? applyOriginal,
     Future<StudioDockCueUpdate?> Function(int, String?, bool, bool)? applyNotes,
@@ -28,7 +29,7 @@ void main() {
       isLiveSession: true,
       isEditMode: isEditMode,
       maxLineLength: maxLineLength,
-      initialCues: const [StudioDockCue(
+      initialCues: cues ?? const [StudioDockCue(
         id: 1, start: '00:00:01,000', end: '00:00:02,000',
         original: 'Original', edited: 'Edited line',
       )],
@@ -376,6 +377,47 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('studio-encoding-ISO-8859-1')));
     await tester.pumpAndSettle();
     expect(requests, ['ISO-8859-1']);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('folded effect frames expand, collapse and reveal on search',
+      (tester) async {
+    const source = 'Hey';
+    await launch(tester, cues: const [
+      StudioDockCue(id: 1, start: '00:00:01,000', end: '00:00:01,300',
+        original: source, edited: '<font color="#ff00aa">H</font>'),
+      StudioDockCue(id: 2, start: '00:00:01,300', end: '00:00:01,600',
+        original: source, edited: '<font color="#ff00aa">He</font>'),
+      StudioDockCue(id: 3, start: '00:00:01,600', end: '00:00:02,000',
+        original: source, edited: '<font color="#ff00aa">Hey</font>'),
+      StudioDockCue(id: 4, start: '00:00:03,000', end: '00:00:04,000',
+        original: 'Other', edited: 'Other'),
+    ]);
+    final group = find.byKey(const ValueKey('studio-effect-group-1'));
+    final toggle = find.byKey(const ValueKey('studio-effect-fold-toggle'));
+    expect(group, findsOneWidget);
+    expect(toggle, findsOneWidget);
+    expect(find.byKey(const ValueKey('desktop-cue-2')), findsNothing);
+    expect(find.byKey(const ValueKey('desktop-cue-4')), findsOneWidget);
+
+    await tester.tap(group);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('desktop-cue-2')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('studio-effect-collapse-1')));
+    await tester.pumpAndSettle();
+    expect(group, findsOneWidget);
+    await tester.tap(toggle);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('desktop-cue-2')), findsOneWidget);
+    await tester.tap(toggle);
+    await tester.pumpAndSettle();
+    expect(group, findsOneWidget);
+
+    await tester.enterText(find.byKey(const ValueKey('desktop-cue-search')),
+        'Hey');
+    await tester.pumpAndSettle();
+    expect(group, findsNothing);
+    expect(find.byKey(const ValueKey('desktop-cue-2')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

@@ -13,6 +13,7 @@ class StudioDockLayoutSnapshot {
     this.inspectorOpen = true,
     this.videoOpen = false,
     this.waveformOpen = false,
+    this.collapseEffects = true,
   });
 
   final double explorerWidth;
@@ -24,6 +25,8 @@ class StudioDockLayoutSnapshot {
   /// Media panels reopen only when explicitly enabled and a source exists.
   final bool videoOpen;
   final bool waveformOpen;
+  /// Visual-only effect folding; does not change or merge persisted cues.
+  final bool collapseEffects;
 }
 
 class StudioDockLayoutPreferences {
@@ -59,6 +62,7 @@ class StudioDockLayoutPreferences {
       inspectorOpen: p.getBool(prefix + 'inspectorOpen') ?? true,
       videoOpen: p.getBool(prefix + 'videoOpen') ?? false,
       waveformOpen: p.getBool(prefix + 'waveformOpen') ?? false,
+      collapseEffects: p.getBool(prefix + 'collapseEffects') ?? true,
     );
   }
 
@@ -73,5 +77,6 @@ class StudioDockLayoutPreferences {
     await p.setBool(prefix + 'inspectorOpen', state.inspectorOpen);
     await p.setBool(prefix + 'videoOpen', state.videoOpen);
     await p.setBool(prefix + 'waveformOpen', state.waveformOpen);
+    await p.setBool(prefix + 'collapseEffects', state.collapseEffects);
   }
 }

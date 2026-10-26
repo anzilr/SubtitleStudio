@@ -16,6 +16,7 @@ void main() {
     final layout = await StudioDockLayoutPreferences().load();
     expect(layout.videoShare, .36);
     expect(layout.waveformShare, .24);
+    expect(layout.collapseEffects, isTrue);
   });
 
   test('local dock preferences round-trip widths, splits and visibility',
@@ -30,6 +31,7 @@ void main() {
       inspectorOpen: false,
       videoOpen: true,
       waveformOpen: true,
+      collapseEffects: false,
     );
     await repo.save(expected);
     final loaded = await repo.load();
@@ -42,6 +44,7 @@ void main() {
     expect(loaded.inspectorOpen, false);
     expect(loaded.videoOpen, true);
     expect(loaded.waveformOpen, true);
+    expect(loaded.collapseEffects, false);
   });
 
   test('invalid layout values are clamped to safe window limits', () async {
