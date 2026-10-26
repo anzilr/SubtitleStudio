@@ -1,5 +1,18 @@
 # SubtitleStudio Refactor Roadmap v4
 
+> **AUDIO TIMING AND VIDEO EXPORT BACKLOG — 2026-10-27:** The user requested
+> transcript-free subtitle timing and encoding subtitles into video files.
+> Plan an offline VAD speech-region detector that creates blank, reviewable
+> timed cues (no text recognition); distinguish that from text/audio forced
+> alignment. Add two explicit **Export Video** paths: selectable soft
+> subtitle tracks through container-compatible muxing (prefer video/audio
+> stream copy) and hard/burned-in subtitles (video re-encode required).
+> Include preservation/loss warnings for VTT/ASS/SSA styles, existing tracks,
+> progress/cancellation, format and licensing constraints, and native-device
+> acceptance. Both are **future roadmap items, not implemented**. Scope,
+> safeguards and phased gates:
+> [format expansion, timing and video export backlog](SUBTITLE_FORMAT_EXPANSION_AND_SUBTITLE_EDIT_PARITY_BACKLOG_2026-10-27.md).
+
 > **FORMAT / SUBTITLE EDIT PARITY BACKLOG — 2026-10-27:** User explicitly
 > requested future editable ASS/SSA and WebVTT support and retention of the
 > earlier Subtitle Edit feature-parity proposals. The detailed format-safe
