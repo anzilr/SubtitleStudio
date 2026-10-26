@@ -1147,13 +1147,17 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   void _toggleMarkedSelection() {
     if (widget.isLiveSession || _selectedIds.isEmpty) return;
     final targets = _effectReviewTargets(_selectedIds);
+    final collapsedGroupTarget = targets.length > _selectedIds.length;
     final allMarked = _cues.where((cue) => targets.contains(cue.id))
         .every((cue) => cue.marked);
     setState(() {
       for (var i = 0; i < _cues.length; i++) {
         final cue = _cues[i];
         if (targets.contains(cue.id)) {
-          _cues[i] = cue.copyWith(marked: !allMarked);
+          // Preserve the existing per-cue toggle for ordinary multi-select.
+          // Only a collapsed effect row is one aggregate mark target.
+          _cues[i] = cue.copyWith(marked: collapsedGroupTarget
+              ? !allMarked : !cue.marked);
         }
       }
     });
