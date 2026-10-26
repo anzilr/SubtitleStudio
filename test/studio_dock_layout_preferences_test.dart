@@ -251,11 +251,15 @@ void main() {
       onDeleteCue: (_) async => null,
     )));
     await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull,
+        reason: 'Compact toolbar and subtitle header must initially fit');
     expect(find.byKey(const ValueKey('studio-cue-header-more')), findsOneWidget);
     expect(find.byKey(const ValueKey('studio-dock-insert-cue')), findsNothing);
     expect(find.byKey(const ValueKey('desktop-cue-search')), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('studio-cue-header-more')));
     await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull,
+        reason: 'Compact subtitle actions popup must fit');
     await tester.tap(find.text('Insert subtitle line'));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('studio-confirm-insert')), findsOneWidget);

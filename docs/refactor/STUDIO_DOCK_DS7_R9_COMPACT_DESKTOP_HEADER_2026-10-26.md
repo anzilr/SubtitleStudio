@@ -31,6 +31,8 @@ Branch: `feature/studio-dock-integration`
   history, draft guards, selected-cue actions and their shortcuts are intact.
 - Subtitle search no longer jumps to a second 34px row below 850px panel
   width, preserving additional subtitle-list height on narrow layouts.
+  The search now yields width to the header actions rather than retaining a
+  fixed minimum size that could overflow small editor panes.
 
 ## Verification
 

@@ -4740,10 +4740,11 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
       ),
       const SizedBox(width: 6),
-      SizedBox(
-        width: (tableLimits.maxWidth * .24).clamp(120.0, 290.0).toDouble(),
-        child: _subtitleSearchField(),
-      ),
+      // Search yields width to the actions when the center pane is narrow;
+      // a fixed search width can overflow a compact inspector arrangement.
+      Flexible(fit: FlexFit.loose,
+        child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 290),
+          child: _subtitleSearchField())),
       _cueStructureHeaderActions(compact: compactActions),
       IconButton(
         key: const ValueKey('studio-go-to-line'),
@@ -4753,7 +4754,6 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         padding: EdgeInsets.zero,
         onPressed: _cues.isEmpty ? null : () => unawaited(_goToLineSafely()),
       ),
-      const Spacer(),
       if (compactFilter)
         PopupMenuButton<_StudioDockReviewFilter>(
           key: const ValueKey('studio-review-filter'),
