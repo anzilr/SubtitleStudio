@@ -28,6 +28,13 @@ Branch: `feature/studio-dock-integration` in fork `anzilr/SubtitleStudio`.
   loading every supplied Flutter SVG asset.
 - CI triggers only `flutter pub get`, `flutter analyze`, and `flutter test`;
   **no platform builds in GitHub Actions**.
+- Verified source commit `3ce9c99a247d10ff80bd01154e62db87a82dd683`:
+  - Studio Dock Flutter quality: **PASS**, analyzer clean, **373 tests**
+    (run `40401982309`).
+  - Migration quality checks: **PASS**, analyzer clean, **1,219 tests**
+    (run `40401982869`).
+- Platform/device visual QA is still needed to review toolbar SVG appearance,
+  high-contrast themes, and playback while Character Karaoke frames advance.
 
 ## Candidate future effects limited to standard SRT cues
 
