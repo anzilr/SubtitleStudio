@@ -6506,11 +6506,18 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         const SizedBox(width: 10),
       ],
       Expanded(child: Text(widget.projectTitle ?? 'Ready',
+        maxLines: 1, overflow: TextOverflow.ellipsis,
         style: TextStyle(color: _muted, fontSize: 12))),
-      Text(widget.encoding == null
-          ? 'Desktop prototype  •  Windows / macOS / Linux'
-          : 'Encoding: ' + widget.encoding!,
-        style: TextStyle(color: _muted, fontSize: 12)),
+      // Long encoding labels must yield space to the active project. The
+      // footer can be narrower than either text when a panel is overlaid.
+      Flexible(fit: FlexFit.loose, child: Align(
+        alignment: Alignment.centerRight,
+        child: Text(widget.encoding == null
+            ? 'Desktop prototype  •  Windows / macOS / Linux'
+            : 'Encoding: ' + widget.encoding!,
+          maxLines: 1, overflow: TextOverflow.ellipsis,
+          style: TextStyle(color: _muted, fontSize: 12)),
+      )),
     ]),
   );
 }

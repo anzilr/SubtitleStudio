@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_file_actions.dart';
@@ -252,27 +251,7 @@ void main() {
       onDeleteCue: (_) async => null,
     )));
     await tester.pumpAndSettle();
-    final initialError = tester.takeException();
-    if (initialError != null) {
-      for (final flex in tester.allRenderObjects.whereType<RenderFlex>()) {
-        if (flex.direction != Axis.horizontal || !flex.hasSize) continue;
-        final overflowingChildren = <String>[];
-        flex.visitChildren((child) {
-          if (child is! RenderBox || !child.hasSize ||
-              child.parentData is! FlexParentData) return;
-          final position = (child.parentData! as FlexParentData).offset;
-          final farEdge = position.dx + child.size.width;
-          if (farEdge > flex.size.width + .5) {
-            overflowingChildren.add('${child.toStringShort()} right=$farEdge');
-          }
-        });
-        if (overflowingChildren.isNotEmpty) {
-          debugPrint('COMPACT HEADER DIAGNOSTIC: ${flex.debugCreator} '
-              'size=${flex.size} children=$overflowingChildren');
-        }
-      }
-    }
-    expect(initialError, isNull,
+    expect(tester.takeException(), isNull,
         reason: 'Compact toolbar and subtitle header must initially fit');
     expect(find.byKey(const ValueKey('studio-cue-header-more')), findsOneWidget);
     expect(find.byKey(const ValueKey('studio-dock-insert-cue')), findsNothing);
