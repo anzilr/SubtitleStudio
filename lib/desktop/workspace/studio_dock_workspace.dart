@@ -490,6 +490,21 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         cue.start.contains(q) || cue.id.toString() == q;
   }).toList(growable: false);
 
+  String get _subtitleCountLabel {
+    final total = _cues.length;
+    if (total == 0) return '0 subtitles';
+    final shown = _visible.length;
+    final selected = _selectedIds.length;
+    if (shown != total) {
+      return selected > 1
+          ? '$shown of $total shown · $selected selected'
+          : '$shown of $total shown';
+    }
+    return selected > 1
+        ? '$selected selected · $total subtitles'
+        : '$total subtitles';
+  }
+
 
   static const _managedActions = <HotkeyAction>[
     HotkeyAction.nextLine,
@@ -616,6 +631,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       _draftTimingCueId = null;
       _draftStart = null;
       _draftEnd = null;
+      _durationError = null;
       _draftRevision++;
       _cues
         ..clear()
@@ -1087,7 +1103,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   bool get _hasDirtyTimingDraft => widget.onApplyCueTiming != null &&
       _draftTimingCueId == _selectedId &&
       (_draftStart != null && _draftStart != _selected.start ||
-       _draftEnd != null && _draftEnd != _selected.end);
+       _draftEnd != null && _draftEnd != _selected.end ||
+       _durationError != null);
 
   static String? _normalizeNote(String? text) =>
       text == null || text.trim().isEmpty ? null : text;
@@ -1124,7 +1141,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   String get _timingEnd => _draftTimingCueId == _selectedId
       ? _draftEnd ?? _selected.end : _selected.end;
   String? get _timingError =>
-      _durationError ??
+      (_draftTimingCueId == _selectedId ? _durationError : null) ??
       StudioDockTimingEditService.validate(_timingStart, _timingEnd);
 
   String get _styleText => _draftCueId == _selectedId && _draftText != null
@@ -1929,6 +1946,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       _draftTimingCueId = null;
       _draftStart = null;
       _draftEnd = null;
+      _durationError = null;
       _draftNotesCueId = null;
       _draftNoteText = null;
       _draftMarked = null;
@@ -4263,7 +4281,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       );
 
   Widget _paneHeader(IconData icon, String title,
-      {String? trailing, double height = 42}) =>
+      {String? trailing, Key? trailingKey, double height = 42}) =>
       Container(
         height: height,
         padding: EdgeInsets.symmetric(horizontal: 10),
@@ -4276,6 +4294,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: .4)),
           const Spacer(),
           if (trailing != null) Flexible(child: Text(trailing,
+              key: trailingKey,
               maxLines: 1, overflow: TextOverflow.ellipsis,
               style: TextStyle(color: _muted, fontSize: 12))),
         ]),
@@ -4530,7 +4549,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     return Column(children: [
     SizedBox(height: 34, child: Row(children: [
       Expanded(child: _paneHeader(Icons.view_list_outlined, 'SUBTITLE LINES',
-        trailing: '${_cues.isEmpty ? 0 : _selectedId} / ${_cues.length}',
+        trailing: _subtitleCountLabel,
+        trailingKey: const ValueKey('studio-subtitle-count'),
         height: 30)),
       if (!searchOnSecondRow)
         SizedBox(
@@ -5346,20 +5366,17 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                 hintText: '1.500',
               ),
               onChanged: (value) {
-                final seconds = double.tryParse(value.trim());
+                final result = StudioDockTimingEditService.endFromDuration(
+                    _timingStart, value);
                 setState(() {
-                  if (seconds == null || !seconds.isFinite ||
-                      seconds <= 0 || seconds >= 86400) {
-                    _durationError = 'Enter a positive duration in seconds';
-                    return;
-                  }
-                  _durationError = null;
+                  // Even an invalid duration is an unsaved form edit: it must
+                  // be fixed or explicitly discarded before changing cues.
                   _draftTimingCueId = _selectedId;
-                  _timingFieldRevision++;
-                  _draftEnd = _formatCueTime(
-                    TimeValidator.timeStringToMilliseconds(_timingStart) +
-                        (seconds * 1000).round(),
-                  );
+                  _durationError = result.error;
+                  if (result.endMilliseconds != null) {
+                    _timingFieldRevision++;
+                    _draftEnd = _formatCueTime(result.endMilliseconds!);
+                  }
                 });
               },
             ),

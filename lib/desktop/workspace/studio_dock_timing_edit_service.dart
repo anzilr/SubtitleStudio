@@ -28,6 +28,38 @@ class StudioDockTimingEditService {
         TimeValidator.validateTimeOrder(start, end);
   }
 
+  /// Convert a human-entered duration to an END time without rounding beyond
+  /// SRT's millisecond precision or silently treating an invalid START as 0.
+  static ({int? endMilliseconds, String? error}) endFromDuration(
+      String start, String secondsText) {
+    final value = secondsText.trim();
+    if (!RegExp(r'^\d+(?:\.\d{1,3})?$').hasMatch(value)) {
+      return (endMilliseconds: null,
+          error: 'Enter seconds with up to 3 decimal places');
+    }
+    final seconds = double.tryParse(value);
+    if (seconds == null || !seconds.isFinite || seconds <= 0) {
+      return (endMilliseconds: null,
+          error: 'Enter a positive duration in seconds');
+    }
+    final durationMs = (seconds * 1000).round();
+    if (durationMs <= 0) {
+      return (endMilliseconds: null,
+          error: 'Duration must be at least 0.001 seconds');
+    }
+    if (!RegExp(r'^\d{2}:\d{2}:\d{2},\d{3}$').hasMatch(start) ||
+        TimeValidator.validateTimeString(start) != null) {
+      return (endMilliseconds: null,
+          error: 'Enter a valid START time before changing duration');
+    }
+    final endMs = TimeValidator.timeStringToMilliseconds(start) + durationMs;
+    if (endMs > 86399999) {
+      return (endMilliseconds: null,
+          error: 'END must be before 24:00:00,000');
+    }
+    return (endMilliseconds: endMs, error: null);
+  }
+
   Future<StudioDockSessionSnapshot?> apply({
     required StudioDockSessionSnapshot baseline,
     required int cueNumber,

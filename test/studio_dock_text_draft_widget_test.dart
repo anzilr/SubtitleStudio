@@ -127,6 +127,29 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('Original and Edited fields keep a fixed selectable editor height',
+      (tester) async {
+    await launch(tester,
+      apply: (_, __) async => true,
+      applyOriginal: (_, __) async => true,
+    );
+    final source = find.byKey(const ValueKey('studio-original-readonly-1'));
+    final edited = find.byKey(const ValueKey('studio-edit-1-0'));
+    expect(tester.getSize(source).height, 112);
+    expect(tester.getSize(edited).height, 112);
+    final readOnly = tester.widget<TextFormField>(source);
+    expect(readOnly.readOnly, isTrue);
+    expect(readOnly.enableInteractiveSelection, isTrue);
+
+    await tester.tap(find.byKey(const ValueKey('studio-original-edit-toggle')));
+    await tester.pumpAndSettle();
+    final originalEdit = find.byKey(const ValueKey('studio-original-1-0'));
+    expect(tester.getSize(originalEdit).height, 112);
+    expect(tester.widget<TextFormField>(originalEdit).readOnly, isFalse);
+    expect(tester.getSize(edited).height, 112);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Original text toolbar can paste into live translation draft',
       (tester) async {
     final edits = <String>[];
@@ -291,6 +314,60 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('studio-apply-cue')));
     await tester.pumpAndSettle();
     expect(changes, ['1:00:00:01,000->00:00:03,500']);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Invalid duration blocks cue navigation until explicitly discarded',
+      (tester) async {
+    final timingWrites = <String>[];
+    await launch(tester,
+      apply: (_, __) async => true,
+      applyTiming: (cue, start, end) async {
+        timingWrites.add('$cue:$start:$end');
+        return true;
+      },
+    );
+    await tester.enterText(find.byKey(
+        const ValueKey('studio-timing-duration-1-0-0')), 'not seconds');
+    await tester.pump();
+    expect(find.textContaining('up to 3 decimal places'), findsOneWidget);
+    expect(tester.widget<FilledButton>(find.byKey(
+        const ValueKey('studio-apply-cue'))).onPressed, isNull);
+    await tester.tap(find.byKey(const ValueKey('desktop-cue-2')));
+    await tester.pumpAndSettle();
+    expect(find.text('Unsaved subtitle edit'), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(find.text('not seconds'), findsOneWidget);
+    expect(timingWrites, isEmpty);
+
+    await tester.tap(find.byKey(const ValueKey('desktop-cue-2')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.descendant(
+      of: find.byType(AlertDialog), matching: find.text('Discard')));
+    await tester.pumpAndSettle();
+    expect(find.text('not seconds'), findsNothing);
+    expect(timingWrites, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Subtitle header reports totals and useful filtered counts',
+      (tester) async {
+    await launch(tester, apply: (_, __) async => true);
+    final status = find.byKey(const ValueKey('studio-subtitle-count'));
+    expect(tester.widget<Text>(status).data, '2 subtitles');
+    await tester.enterText(
+        find.byKey(const ValueKey('desktop-cue-search')), 'Original 1');
+    await tester.pumpAndSettle();
+    expect(tester.widget<Text>(status).data, '1 of 2 shown');
+    await tester.enterText(
+        find.byKey(const ValueKey('desktop-cue-search')), 'not present');
+    await tester.pumpAndSettle();
+    expect(tester.widget<Text>(status).data, '0 of 2 shown');
+    await tester.enterText(
+        find.byKey(const ValueKey('desktop-cue-search')), '');
+    await tester.pumpAndSettle();
+    expect(tester.widget<Text>(status).data, '2 subtitles');
     expect(tester.takeException(), isNull);
   });
 
