@@ -21,11 +21,13 @@ void main() {
     await tester.pumpWidget(const StudioDockDemoApp());
     await tester.pumpAndSettle();
 
-    expect(find.text('SubtitleStudio'), findsOneWidget);
+    expect(find.byKey(const ValueKey('studio-brand-subtitle')), findsOneWidget);
+    expect(find.byKey(const ValueKey('studio-brand-studio')), findsOneWidget);
     expect(find.text('PROJECT'), findsOneWidget);
     expect(find.text('VIDEO PREVIEW'), findsNothing);
     expect(find.text('WAVEFORM'), findsNothing);
-    expect(find.text('SUBTITLE LINES'), findsOneWidget);
+    expect(find.text('SUBTITLE LINES'), findsNothing);
+    expect(find.text('12 subtitles'), findsOneWidget);
     expect(find.text('LINE INSPECTOR'), findsOneWidget);
     expect(find.text('Ready'), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -89,7 +91,8 @@ void main() {
     expect(find.text('PROJECT'), findsNothing);
     expect(find.text('LINE INSPECTOR'), findsNothing);
     expect(find.text('VIDEO PREVIEW'), findsNothing);
-    expect(find.text('SUBTITLE LINES'), findsOneWidget);
+    expect(find.text('SUBTITLE LINES'), findsNothing);
+    expect(find.text('12 subtitles'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

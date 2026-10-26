@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:subtitle_studio/desktop/workspace/studio_dock_file_actions.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_layout_preferences.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_workspace.dart';
 import '../tool/studio_dock_demo.dart';
@@ -120,10 +121,12 @@ void main() {
       waveformSurface: const Center(child: Text('Waveform panel')),
     )));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('studio-toggle-video-panel')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('studio-toggle-waveform-panel')));
-    await tester.pumpAndSettle();
+    for (final label in ['Show video panel', 'Show waveform panel']) {
+      await tester.tap(find.byKey(const ValueKey('studio-view-menu')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(label));
+      await tester.pumpAndSettle();
+    }
 
     expect(find.text('Video panel'), findsOneWidget);
     expect(find.text('Waveform panel'), findsOneWidget);
@@ -166,7 +169,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('wide toolbar orders editing before media and project actions',
+  testWidgets('wide toolbar orders project actions right of command palette',
       (tester) async {
     tester.view.physicalSize = const Size(1700, 950);
     tester.view.devicePixelRatio = 1;
@@ -185,25 +188,77 @@ void main() {
       onChooseVideo: () {},
       onImportFile: () {},
       onNewProject: () {},
+      onSaveFile: () async => StudioDockFileResult.saved,
+      onRestoreHistory: (_, __, ___) async => null,
     )));
     await tester.pumpAndSettle();
-    final orderedKeys = [
+    expect(tester.getSize(find.byKey(
+        const ValueKey('studio-main-menu-toolbar'))).height, 44);
+    final topKeys = [
+      'studio-dock-toolbar-new',
+      'studio-dock-toolbar-import',
+      'studio-dock-toolbar-video',
+      'studio-dock-save-file',
+      'studio-dock-undo',
+      'studio-dock-redo',
+      'toggle-explorer',
+      'toggle-inspector',
+    ];
+    final topPositions = topKeys.map((key) =>
+        tester.getTopLeft(find.byKey(ValueKey(key))).dx).toList();
+    for (var i = 1; i < topPositions.length; i++) {
+      expect(topPositions[i], greaterThan(topPositions[i - 1]));
+    }
+    final paletteX = tester.getTopLeft(find.byKey(
+        const ValueKey('desktop-command-palette'))).dx;
+    expect(paletteX, lessThan(topPositions.first));
+    expect(paletteX, greaterThan(tester.getTopLeft(find.byKey(
+        const ValueKey('studio-view-menu'))).dx));
+
+    final cueHeaderKeys = [
+      'desktop-cue-search',
       'studio-dock-insert-cue',
       'studio-dock-split-cue',
       'studio-dock-merge-cue',
       'studio-dock-delete-cue',
-      'studio-toggle-video-panel',
-      'studio-toggle-waveform-panel',
-      'studio-dock-toolbar-video',
-      'studio-dock-toolbar-import',
-      'studio-dock-toolbar-new',
-      'desktop-command-palette',
+      'studio-go-to-line',
     ];
-    final positions = orderedKeys.map((key) =>
+    final positions = cueHeaderKeys.map((key) =>
         tester.getTopLeft(find.byKey(ValueKey(key))).dx).toList();
     for (var i = 1; i < positions.length; i++) {
       expect(positions[i], greaterThan(positions[i - 1]));
     }
+    expect(tester.getTopLeft(find.byKey(const ValueKey('studio-subtitle-count'))).dx,
+        lessThan(positions.first));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('compact subtitle header keeps editing actions in one row',
+      (tester) async {
+    tester.view.physicalSize = const Size(640, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(MaterialApp(home: StudioDockWorkspace(
+      isLiveSession: true,
+      initialCues: const [StudioDockCue(
+        id: 1, start: '00:00:01,000', end: '00:00:02,000',
+        original: 'Original', edited: 'Edited',
+      )],
+      onInsertCue: (_, __) async => null,
+      onSplitCue: (_, __) async => null,
+      onMergeCue: (_, __) async => null,
+      onDeleteCue: (_) async => null,
+    )));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('studio-cue-header-more')), findsOneWidget);
+    expect(find.byKey(const ValueKey('studio-dock-insert-cue')), findsNothing);
+    expect(find.byKey(const ValueKey('desktop-cue-search')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('studio-cue-header-more')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Insert subtitle line'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('studio-confirm-insert')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -253,10 +308,12 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('dock-video-band')), findsNothing);
     expect(find.byKey(const ValueKey('dock-waveform-band')), findsNothing);
-    await tester.tap(find.byKey(const ValueKey('studio-toggle-video-panel')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('studio-toggle-waveform-panel')));
-    await tester.pumpAndSettle();
+    for (final label in ['Show video panel', 'Show waveform panel']) {
+      await tester.tap(find.byKey(const ValueKey('studio-view-menu')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(label));
+      await tester.pumpAndSettle();
+    }
     expect(find.text('Valid video surface'), findsOneWidget);
     expect(find.text('Valid waveform surface'), findsOneWidget);
     final stored = await StudioDockLayoutPreferences().load();

@@ -143,6 +143,42 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('subtitle header uses line navigation and follow-sync icons',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final link = StudioDockPlaybackLink();
+    await tester.pumpWidget(MaterialApp(home: StudioDockWorkspace(
+      isLiveSession: true,
+      initialCues: const [StudioDockCue(
+        id: 1, start: '00:00:01,000', end: '00:00:02,000',
+        original: 'Original', edited: 'Edited',
+      )],
+      playback: link,
+    )));
+    await tester.pumpAndSettle();
+    expect(tester.widget<Icon>(find.descendant(
+      of: find.byKey(const ValueKey('studio-go-to-line')),
+      matching: find.byType(Icon),
+    )).icon, Icons.format_list_numbered_rounded);
+    expect(tester.widget<Icon>(find.descendant(
+      of: find.byKey(const ValueKey('studio-dock-follow-playback')),
+      matching: find.byType(Icon),
+    )).icon, Icons.sync_rounded);
+    await tester.tap(find.byKey(const ValueKey('studio-dock-follow-playback')));
+    await tester.pump();
+    expect(tester.widget<Icon>(find.descendant(
+      of: find.byKey(const ValueKey('studio-dock-follow-playback')),
+      matching: find.byType(Icon),
+    )).icon, Icons.sync_disabled_rounded);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+    link.dispose();
+  });
+
   testWidgets('attach-video command is available without classic editor',
       (tester) async {
     SharedPreferences.setMockInitialValues({});

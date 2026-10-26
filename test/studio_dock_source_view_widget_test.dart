@@ -84,7 +84,7 @@ void main() {
     await tester.tap(find.text('Discard'));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('studio-source-view')), findsNothing);
-    expect(find.text('SUBTITLE LINES'), findsOneWidget);
+    expect(find.byKey(const ValueKey('studio-subtitle-count')), findsOneWidget);
   });
 
   testWidgets('Apply refreshes complete cue list and source baseline',

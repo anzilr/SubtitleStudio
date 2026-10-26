@@ -37,8 +37,10 @@ import '../../utils/msone_hotkey_manager.dart';
 enum _StudioDockReviewFilter { all, marked, unresolved, resolved }
 
 enum _StudioDockToolbarOverflow {
-  merge, delete, attachVideo, import, newProject, projectSettings,
+  newProject, import, attachVideo,
 }
+
+enum _StudioDockCueHeaderAction { insert, split, merge, delete }
 
 /// Same persisted switches used by mobile Edit Line; formatted preview is
 /// intentionally session-only (mobile also does not persist its toggle).
@@ -58,7 +60,8 @@ enum _StudioDockMenuAction {
   importComments, removeHearingImpaired, insertMsoneBanners, normalizeMalayalam,
   boldFormat, italicFormat, colorPicker, pasteOriginal,
   msoneDictionary, olamDictionary, urbanDictionary,
-  explorer, inspector, toggleFullscreen, floatingPlayback, unloadVideo,
+  explorer, inspector, toggleVideoPanel, toggleWaveformPanel,
+  toggleFullscreen, floatingPlayback, unloadVideo,
   repeatCurrent, repeatRange, settings, help,
   showOriginalLine, autoSaveWithNavigation, showOriginalTextField,
   formattedView,
@@ -2719,7 +2722,6 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             final inspectorOverlay = bounds.maxWidth < 1250 &&
                 _inspectorOverlayOpen && _section == 0;
             return Column(children: [
-              _menuBar(),
               _topBar(),
               Expanded(child: Stack(children: [
                 Row(children: [
@@ -2768,13 +2770,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     );
   }
 
-  Widget _menuBar() => Container(
-    height: 32,
-    padding: const EdgeInsets.symmetric(horizontal: 10),
-    decoration: BoxDecoration(
-      border: Border(bottom: BorderSide(color: _border)),
-    ),
-    child: SingleChildScrollView(
+  Widget _menuBar() => SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(children: [
         if (widget.onSaveFile != null || widget.onSaveProject != null ||
@@ -3009,6 +3005,14 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               child: Text('Toggle project explorer')),
           const PopupMenuItem(height: 34, value: _StudioDockMenuAction.inspector,
               child: Text('Toggle line inspector')),
+          if (widget.videoSurface != null)
+            PopupMenuItem(height: 34,
+              value: _StudioDockMenuAction.toggleVideoPanel,
+              child: Text(_showVideo ? 'Hide video panel' : 'Show video panel')),
+          if (widget.waveformSurface != null)
+            PopupMenuItem(height: 34,
+              value: _StudioDockMenuAction.toggleWaveformPanel,
+              child: Text(_showWaveform ? 'Hide waveform panel' : 'Show waveform panel')),
           if (widget.onSaveEditPreference != null) ...[
             const PopupMenuDivider(),
             if (!widget.isEditMode) ...[
@@ -3093,7 +3097,6 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               fontSize: 14, color: Theme.of(context).colorScheme.onSurface)),
           ),
       ]),
-    ),
   );
 
   Widget _desktopMenu(String title, Key key,
@@ -3210,6 +3213,16 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         _toggleExplorerPanel();
       case _StudioDockMenuAction.inspector:
         _toggleInspectorPanel();
+      case _StudioDockMenuAction.toggleVideoPanel:
+        if (widget.videoSurface != null) {
+          setState(() => _showVideo = !_showVideo);
+          _queueLayoutSave(now: true);
+        }
+      case _StudioDockMenuAction.toggleWaveformPanel:
+        if (widget.waveformSurface != null) {
+          setState(() => _showWaveform = !_showWaveform);
+          _queueLayoutSave(now: true);
+        }
       case _StudioDockMenuAction.floatingPlayback:
         if (widget.videoSurface != null && widget.playback != null &&
             widget.onTogglePlayback != null) {
@@ -3591,18 +3604,20 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   }
 
 
-  // Daily edits first, media/view controls second, project management last.
-  // Less frequent actions move into More on laptop-width windows instead of
-  // forcing the entire toolbar (or the title) off-screen.
+  // One combined menubar and toolbar returns the former 32px menu row to the
+  // editing workspace. Project actions stay at the right in task order; line
+  // editing actions live with the subtitle grid, not in this global bar.
   Widget _topBar() => LayoutBuilder(builder: (context, limits) {
-    final showSecondary = limits.maxWidth >= 1500;
-    final showBrand = limits.maxWidth >= 960;
+    final showProjectActions = limits.maxWidth >= 1200;
+    final showBrand = limits.maxWidth >= 740;
+    final showPaletteLabel = limits.maxWidth >= 1040;
     return IconButtonTheme(
       data: IconButtonThemeData(style: IconButton.styleFrom(
         visualDensity: VisualDensity.compact,
       )),
       child: Container(
-    height: 48,
+    key: const ValueKey('studio-main-menu-toolbar'),
+    height: 44,
     padding: const EdgeInsets.symmetric(horizontal: 8),
     decoration: BoxDecoration(border:
         Border(bottom: BorderSide(color: _border))),
@@ -3610,18 +3625,67 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       Icon(Icons.subtitles_rounded, color: _accent, size: 22),
       if (showBrand) ...[
         const SizedBox(width: 8),
-        const Text('SubtitleStudio', style:
+        const Text('Subtitle', key: ValueKey('studio-brand-subtitle'), style:
             TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-        const SizedBox(width: 10),
-        Container(width: 1, height: 20, color: _border),
-        const SizedBox(width: 10),
-        Flexible(child: Text(
-          widget.projectTitle ?? 'Night Drive  /  Main subtitles',
-          maxLines: 1, overflow: TextOverflow.ellipsis,
-          style: TextStyle(color: _muted, fontSize: 12),
-        )),
+        const SizedBox(width: 3),
+        Text('Studio', key: const ValueKey('studio-brand-studio'), style: TextStyle(
+            color: _accent, fontWeight: FontWeight.w700, fontSize: 14)),
       ],
-      const Spacer(),
+      const SizedBox(width: 14),
+      Expanded(child: _menuBar()),
+      const SizedBox(width: 8),
+      Tooltip(
+        message: 'Command palette (Ctrl/Cmd+K)',
+        child: OutlinedButton(
+          key: const ValueKey('desktop-command-palette'),
+          onPressed: _showCommandPalette,
+          style: OutlinedButton.styleFrom(
+            padding: EdgeInsets.symmetric(
+                horizontal: showPaletteLabel ? 11 : 9, vertical: 7),
+            minimumSize: const Size(34, 32),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            foregroundColor: _accent,
+            backgroundColor: _accent.withValues(alpha: .12),
+            side: BorderSide(color: _accent.withValues(alpha: .65)),
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(Icons.keyboard_command_key, size: 16),
+            if (showPaletteLabel) ...[
+              const SizedBox(width: 6),
+              const Text('Commands', style: TextStyle(
+                  fontSize: 12, fontWeight: FontWeight.w700)),
+            ],
+          ]),
+        ),
+      ),
+      const SizedBox(width: 8),
+      Container(width: 1, height: 20, color: _border),
+      const SizedBox(width: 5),
+      if (showProjectActions) ...[
+        if (widget.onNewProject != null)
+          IconButton(
+            key: const ValueKey('studio-dock-toolbar-new'),
+            icon: const Icon(Icons.add_box_outlined),
+            tooltip: 'New project',
+            onPressed: () => unawaited(_newProjectSafely()),
+          ),
+        if (widget.onImportFile != null)
+          IconButton(
+            key: const ValueKey('studio-dock-toolbar-import'),
+            icon: const Icon(Icons.file_open_outlined),
+            tooltip: 'Import subtitles or project',
+            onPressed: () => unawaited(_importFileSafely()),
+          ),
+        if (widget.onChooseVideo != null)
+          IconButton(
+            key: const ValueKey('studio-dock-toolbar-video'),
+            icon: const Icon(Icons.video_file_outlined),
+            tooltip: 'Attach or change video',
+            onPressed: () => unawaited(_chooseVideoSafely()),
+          ),
+      ] else if (widget.onNewProject != null || widget.onImportFile != null ||
+          widget.onChooseVideo != null)
+        _toolbarOverflowMenu(),
       if (widget.onSaveFile != null)
         IconButton(
           key: const ValueKey('studio-dock-save-file'),
@@ -3651,105 +3715,6 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               ? null : () => unawaited(_redoHistory()),
         ),
       ],
-      if (widget.isLiveSession && widget.onApplyCueText == null)
-        Text('READ ONLY', style: TextStyle(
-          color: _muted, letterSpacing: .7, fontSize: 12)),
-      if (widget.onInsertCue != null)
-        IconButton(
-          key: const ValueKey('studio-dock-insert-cue'),
-          icon: const Icon(Icons.add_comment_outlined),
-          tooltip: 'Insert subtitle line',
-          onPressed: _changingStructure ? null :
-              () => unawaited(_addCueSafely()),
-        ),
-      if (widget.onSplitCue != null)
-        IconButton(
-          key: const ValueKey('studio-dock-split-cue'),
-          icon: const Icon(Icons.call_split_outlined),
-          tooltip: 'Split selected subtitle line',
-          onPressed: _changingStructure || _cues.isEmpty ? null :
-              () => unawaited(_splitCueSafely()),
-        ),
-      if (showSecondary && widget.onMergeCue != null)
-        IconButton(
-          key: const ValueKey('studio-dock-merge-cue'),
-          icon: const Icon(Icons.merge_outlined),
-          tooltip: 'Combine selected line with adjacent line',
-          onPressed: _changingStructure || _cues.length < 2 ? null :
-              () => unawaited(_mergeCueSafely()),
-        ),
-      if (showSecondary && widget.onDeleteCue != null)
-        IconButton(
-          key: const ValueKey('studio-dock-delete-cue'),
-          icon: const Icon(Icons.delete_outline),
-          tooltip: 'Delete selected subtitle line',
-          onPressed: _changingStructure || _cues.isEmpty ? null :
-              () => unawaited(_deleteCueSafely()),
-        ),
-      const SizedBox(width: 6),
-      Container(width: 1, height: 20, color: _border),
-      const SizedBox(width: 6),
-      IconButton(
-        key: const ValueKey('studio-toggle-video-panel'),
-        tooltip: _showVideo ? 'Hide video player' : 'Show video player',
-        onPressed: widget.videoSurface == null ? null : () {
-          setState(() => _showVideo = !_showVideo);
-          _queueLayoutSave(now: true);
-        },
-        icon: Icon(_showVideo ? Icons.videocam : Icons.videocam_off_outlined,
-            color: _showVideo ? _accent : _muted),
-      ),
-      IconButton(
-        key: const ValueKey('studio-toggle-waveform-panel'),
-        tooltip: _showWaveform ? 'Hide waveform' : 'Show waveform',
-        onPressed: widget.waveformSurface == null ? null : () {
-          setState(() => _showWaveform = !_showWaveform);
-          _queueLayoutSave(now: true);
-        },
-        icon: Icon(Icons.graphic_eq,
-            color: _showWaveform ? _accent : _muted),
-      ),
-      const SizedBox(width: 6),
-      Container(width: 1, height: 20, color: _border),
-      const SizedBox(width: 6),
-      if (showSecondary && widget.onChooseVideo != null)
-        IconButton(
-          key: const ValueKey('studio-dock-toolbar-video'),
-          icon: const Icon(Icons.video_file_outlined),
-          tooltip: 'Attach or change video',
-          onPressed: () => unawaited(_chooseVideoSafely()),
-        ),
-      if (showSecondary && widget.onImportFile != null)
-        IconButton(
-          key: const ValueKey('studio-dock-toolbar-import'),
-          icon: const Icon(Icons.file_open_outlined),
-          tooltip: 'Import subtitles or project',
-          onPressed: () => unawaited(_importFileSafely()),
-        ),
-      if (showSecondary && widget.onNewProject != null)
-        IconButton(
-          key: const ValueKey('studio-dock-toolbar-new'),
-          icon: const Icon(Icons.add_box_outlined),
-          tooltip: 'New project',
-          onPressed: () => unawaited(_newProjectSafely()),
-        ),
-      if (showSecondary && widget.onOpenProjectSettings != null)
-        IconButton(
-          key: const ValueKey('studio-toolbar-project-settings'),
-          icon: const Icon(Icons.settings_applications_outlined),
-          tooltip: 'Project Settings',
-          onPressed: _openingProjectSettings ? null :
-              () => unawaited(_openProjectSettingsSafely()),
-        ),
-      if (!showSecondary) _toolbarOverflowMenu(),
-      const SizedBox(width: 6),
-      IconButton(
-        key: const ValueKey('desktop-command-palette'),
-        icon: const Icon(Icons.keyboard_command_key),
-        tooltip: 'Command palette (Ctrl/Cmd+K)',
-        onPressed: _showCommandPalette,
-      ),
-      const SizedBox(width: 5),
       IconButton(
         key: const ValueKey('toggle-explorer'),
         icon: const Icon(Icons.folder_open_outlined),
@@ -3763,54 +3728,34 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         tooltip: 'Toggle inspector',
         onPressed: _toggleInspectorPanel,
       ),
-      const SizedBox(width: 7),
-      Icon(Icons.circle, size: 9, color: _accent),
     ]),
   ));
   });
 
   Widget _toolbarOverflowMenu() => PopupMenuButton<_StudioDockToolbarOverflow>(
     key: const ValueKey('studio-dock-toolbar-more'),
-    tooltip: 'More subtitle and project actions',
+    tooltip: 'New, import and video actions',
     icon: const Icon(Icons.more_horiz),
     onSelected: (action) {
       switch (action) {
-        case _StudioDockToolbarOverflow.merge:
-          unawaited(_mergeCueSafely());
-        case _StudioDockToolbarOverflow.delete:
-          unawaited(_deleteCueSafely());
-        case _StudioDockToolbarOverflow.attachVideo:
-          unawaited(_chooseVideoSafely());
-        case _StudioDockToolbarOverflow.import:
-          unawaited(_importFileSafely());
         case _StudioDockToolbarOverflow.newProject:
           unawaited(_newProjectSafely());
-        case _StudioDockToolbarOverflow.projectSettings:
-          unawaited(_openProjectSettingsSafely());
+        case _StudioDockToolbarOverflow.import:
+          unawaited(_importFileSafely());
+        case _StudioDockToolbarOverflow.attachVideo:
+          unawaited(_chooseVideoSafely());
       }
     },
     itemBuilder: (_) => [
-      if (widget.onMergeCue != null)
-        PopupMenuItem(value: _StudioDockToolbarOverflow.merge,
-          enabled: !_changingStructure && _cues.length >= 2,
-          child: const Text('Merge with adjacent line')),
-      if (widget.onDeleteCue != null)
-        PopupMenuItem(value: _StudioDockToolbarOverflow.delete,
-          enabled: !_changingStructure && _cues.isNotEmpty,
-          child: const Text('Delete selected line')),
-      if (widget.onChooseVideo != null)
-        const PopupMenuItem(value: _StudioDockToolbarOverflow.attachVideo,
-          child: Text('Attach or change video')),
-      if (widget.onImportFile != null)
-        const PopupMenuItem(value: _StudioDockToolbarOverflow.import,
-          child: Text('Import subtitles or project')),
       if (widget.onNewProject != null)
         const PopupMenuItem(value: _StudioDockToolbarOverflow.newProject,
           child: Text('New project')),
-      if (widget.onOpenProjectSettings != null)
-        PopupMenuItem(value: _StudioDockToolbarOverflow.projectSettings,
-          enabled: !_openingProjectSettings,
-          child: const Text('Project settings')),
+      if (widget.onImportFile != null)
+        const PopupMenuItem(value: _StudioDockToolbarOverflow.import,
+          child: Text('Import subtitles or project')),
+      if (widget.onChooseVideo != null)
+        const PopupMenuItem(value: _StudioDockToolbarOverflow.attachVideo,
+          child: Text('Attach or change video')),
     ],
   );
 
@@ -4686,29 +4631,151 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     ]),
   );
 
-  Widget _subtitleTable() => LayoutBuilder(builder: (context, tableLimits) {
-    final searchOnSecondRow = tableLimits.maxWidth < 850;
-    return Column(children: [
-    SizedBox(height: 34, child: Row(children: [
-      Expanded(child: _paneHeader(Icons.view_list_outlined, 'SUBTITLE LINES',
-        trailing: _subtitleCountLabel,
-        trailingKey: const ValueKey('studio-subtitle-count'),
-        height: 30)),
-      if (!searchOnSecondRow)
-        SizedBox(
-          width: (tableLimits.maxWidth * .27)
-              .clamp(190.0, 300.0).toDouble(),
-          child: _subtitleSearchField(),
+  Widget _cueStructureHeaderActions({required bool compact}) {
+    if (widget.onInsertCue == null && widget.onSplitCue == null &&
+        widget.onMergeCue == null && widget.onDeleteCue == null) {
+      return const SizedBox.shrink();
+    }
+    if (compact) {
+      return PopupMenuButton<_StudioDockCueHeaderAction>(
+        key: const ValueKey('studio-cue-header-more'),
+        tooltip: 'Insert, split, combine or delete subtitle lines',
+        icon: const Icon(Icons.edit_note_outlined, size: 20),
+        constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+        padding: EdgeInsets.zero,
+        onSelected: (action) {
+          switch (action) {
+            case _StudioDockCueHeaderAction.insert:
+              unawaited(_addCueSafely());
+            case _StudioDockCueHeaderAction.split:
+              unawaited(_splitCueSafely());
+            case _StudioDockCueHeaderAction.merge:
+              unawaited(_mergeCueSafely());
+            case _StudioDockCueHeaderAction.delete:
+              unawaited(_deleteCueSafely());
+          }
+        },
+        itemBuilder: (_) => [
+          if (widget.onInsertCue != null)
+            PopupMenuItem(value: _StudioDockCueHeaderAction.insert,
+              enabled: !_changingStructure,
+              child: const Text('Insert subtitle line')),
+          if (widget.onSplitCue != null)
+            PopupMenuItem(value: _StudioDockCueHeaderAction.split,
+              enabled: !_changingStructure && _cues.isNotEmpty,
+              child: const Text('Split selected subtitle line')),
+          if (widget.onMergeCue != null)
+            PopupMenuItem(value: _StudioDockCueHeaderAction.merge,
+              enabled: !_changingStructure && _cues.length > 1,
+              child: const Text('Combine selected line')),
+          if (widget.onDeleteCue != null)
+            PopupMenuItem(value: _StudioDockCueHeaderAction.delete,
+              enabled: !_changingStructure && _cues.isNotEmpty,
+              child: const Text('Delete selected subtitle line')),
+        ],
+      );
+    }
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      if (widget.onInsertCue != null)
+        IconButton(
+          key: const ValueKey('studio-dock-insert-cue'),
+          icon: const Icon(Icons.add_comment_outlined, size: 19),
+          tooltip: 'Insert subtitle line',
+          constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+          padding: EdgeInsets.zero,
+          onPressed: _changingStructure ? null :
+              () => unawaited(_addCueSafely()),
         ),
+      if (widget.onSplitCue != null)
+        IconButton(
+          key: const ValueKey('studio-dock-split-cue'),
+          icon: const Icon(Icons.call_split_outlined, size: 19),
+          tooltip: 'Split selected subtitle line',
+          constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+          padding: EdgeInsets.zero,
+          onPressed: _changingStructure || _cues.isEmpty ? null :
+              () => unawaited(_splitCueSafely()),
+        ),
+      if (widget.onMergeCue != null)
+        IconButton(
+          key: const ValueKey('studio-dock-merge-cue'),
+          icon: const Icon(Icons.merge_outlined, size: 19),
+          tooltip: 'Combine selected line with adjacent line',
+          constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+          padding: EdgeInsets.zero,
+          onPressed: _changingStructure || _cues.length < 2 ? null :
+              () => unawaited(_mergeCueSafely()),
+        ),
+      if (widget.onDeleteCue != null)
+        IconButton(
+          key: const ValueKey('studio-dock-delete-cue'),
+          icon: const Icon(Icons.delete_outline, size: 19),
+          tooltip: 'Delete selected subtitle line',
+          constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+          padding: EdgeInsets.zero,
+          onPressed: _changingStructure || _cues.isEmpty ? null :
+              () => unawaited(_deleteCueSafely()),
+        ),
+    ]);
+  }
+
+  Widget _subtitleTable() => LayoutBuilder(builder: (context, tableLimits) {
+    final compactActions = tableLimits.maxWidth < 690;
+    final compactFilter = tableLimits.maxWidth < 515;
+    return Column(children: [
+    Container(
+      height: 34,
+      padding: const EdgeInsets.only(left: 8, right: 4),
+      decoration: BoxDecoration(border:
+        Border(bottom: BorderSide(color: _border))),
+      child: Row(children: [
+      Icon(Icons.view_list_outlined, size: 17, color: _muted),
+      const SizedBox(width: 6),
+      ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: tableLimits.maxWidth < 620 ? 110 : 190),
+        child: Text(_subtitleCountLabel,
+          key: const ValueKey('studio-subtitle-count'),
+          maxLines: 1, overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+      ),
+      const SizedBox(width: 6),
+      SizedBox(
+        width: (tableLimits.maxWidth * .24).clamp(120.0, 290.0).toDouble(),
+        child: _subtitleSearchField(),
+      ),
+      _cueStructureHeaderActions(compact: compactActions),
       IconButton(
         key: const ValueKey('studio-go-to-line'),
         tooltip: 'Go to subtitle line',
-        icon: const Icon(Icons.numbers, size: 19),
+        icon: const Icon(Icons.format_list_numbered_rounded, size: 19),
         constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
         padding: EdgeInsets.zero,
         onPressed: _cues.isEmpty ? null : () => unawaited(_goToLineSafely()),
       ),
-      DropdownButtonHideUnderline(child: DropdownButton<_StudioDockReviewFilter>(
+      const Spacer(),
+      if (compactFilter)
+        PopupMenuButton<_StudioDockReviewFilter>(
+          key: const ValueKey('studio-review-filter'),
+          tooltip: 'Filter subtitle lines',
+          icon: const Icon(Icons.filter_list_rounded, size: 19),
+          constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+          padding: EdgeInsets.zero,
+          onSelected: (filter) => unawaited(_changeReviewFilterSafely(filter)),
+          itemBuilder: (_) => [
+            for (final filter in _StudioDockReviewFilter.values)
+              CheckedPopupMenuItem(
+                value: filter, checked: _reviewFilter == filter,
+                child: Text(switch (filter) {
+                  _StudioDockReviewFilter.all => 'All lines',
+                  _StudioDockReviewFilter.marked => 'Marked',
+                  _StudioDockReviewFilter.unresolved => 'Unresolved',
+                  _StudioDockReviewFilter.resolved => 'Resolved',
+                }),
+              ),
+          ],
+        )
+      else DropdownButtonHideUnderline(child: DropdownButton<_StudioDockReviewFilter>(
         key: const ValueKey('studio-review-filter'),
         value: _reviewFilter,
         isDense: true,
@@ -4751,15 +4818,14 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         ),
       if (widget.playback != null) IconButton(
         key: const ValueKey('studio-dock-follow-playback'),
-        tooltip: _followPlayback ? 'Pause subtitle follow' : 'Follow playback',
-        icon: Icon(_followPlayback ? Icons.my_location : Icons.location_disabled),
+        tooltip: _followPlayback ? 'Pause subtitle follow' : 'Resume subtitle follow',
+        icon: Icon(_followPlayback ? Icons.sync_rounded : Icons.sync_disabled_rounded,
+            size: 19, color: _followPlayback ? _accent : _muted),
         constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
         padding: EdgeInsets.zero,
         onPressed: () { setState(() => _followPlayback = !_followPlayback); _onPlaybackPosition(); },
       ),
     ])),
-    if (searchOnSecondRow)
-      SizedBox(height: 34, child: _subtitleSearchField()),
     Expanded(child: LayoutBuilder(builder: (context, limits) {
       final gridWidth = math.max(850.0, limits.maxWidth);
       return SingleChildScrollView(
@@ -6432,6 +6498,11 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     child: Row(children: [
       Icon(Icons.info_outline, color: _accent, size: 16),
       const SizedBox(width: 8),
+      if (widget.isLiveSession && widget.onApplyCueText == null) ...[
+        Text('READ ONLY', style: TextStyle(
+          color: _muted, letterSpacing: .7, fontSize: 11)),
+        const SizedBox(width: 10),
+      ],
       Expanded(child: Text(widget.projectTitle ?? 'Ready',
         style: TextStyle(color: _muted, fontSize: 12))),
       Text(widget.encoding == null
