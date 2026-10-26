@@ -28,6 +28,9 @@ Branch: `feature/studio-dock-integration` (fork `anzilr/SubtitleStudio`).
 - `git diff --check` clean before CI request.
 - CI: Flutter analyze/full tests and Studio Dock suite are dispatched via
   `.github/ci-checkpoint` and `.github/ci-studio-dock` on this branch.
+- R14a: Corrected the demo multi-selection toggle regression reported by
+  both first-pass CI runs. A collapsed group toggles uniformly; unrelated
+  selected cues keep their existing independent toggle semantics.
 
 ## Follow-up
 
