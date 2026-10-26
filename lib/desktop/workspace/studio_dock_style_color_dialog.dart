@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:subtitle_studio/widgets/colour_picker_widget.dart';
 
 /// Scoped owner for the existing SubtitleStudio text color picker. Its editing
@@ -25,6 +26,7 @@ class _StudioDockStyleColorDialogState
     extends State<StudioDockStyleColorDialog> {
   late final TextEditingController _controller;
   final _pickerKey = GlobalKey<ColorPickerWithTextEditingState>();
+  bool _completed = false;
 
   @override
   void initState() {
@@ -40,8 +42,22 @@ class _StudioDockStyleColorDialogState
     super.dispose();
   }
 
+  void _apply() {
+    if (_completed) return;
+    _completed = true;
+    _pickerKey.currentState?.applyChanges();
+    Navigator.pop(context, _controller.text);
+  }
+
   @override
-  Widget build(BuildContext context) => AlertDialog(
+  Widget build(BuildContext context) => CallbackShortcuts(
+    bindings: {
+      const SingleActivator(LogicalKeyboardKey.enter): _apply,
+      const SingleActivator(LogicalKeyboardKey.numpadEnter): _apply,
+      const SingleActivator(LogicalKeyboardKey.escape):
+          () => Navigator.pop(context),
+    },
+    child: AlertDialog(
     title: const Text('Subtitle text color'),
     content: SizedBox(
       width: 480,
@@ -62,12 +78,10 @@ class _StudioDockStyleColorDialogState
       ),
       FilledButton(
         key: const ValueKey('studio-style-color-confirm'),
-        onPressed: () {
-          _pickerKey.currentState?.applyChanges();
-          Navigator.pop(context, _controller.text);
-        },
+        onPressed: _apply,
         child: const Text('Use color'),
       ),
     ],
+    ),
   );
 }

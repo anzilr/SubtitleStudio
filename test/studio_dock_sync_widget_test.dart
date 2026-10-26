@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_workspace.dart';
@@ -78,6 +79,30 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('studio-tool-confirm')));
     await tester.pumpAndSettle();
     expect(calls, [(1, '00:00:02,000', '00:00:08,000')]);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Sync Enter checks validation before confirmation', (tester) async {
+    var calls = 0;
+    await launch(tester, anchored: (_, __, ___) async {
+      calls++;
+      return null;
+    });
+    await openTools(tester);
+    await tapTool(tester, 'studio-tool-sync-anchors');
+    await tester.enterText(find.byKey(const ValueKey('studio-sync-start')), 'bad');
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('studio-sync-start')), findsOneWidget);
+    expect(calls, 0);
+    await tester.enterText(find.byKey(const ValueKey('studio-sync-start')),
+        '00:00:02,000');
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('studio-tool-confirm')), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(calls, 0);
     expect(tester.takeException(), isNull);
   });
 

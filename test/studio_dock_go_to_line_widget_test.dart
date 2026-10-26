@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_go_to_line_dialog.dart';
@@ -96,6 +97,31 @@ void main() {
     expect(tester.state<StudioDockWorkspaceState>(
         find.byType(StudioDockWorkspace)).selectedCueNumber, 1);
     expect(positions, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Go to Line Enter validates and Escape keeps the current cue',
+      (tester) async {
+    await launch(tester);
+    await openDialog(tester);
+    await tester.enterText(
+        find.byKey(const ValueKey('studio-go-to-line-input')), '99');
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('between 1 and 3'), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.text('Go to line'), findsNothing);
+    expect(tester.state<StudioDockWorkspaceState>(
+        find.byType(StudioDockWorkspace)).selectedCueNumber, 1);
+
+    await openDialog(tester);
+    await tester.enterText(
+        find.byKey(const ValueKey('studio-go-to-line-input')), '2');
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(tester.state<StudioDockWorkspaceState>(
+        find.byType(StudioDockWorkspace)).selectedCueNumber, 2);
     expect(tester.takeException(), isNull);
   });
 

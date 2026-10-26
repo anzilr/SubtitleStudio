@@ -1042,7 +1042,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     if (cueNumbers.length > 1 || clearsNotes || marksUnmarked) {
       final approved = await showDialog<bool>(
         context: context,
-        builder: (dialog) => AlertDialog(
+        builder: (dialog) => _modalKeys<bool>(dialog,
+          confirm: true, cancel: false, child: AlertDialog(
           title: Text('$name selected subtitles?'),
           content: Text('$prompt One history point will be saved.'),
           actions: [
@@ -1054,7 +1055,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               child: Text(name),
             ),
           ],
-        ),
+        )),
       );
       if (approved != true || !mounted) return;
     }
@@ -1542,14 +1543,27 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     required T confirm,
     required T cancel,
     required Widget child,
+  }) => _modalActions(
+    onConfirm: () => Navigator.of(dialogContext).pop<T>(confirm),
+    onCancel: () => Navigator.of(dialogContext).pop<T>(cancel),
+    child: child,
+  );
+
+  /// Data-entry dialogs pass their validation/async actions here instead of
+  /// returning a result directly. Enter must never bypass a failed validation
+  /// or invoke a disabled Apply button while an operation is in flight.
+  Widget _modalActions({
+    required VoidCallback onConfirm,
+    required VoidCallback onCancel,
+    required Widget child,
   }) => CallbackShortcuts(
     bindings: {
       const SingleActivator(LogicalKeyboardKey.enter):
-          () => Navigator.of(dialogContext).pop<T>(confirm),
+          onConfirm,
       const SingleActivator(LogicalKeyboardKey.numpadEnter):
-          () => Navigator.of(dialogContext).pop<T>(confirm),
+          onConfirm,
       const SingleActivator(LogicalKeyboardKey.escape):
-          () => Navigator.of(dialogContext).pop<T>(cancel),
+          onCancel,
     },
     child: child,
   );
@@ -1740,7 +1754,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         !await _confirmDraftBeforeLeaving() || !mounted) return;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialog) => AlertDialog(
+      builder: (dialog) => _modalKeys<bool>(dialog,
+        confirm: true, cancel: false, child: AlertDialog(
         title: const Text('Unload this video?'),
         content: const Text('The video will be detached from this project. '
             'The original video file will not be deleted. You can attach '
@@ -1754,7 +1769,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             child: const Text('Unload video'),
           ),
         ],
-      ),
+      )),
     );
     if (confirmed != true || !mounted) return;
     setState(() => _unloadingVideo = true);
@@ -2001,7 +2016,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     final cueNumber = _selectedId;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialog) => AlertDialog(
+      builder: (dialog) => _modalKeys<bool>(dialog,
+        confirm: true, cancel: false, child: AlertDialog(
         title: Text('Delete subtitle line #$cueNumber?'),
         content: const Text('This removes the selected line from the project. '
             'The change will be recorded in checkpoint history.'),
@@ -2016,7 +2032,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             child: const Text('Delete line'),
           ),
         ],
-      ),
+      )),
     );
     if (confirmed != true || !mounted) return;
     setState(() => _changingStructure = true);
@@ -2072,7 +2088,9 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     final index = _cues.indexWhere((cue) => cue.id == cueNumber);
     final withPrevious = await showDialog<bool>(
       context: context,
-      builder: (dialog) => AlertDialog(
+      builder: (dialog) => _modalKeys<bool?>(dialog,
+        confirm: index < _cues.length - 1 ? false : true,
+        cancel: null, child: AlertDialog(
         title: Text('Combine subtitle line #$cueNumber'),
         content: Text('Choose an adjacent line to combine. '
             '${widget.isEditMode ? 'Subtitle text' : 'Original and edited lines'}, '
@@ -2094,7 +2112,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             child: const Text('With next'),
           ),
         ],
-      ),
+      )),
     );
     if (withPrevious == null || !mounted) return;
     setState(() => _changingStructure = true);
@@ -2211,7 +2229,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     }
     final originalOnly = await showDialog<bool>(
       context: context,
-      builder: (dialog) => AlertDialog(
+      builder: (dialog) => _modalKeys<bool?>(dialog,
+        confirm: false, cancel: null, child: AlertDialog(
         title: const Text('Export subtitle file'),
         content: const Text('Choose which text to include in the SRT. '
             'Export does not change the current project or its save location.'),
@@ -2231,7 +2250,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             child: const Text('Edited text'),
           ),
         ],
-      ),
+      )),
     );
     if (originalOnly == null || !mounted) return;
     await _runFileAction(
@@ -3150,9 +3169,27 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     var firstText = '1';
     var lastText = '${_cues.length}';
     String? error;
+    var submitted = false;
     final chosen = await showDialog<List<int>>(
       context: context,
-      builder: (dialog) => StatefulBuilder(builder: (dialog, refresh) => AlertDialog(
+      builder: (dialog) => StatefulBuilder(builder: (dialog, refresh) {
+        void submit() {
+          if (submitted) return;
+          final start = int.tryParse(firstText.trim());
+          final end = int.tryParse(lastText.trim());
+          if (start == null || end == null || start < 1 ||
+              end < start || end > _cues.length) {
+            refresh(() => error =
+                'Enter indices between 1 and ${_cues.length} in order.');
+            return;
+          }
+          submitted = true;
+          Navigator.pop(dialog, <int>[start, end]);
+        }
+        return _modalActions(
+          onConfirm: submit,
+          onCancel: () => Navigator.pop(dialog),
+          child: AlertDialog(
         title: const Text('Select subtitles by index'),
         content: SizedBox(width: 390, child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -3163,6 +3200,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               key: const ValueKey('studio-range-start'),
               initialValue: firstText,
               onChanged: (value) => firstText = value,
+              onFieldSubmitted: (_) => submit(),
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(
                 labelText: 'First line', border: OutlineInputBorder()),
@@ -3172,6 +3210,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               key: const ValueKey('studio-range-end'),
               initialValue: lastText,
               onChanged: (value) => lastText = value,
+              onFieldSubmitted: (_) => submit(),
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(
                 labelText: 'Last line', border: OutlineInputBorder()),
@@ -3188,20 +3227,12 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               child: const Text('Cancel')),
           FilledButton(
             key: const ValueKey('studio-range-confirm'),
-            onPressed: () {
-              final start = int.tryParse(firstText.trim());
-              final end = int.tryParse(lastText.trim());
-              if (start == null || end == null || start < 1 ||
-                  end < start || end > _cues.length) {
-                refresh(() => error = 'Enter indices between 1 and ${_cues.length} in order.');
-                return;
-              }
-              Navigator.pop(dialog, <int>[start, end]);
-            },
+            onPressed: submit,
             child: const Text('Select range'),
           ),
         ],
-      )),
+      ));
+      }),
     );
     if (chosen == null || !mounted) return;
     _applyIndexRange(chosen[0], chosen[1]);
@@ -3254,7 +3285,39 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     String? error;
     await showDialog<void>(
       context: context,
-      builder: (dialog) => StatefulBuilder(builder: (dialog, refresh) => PopScope(
+      builder: (dialog) => StatefulBuilder(builder: (dialog, refresh) {
+        Future<void> submit() async {
+          if (saving) return;
+          final start = firstText.trim();
+          final end = lastText.trim();
+          final validation = StudioDockTimingEditService.validate(start, end);
+          if (validation != null) {
+            refresh(() => error = validation);
+            return;
+          }
+          refresh(() { saving = true; error = null; });
+          StudioDockCueUpdate? updated;
+          try {
+            updated = await apply(cueNumbers, start, end, _selectedId);
+          } catch (_) {
+            updated = null;
+          }
+          if (!mounted || !dialog.mounted) return;
+          if (updated == null) {
+            refresh(() {
+              saving = false;
+              error = 'The time shift could not be saved. The project may '
+                  'have changed or a line would exceed the SRT time range.';
+            });
+            return;
+          }
+          Navigator.pop(dialog);
+          _acceptStructure(updated);
+        }
+        return _modalActions(
+          onConfirm: () { if (!saving) unawaited(submit()); },
+          onCancel: () { if (!saving) Navigator.pop(dialog); },
+          child: PopScope(
         canPop: !saving,
         child: AlertDialog(
           title: Text('Shift ${selected.length} selected subtitles'),
@@ -3268,6 +3331,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                 key: const ValueKey('studio-selected-start'),
                 initialValue: firstText,
                 onChanged: (value) => firstText = value,
+                onFieldSubmitted: (_) { if (!saving) unawaited(submit()); },
                 enabled: !saving,
                 decoration: const InputDecoration(
                   labelText: 'First selected start', border: OutlineInputBorder()),
@@ -3277,6 +3341,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                 key: const ValueKey('studio-selected-end'),
                 initialValue: lastText,
                 onChanged: (value) => lastText = value,
+                onFieldSubmitted: (_) { if (!saving) unawaited(submit()); },
                 enabled: !saving,
                 decoration: const InputDecoration(
                   labelText: 'Last selected end anchor', border: OutlineInputBorder()),
@@ -3293,38 +3358,13 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                 child: const Text('Cancel')),
             FilledButton(
               key: const ValueKey('studio-selected-shift-apply'),
-              onPressed: saving ? null : () async {
-                final start = firstText.trim();
-                final end = lastText.trim();
-                final validation = StudioDockTimingEditService.validate(start, end);
-                if (validation != null) {
-                  refresh(() => error = validation);
-                  return;
-                }
-                refresh(() { saving = true; error = null; });
-                StudioDockCueUpdate? updated;
-                try {
-                  updated = await apply(cueNumbers, start, end, _selectedId);
-                } catch (_) {
-                  updated = null;
-                }
-                if (!mounted || !dialog.mounted) return;
-                if (updated == null) {
-                  refresh(() {
-                    saving = false;
-                    error = 'The time shift could not be saved. The project may '
-                        'have changed or a line would exceed the SRT time range.';
-                  });
-                  return;
-                }
-                Navigator.pop(dialog);
-                _acceptStructure(updated);
-              },
+              onPressed: saving ? null : () => unawaited(submit()),
               child: Text(saving ? 'Applying…' : 'Apply selected shift'),
             ),
           ],
         ),
-      )),
+      )));
+      }),
     );
   }
 
@@ -3337,7 +3377,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     if (ids.isEmpty) return;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialog) => AlertDialog(
+      builder: (dialog) => _modalKeys<bool>(dialog,
+        confirm: true, cancel: false, child: AlertDialog(
         title: Text('Delete ${ids.length} selected subtitles?'),
         content: const Text('This removes all selected lines in one undoable '
             'checkpoint. You can restore them using Undo.'),
@@ -3350,7 +3391,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             child: const Text('Delete selected'),
           ),
         ],
-      ),
+      )),
     );
     if (confirmed != true || !mounted) return;
     setState(() => _runningSelectedBatch = true);
@@ -3831,7 +3872,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     final replacement = _replaceInput.text;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialog) => AlertDialog(
+      builder: (dialog) => _modalKeys<bool>(dialog,
+        confirm: true, cancel: false, child: AlertDialog(
         title: const Text('Replace subtitle text?'),
         content: Text('Replace ${hits.length} occurrence(s) of "$term" '
             'with "$replacement"? This will create one saved history point.'),
@@ -3842,7 +3884,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               onPressed: () => Navigator.pop(dialog, true),
               child: const Text('Replace')),
         ],
-      ),
+      )),
     );
     if (confirmed != true || !mounted) return;
     setState(() => _replacingMatches = true);
@@ -3872,10 +3914,26 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     var start = _cues.first.start;
     var end = _cues.last.end;
     String? error;
+    var submitted = false;
     final result = await showDialog<List<String>>(
       context: context,
       builder: (dialog) => StatefulBuilder(
-        builder: (dialog, refresh) => AlertDialog(
+        builder: (dialog, refresh) {
+          void submit() {
+            if (submitted) return;
+            final validation = StudioDockTimingEditService.validate(
+                start.trim(), end.trim());
+            if (validation != null) {
+              refresh(() => error = validation);
+              return;
+            }
+            submitted = true;
+            Navigator.pop(dialog, [start.trim(), end.trim()]);
+          }
+          return _modalActions(
+            onConfirm: submit,
+            onCancel: () => Navigator.pop(dialog),
+            child: AlertDialog(
           title: const Text('Sync subtitles using time anchors'),
           content: SizedBox(width: 430, child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -3890,6 +3948,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                     labelText: 'First subtitle start (HH:MM:SS,mmm)',
                     border: OutlineInputBorder()),
                 onChanged: (v) => start = v,
+                onFieldSubmitted: (_) => submit(),
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -3899,6 +3958,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                     labelText: 'Last subtitle end (HH:MM:SS,mmm)',
                     border: OutlineInputBorder()),
                 onChanged: (v) => end = v,
+                onFieldSubmitted: (_) => submit(),
               ),
               if (error != null) ...[
                 const SizedBox(height: 8),
@@ -3912,19 +3972,12 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                 child: const Text('Cancel')),
             FilledButton(
               key: const ValueKey('studio-sync-anchor-next'),
-              onPressed: () {
-                final validation = StudioDockTimingEditService.validate(
-                    start.trim(), end.trim());
-                if (validation != null) {
-                  refresh(() => error = validation);
-                  return;
-                }
-                Navigator.pop(dialog, [start.trim(), end.trim()]);
-              },
+              onPressed: submit,
               child: const Text('Continue'),
             ),
           ],
-        ),
+        ));
+        },
       ),
     );
     if (result == null || !mounted) return;
@@ -3945,10 +3998,27 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     var target = detected != null && detected.isFinite && detected > 0
         ? detected.toStringAsFixed(3) : '25.000';
     String? error;
+    var submitted = false;
     final result = await showDialog<List<double>>(
       context: context,
       builder: (dialog) => StatefulBuilder(
-        builder: (dialog, refresh) => AlertDialog(
+        builder: (dialog, refresh) {
+          void submit() {
+            if (submitted) return;
+            final a = double.tryParse(source.trim());
+            final b = double.tryParse(target.trim());
+            if (a == null || b == null || !a.isFinite || !b.isFinite ||
+                a <= 0 || b <= 0) {
+              refresh(() => error = 'Enter positive, finite framerates.');
+              return;
+            }
+            submitted = true;
+            Navigator.pop(dialog, [a, b]);
+          }
+          return _modalActions(
+            onConfirm: submit,
+            onCancel: () => Navigator.pop(dialog),
+            child: AlertDialog(
           title: const Text('Adjust subtitle framerate'),
           content: SizedBox(width: 430, child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -3963,6 +4033,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                 decoration: const InputDecoration(
                     labelText: 'Source FPS', border: OutlineInputBorder()),
                 onChanged: (v) => source = v,
+                onFieldSubmitted: (_) => submit(),
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -3972,6 +4043,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                 decoration: const InputDecoration(
                     labelText: 'Target FPS', border: OutlineInputBorder()),
                 onChanged: (v) => target = v,
+                onFieldSubmitted: (_) => submit(),
               ),
               if (error != null) ...[
                 const SizedBox(height: 8),
@@ -3985,20 +4057,12 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                 child: const Text('Cancel')),
             FilledButton(
               key: const ValueKey('studio-sync-fps-next'),
-              onPressed: () {
-                final a = double.tryParse(source.trim());
-                final b = double.tryParse(target.trim());
-                if (a == null || b == null || !a.isFinite || !b.isFinite ||
-                    a <= 0 || b <= 0) {
-                  refresh(() => error = 'Enter positive, finite framerates.');
-                  return;
-                }
-                Navigator.pop(dialog, [a, b]);
-              },
+              onPressed: submit,
               child: const Text('Continue'),
             ),
           ],
-        ),
+        ));
+        },
       ),
     );
     if (result == null || !mounted) return;
@@ -4020,7 +4084,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         _runningTool || _changingStructure) return;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialog) => AlertDialog(
+      builder: (dialog) => _modalKeys<bool>(dialog,
+        confirm: true, cancel: false, child: AlertDialog(
         title: Text(title),
         content: Text('$detail One saved history point will be created. '
             'The original subtitle file will not be overwritten.'),
@@ -4031,7 +4096,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               onPressed: () => Navigator.pop(dialog, true),
               child: const Text('Apply')),
         ],
-      ),
+      )),
     );
     if (confirmed != true || !mounted) return;
     setState(() { _runningTool = true; _toolsError = null; });
@@ -6066,7 +6131,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     if (node.isHead || _historyNavigationBlocked) return;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialog) => AlertDialog(
+      builder: (dialog) => _modalKeys<bool>(dialog,
+        confirm: true, cancel: false, child: AlertDialog(
         title: const Text('Restore this saved version?'),
         content: const Text('The subtitles will return to this history '
             'point. Other saved versions will remain in history. '
@@ -6082,7 +6148,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             child: const Text('Restore version'),
           ),
         ],
-      ),
+      )),
     );
     if (confirmed == true && mounted) {
       await _restoreHistoryPoint(node.checkpointId);

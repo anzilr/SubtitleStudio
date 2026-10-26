@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// Desktop presentation of the mobile Go to Line command. The dialog owns
 /// its text controller so route-dismissal animations never outlive the input.
@@ -21,6 +22,7 @@ class _StudioDockGoToLineDialogState extends State<StudioDockGoToLineDialog> {
   late final TextEditingController _input;
   late int _sliderLine;
   String? _error;
+  bool _completed = false;
 
   @override
   void initState() {
@@ -36,17 +38,26 @@ class _StudioDockGoToLineDialogState extends State<StudioDockGoToLineDialog> {
   }
 
   void _submit() {
+    if (_completed) return;
     final line = int.tryParse(_input.text.trim());
     if (line == null || line < 1 || line > widget.lineCount) {
       setState(() => _error =
           'Enter a line number between 1 and ${widget.lineCount}.');
       return;
     }
+    _completed = true;
     Navigator.of(context).pop(line);
   }
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
+  Widget build(BuildContext context) => CallbackShortcuts(
+    bindings: {
+      const SingleActivator(LogicalKeyboardKey.enter): _submit,
+      const SingleActivator(LogicalKeyboardKey.numpadEnter): _submit,
+      const SingleActivator(LogicalKeyboardKey.escape):
+          () => Navigator.of(context).pop(),
+    },
+    child: AlertDialog(
     title: const Text('Go to line'),
     content: SizedBox(
       width: 390,
@@ -108,5 +119,6 @@ class _StudioDockGoToLineDialogState extends State<StudioDockGoToLineDialog> {
         child: const Text('Go to line'),
       ),
     ],
+    ),
   );
 }

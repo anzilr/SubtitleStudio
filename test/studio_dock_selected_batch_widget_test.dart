@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_workspace.dart';
@@ -70,6 +71,27 @@ void main() {
     await tester.enterText(find.byKey(const ValueKey('studio-range-start')), '2');
     await tester.enterText(find.byKey(const ValueKey('studio-range-end')), '3');
     await tester.tap(find.byKey(const ValueKey('studio-range-confirm')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('2 of 3 subtitles selected'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Index selection Enter validates and Escape cancels',
+      (tester) async {
+    await launch(tester);
+    await openTools(tester);
+    await tapTool(tester, 'studio-tool-select-indices');
+    await tester.enterText(find.byKey(const ValueKey('studio-range-start')), '3');
+    await tester.enterText(find.byKey(const ValueKey('studio-range-end')), '2');
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('in order'), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('studio-range-start')), findsNothing);
+    await tapTool(tester, 'studio-tool-select-indices');
+    await tester.enterText(find.byKey(const ValueKey('studio-range-start')), '2');
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
     expect(find.textContaining('2 of 3 subtitles selected'), findsOneWidget);
     expect(tester.takeException(), isNull);

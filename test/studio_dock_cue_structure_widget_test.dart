@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_workspace.dart';
@@ -193,6 +194,45 @@ void main() {
     expect(deletions, 1);
     expect(find.byKey(const ValueKey('desktop-cue-2')), findsNothing);
     expect(find.text('Original 2'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Escape cancels desktop deletion and Enter confirms it',
+      (tester) async {
+    var deletions = 0;
+    await launch(tester, cues: const [_first, _second],
+      delete: (_) async {
+        deletions++;
+        return const StudioDockCueUpdate(cues: [_second], selectedCueId: 2);
+      });
+    await tester.tap(find.byKey(const ValueKey('studio-dock-delete-cue')));
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.text('Delete subtitle line #1?'), findsNothing);
+    expect(deletions, 0);
+
+    await tester.tap(find.byKey(const ValueKey('studio-dock-delete-cue')));
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(deletions, 1);
+    expect(find.text('Delete subtitle line #1?'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Enter merges with the only enabled neighbor', (tester) async {
+    final requests = <bool>[];
+    await launch(tester, cues: const [_first, _second],
+      merge: (_, previous) async {
+        requests.add(previous);
+        return const StudioDockCueUpdate(cues: [_first], selectedCueId: 1);
+      });
+    await tester.tap(find.byKey(const ValueKey('studio-dock-merge-cue')));
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(requests, [false]);
     expect(tester.takeException(), isNull);
   });
 
