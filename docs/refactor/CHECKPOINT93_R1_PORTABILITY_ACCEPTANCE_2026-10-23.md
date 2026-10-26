@@ -14,7 +14,7 @@ mobile layout, player lifecycle and `.msone` wire format remain unchanged.
 
 ## New project portability integration coverage
 
-`test/cp93_project_portability_acceptance_test.dart` exercises these real
+`test/project_document_portability_acceptance_test.dart` exercises these real
 production boundaries together:
 
 1. `ProjectDocumentBuilder.build` exports a project with two cues, one

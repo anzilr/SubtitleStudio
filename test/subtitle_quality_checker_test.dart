@@ -26,11 +26,13 @@ void main() {
     ]);
     expect(report.issues.map((issue) => issue.type), [
       SubtitleQualityIssueType.insufficientGap,
+      SubtitleQualityIssueType.outOfSequence,
       SubtitleQualityIssueType.overlap,
     ]);
     // Results are listed in document order, even though intervals are checked
     // chronologically. The overlap belongs to cue 20; short gap to cue 30.
-    expect(report.issues.map((issue) => issue.cueId), [30, 20]);
+    // Cue 10 also precedes cue 30 in time despite appearing after it in file.
+    expect(report.issues.map((issue) => issue.cueId), [30, 10, 20]);
   });
 
   test('nested overlapping cues preserve the latest end as anchor', () {
@@ -107,7 +109,7 @@ void main() {
       SubtitleQualityCue(id: 1, start: '00:00:01,000',
           end: '00:00:02,000', text: 'Hi'),
       SubtitleQualityCue(id: 2, start: '00:00:02,080',
-          end: '00:00:03,080', text: 'Hi'),
+          end: '00:00:03,080', text: 'Yo'),
     ], profile: checker);
     expect(report.issues, isEmpty);
   });
@@ -163,6 +165,49 @@ void main() {
     ]) {
       expect(SubtitleQualityProfile.decode(json).maxCharactersPerLine, 42);
     }
+  });
+
+  test('detects repeated neighboring caption text despite styling changes', () {
+    final report = SubtitleQualityChecker.scan(const [
+      SubtitleQualityCue(id: 1, start: '00:00:01,000',
+          end: '00:00:02,000', text: '<b>Hello\nworld!</b>'),
+      SubtitleQualityCue(id: 2, start: '00:00:03,000',
+          end: '00:00:04,000', text: 'hello world!'),
+      SubtitleQualityCue(id: 3, start: '00:00:05,000',
+          end: '00:00:06,000', text: 'Something else'),
+      SubtitleQualityCue(id: 4, start: '00:00:07,000',
+          end: '00:00:08,000', text: 'Hello world!'),
+    ]);
+    final repeated = report.issues.where(
+        (issue) => issue.type == SubtitleQualityIssueType.repeatedText).toList();
+    expect(repeated, hasLength(1));
+    expect(repeated.single.cueId, 2);
+    expect(repeated.single.detail, contains('#1'));
+  });
+
+  test('detects file timecodes out of order, without changing cue order', () {
+    const cues = [
+      SubtitleQualityCue(id: 11, start: '00:00:05,000',
+          end: '00:00:06,000', text: 'Later'),
+      SubtitleQualityCue(id: 12, start: '00:00:01,000',
+          end: '00:00:02,000', text: 'Earlier'),
+    ];
+    final report = SubtitleQualityChecker.scan(cues);
+    expect(report.count(SubtitleQualityIssueType.outOfSequence), 1);
+    expect(report.issues.singleWhere((issue) =>
+        issue.type == SubtitleQualityIssueType.outOfSequence).cueId, 12);
+    expect(cues.first.id, 11);
+    expect(cues.last.id, 12);
+  });
+
+  test('empty captions do not trigger repeated-text false positives', () {
+    final report = SubtitleQualityChecker.scan(const [
+      SubtitleQualityCue(id: 1, start: '00:00:01,000',
+          end: '00:00:02,000', text: '  '),
+      SubtitleQualityCue(id: 2, start: '00:00:03,000',
+          end: '00:00:04,000', text: '<b></b>'),
+    ]);
+    expect(report.count(SubtitleQualityIssueType.repeatedText), 0);
   });
 
   test('safe whitespace suggestions preserve tags and deliberate blank lines', () {

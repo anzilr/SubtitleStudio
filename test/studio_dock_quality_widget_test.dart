@@ -9,6 +9,7 @@ void main() {
 
   Future<void> launch(WidgetTester tester,
       {ValueChanged<int>? onSelectedCueChanged,
+      List<StudioDockCue>? initialCues,
       Future<StudioDockCueUpdate?> Function(List<SubtitleQualityFix>)?
           onApplyQualityFixes}) async {
     tester.view.physicalSize = const Size(1680, 1000);
@@ -20,7 +21,7 @@ void main() {
         isLiveSession: true,
         onSelectedCueChanged: onSelectedCueChanged,
         onApplyQualityFixes: onApplyQualityFixes,
-        initialCues: const [
+        initialCues: initialCues ?? const [
           StudioDockCue(id: 1, start: '00:00:01,000',
               end: '00:00:03,000', original: 'First original',
               edited: 'First subtitle'),
@@ -74,6 +75,27 @@ void main() {
 
     expect(find.text('Subtitle Quality'), findsNothing);
     expect(selectedIds.last, 2);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('repeated caption report navigates without changing text',
+      (tester) async {
+    final selected = <int>[];
+    await launch(tester, onSelectedCueChanged: selected.add,
+        initialCues: const [
+      StudioDockCue(id: 1, start: '00:00:01,000',
+          end: '00:00:02,000', original: 'First', edited: 'Go!'),
+      StudioDockCue(id: 2, start: '00:00:03,000',
+          end: '00:00:04,000', original: 'Second', edited: '<b>Go!</b>'),
+    ]);
+    await openQuality(tester);
+    final issue = find.byKey(
+        const ValueKey('studio-quality-issue-2-repeatedText'));
+    expect(issue, findsOneWidget);
+    await tester.tap(issue);
+    await tester.pumpAndSettle();
+    expect(selected.last, 2);
+    expect(find.textContaining('Go!'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
 

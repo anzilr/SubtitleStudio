@@ -18,6 +18,8 @@ enum SubtitleQualityIssueType {
   tooManyLines,
   emptyText,
   unnecessaryWhitespace,
+  repeatedText,
+  outOfSequence,
 }
 
 extension SubtitleQualityIssueLabel on SubtitleQualityIssueType {
@@ -33,6 +35,8 @@ extension SubtitleQualityIssueLabel on SubtitleQualityIssueType {
         SubtitleQualityIssueType.tooManyLines => 'Too many lines',
         SubtitleQualityIssueType.emptyText => 'Empty text',
         SubtitleQualityIssueType.unnecessaryWhitespace => 'Unnecessary spaces',
+        SubtitleQualityIssueType.repeatedText => 'Repeated subtitle text',
+        SubtitleQualityIssueType.outOfSequence => 'Out-of-order timecode',
       };
 }
 
@@ -251,6 +255,7 @@ class SubtitleQualityChecker {
   }) {
     final issues = <SubtitleQualityIssue>[];
     final positions = <({int index, int start, int end})>[];
+    int? previousFileStart;
 
     for (var index = 0; index < cues.length; index++) {
       final cue = cues[index];
@@ -263,6 +268,13 @@ class SubtitleQualityChecker {
 
       final start = _milliseconds(cue.start);
       final end = _milliseconds(cue.end);
+      if (start != null) {
+        if (previousFileStart != null && start < previousFileStart) {
+          add(SubtitleQualityIssueType.outOfSequence,
+              'This subtitle begins before the preceding subtitle in the file.');
+        }
+        previousFileStart = start;
+      }
       if (start == null || end == null) {
         add(SubtitleQualityIssueType.invalidTimecode,
             'Start or end does not match HH:mm:ss,SSS.');
@@ -318,10 +330,27 @@ class SubtitleQualityChecker {
       return byStart != 0 ? byStart : a.index.compareTo(b.index);
     });
     int? maxEnd;
+    String? precedingText;
+    int? precedingCueId;
     for (final position in positions) {
+      final cue = cues[position.index];
+      final normalized = visibleText(cue.text)
+          .replaceAll(RegExp(r'\s+'), ' ')
+          .trim()
+          .toLowerCase();
+      if (normalized.isNotEmpty && normalized == precedingText) {
+        issues.add(SubtitleQualityIssue(
+          cueId: cue.id,
+          type: SubtitleQualityIssueType.repeatedText,
+          detail: 'Same text as subtitle #$precedingCueId. '
+              'Check whether the repetition is intentional.',
+          text: visibleText(cue.text).trim(),
+        ));
+      }
+      precedingText = normalized;
+      precedingCueId = cue.id;
       if (maxEnd != null) {
         final gap = position.start - maxEnd;
-        final cue = cues[position.index];
         if (gap < 0) {
           issues.add(SubtitleQualityIssue(
             cueId: cue.id,
