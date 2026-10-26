@@ -1,3 +1,4 @@
+import 'package:characters/characters.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/operations/subtitle_effect_operations.dart';
@@ -62,6 +63,61 @@ void main() {
       expect(output.first.edited, 'A <font color="#00ff00">B</font>C Z');
       expect(output.last.edited, 'A <font color="#00ff00">BC</font> Z');
       expect(parseTimeString(output.last.endTime).inMilliseconds, 3900);
+    });
+
+    test('Malayalam conjuncts and emoji animate as complete visible glyphs',
+        () async {
+      const content = 'കേൾക്കാം 👩‍👩‍👧‍👦';
+      final source = _line(1, content);
+      final clusters = content.characters.toList();
+      final typewriter = await SubtitleEffectOperations.generateTypewriterEffect(
+          originalLine: source, color: 'ffcc00');
+      expect(typewriter.length, clusters.length);
+      for (var i = 0; i < typewriter.length; i++) {
+        expect(typewriter[i].edited,
+            '<font color="#ffcc00">${clusters.take(i + 1).join()}</font>');
+      }
+      final karaoke = await SubtitleEffectOperations.generateKaraokeEffect(
+          originalLine: source, color: 'ffcc00', effectType: 'character');
+      expect(karaoke.length, clusters.length);
+      expect(karaoke.last.edited, '<font color="#ffcc00">$content</font>');
+    });
+
+    test('word karaoke preserves multilingual whitespace and newlines', () async {
+      const content = 'നമസ്കാരം  ലോകം\nസുഖമാണോ';
+      final frames = await SubtitleEffectOperations.generateKaraokeEffect(
+          originalLine: _line(2, content), color: 'ffaa00');
+      expect(frames, hasLength(3));
+      expect(frames.first.edited,
+          '<font color="#ffaa00">നമസ്കാരം</font>  ലോകം\nസുഖമാണോ');
+      expect(frames[1].edited,
+          '<font color="#ffaa00">നമസ്കാരം  ലോകം</font>\nസുഖമാണോ');
+      expect(frames.last.edited, '<font color="#ffaa00">$content</font>');
+    });
+
+    test('selected complex-script span is expanded to glyph boundaries', () async {
+      const content = 'A കാ B';
+      final frames = await SubtitleEffectOperations.generateKaraokeEffect(
+          originalLine: _line(3, content), color: 'aabbcc',
+          effectType: 'character', hasTextSelection: true,
+          fullText: content, selectedText: 'ാ',
+          selectionStart: 3, selectionEnd: 4);
+      expect(frames, hasLength(1));
+      expect(frames.single.edited, 'A <font color="#aabbcc">കാ</font> B');
+    });
+
+    test('long text is paced rather than flashing a frame per code point',
+        () async {
+      final longText = List.filled(120, 'കാ').join();
+      final frames = await SubtitleEffectOperations.generateTypewriterEffect(
+          originalLine: _line(4, longText), color: 'fff000');
+      expect(frames.length, lessThanOrEqualTo(15));
+      expect(frames.last.edited, '<font color="#fff000">$longText</font>');
+      expect(parseTimeString(frames.last.endTime).inMilliseconds, 4900);
+      for (final frame in frames) {
+        expect(parseTimeString(frame.startTime).inMilliseconds,
+            lessThan(parseTimeString(frame.endTime).inMilliseconds));
+      }
     });
 
     test('blank text and exhausted animation duration do not generate lines',

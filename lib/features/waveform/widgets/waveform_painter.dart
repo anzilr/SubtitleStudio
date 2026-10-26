@@ -386,13 +386,13 @@ class WaveformPainter extends CustomPainter {
       // Use different colors for editing subtitle
       if (isEditing) {
         canvas.drawRect(rect, editHighlightPaint);
-        canvas.drawRect(rect, editBorderPaint);
+        _drawSubtitleSideBorders(canvas, rect, editBorderPaint);
       } else if (isHighlighted) {
         canvas.drawRect(rect, highlightedSubtitlePaint);
-        canvas.drawRect(rect, highlightedSubtitleBorderPaint);
+        _drawSubtitleSideBorders(canvas, rect, highlightedSubtitleBorderPaint);
       } else {
         canvas.drawRect(rect, subtitlePaint);
-        canvas.drawRect(rect, subtitleBorderPaint);
+        _drawSubtitleSideBorders(canvas, rect, subtitleBorderPaint);
       }
 
       // Draw subtitle text at top center if wide enough
@@ -440,6 +440,12 @@ class WaveformPainter extends CustomPainter {
         }
       }
     }
+  }
+
+  /// Time boundaries matter; horizontal box strokes obscure the waveform.
+  void _drawSubtitleSideBorders(Canvas canvas, Rect rect, Paint paint) {
+    canvas.drawLine(rect.topLeft, rect.bottomLeft, paint);
+    canvas.drawLine(rect.topRight, rect.bottomRight, paint);
   }
   
   /// Draw draggable bars at start and end of selected subtitle

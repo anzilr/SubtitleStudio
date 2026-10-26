@@ -215,8 +215,8 @@ extension _WaveformRendering on WaveformWidgetState {
       if (limits.maxWidth >= 355) ...[
         IconButton(
           key: const ValueKey('waveform-compact-vertical-zoom-out'),
-          tooltip: 'Decrease waveform height',
-          icon: const Icon(Icons.height, size: 15),
+          tooltip: 'Reduce waveform amplitude (vertical scale)',
+          icon: const Icon(Icons.vertical_align_center_rounded, size: 15),
           onPressed: state.verticalZoom > .5
               ? () => ref.read(waveformControllerProvider.notifier)
                   .dispatch(UpdateVerticalZoom(
@@ -229,8 +229,8 @@ extension _WaveformRendering on WaveformWidgetState {
             style: const TextStyle(fontSize: 10)),
         IconButton(
           key: const ValueKey('waveform-compact-vertical-zoom-in'),
-          tooltip: 'Increase waveform height',
-          icon: const Icon(Icons.open_in_full, size: 15),
+          tooltip: 'Amplify waveform (vertical scale)',
+          icon: const Icon(Icons.height_rounded, size: 15),
           onPressed: state.verticalZoom < 8
               ? () => ref.read(waveformControllerProvider.notifier)
                   .dispatch(UpdateVerticalZoom(

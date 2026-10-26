@@ -431,6 +431,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   final FocusNode _searchFocus = FocusNode(debugLabel: 'Studio Dock search');
   final FocusNode _findFocus = FocusNode(debugLabel: 'Studio Dock Find');
   final FocusNode _cueTextFocus = FocusNode(debugLabel: 'Studio Dock cue text');
+  final FocusNode _originalTextFocus = FocusNode(debugLabel: 'Studio Dock original text');
+  bool _lastEditingOriginal = false;
   int? _focusEditorCueOnMount;
   final TextEditingController _commandSearch = TextEditingController();
   final TextEditingController _tableSearch = TextEditingController();
@@ -620,6 +622,12 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   @override
   void initState() {
     super.initState();
+    _cueTextFocus.addListener(() {
+      if (_cueTextFocus.hasFocus) _lastEditingOriginal = false;
+    });
+    _originalTextFocus.addListener(() {
+      if (_originalTextFocus.hasFocus) _lastEditingOriginal = true;
+    });
     _cues = List<StudioDockCue>.from(widget.initialCues);
     _selectedId = _cues.isEmpty ? -1 :
         _cues.any((cue) => cue.id == widget.initialSelectedCueId)
@@ -753,6 +761,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     _searchFocus.dispose();
     _findFocus.dispose();
     _cueTextFocus.dispose();
+    _originalTextFocus.dispose();
     super.dispose();
   }
 
@@ -1204,10 +1213,34 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     });
   }
 
-  TextEditingController? get _focusedCueController {
-    if (!_cueTextFocus.hasFocus) return null;
-    return _cueTextFocus.context
+  TextEditingController? _controllerFor(FocusNode focus) => focus.context
         ?.findAncestorStateOfType<EditableTextState>()?.widget.controller;
+
+  TextEditingController? get _focusedCueController =>
+      _cueTextFocus.hasFocus ? _controllerFor(_cueTextFocus) : null;
+
+  // Toolbar clicks can move focus away before onPressed executes. Reuse the
+  // latest text field's selection, even after that field loses focus.
+  ({TextEditingController controller, bool original})? get _formattingTarget {
+    final original = _originalEditing &&
+        (_originalTextFocus.hasFocus ||
+         (_lastEditingOriginal && !_cueTextFocus.hasFocus));
+    final controller = original
+        ? _controllerFor(_originalTextFocus) : _controllerFor(_cueTextFocus);
+    if (controller == null || !controller.selection.isValid) return null;
+    return (controller: controller, original: original);
+  }
+
+  void _storeFormattedText(TextEditingController controller, bool original) {
+    setState(() {
+      if (original) {
+        _draftOriginalCueId = _selectedId;
+        _draftOriginal = controller.text;
+      } else {
+        _draftCueId = _selectedId;
+        _draftText = controller.text;
+      }
+    });
   }
 
   void _replaceEditedDraft(String replacement) {
@@ -1229,16 +1262,13 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
 
   void _formatCueShortcut(String tag) {
     if (_cues.isEmpty || widget.onApplyCueText == null || _savingDraft) return;
-    final controller = _focusedCueController;
-    if (controller == null) {
+    final target = _formattingTarget;
+    if (target == null) {
       _toggleStyleTag(tag);
       return;
     }
-    toggleTextFormatting(controller: controller, tag: tag);
-    setState(() {
-      _draftCueId = _selectedId;
-      _draftText = controller.text;
-    });
+    toggleTextFormatting(controller: target.controller, tag: tag);
+    _storeFormattedText(target.controller, target.original);
   }
 
   Widget _studioTextContextMenu(
@@ -1374,16 +1404,34 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     StudioDockStyleActions.toggleTag(_styleText, tag),
   );
 
-  void _clearCueFormatting() => _setStyleDraft(
-    StudioDockStyleActions.clearSupportedTags(_styleText),
-  );
+  void _clearCueFormatting() {
+    final target = _formattingTarget;
+    if (target == null || target.controller.selection.isCollapsed) {
+      _setStyleDraft(StudioDockStyleActions.clearSupportedTags(_styleText));
+      return;
+    }
+    final controller = target.controller;
+    final selection = controller.selection;
+    final cleaned = StudioDockStyleActions.clearSupportedTags(
+        selection.textInside(controller.text));
+    controller.value = TextEditingValue(
+      text: controller.text.replaceRange(selection.start, selection.end, cleaned),
+      selection: TextSelection.collapsed(offset: selection.start + cleaned.length));
+    _storeFormattedText(controller, target.original);
+  }
 
   Future<void> _pickStyleColor() async {
     if (widget.onApplyCueText == null || _savingDraft) return;
+    final target = _formattingTarget;
+    final selected = target != null && !target.controller.selection.isCollapsed;
+    final selection = selected ? target!.controller.selection : null;
+    final before = selected ? target!.controller.text : null;
+    final cueId = _selectedId;
     final current = _styleText;
-    final body = StudioDockStyleActions.body(current);
+    final body = selected
+        ? selection!.textInside(before!) : StudioDockStyleActions.body(current);
     if (body.isEmpty) return;
-    final prefix = current.substring(0, current.length - body.length);
+    final prefix = selected ? '' : current.substring(0, current.length - body.length);
     final initialColor = Theme.of(context).colorScheme.onSurface;
     final chosen = await showDialog<String>(
       context: context,
@@ -1393,7 +1441,16 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         colorHistory: _styleColorHistory,
       ),
     );
-    if (chosen != null && mounted) _setStyleDraft(prefix + chosen);
+    if (chosen == null || !mounted || cueId != _selectedId) return;
+    if (selected && target!.controller.text == before) {
+      final replacement = before!.replaceRange(selection!.start,
+          selection.end, chosen);
+      target.controller.value = TextEditingValue(text: replacement,
+        selection: TextSelection.collapsed(offset: selection.start + chosen.length));
+      _storeFormattedText(target.controller, target.original);
+    } else if (!selected) {
+      _setStyleDraft(prefix + chosen);
+    }
   }
 
   void _discardDraft() {
@@ -3873,7 +3930,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           widget.onApplyCueText == null ? null :
               () => unawaited(_openDictionary(HotkeyAction.msoneDictionary))),
         _railAction('studio-rail-olam-dictionary',
-          Icon(Icons.book_outlined, size: 21, color: _muted),
+          SvgPicture.asset('assets/olam_logo.svg', width: 32, height: 20,
+              colorFilter: ColorFilter.mode(_muted, BlendMode.srcIn)),
           'Olam Dictionary (Alt+O)',
           widget.onApplyCueText == null ? null :
               () => unawaited(_openDictionary(HotkeyAction.olamDictionary))),
@@ -3893,7 +3951,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                 () => unawaited(_submitMsoneSafely())),
         if (widget.onOpenProjectSettings != null)
           _railAction('studio-rail-project-settings',
-            Icon(Icons.settings_outlined, size: 21, color: _muted),
+            Icon(Icons.folder_shared_outlined, size: 21, color: _muted),
             'Project settings', _openingProjectSettings ? null :
                 () => unawaited(_openProjectSettingsSafely())),
       ]))),
@@ -4887,6 +4945,10 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                 child: Text('Reopen selected')),
           ],
         ),
+      const Spacer(),
+      // The right-aligned playback/view/filter controls are one distinct group.
+      Container(width: 1, height: 20, margin: const EdgeInsets.symmetric(horizontal: 5),
+        color: _border),
       if (widget.playback != null) IconButton(
         key: const ValueKey('studio-dock-follow-playback'),
         tooltip: _followPlayback ? 'Pause subtitle follow' : 'Resume subtitle follow',
@@ -4916,6 +4978,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         padding: EdgeInsets.zero,
         onPressed: () => _toggleMediaPanel(video: false),
       ),
+      const SizedBox(width: 6),
       _reviewFilterControl(compact: compactFilter),
     ])),
     Expanded(child: LayoutBuilder(builder: (context, limits) {
@@ -5621,6 +5684,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               height: 112,
               child: Stack(children: [Positioned.fill(child: _originalEditing
                   ? TextFormField(
+                      focusNode: _originalTextFocus,
                       key: ValueKey('studio-original-$_selectedId-$_draftRevision'),
                       initialValue: _draftOriginalCueId == _selectedId &&
                               _draftOriginal != null
@@ -6733,85 +6797,53 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               : 'Encoding: ${widget.encoding}',
               maxLines: 1, overflow: TextOverflow.ellipsis,
               style: TextStyle(color: _muted, fontSize: 12))
-          : Tooltip(message: 'Choose project-wide text encoding', child: TextButton(
+          : PopupMenuButton<String>(
               key: const ValueKey('studio-project-encoding'),
-              onPressed: _changingEncoding ? null :
-                  () => unawaited(_openEncodingPicker()),
-              style: TextButton.styleFrom(
-                minimumSize: Size.zero,
+              tooltip: 'Select project-wide text encoding',
+              enabled: !_changingEncoding,
+              position: PopupMenuPosition.over,
+              constraints: const BoxConstraints(maxHeight: 420, minWidth: 210),
+              onSelected: (choice) => unawaited(_changeProjectEncoding(choice)),
+              itemBuilder: (_) => [
+                const PopupMenuItem<String>(enabled: false, height: 30,
+                  child: Text('Project text encoding',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
+                for (final choice in [
+                  ...SubtitleTextCodec.supportedEncodings,
+                  ...SubtitleExtendedEncodingService.extendedEncodings,
+                ])
+                  PopupMenuItem<String>(
+                    key: ValueKey('studio-encoding-$choice'),
+                    value: choice, height: 34,
+                    child: Row(children: [
+                      if (choice == widget.encoding)
+                        const Icon(Icons.check_rounded, size: 15)
+                      else const SizedBox(width: 15),
+                      const SizedBox(width: 8),
+                      Text(choice, style: const TextStyle(fontSize: 12)),
+                    ]),
+                  ),
+              ],
+              child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 5),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Flexible(child: Text(_changingEncoding ? 'Saving encoding…'
+                      : 'Encoding: ${widget.encoding ?? 'UTF-8'}',
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 12))),
+                  const Icon(Icons.arrow_drop_down_rounded, size: 17),
+                ]),
               ),
-              child: Text(_changingEncoding ? 'Saving encoding…'
-                  : 'Encoding: ${widget.encoding ?? 'UTF-8'}',
-                maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 12)),
-            )),
+            ),
       )),
     ]),
   );
 
-  Future<void> _openEncodingPicker() async {
+  Future<void> _changeProjectEncoding(String chosen) async {
     final update = widget.onChangeEncoding;
     if (update == null || _changingEncoding || !mounted ||
         !await _confirmDraftBeforeLeaving() || !mounted) return;
-    late Future<List<String>> optionsFuture;
-    try {
-      optionsFuture = (widget.onLoadEncodings?.call() ??
-          SubtitleExtendedEncodingService.standard.availableEncodings())
-          .catchError((Object _) => SubtitleTextCodec.supportedEncodings);
-    } catch (_) {
-      optionsFuture = Future.value(SubtitleTextCodec.supportedEncodings);
-    }
-    var search = '';
-    final chosen = await showDialog<String>(
-      context: context,
-      builder: (dialog) => StatefulBuilder(builder: (dialog, refresh) =>
-        AlertDialog(
-          title: const Text('Project text encoding'),
-          content: SizedBox(width: 410, height: 410, child: Column(children: [
-            TextField(
-              key: const ValueKey('studio-encoding-search'),
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.search),
-                hintText: 'Find encoding', isDense: true,
-              ),
-              onChanged: (value) => refresh(() => search = value),
-            ),
-            const SizedBox(height: 8),
-            Expanded(child: FutureBuilder<List<String>>(
-              future: optionsFuture,
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  if (snapshot.hasError) return const Center(
-                    child: Text('Could not load available encodings.'));
-                  return const Center(child: CircularProgressIndicator());
-                }
-                final available = snapshot.data!;
-                final matches = available.where((choice) => choice
-                    .toLowerCase().contains(search.trim().toLowerCase())).toList();
-                return ListView.builder(
-                  itemCount: matches.length,
-                  itemBuilder: (context, index) {
-                    final option = matches[index];
-                    return ListTile(
-                      key: ValueKey('studio-encoding-$option'),
-                      dense: true,
-                      title: Text(option),
-                      trailing: option == widget.encoding
-                          ? const Icon(Icons.check_rounded) : null,
-                      onTap: () => Navigator.pop(dialog, option),
-                    );
-                  },
-                );
-              },
-            )),
-          ])),
-          actions: [TextButton(onPressed: () => Navigator.pop(dialog),
-              child: const Text('Cancel'))],
-        )),
-    );
-    if (chosen == null || !mounted || chosen == widget.encoding) return;
+    if (chosen == widget.encoding) return;
     setState(() => _changingEncoding = true);
     var saved = false;
     try {

@@ -207,6 +207,65 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('inline buttons format only the selected edited substring',
+      (tester) async {
+    final edits = <String>[];
+    await launch(tester, applyText: (_, value) async {
+      edits.add(value);
+      return true;
+    });
+    final field = find.byKey(const ValueKey('studio-edit-1-0'));
+    await tester.tap(field);
+    await tester.pump();
+    final editable = tester.widget<EditableText>(find.descendant(
+      of: field, matching: find.byType(EditableText)));
+    editable.controller.selection = const TextSelection(
+        baseOffset: 0, extentOffset: 6);
+    await tester.tap(find.byKey(const ValueKey('studio-style-b')));
+    await tester.pump();
+    expect(editable.controller.text, '<b>Edited</b> line');
+    await tester.tap(find.byKey(const ValueKey('studio-apply-cue')));
+    await tester.pumpAndSettle();
+    expect(edits, ['<b>Edited</b> line']);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('original text selection stays scoped after toolbar focus change',
+      (tester) async {
+    await launch(tester, applyText: (_, __) async => true,
+        applyOriginal: (_, __) async => true);
+    await tester.tap(find.byKey(const ValueKey('studio-original-edit-toggle')));
+    await tester.pump();
+    final field = find.byKey(const ValueKey('studio-original-1-0'));
+    await tester.tap(field);
+    await tester.pump();
+    final editable = tester.widget<EditableText>(find.descendant(
+      of: field, matching: find.byType(EditableText)));
+    editable.controller.selection = const TextSelection(
+        baseOffset: 0, extentOffset: 8);
+    await tester.tap(find.byKey(const ValueKey('studio-style-i')));
+    await tester.pump();
+    expect(editable.controller.text, '<i>Original</i>');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('clear formatting edits the selected portion only',
+      (tester) async {
+    await launch(tester, applyText: (_, __) async => true);
+    final field = find.byKey(const ValueKey('studio-edit-1-0'));
+    await tester.tap(field);
+    await tester.pump();
+    final controller = tester.widget<EditableText>(find.descendant(
+      of: field, matching: find.byType(EditableText))).controller;
+    controller.value = const TextEditingValue(
+        text: '<b>Edited</b> <i>line</i>',
+        selection: TextSelection(baseOffset: 14, extentOffset: 25));
+    await tester.tap(find.byKey(const ValueKey('studio-style-clear')));
+    await tester.pump();
+    expect(controller.text, '<b>Edited</b> line');
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Style 9-grid uses guarded Apply', (tester) async {
     final edits = <String>[];
     await launch(tester, applyText: (_, text) async {
@@ -302,7 +361,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Status encoding opens shared options and requests persistence',
+  testWidgets('Status encoding opens an anchored dropdown and persists selection',
       (tester) async {
     final requests = <String>[];
     await launch(tester, encoding: 'UTF-8',
@@ -314,9 +373,6 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('studio-project-encoding')));
     await tester.pumpAndSettle();
     expect(find.text('Project text encoding'), findsOneWidget);
-    await tester.enterText(find.byKey(
-        const ValueKey('studio-encoding-search')), 'ISO-8859-1');
-    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('studio-encoding-ISO-8859-1')));
     await tester.pumpAndSettle();
     expect(requests, ['ISO-8859-1']);

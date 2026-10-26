@@ -1,3 +1,6 @@
+import 'dart:math' as math;
+
+import 'package:characters/characters.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/utils/time_parser.dart';
 import 'package:subtitle_studio/operations/subtitle_sync_operations.dart'; // For formatDuration
@@ -58,20 +61,23 @@ class SubtitleEffectOperations {
     if (availableDuration <= 0) return []; // Not enough time for effect
     
     final List<SubtitleLine> effectLines = [];
-    final characters = cleanText.split('');
-    
-    // Calculate timing for each character based on available duration and total characters
-    final millisecondsPerCharacter = availableDuration / characters.length;
-    
-    for (int i = 1; i <= characters.length; i++) {
-      final partialText = characters.take(i).join('');
+    // One visible glyph can contain many Unicode code points (Malayalam
+    // conjuncts, vowel signs, emoji sequences). Never reveal half a glyph.
+    final clusters = cleanText.characters.toList();
+    // Limit flashes to ~16 per second; dense scripts must remain readable.
+    final frameCount = math.min(clusters.length,
+        math.max(1, availableDuration ~/ 60));
+    final millisecondsPerFrame = availableDuration / frameCount;
+
+    for (int i = 1; i <= frameCount; i++) {
+      final visibleClusters = (i * clusters.length / frameCount).ceil();
+      final partialText = clusters.take(visibleClusters).join('');
       final coloredText = '<font color="#$color">$partialText</font>';
       
-      final lineStartTime = startTime.inMilliseconds + ((i - 1) * millisecondsPerCharacter).round();
-      final lineEndTime = startTime.inMilliseconds + (i * millisecondsPerCharacter).round();
+      final lineStartTime = startTime.inMilliseconds + ((i - 1) * millisecondsPerFrame).round();
+      final lineEndTime = startTime.inMilliseconds + (i * millisecondsPerFrame).round();
       
-      // For the last character, extend to show full text until actual end time
-      final adjustedEndTime = (i == characters.length) ? endTime.inMilliseconds : lineEndTime;
+      final adjustedEndTime = (i == frameCount) ? endTime.inMilliseconds : lineEndTime;
       
       final newLine = SubtitleLine()
         ..index = originalLine.index + i - 1
@@ -112,16 +118,15 @@ class SubtitleEffectOperations {
     String afterSelection = '';
     
     if (hasTextSelection && selectedText != null && selectedText.isNotEmpty) {
-      // Apply effect only to selected text
-      textToEffect = selectedText;
-      // Use the full text from the text controller for proper selection bounds
+      // Flutter selections use UTF-16 offsets. Expand any incomplete offsets
+      // outward to grapheme boundaries so a Malayalam sign is never detached.
       final workingText = fullText ?? cleanText;
-      if (selectionStart > 0 && selectionStart <= workingText.length) {
-        beforeSelection = workingText.substring(0, selectionStart);
-      }
-      if (selectionEnd < workingText.length && selectionEnd >= 0) {
-        afterSelection = workingText.substring(selectionEnd);
-      }
+      final start = _graphemeBoundary(workingText, selectionStart, end: false);
+      final end = _graphemeBoundary(workingText, selectionEnd, end: true);
+      if (start >= end) return [];
+      beforeSelection = workingText.substring(0, start);
+      textToEffect = workingText.substring(start, end);
+      afterSelection = workingText.substring(end);
     } else {
       // Apply effect to entire text
       textToEffect = cleanText;
@@ -141,99 +146,37 @@ class SubtitleEffectOperations {
     
     final List<SubtitleLine> effectLines = [];
     
-    // Split based on effect type - apply only to the text portion that should have effect
-    List<String> segments;
+    // Store UTF-16 end offsets of complete graphemes or whole words. Using
+    // offsets rather than split/join also preserves every space and newline.
+    final endpoints = <int>[];
     if (effectType == 'character') {
-      segments = textToEffect.split('');
+      var offset = 0;
+      for (final cluster in textToEffect.characters) {
+        offset += cluster.length;
+        endpoints.add(offset);
+      }
     } else {
-      segments = textToEffect.split(' ');
+      for (final match in RegExp(r'\S+', unicode: true).allMatches(textToEffect)) {
+        endpoints.add(match.end);
+      }
     }
-    
-    if (segments.isEmpty) return [];
-    
-    // Calculate timing for each segment
-    final timePerSegment = availableDuration / segments.length;
-    
-    for (int i = 1; i <= segments.length; i++) {
-      List<String> highlightedSegments;
-      List<String> remainingSegments;
+    if (endpoints.isEmpty) return [];
+    final frameCount = math.min(endpoints.length,
+        math.max(1, availableDuration ~/ 60));
+    final timePerFrame = availableDuration / frameCount;
+
+    for (int i = 1; i <= frameCount; i++) {
+      final endpoint = endpoints[(i * endpoints.length / frameCount).ceil() - 1];
+      final highlighted = textToEffect.substring(0, endpoint);
+      final remaining = textToEffect.substring(endpoint);
+      final karaokeText = '$beforeSelection<font color="#$color">$highlighted</font>'
+          '$remaining$afterSelection';
       
-      if (effectType == 'character') {
-        highlightedSegments = segments.take(i).toList();
-        remainingSegments = segments.skip(i).toList();
-      } else {
-        highlightedSegments = segments.take(i).toList();
-        remainingSegments = segments.skip(i).toList();
-      }
-      
-      String karaokeText;
-      
-      // Build the karaoke text based on whether we have text selection
-      if (hasTextSelection && selectedText != null && selectedText.isNotEmpty) {
-        // We have text selection - build: beforeSelection + progressiveEffect + remainingEffect + afterSelection
-        String progressiveEffectText = '';
-        String remainingEffectText = '';
-        
-        if (effectType == 'character') {
-          progressiveEffectText = highlightedSegments.join('');
-          remainingEffectText = remainingSegments.join('');
-        } else {
-          progressiveEffectText = highlightedSegments.join(' ');
-          remainingEffectText = remainingSegments.isNotEmpty ? remainingSegments.join(' ') : '';
-        }
-        
-        // Build final text with selection context
-        String finalText = '';
-        
-        // Add text before selection without effect
-        if (beforeSelection.isNotEmpty) {
-          finalText += beforeSelection;
-        }
-        
-        // Add progressive effect text
-        if (progressiveEffectText.isNotEmpty) {
-          finalText += '<font color="#$color">$progressiveEffectText</font>';
-        }
-        
-        // Add remaining effect text in normal color
-        if (remainingEffectText.isNotEmpty) {
-          if (effectType == 'word' && progressiveEffectText.isNotEmpty) {
-            finalText += ' ';
-          }
-          finalText += remainingEffectText;
-        }
-        
-        // Add text after selection without effect
-        if (afterSelection.isNotEmpty) {
-          finalText += afterSelection;
-        }
-        
-        karaokeText = finalText;
-      } else {
-        // No text selection - apply effect to entire text (original behavior)
-        if (remainingSegments.isNotEmpty) {
-          if (effectType == 'character') {
-            final highlightedText = highlightedSegments.join('');
-            final remainingText = remainingSegments.join('');
-            karaokeText = '<font color="#$color">$highlightedText</font>$remainingText';
-          } else {
-            final highlightedText = highlightedSegments.join(' ');
-            final remainingText = remainingSegments.join(' ');
-            karaokeText = '<font color="#$color">$highlightedText</font> $remainingText';
-          }
-        } else {
-          final highlightedText = effectType == 'character' 
-              ? highlightedSegments.join('')
-              : highlightedSegments.join(' ');
-          karaokeText = '<font color="#$color">$highlightedText</font>';
-        }
-      }
-      
-      final lineStartTime = startTime.inMilliseconds + ((i - 1) * timePerSegment).round();
-      final lineEndTime = startTime.inMilliseconds + (i * timePerSegment).round();
+      final lineStartTime = startTime.inMilliseconds + ((i - 1) * timePerFrame).round();
+      final lineEndTime = startTime.inMilliseconds + (i * timePerFrame).round();
       
       // For the last segment, extend to show full text until actual end time
-      final adjustedEndTime = (i == segments.length) ? endTime.inMilliseconds : lineEndTime;
+      final adjustedEndTime = (i == frameCount) ? endTime.inMilliseconds : lineEndTime;
       
       final newLine = SubtitleLine()
         ..index = originalLine.index + i - 1
@@ -248,6 +191,17 @@ class SubtitleEffectOperations {
     
     return effectLines;
   }
-  
+
+  static int _graphemeBoundary(String text, int rawOffset, {required bool end}) {
+    final target = rawOffset.clamp(0, text.length);
+    var previous = 0;
+    for (final cluster in text.characters) {
+      final next = previous + cluster.length;
+      if (target == previous || target == next) return target;
+      if (target < next) return end ? next : previous;
+      previous = next;
+    }
+    return text.length;
+  }
 
 }
