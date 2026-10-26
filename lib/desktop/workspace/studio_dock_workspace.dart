@@ -3363,7 +3363,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             ),
           ],
         ),
-      )));
+      ));
       }),
     );
   }
