@@ -1565,7 +1565,10 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       const SingleActivator(LogicalKeyboardKey.escape):
           onCancel,
     },
-    child: child,
+    // AlertDialog does not always have an initially focused descendant.
+    // Own a focus target inside the shortcut scope so Enter works immediately
+    // even before the user tabs to a button. Editable fields can take focus.
+    child: Focus(autofocus: true, child: child),
   );
 
   /// Only cue-to-cue navigation follows Edit Line's auto-save preference.

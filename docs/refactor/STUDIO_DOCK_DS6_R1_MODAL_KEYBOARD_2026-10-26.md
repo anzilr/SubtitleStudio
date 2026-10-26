@@ -26,6 +26,9 @@ the subtitle model, or file persistence.
 - Go to Line and subtitle color selection support Enter/numpad Enter/Escape
   through the existing submit/apply methods; Go to Line rejects out-of-range
   input before closing.
+- Every keyboard-enabled desktop dialog owns an initial focus target, so an
+  Enter keypress can reach its action even before the user clicks a field or
+  tabs to a button. A focused editable field can still take focus normally.
 - Existing dirty-draft confirmation, standalone split/insert dialogs,
   Shift+Enter editor focus and already-wired shortcut toggles are retained.
 

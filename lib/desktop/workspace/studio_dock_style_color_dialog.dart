@@ -57,7 +57,7 @@ class _StudioDockStyleColorDialogState
       const SingleActivator(LogicalKeyboardKey.escape):
           () => Navigator.pop(context),
     },
-    child: AlertDialog(
+    child: Focus(autofocus: true, child: AlertDialog(
     title: const Text('Subtitle text color'),
     content: SizedBox(
       width: 480,
@@ -82,6 +82,6 @@ class _StudioDockStyleColorDialogState
         child: const Text('Use color'),
       ),
     ],
-    ),
+    )),
   );
 }

@@ -57,7 +57,7 @@ class _StudioDockGoToLineDialogState extends State<StudioDockGoToLineDialog> {
       const SingleActivator(LogicalKeyboardKey.escape):
           () => Navigator.of(context).pop(),
     },
-    child: AlertDialog(
+    child: Focus(autofocus: true, child: AlertDialog(
     title: const Text('Go to line'),
     content: SizedBox(
       width: 390,
@@ -119,6 +119,6 @@ class _StudioDockGoToLineDialogState extends State<StudioDockGoToLineDialog> {
         child: const Text('Go to line'),
       ),
     ],
-    ),
+    )),
   );
 }
