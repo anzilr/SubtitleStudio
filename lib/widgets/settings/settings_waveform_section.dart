@@ -107,7 +107,7 @@ extension _SettingsWaveformSection on _SettingsSheetState {
             // Zoom Multiplier
             ListTile(
               title: const Text('Zoom Multiplier'),
-              subtitle: Text('Current: ${_waveformZoomMultiplier.toStringAsFixed(2)}\nDefault: 1.35 • Lower = More zoom steps'),
+              subtitle: Text('Current: ${_waveformZoomMultiplier.toStringAsFixed(2)}\nDefault: 1.25 • Lower = More zoom steps'),
               trailing: SizedBox(
                 width: 80,
                 child: TextFormField(
@@ -160,10 +160,10 @@ extension _SettingsWaveformSection on _SettingsSheetState {
                 _setSettingsState(() {
                   _waveformMaxPixels = 500000;
                   _waveformSampleRateFactor = 16;
-                  _waveformZoomMultiplier = 1.35;
+                  _waveformZoomMultiplier = 1.25;
                   _waveformMaxPixelsController.text = '500000';
                   _waveformSampleRateFactorController.text = '16';
-                  _waveformZoomMultiplierController.text = '1.35';
+                  _waveformZoomMultiplierController.text = '1.25';
                 });
                 
                 if (widget.onSettingsChanged != null) {

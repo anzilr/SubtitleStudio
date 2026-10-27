@@ -41,6 +41,11 @@ extension _SettingsDestructiveSection on _SettingsSheetState {
                   GeminiModelsService.clearCache();
 
                   await _preferencesRepository.clearAllPreferences();
+                  // Dock panel geometry is not stored in Isar. Reset only
+                  // SubtitleStudio's own layout keys, leaving other saved
+                  // preferences and document-access metadata intact.
+                  await StudioDockLayoutPreferences().reset();
+                  ref.invalidate(themeControllerProvider);
                   await _loadSettings(); // Reload settings after clearing
                   if (widget.onSettingsChanged != null) {
                     widget.onSettingsChanged!();
@@ -120,15 +125,14 @@ extension _SettingsDestructiveSection on _SettingsSheetState {
                                     style: TextStyle(fontWeight: FontWeight.bold),
                                   ),
                                   SizedBox(height: 8),
-                                  Text('• All subtitle files and editing sessions'),
-                                  Text('• All app settings and preferences'),
-                                  Text('• Edit history and checkpoints'),
+                                  Text('• Imported subtitle data and editing sessions in the app'),
+                                  Text('• Stored app settings and Studio Dock layout'),
+                                  Text('• Edit history, branches, bookmarks, and checkpoints'),
                                   Text('• Video preferences and associations'),
-                                  Text('• Cached waveform data'),
-                                  Text('• All temporary files'),
+                                  Text('• Waveform cache and temporary waveform audio'),
                                   SizedBox(height: 12),
                                   Text(
-                                    'Dictionary data will be preserved.',
+                                    'Your original SRT files, saved exports, and dictionary data will be preserved.',
                                     style: TextStyle(
                                       fontStyle: FontStyle.italic,
                                       fontSize: 12,
@@ -204,6 +208,9 @@ extension _SettingsDestructiveSection on _SettingsSheetState {
                     await ref
                         .read(appDataMaintenanceRepositoryProvider)
                         .clearAllApplicationData();
+                    await StudioDockLayoutPreferences().reset();
+                    await SessionActivityStore().clear();
+                    ref.invalidate(themeControllerProvider);
                     
                     if (!mounted) return;
                     

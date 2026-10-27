@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:subtitle_studio/database/stores/preferences_store.dart';
+import 'package:subtitle_studio/app/repositories/app_preferences_repository.dart';
 import 'package:subtitle_studio/features/waveform/repositories/waveform_preferences_repository.dart';
 
 import 'support/test_isar_harness.dart';
@@ -29,6 +30,18 @@ void main() {
       expect(config.maxPixelsForDetailedView, 500000);
       expect(config.sampleRateFactor, 16);
       expect(config.zoomMultiplier, 1.25);
+      expect((await AppPreferencesRepository(harness.isar).loadSettings())
+          .waveformZoomMultiplier, 1.25);
+    });
+
+    test('reset waveform settings agrees with the generator defaults',
+        () async {
+      final settings = AppPreferencesRepository(harness.isar);
+      await settings.setWaveformZoomMultiplier(2.0);
+      await settings.resetWaveformSettings();
+
+      expect((await settings.loadSettings()).waveformZoomMultiplier, 1.25);
+      expect((await repository.getGenerationConfig()).zoomMultiplier, 1.25);
     });
 
     test('loads configured generation settings', () async {

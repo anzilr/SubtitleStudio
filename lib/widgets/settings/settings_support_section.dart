@@ -40,14 +40,16 @@ extension _SettingsSupportSection on _SettingsSheetState {
         
         const Divider(),
         
-        // Check for Updates
-        ListTile(
+        // The current update service only queries Google Play on Android.
+        if (ResponsiveLayout.isMobilePlatform() &&
+            Theme.of(context).platform == TargetPlatform.android)
+          ListTile(
           leading: Icon(Icons.system_update, color: Theme.of(context).colorScheme.primary),
-          title: const Text('Check for Updates'),
-          subtitle: const Text('Check for new app versions'),
+          title: const Text('Check for Google Play Updates'),
+          subtitle: const Text('Available for Google Play installs on Android'),
           trailing: const Icon(Icons.arrow_forward_ios, size: 16),
           onTap: () => _checkForUpdates(),
-        ),
+          ),
         
         // Help & Documentation
         ListTile(

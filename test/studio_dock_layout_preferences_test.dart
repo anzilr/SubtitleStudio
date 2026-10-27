@@ -47,6 +47,28 @@ void main() {
     expect(loaded.collapseEffects, false);
   });
 
+  test('reset drops dock layout without deleting unrelated saved data',
+      () async {
+    final repo = StudioDockLayoutPreferences();
+    await repo.save(const StudioDockLayoutSnapshot(
+      explorerWidth: 300,
+      videoOpen: true,
+    ));
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('session_last_opened_v1', '{"12":1234}');
+    await prefs.setString('saf_uri_content://file', 'content://file');
+
+    await repo.reset();
+
+    expect(await repo.load(), isA<StudioDockLayoutSnapshot>());
+    expect((await repo.load()).explorerWidth, 240);
+    expect((await repo.load()).videoOpen, isFalse);
+    expect(prefs.getString('session_last_opened_v1'), '{"12":1234}');
+    expect(prefs.getString('saf_uri_content://file'), 'content://file');
+    expect(prefs.getKeys().any(
+      (key) => key.startsWith(StudioDockLayoutPreferences.prefix)), isFalse);
+  });
+
   test('invalid layout values are clamped to safe window limits', () async {
     final repo = StudioDockLayoutPreferences();
     SharedPreferences.setMockInitialValues({

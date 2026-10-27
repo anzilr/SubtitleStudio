@@ -82,7 +82,7 @@ class Preferences {
   // Waveform settings
   int? waveformMaxPixels; // Maximum pixels for detailed view (default: 500000)
   int? waveformSampleRateFactor; // Sample rate downsampling factor (default: 16)
-  double? waveformZoomMultiplier; // Zoom level multiplier (default: 1.35)
+  double? waveformZoomMultiplier; // Zoom level multiplier (default: 1.25)
 
   // Session sorting
   @enumerated

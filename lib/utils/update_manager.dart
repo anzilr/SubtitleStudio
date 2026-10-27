@@ -91,7 +91,7 @@ class UpdateManager {
   /// - Error occurred during check
   /// - App is not installed from Play Store
   /// - Not running on Android platform
-  Future<AppUpdateInfo?> checkForUpdate() async {
+  Future<AppUpdateInfo?> checkForUpdate({bool rethrowOnError = false}) async {
     // Only available on Android
     if (!Platform.isAndroid) {
       await AppLogger.instance.info(
@@ -141,6 +141,9 @@ class UpdateManager {
         'Error checking for updates: $e',
         context: 'UpdateManager.checkForUpdate',
       );
+      // Background startup checks remain best-effort, but an explicit
+      // Settings request must not report a failed Play query as up to date.
+      if (rethrowOnError) rethrow;
       return null;
     }
   }

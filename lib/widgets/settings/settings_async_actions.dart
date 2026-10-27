@@ -121,7 +121,9 @@ extension _SettingsAsyncActions on _SettingsSheetState {
       );
   
       // Get diagnostic information for debugging
-      final updateInfo = await UpdateManager.instance.checkForUpdate();
+      final updateInfo = await UpdateManager.instance.checkForUpdate(
+        rethrowOnError: true,
+      );
   
       // Remove loading dialog
       if (mounted) {

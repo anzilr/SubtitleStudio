@@ -33,6 +33,15 @@ class StudioDockLayoutPreferences {
   static const String prefix = 'subtitle_studio.desktop.studio_dock.v1.';
   static const int _verticalPresetVersion = 3;
 
+  /// Reset only Studio Dock layout keys. Other shared preferences can contain
+  /// document grants, quality profiles, or unrelated application state.
+  Future<void> reset() async {
+    final preferences = await SharedPreferences.getInstance();
+    for (final key in preferences.getKeys().where((key) => key.startsWith(prefix))) {
+      await preferences.remove(key);
+    }
+  }
+
   Future<StudioDockLayoutSnapshot> load() async {
     final p = await SharedPreferences.getInstance();
     double read(String key, double fallback, double min, double max) {

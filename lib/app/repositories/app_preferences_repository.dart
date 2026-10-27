@@ -84,7 +84,7 @@ class AppPreferencesRepository {
       waveformMaxPixels: preferences.waveformMaxPixels ?? 500000,
       waveformSampleRateFactor:
           preferences.waveformSampleRateFactor ?? 16,
-      // Preserve PreferencesModel's existing fallback behavior.
+      // Keep the live generator, UI, and reset action on the same default.
       waveformZoomMultiplier: preferences.waveformZoomMultiplier ?? 1.25,
     );
   }
@@ -153,7 +153,7 @@ class AppPreferencesRepository {
     await _updatePreferences((preferences) {
       preferences.waveformMaxPixels = 500000;
       preferences.waveformSampleRateFactor = 16;
-      preferences.waveformZoomMultiplier = 1.35;
+      preferences.waveformZoomMultiplier = 1.25;
     });
   }
 

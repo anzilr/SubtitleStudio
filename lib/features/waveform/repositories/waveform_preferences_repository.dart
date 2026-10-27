@@ -79,7 +79,7 @@ class WaveformPreferencesRepository {
     return WaveformGenerationConfig(
       maxPixelsForDetailedView: preferences.waveformMaxPixels ?? 500000,
       sampleRateFactor: preferences.waveformSampleRateFactor ?? 16,
-      // Preserve the legacy PreferencesModel fallback.
+      // Matches the Settings default and reset value.
       zoomMultiplier: preferences.waveformZoomMultiplier ?? 1.25,
     );
   }

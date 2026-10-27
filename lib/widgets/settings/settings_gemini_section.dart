@@ -44,7 +44,9 @@ extension _SettingsGeminiSection on _SettingsSheetState {
         ListTile(
           leading: Icon(Icons.auto_awesome, color: Theme.of(context).colorScheme.primary),
           title: const Text('Gemini AI Settings'),
-          subtitle: const Text('Configure AI explanation features (accessible in dictionary menu)'),
+          subtitle: Text(ResponsiveLayout.isDesktopPlatform()
+              ? 'AI explanations are currently available in the mobile editor. Desktop integration is planned.'
+              : 'Configure AI explanations in the dictionary menu'),
         ),
         
         // Gemini API Key Input

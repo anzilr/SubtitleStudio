@@ -8,6 +8,8 @@ import 'package:subtitle_studio/utils/update_manager.dart'; // Add this import
 import 'package:subtitle_studio/screens/screen_help.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/utils/responsive_layout.dart';
+import 'package:subtitle_studio/desktop/workspace/studio_dock_layout_preferences.dart';
+import 'package:subtitle_studio/screens/home/services/session_activity_store.dart';
 import 'feedback_widget.dart';
 import 'log_management_widget.dart';
 import 'package:file_picker/file_picker.dart';
@@ -43,7 +45,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
   }
 
   bool _isMsoneEnabled = false;
-  bool _isSaveToFileEnabled = false; // New variable for save to file toggle
+  bool _isSaveToFileEnabled = false;
   int _maxLineLength = 32; // Variable for max line length setting
   int _skipDurationSeconds = 10; // Variable for skip duration setting
   String _editLineLayout = 'layout1'; // Variable for edit line layout preference
@@ -67,7 +69,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
   // Waveform settings
   int _waveformMaxPixels = 500000;
   int _waveformSampleRateFactor = 16;
-  double _waveformZoomMultiplier = 1.35;
+  double _waveformZoomMultiplier = 1.25;
   late TextEditingController _waveformMaxPixelsController;
   late TextEditingController _waveformSampleRateFactorController;
   late TextEditingController _waveformZoomMultiplierController;
@@ -171,43 +173,36 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                     children: [
                       // Keep Appearance folded by default. Opening it
                       // exposes the full live skin/mode picker as before.
-                      const ExpansionTile(
+                      ExpansionTile(
                         key: ValueKey('settings-appearance-expansion'),
                         initiallyExpanded: false,
-                        leading: Icon(Icons.palette_outlined),
-                        title: Text('Appearance'),
-                        childrenPadding: EdgeInsets.symmetric(
+                        leading: const Icon(Icons.palette_outlined),
+                        title: const Text('Appearance'),
+                        childrenPadding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 8,
                         ),
-                        children: [StudioAppearanceSettings(showTitle: false)],
+                        children: [
+                          const StudioAppearanceSettings(showTitle: false),
+                          _buildFontSection(),
+                        ],
                       ),
                       const Divider(),
                       const SizedBox(height: 8),
 
-                      // MSone Features Setting
-                      ListTile(
-                        leading: Icon(Icons.auto_awesome, color: Theme.of(context).colorScheme.primary),
-                        title: const Text('Enable MSone Features'),
-                        subtitle: const Text('Enable advanced translation and editing features'),
-                        trailing: Switch(
-                          value: _isMsoneEnabled,
-                          onChanged: (bool value) async {
-                            await _preferencesRepository.setMsoneEnabled(value);
-                            setState(() {
-                              _isMsoneEnabled = value;
-                            });
-                            if (widget.onSettingsChanged != null) {
-                              widget.onSettingsChanged!();
-                            }
-                          },
-                        ),
-                      ),
-                      
-                      // New Toggle for Save to File
-                      ListTile(
+                      ExpansionTile(
+                        key: const ValueKey('settings-editing-expansion'),
+                        initiallyExpanded: true,
+                        leading: const Icon(Icons.edit_note),
+                        title: const Text('Editing & Playback'),
+                        children: [
+                      // Source-file auto-write is a mobile Edit Line save
+                      // preference. Studio Dock has an explicit File > Save;
+                      // silently applying this flag to desktop edits would
+                      // change its recovery-safe Isar-first workflow.
+                      if (ResponsiveLayout.isMobilePlatform()) ListTile(
                         leading: Icon(Icons.save, color: Theme.of(context).colorScheme.primary),
-                        title: const Text('Auto-Save to File'),
-                        subtitle: const Text('When saving changes, also write to the file directly'),
+                        title: const Text('Write SRT When Saving a Line'),
+                        subtitle: const Text('Save the edit in Isar and also update the source SRT file. When off, the edit remains safely in the project until you export or save it.'),
                         trailing: Switch(
                   value: _isSaveToFileEnabled,
                   onChanged: (bool value) async {
@@ -221,6 +216,12 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                   },
                 ),
               ),
+              if (ResponsiveLayout.isDesktopPlatform())
+                const ListTile(
+                  leading: Icon(Icons.save_outlined),
+                  title: Text('Saving Subtitle Files'),
+                  subtitle: Text('Edits are kept in Isar. Use File > Save or Save As in Studio Dock to write the SRT file.'),
+                ),
               
               // Max Line Length Setting
               ListTile(
@@ -296,11 +297,10 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                 ),
               ),
               
-              // Custom Font Setting
-              _buildFontSection(),
-
-              // Switch Layout Setting (Desktop Only)
-              if (ResponsiveLayout.shouldUseDesktopLayout(context))
+              // This legacy two-pane layout is still used on large mobile
+              // tablets, but Studio Dock replaces it on desktop platforms.
+              if (ResponsiveLayout.isMobilePlatform() &&
+                  ResponsiveLayout.shouldUseDesktopLayout(context))
                 ListTile(
                   leading: Icon(Icons.view_week, color: Theme.of(context).colorScheme.primary),
                   title: const Text('Switch Layout'),
@@ -319,16 +319,26 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                     },
                   ),
                 ),
+
+                        ],
+                      ),
               
               const Divider(),
+
+              ExpansionTile(
+                key: const ValueKey('settings-history-expansion'),
+                leading: const Icon(Icons.history),
+                title: const Text('History & Storage'),
+                subtitle: const Text('Checkpoints, snapshots, and retention'),
+                children: [
               
               // Max History Entries Setting
               ListTile(
                 leading: Icon(Icons.storage, color: Theme.of(context).colorScheme.primary),
                 title: const Text('Maximum Edit History'),
-                subtitle: Text(_maxCheckpoints == 0 
-                    ? 'No Limit (Warning: May increase database size)'
-                    : 'Limit: $_maxCheckpoints entries per session'),
+                subtitle: Text(_maxCheckpoints == 0
+                    ? 'No limit (may increase database size)'
+                    : 'Target: $_maxCheckpoints checkpoints per session; protected branches and bookmarks are retained'),
                 trailing: DropdownButton<int>(
                   value: _maxCheckpoints,
                   items: const [
@@ -358,7 +368,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
               ListTile(
                 leading: Icon(Icons.save, color: Theme.of(context).colorScheme.primary),
                 title: const Text('Full Backup Interval'),
-                subtitle: Text('Create full backup every $_snapshotInterval changes\nLower = Faster undo, Higher = More space efficient'),
+                subtitle: Text('Create a full history snapshot every $_snapshotInterval changes\nLower = faster restore, higher = less storage'),
                 trailing: SizedBox(
                   width: 80,
                   child: TextFormField(
@@ -393,11 +403,11 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
               ListTile(
                 leading: Icon(Icons.account_tree, color: Theme.of(context).colorScheme.primary),
                 title: const Text('Edit History Strategy'),
-                subtitle: Text(_checkpointStrategy == 'hybrid' 
-                    ? 'Smart Backup: Balanced accuracy and efficiency'
+                subtitle: Text(_checkpointStrategy == 'hybrid'
+                    ? 'Hybrid: periodic snapshots plus recorded changes'
                     : _checkpointStrategy == 'snapshot'
-                        ? 'Full Backup Only: Maximum accuracy, larger size'
-                        : 'Changes Only: Maximum efficiency, potential issues'),
+                        ? 'Full snapshots: faster restore, more storage'
+                        : 'Recorded changes: less storage, slower restore'),
                 trailing: DropdownButton<String>(
                   value: _checkpointStrategy,
                   items: const [
@@ -447,15 +457,15 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                                       children: [
                                         if (value == 'snapshot') ...[
                                           const Text('Full Backup Only:\n', style: TextStyle(fontWeight: FontWeight.bold)),
-                                          const Text('✓ Maximum accuracy - every save stores complete state'),
+                                          const Text('✓ Every save stores a full snapshot'),
                                           const Text('✓ Fastest restoration'),
-                                          const Text('✗ Large database size (10x more storage)'),
+                                          const Text('✗ Larger database size'),
                                           const Text('✗ Slower save creation'),
                                         ] else if (value == 'delta') ...[
                                           const Text('Changes Only:\n', style: TextStyle(fontWeight: FontWeight.bold)),
                                           const Text('✓ Minimum database size'),
                                           const Text('✓ Fast save creation'),
-                                          const Text('✗ Potential restoration errors if chain breaks'),
+                                          const Text('✗ Restoration requires replaying the change history'),
                                           const Text('✗ Slower restoration (must apply all changes)'),
                                         ] else ...[
                                           const Text('Smart Backup (Recommended):\n', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -516,13 +526,44 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                   },
                 ),
               ),
+                ],
+              ),
               
               const Divider(),
-              
-              _buildGeminiSettingsSection(),
+
+              ExpansionTile(
+                key: const ValueKey('settings-integrations-expansion'),
+                leading: const Icon(Icons.extension_outlined),
+                title: const Text('Integrations'),
+                subtitle: const Text('MSone and optional AI explanation'),
+                children: [
+                  ListTile(
+                    leading: Icon(Icons.auto_awesome, color: Theme.of(context).colorScheme.primary),
+                    title: const Text('Enable MSone Features'),
+                    subtitle: const Text('Translation tools, submission, and MSone integrations'),
+                    trailing: Switch(
+                      value: _isMsoneEnabled,
+                      onChanged: (value) async {
+                        await _preferencesRepository.setMsoneEnabled(value);
+                        if (!mounted) return;
+                        setState(() => _isMsoneEnabled = value);
+                        widget.onSettingsChanged?.call();
+                      },
+                    ),
+                  ),
+                  _buildGeminiSettingsSection(),
+                ],
+              ),
               _buildWaveformSettingsSection(),
-              _buildSupportSection(),
-              _buildDestructiveSettingsSection(),
+              ExpansionTile(
+                key: const ValueKey('settings-support-expansion'),
+                leading: const Icon(Icons.support_agent),
+                title: const Text('Support & Maintenance'),
+                children: [
+                  _buildSupportSection(),
+                  _buildDestructiveSettingsSection(),
+                ],
+              ),
                     ],
                   ),
                 ),

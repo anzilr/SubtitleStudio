@@ -9,11 +9,7 @@ import 'studio_skin_preview.dart';
 import 'studio_theme_factory.dart';
 import 'theme_controller.dart';
 
-/// SKIN-3 appearance picker.
-///
-/// Mode switching already updates the current legacy app theme. Skin changes
-/// are saved independently but are preview-only until SKIN-4 replaces the
-/// white-on-primary Edit Line fields and activates StudioThemeFactory globally.
+/// Live skin and appearance picker for the shared mobile and desktop theme.
 class StudioAppearanceSettings extends ConsumerWidget {
   const StudioAppearanceSettings({super.key, this.showTitle = true});
 
