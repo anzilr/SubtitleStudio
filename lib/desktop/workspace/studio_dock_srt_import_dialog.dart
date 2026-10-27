@@ -62,6 +62,10 @@ class _StudioDockSrtImportDialogState extends State<StudioDockSrtImportDialog> {
         selectedEncoding: _encoding == 'Auto' ? null : _encoding,
       );
       if (!mounted) return;
+      // Decoding has finished. Stop the progress animation before displaying
+      // the preview dialog; otherwise the obscured spinner keeps scheduling
+      // frames until the preview closes (and widget tests cannot settle).
+      setState(() => _previewBusy = false);
       await showDialog<void>(
         context: context,
         builder: (dialogContext) => AlertDialog(
