@@ -34,7 +34,7 @@ void main() {
   }
 
   Future<void> openUnload(WidgetTester tester) async {
-    await tester.tap(find.byKey(const ValueKey('studio-view-menu')));
+    await tester.tap(find.byKey(const ValueKey('studio-media-menu')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Unload video…'));
     await tester.pumpAndSettle();
@@ -43,12 +43,12 @@ void main() {
   testWidgets('Unload is exposed only when live video and host are present',
       (tester) async {
     await launch(tester, onUnload: () async => true, videoAttached: false);
-    await tester.tap(find.byKey(const ValueKey('studio-view-menu')));
+    await tester.tap(find.byKey(const ValueKey('studio-media-menu')));
     await tester.pumpAndSettle();
     expect(find.text('Unload video…'), findsNothing);
     await tester.pumpWidget(const SizedBox.shrink());
     await launch(tester);
-    await tester.tap(find.byKey(const ValueKey('studio-view-menu')));
+    await tester.tap(find.byKey(const ValueKey('studio-media-menu')));
     await tester.pumpAndSettle();
     expect(find.text('Unload video…'), findsNothing);
     expect(tester.takeException(), isNull);

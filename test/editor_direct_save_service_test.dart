@@ -148,6 +148,35 @@ void main() {
     expect(ops.writes, ['native']);
   });
 
+  test('SRT compiler never overwrites a linked VTT, ASS or SSA source',
+      () async {
+    for (final extension in ['vtt', 'ass', 'ssa']) {
+      final path = '/existing/original.$extension';
+      final ops = _FakeFileOperations()
+        ..files[path] = Uint8List.fromList([1, 2, 3]);
+      final collection = _collection(filePath: path);
+      // Even if an imported archive advertises an SRT display name, its
+      // non-SRT native locator must not become the target of SRT Save.
+      final result = await _service(ops, isMacOS: false)
+          .save(collection, [_line()]);
+      expect(result.saved, isFalse);
+      expect(ops.writes, isEmpty);
+      expect(ops.files[path], [1, 2, 3]);
+    }
+  });
+
+  test('non-SRT project filename cannot write an SRT-looking file', () async {
+    final ops = _FakeFileOperations()
+      ..files[nativePath] = Uint8List.fromList([4, 5]);
+    final collection = _collection(filePath: nativePath)
+      ..fileName = 'imported.ass';
+    final result = await _service(ops, isMacOS: false)
+        .save(collection, [_line()]);
+    expect(result.saved, isFalse);
+    expect(ops.writes, isEmpty);
+    expect(ops.files[nativePath], [4, 5]);
+  });
+
   test('encoding failure happens before any bookmark or write operation',
       () async {
     final bookmarks = _FakeBookmarks()..resolved = nativePath;

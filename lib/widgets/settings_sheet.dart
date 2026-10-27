@@ -406,7 +406,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                 subtitle: Text(_checkpointStrategy == 'hybrid'
                     ? 'Smart Backup: periodic snapshots plus recorded changes'
                     : _checkpointStrategy == 'snapshot'
-                        ? 'Full snapshots: faster restore, more storage'
+                        ? 'Full Backup: faster restore, more storage'
                         : 'Recorded changes: less storage, slower restore'),
                 trailing: DropdownButton<String>(
                   value: _checkpointStrategy,

@@ -20,7 +20,7 @@ void main() {
   }));
 
   Future<void> openView(WidgetTester tester) async {
-    await tester.tap(find.byKey(const ValueKey('studio-view-menu')));
+    await tester.tap(find.byKey(const ValueKey('studio-media-menu')));
     await tester.pumpAndSettle();
   }
 

@@ -32,7 +32,7 @@ void main() {
   }
 
   Future<void> tools(WidgetTester tester) async {
-    await tester.tap(find.byKey(const ValueKey('studio-tools-menu')));
+    await tester.tap(find.byKey(const ValueKey('studio-media-menu')));
     await tester.pumpAndSettle();
   }
 
@@ -53,6 +53,25 @@ void main() {
     await tester.pumpAndSettle();
     expect(launches, 1);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('top toolbar loads secondary subtitles directly', (tester) async {
+    var launches = 0;
+    await launch(tester, load: () async { launches++; });
+    final button = find.byKey(
+        const ValueKey('studio-dock-toolbar-secondary'));
+    expect(button, findsOneWidget);
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+    expect(launches, 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('secondary toolbar action is absent without a load callback',
+      (tester) async {
+    await launch(tester);
+    expect(find.byKey(const ValueKey('studio-dock-toolbar-secondary')),
+        findsNothing);
   });
 
   testWidgets('visibility control keeps the saved track available',

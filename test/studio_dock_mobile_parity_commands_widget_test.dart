@@ -43,7 +43,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('Fullscreen action is available through View menu and shared F11 binding',
+  testWidgets('Fullscreen action is available through Media menu and shared F11 binding',
       (tester) async {
     var toggles = 0;
     await launch(tester, fullscreen: () => toggles++);
@@ -51,7 +51,7 @@ void main() {
     expect(manager.dispatchForTesting(HotkeyAction.toggleFullscreen), isTrue);
     await tester.pumpAndSettle();
     expect(toggles, 1);
-    await tester.tap(find.byKey(const ValueKey('studio-view-menu')));
+    await tester.tap(find.byKey(const ValueKey('studio-media-menu')));
     await tester.pumpAndSettle();
     expect(find.text('Toggle video fullscreen'), findsOneWidget);
     await tester.tap(find.text('Toggle video fullscreen'));
@@ -60,11 +60,11 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('No attached video disables View fullscreen command',
+  testWidgets('No attached video disables Media fullscreen command',
       (tester) async {
     var toggles = 0;
     await launch(tester, fullscreen: () => toggles++, withVideo: false);
-    await tester.tap(find.byKey(const ValueKey('studio-view-menu')));
+    await tester.tap(find.byKey(const ValueKey('studio-media-menu')));
     await tester.pumpAndSettle();
     // The generic PopupMenuItem type is private to Studio Dock; locating it
     // by the public Text child works reliably in Flutter widget tests.

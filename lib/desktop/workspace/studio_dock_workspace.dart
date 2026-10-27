@@ -69,7 +69,7 @@ enum _StudioDockMenuAction {
   msoneDictionary, olamDictionary, urbanDictionary,
   explorer, inspector, toggleVideoPanel, toggleWaveformPanel,
   toggleFullscreen, floatingPlayback, unloadVideo,
-  repeatCurrent, repeatRange, settings, help,
+  repeatCurrent, repeatRange, attachVideo,
   showOriginalLine, autoSaveWithNavigation, showOriginalTextField,
   formattedView,
 }
@@ -159,7 +159,8 @@ class StudioDockProjectEntry {
 }
 
 enum _StudioDockFileMenuAction {
-  save, saveAs, export, saveProject, saveProjectAs, projectSettings,
+  newProject, importFile, save, saveAs, export,
+  saveProject, saveProjectAs, projectSettings, appSettings,
 }
 
 /// Desktop workspace UI. Persisted changes are handled by injected callbacks
@@ -479,9 +480,11 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   ModalRoute<dynamic>? _hearingMenuRoute;
   ModalRoute<dynamic>? _msoneMenuRoute;
   ModalRoute<dynamic>? _secondaryMenuRoute;
+  ModalRoute<dynamic>? _attachVideoMenuRoute;
   ModalRoute<dynamic>? _dictionaryMenuRoute;
   ModalRoute<dynamic>? _unloadVideoMenuRoute;
   ModalRoute<dynamic>? _projectSettingsMenuRoute;
+  ModalRoute<dynamic>? _fileNavigationMenuRoute;
   ModalRoute<dynamic>? _commentsMenuRoute;
   ModalRoute<dynamic>? _markedLinesMenuRoute;
   ModalRoute<dynamic>? _qualityMenuRoute;
@@ -2001,13 +2004,17 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         widget.onSelectProject?.call(id);
     }
   }
-  Future<void> _importFileSafely() async {
+  Future<void> _importFileSafely({ModalRoute<dynamic>? afterMenu}) async {
+    if (afterMenu != null) await afterMenu.completed;
+    if (!mounted) return;
     if (await _confirmDraftBeforeLeaving() && mounted) {
       widget.onImportFile?.call();
     }
   }
 
-  Future<void> _chooseVideoSafely() async {
+  Future<void> _chooseVideoSafely({ModalRoute<dynamic>? afterMenu}) async {
+    if (afterMenu != null) await afterMenu.completed;
+    if (!mounted) return;
     if (await _confirmDraftBeforeLeaving() && mounted) {
       widget.onChooseVideo?.call();
     }
@@ -2054,7 +2061,9 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     ));
   }
 
-  Future<void> _newProjectSafely() async {
+  Future<void> _newProjectSafely({ModalRoute<dynamic>? afterMenu}) async {
+    if (afterMenu != null) await afterMenu.completed;
+    if (!mounted) return;
     if (await _confirmDraftBeforeLeaving() && mounted) {
       widget.onNewProject?.call();
     }
@@ -3021,7 +3030,9 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       scrollDirection: Axis.horizontal,
       child: Row(children: [
         if (widget.onSaveFile != null || widget.onSaveProject != null ||
-            widget.onOpenProjectSettings != null)
+            widget.onOpenProjectSettings != null ||
+            widget.onNewProject != null || widget.onImportFile != null ||
+            widget.onOpenAppSettings != null)
           PopupMenuButton<_StudioDockFileMenuAction>(
             key: const ValueKey('studio-file-menu'),
             tooltip: 'File actions',
@@ -3029,6 +3040,14 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                 !_openingProjectSettings,
             onSelected: (action) {
               switch (action) {
+                case _StudioDockFileMenuAction.newProject:
+                  final menuRoute = _fileNavigationMenuRoute;
+                  _fileNavigationMenuRoute = null;
+                  unawaited(_newProjectSafely(afterMenu: menuRoute));
+                case _StudioDockFileMenuAction.importFile:
+                  final menuRoute = _fileNavigationMenuRoute;
+                  _fileNavigationMenuRoute = null;
+                  unawaited(_importFileSafely(afterMenu: menuRoute));
                 case _StudioDockFileMenuAction.save:
                   unawaited(_saveFileSafely());
                 case _StudioDockFileMenuAction.saveAs:
@@ -3043,9 +3062,29 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                   final menuRoute = _projectSettingsMenuRoute;
                   _projectSettingsMenuRoute = null;
                   unawaited(_openProjectSettingsSafely(afterMenu: menuRoute));
+                case _StudioDockFileMenuAction.appSettings:
+                  unawaited(_switchSection(4));
               }
             },
             itemBuilder: (_) => [
+              if (widget.onNewProject != null)
+                PopupMenuItem(height: 34,
+                  value: _StudioDockFileMenuAction.newProject,
+                  child: Builder(builder: (popupContext) {
+                    _fileNavigationMenuRoute = ModalRoute.of(popupContext);
+                    return const Text('New project');
+                  })),
+              if (widget.onImportFile != null)
+                PopupMenuItem(height: 34,
+                  value: _StudioDockFileMenuAction.importFile,
+                  child: Builder(builder: (popupContext) {
+                    _fileNavigationMenuRoute = ModalRoute.of(popupContext);
+                    return const Text('Open SRT / Import project');
+                  })),
+              if ((widget.onNewProject != null || widget.onImportFile != null) &&
+                  (widget.onSaveFile != null || widget.onSaveProject != null ||
+                   widget.onOpenProjectSettings != null))
+                const PopupMenuDivider(),
               if (widget.onSaveFile != null) ...const [
                 PopupMenuItem(height: 34, value: _StudioDockFileMenuAction.save,
                   child: Text('Save subtitle file')),
@@ -3074,6 +3113,17 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                     ]);
                   }),
                 ),
+              ],
+              if (widget.onOpenAppSettings != null) ...[
+                if (widget.onNewProject != null ||
+                    widget.onImportFile != null ||
+                    widget.onSaveFile != null ||
+                    widget.onSaveProject != null ||
+                    widget.onOpenProjectSettings != null)
+                  const PopupMenuDivider(),
+                const PopupMenuItem(height: 34,
+                  value: _StudioDockFileMenuAction.appSettings,
+                  child: Text('Application Settings')),
               ],
             ],
             child: const Padding(
@@ -3114,6 +3164,18 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             PopupMenuItem(height: 34, value: _StudioDockMenuAction.pasteOriginal,
                 enabled: _cues.isNotEmpty && !_savingDraft,
                 child: const Text('Paste original text (Alt+V)')),
+          if (widget.onApplyCueText != null) ...[
+            const PopupMenuDivider(),
+            PopupMenuItem(height: 34, value: _StudioDockMenuAction.boldFormat,
+                enabled: _cues.isNotEmpty && !_savingDraft,
+                child: const Text('Bold (Ctrl+B)')),
+            PopupMenuItem(height: 34, value: _StudioDockMenuAction.italicFormat,
+                enabled: _cues.isNotEmpty && !_savingDraft,
+                child: const Text('Italic (Ctrl+I)')),
+            PopupMenuItem(height: 34, value: _StudioDockMenuAction.colorPicker,
+                enabled: _cues.isNotEmpty && !_savingDraft,
+                child: const Text('Text color (Alt+C)…')),
+          ],
         ]),
         _desktopMenu('Subtitle', const ValueKey('studio-subtitle-menu'), [
           if (widget.onInsertCue != null)
@@ -3132,20 +3194,16 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           if (widget.onMergeCue != null)
             const PopupMenuItem(height: 34, value: _StudioDockMenuAction.mergeCue,
                 child: Text('Combine subtitles')),
-          const PopupMenuItem(height: 34, value: _StudioDockMenuAction.notes,
-              child: Text('Review notes')),
-          if (widget.onApplyCueText != null) ...[
-            const PopupMenuDivider(),
-            PopupMenuItem(height: 34, value: _StudioDockMenuAction.boldFormat,
-                enabled: _cues.isNotEmpty && !_savingDraft,
-                child: const Text('Bold (Ctrl+B)')),
-            PopupMenuItem(height: 34, value: _StudioDockMenuAction.italicFormat,
-                enabled: _cues.isNotEmpty && !_savingDraft,
-                child: const Text('Italic (Ctrl+I)')),
-            PopupMenuItem(height: 34, value: _StudioDockMenuAction.colorPicker,
-                enabled: _cues.isNotEmpty && !_savingDraft,
-                child: const Text('Text color (Alt+C)…')),
-          ],
+          const PopupMenuDivider(),
+          const PopupMenuItem(height: 34, value: _StudioDockMenuAction.showTools,
+              child: Text('Subtitle tools')),
+          if (widget.onRemoveHearingImpaired != null)
+            PopupMenuItem(height: 34, value: _StudioDockMenuAction.removeHearingImpaired,
+              enabled: !_openingHearingCleanup && _cues.isNotEmpty,
+              child: Builder(builder: (popupContext) {
+                _hearingMenuRoute = ModalRoute.of(popupContext);
+                return const Text('Remove Hearing Impaired…');
+              })),
         ]),
         _desktopMenu('Timing', const ValueKey('studio-timing-menu'), [
           const PopupMenuItem(height: 34, value: _StudioDockMenuAction.timing,
@@ -3161,15 +3219,30 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                 enabled: _selectedIds.isNotEmpty && !_runningSelectedBatch,
                 child: Text('Shift selected subtitles (${_selectedIds.length})')),
         ]),
-        _desktopMenu('Tools', const ValueKey('studio-tools-menu'), [
-          const PopupMenuItem(height: 34, value: _StudioDockMenuAction.find,
-              child: Text('Find & Replace')),
+        _desktopMenu('Review', const ValueKey('studio-review-menu'), [
+          const PopupMenuItem(height: 34, value: _StudioDockMenuAction.notes,
+              child: Text('Review notes')),
           PopupMenuItem(height: 34, value: _StudioDockMenuAction.qualityCheck,
               enabled: _cues.isNotEmpty,
               child: Builder(builder: (popupContext) {
                 _qualityMenuRoute = ModalRoute.of(popupContext);
                 return const Text('Check subtitle quality…');
               })),
+          PopupMenuItem(height: 34, value: _StudioDockMenuAction.showMarkedLines,
+            enabled: _cues.isNotEmpty,
+            child: Builder(builder: (popupContext) {
+              _markedLinesMenuRoute = ModalRoute.of(popupContext);
+              return const Text('Show marked lines');
+            })),
+          if (widget.onImportComments != null)
+            PopupMenuItem(height: 34, value: _StudioDockMenuAction.importComments,
+              enabled: !_openingCommentImport && _cues.isNotEmpty,
+              child: Builder(builder: (popupContext) {
+                _commentsMenuRoute = ModalRoute.of(popupContext);
+                return const Text('Import Comments (.msone)…');
+              })),
+        ]),
+        _desktopMenu('Tools', const ValueKey('studio-tools-menu'), [
           if (widget.onApplyCueText != null) ...[
             PopupMenuItem(height: 34, value: _StudioDockMenuAction.msoneDictionary,
               enabled: _cues.isNotEmpty && !_savingDraft,
@@ -3200,45 +3273,6 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                 ]);
               })),
           ],
-          const PopupMenuItem(height: 34, value: _StudioDockMenuAction.showTools,
-              child: Text('Subtitle tools')),
-          PopupMenuItem(height: 34, value: _StudioDockMenuAction.showMarkedLines,
-            enabled: _cues.isNotEmpty,
-            child: Builder(builder: (popupContext) {
-              _markedLinesMenuRoute = ModalRoute.of(popupContext);
-              return const Text('Show marked lines');
-            })),
-          if (widget.onRemoveHearingImpaired != null)
-            PopupMenuItem(height: 34, value: _StudioDockMenuAction.removeHearingImpaired,
-              enabled: !_openingHearingCleanup && _cues.isNotEmpty,
-              child: Builder(builder: (popupContext) {
-                _hearingMenuRoute = ModalRoute.of(popupContext);
-                return const Text('Remove Hearing Impaired…');
-              })),
-          if (widget.onImportComments != null)
-            PopupMenuItem(height: 34, value: _StudioDockMenuAction.importComments,
-              enabled: !_openingCommentImport && _cues.isNotEmpty,
-              child: Builder(builder: (popupContext) {
-                _commentsMenuRoute = ModalRoute.of(popupContext);
-                return const Text('Import Comments (.msone)…');
-              })),
-          if (widget.onLoadSecondarySubtitles != null)
-            PopupMenuItem(height: 34, value: _StudioDockMenuAction.loadSecondary,
-              child: Builder(builder: (popupContext) {
-                _secondaryMenuRoute = ModalRoute.of(popupContext);
-                return const Text('Load secondary subtitles');
-              })),
-          if (widget.onToggleSecondarySubtitles != null)
-            PopupMenuItem(height: 34, value: _StudioDockMenuAction.toggleSecondary,
-              child: Text(widget.showSecondarySubtitles
-                  ? 'Hide secondary subtitles'
-                  : 'Show secondary subtitles')),
-          if (widget.onLoadSourceView != null)
-            const PopupMenuItem(height: 34, value: _StudioDockMenuAction.sourceView,
-                child: Text('Source View')),
-          if (widget.onLoadHistory != null)
-            const PopupMenuItem(height: 34, value: _StudioDockMenuAction.history,
-                child: Text('Edit history')),
           if (widget.onInsertMsoneBanners != null)
             PopupMenuItem(height: 34, value: _StudioDockMenuAction.insertMsoneBanners,
               enabled: !_openingMsoneTools && _cues.isNotEmpty,
@@ -3312,6 +3346,36 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             checked: _formattedView,
             child: const Text('Formatted View'),
           ),
+          if (widget.onLoadSourceView != null)
+            const PopupMenuItem(height: 34, value: _StudioDockMenuAction.sourceView,
+                child: Text('Source View')),
+          if (widget.onLoadHistory != null)
+            const PopupMenuItem(height: 34, value: _StudioDockMenuAction.history,
+                child: Text('Edit history')),
+        ]),
+        _desktopMenu('Media', const ValueKey('studio-media-menu'), [
+          if (widget.onChooseVideo != null)
+            PopupMenuItem(height: 34,
+              value: _StudioDockMenuAction.attachVideo,
+              child: Builder(builder: (popupContext) {
+                _attachVideoMenuRoute = ModalRoute.of(popupContext);
+                return const Text('Attach or change video…');
+              })),
+          if (widget.onLoadSecondarySubtitles != null)
+            PopupMenuItem(height: 34, value: _StudioDockMenuAction.loadSecondary,
+              child: Builder(builder: (popupContext) {
+                _secondaryMenuRoute = ModalRoute.of(popupContext);
+                return const Text('Load secondary subtitles');
+              })),
+          if (widget.onToggleSecondarySubtitles != null)
+            PopupMenuItem(height: 34, value: _StudioDockMenuAction.toggleSecondary,
+              child: Text(widget.showSecondarySubtitles
+                  ? 'Hide secondary subtitles'
+                  : 'Show secondary subtitles')),
+          if (widget.onChooseVideo != null ||
+              widget.onLoadSecondarySubtitles != null ||
+              widget.onToggleSecondarySubtitles != null)
+            const PopupMenuDivider(),
           if (widget.onToggleFullscreen != null)
             PopupMenuItem(height: 34, value: _StudioDockMenuAction.toggleFullscreen,
                 enabled: widget.videoSurface != null,
@@ -3341,9 +3405,6 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                   ? 'Hide floating playback button'
                   : 'Show floating playback button'),
             ),
-          if (widget.onOpenAppSettings != null)
-            const PopupMenuItem(height: 34, value: _StudioDockMenuAction.settings,
-                child: Text('Settings')),
         ]),
         if (widget.onOpenHelp != null)
           TextButton(
@@ -3470,6 +3531,10 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         unawaited(_loadSecondarySafely(afterMenu: menuRoute));
       case _StudioDockMenuAction.toggleSecondary:
         widget.onToggleSecondarySubtitles?.call();
+      case _StudioDockMenuAction.attachVideo:
+        final menuRoute = _attachVideoMenuRoute;
+        _attachVideoMenuRoute = null;
+        unawaited(_chooseVideoSafely(afterMenu: menuRoute));
       case _StudioDockMenuAction.explorer:
         _toggleExplorerPanel();
       case _StudioDockMenuAction.inspector:
@@ -3510,11 +3575,6 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         if (widget.videoSurface != null && _cues.isNotEmpty) {
           widget.onOpenRepeatRange?.call();
         }
-      case _StudioDockMenuAction.settings:
-        unawaited(_switchSection(4));
-      case _StudioDockMenuAction.help:
-        final open = widget.onOpenHelp;
-        if (open != null) unawaited(open());
     }
   }
 
@@ -3928,7 +3988,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           IconButton(
             key: const ValueKey('studio-dock-toolbar-import'),
             icon: const Icon(Icons.file_open_outlined),
-            tooltip: 'Import subtitles or project',
+            tooltip: 'Open SRT / Import project',
             onPressed: () => unawaited(_importFileSafely()),
           ),
         if (widget.onChooseVideo != null)
@@ -3951,6 +4011,13 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           tooltip: 'Save subtitle file (Ctrl/Cmd+S)',
           onPressed: _savingFile || _changingStructure ? null
               : () => unawaited(_saveFileSafely()),
+        ),
+      if (widget.onLoadSecondarySubtitles != null)
+        IconButton(
+          key: const ValueKey('studio-dock-toolbar-secondary'),
+          icon: const Icon(Icons.library_add_outlined),
+          tooltip: 'Load secondary subtitles',
+          onPressed: () => unawaited(_loadSecondarySafely()),
         ),
       if (widget.onRestoreHistory != null) ...[
         IconButton(
@@ -4007,7 +4074,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           child: Text('New project')),
       if (widget.onImportFile != null)
         const PopupMenuItem(value: _StudioDockToolbarOverflow.import,
-          child: Text('Import subtitles or project')),
+          child: Text('Open SRT / Import project')),
       if (widget.onChooseVideo != null)
         const PopupMenuItem(value: _StudioDockToolbarOverflow.attachVideo,
           child: Text('Attach or change video')),

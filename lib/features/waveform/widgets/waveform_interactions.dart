@@ -2,21 +2,30 @@ part of 'waveform_widget.dart';
 
 extension _WaveformInteractions on WaveformWidgetState {
   void _handleScroll(PointerScrollEvent event) {
-    // Handle mouse wheel scroll
-    if (event.scrollDelta.dy != 0) {
-      // Horizontal scroll with mouse wheel
-      final current = ref.read(waveformControllerProvider);
-      if (current is! WaveformReady) return;
-      final newScrollPosition = current.clampScrollPosition(
-        current.scrollPosition + event.scrollDelta.dy * 0.5,
-      );
-      if (newScrollPosition == current.scrollPosition) return;
-      final target = current.centerTimeForScroll(newScrollPosition);
-      _seekCoordinator.scrollWheel(target);
-      ref.read(waveformControllerProvider.notifier).dispatch(
-            ScrollSeekToTime(newScrollPosition),
-          );
-    }
+    _scrollWaveformBy(event.scrollDelta.dy * 0.5);
+  }
+
+  void _handleTrackpadScroll(PointerPanZoomUpdateEvent event) {
+    // Two-finger trackpad scrolling is PointerPanZoom, not a click-and-drag.
+    // Never pass these gestures to the subtitle overlay pan recognizer.
+    final delta = event.panDelta;
+    _scrollWaveformBy(delta.dy.abs() >= delta.dx.abs()
+        ? delta.dy : -delta.dx);
+  }
+
+  void _scrollWaveformBy(double scrollDelta) {
+    if (scrollDelta == 0) return;
+    final current = ref.read(waveformControllerProvider);
+    if (current is! WaveformReady) return;
+    final newScrollPosition = current.clampScrollPosition(
+      current.scrollPosition + scrollDelta,
+    );
+    if (newScrollPosition == current.scrollPosition) return;
+    final target = current.centerTimeForScroll(newScrollPosition);
+    _seekCoordinator.scrollWheel(target);
+    ref.read(waveformControllerProvider.notifier).dispatch(
+      ScrollSeekToTime(newScrollPosition),
+    );
   }
 
   // Waveform drag-scrolling handlers (also handles bar dragging and overlay moving)

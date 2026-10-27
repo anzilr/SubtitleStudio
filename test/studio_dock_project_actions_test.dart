@@ -40,15 +40,14 @@ void main() {
     expect(await harness.isar.sessions.count(), 1);
   });
 
-  test('VTT import uses the existing VTT parser without classic UI', () async {
-    final file = File('${harness.directory.path}/test.vtt');
-    await file.writeAsString(
-        'WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nHello\n');
-    final session = await actions.importFile(file.path);
-    final stored =
-        await harness.isar.subtitleCollections.get(session.subtitleCollectionId);
-    expect(stored!.lines.single.original, 'Hello');
-    expect(stored.encoding, 'UTF-8');
+  test('VTT/ASS/SSA import is blocked before creating a writable project', () async {
+    for (final extension in ['vtt', 'ass', 'ssa']) {
+      final file = File('${harness.directory.path}/test.$extension');
+      await file.writeAsString('Do not overwrite this source');
+      await expectLater(actions.importFile(file.path), throwsFormatException);
+      expect(await file.readAsString(), 'Do not overwrite this source');
+    }
+    expect(await harness.isar.sessions.count(), 0);
   });
 
   test('empty new project is persisted only after explicit creation', () async {

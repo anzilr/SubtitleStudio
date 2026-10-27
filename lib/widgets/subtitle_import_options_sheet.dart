@@ -233,6 +233,15 @@ class _SubtitleImportOptionsSheetState extends ConsumerState<SubtitleImportOptio
       return;
     }
 
+    // Android file intents can bypass the picker extension filter. Refuse
+    // them here too, before storing the source as a writable SRT location.
+    final importName = _fileName.isNotEmpty ? _fileName : _selectedFilePath!;
+    if (!importName.toLowerCase().endsWith('.srt')) {
+      SnackbarHelper.showError(context,
+          'Only SRT files can be imported for editing. VTT, ASS and SSA support is coming later.');
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });

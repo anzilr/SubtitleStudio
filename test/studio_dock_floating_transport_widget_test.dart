@@ -50,7 +50,7 @@ void main() {
   }
 
   Future<void> select(WidgetTester tester, String label) async {
-    await tester.tap(find.byKey(const ValueKey('studio-view-menu')));
+    await tester.tap(find.byKey(const ValueKey('studio-media-menu')));
     await tester.pumpAndSettle();
     await tester.tap(find.text(label));
     await tester.pumpAndSettle();
@@ -125,7 +125,7 @@ void main() {
       (tester) async {
     final playback = StudioDockPlaybackLink();
     await launch(tester, playback, toggle: () {});
-    await tester.tap(find.byKey(const ValueKey('studio-view-menu')));
+    await tester.tap(find.byKey(const ValueKey('studio-media-menu')));
     await tester.pumpAndSettle();
     expect(find.text('Show floating playback button'), findsNothing);
     await tester.binding.handlePopRoute();
@@ -133,7 +133,7 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpAndSettle();
     await launch(tester, playback, video: const SizedBox());
-    await tester.tap(find.byKey(const ValueKey('studio-view-menu')));
+    await tester.tap(find.byKey(const ValueKey('studio-media-menu')));
     await tester.pumpAndSettle();
     expect(find.text('Show floating playback button'), findsNothing);
     await tester.pumpWidget(const SizedBox.shrink());

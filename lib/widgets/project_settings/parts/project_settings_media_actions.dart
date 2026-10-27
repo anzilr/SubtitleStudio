@@ -189,7 +189,7 @@ extension _ProjectSettingsMediaActions on _ProjectSettingsSheetState {
       
       if (Platform.isAndroid) {
         final fileInfo = await PlatformFileHandler.readFile(
-          mimeTypes: ['text/plain', 'application/x-subrip', 'text/vtt'],
+          mimeTypes: ['text/plain', 'application/x-subrip'],
         );
         
         if (fileInfo != null) {
@@ -201,7 +201,7 @@ extension _ProjectSettingsMediaActions on _ProjectSettingsSheetState {
         filePath = await FilePickerSAF.pickFile(
           context: context,
           title: 'Pick a Subtitle File',
-          allowedExtensions: ['.srt', '.vtt', '.ass', '.ssa'],
+          allowedExtensions: ['.srt'],
           pickText: 'Select Subtitle File',
         );
         
@@ -212,6 +212,11 @@ extension _ProjectSettingsMediaActions on _ProjectSettingsSheetState {
             }
 
       if (filePath != null && fileContent != null) {
+        if (!fileName.toLowerCase().endsWith('.srt')) {
+          SnackbarHelper.showError(context,
+              'Only SRT files can be loaded as external secondary subtitles for now.');
+          return;
+        }
         List<SimpleSubtitleLine> parsedSubtitles = [];
         if (fileName.toLowerCase().endsWith('.srt')) {
           parsedSubtitles = SubtitleParser.parseSrt(fileContent);

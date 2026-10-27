@@ -68,6 +68,16 @@ final class EditorDirectSaveService {
     // An unsupported charset must never truncate a user's existing file.
     final bytes = await _saver.prepareBytes(collection, lines);
 
+    // Old .msone packages can still contain non-SRT source links. They must
+    // never authorize the SRT compiler to overwrite VTT/ASS/SSA originals.
+    final source = collection.originalFileUri?.trim().isNotEmpty == true
+        ? collection.originalFileUri
+        : collection.filePath;
+    if (!_isSrtDocument(collection.fileName) ||
+        source == null || !_isSafeSrtSource(source)) {
+      return const EditorDirectSaveResult(saved: false);
+    }
+
     if (_isMacOS) {
       // Keep the established macOS policy: only a currently resolvable
       // security-scoped SRT bookmark authorizes direct save. A path stored in
@@ -82,6 +92,9 @@ final class EditorDirectSaveService {
           Uint8List.fromList(base64Decode(encodedBookmark)),
         );
         if (resolvedPath == null || resolvedPath.isEmpty) {
+          return const EditorDirectSaveResult(saved: false);
+        }
+        if (!_isSrtDocument(resolvedPath)) {
           return const EditorDirectSaveResult(saved: false);
         }
         return EditorDirectSaveResult(
@@ -113,4 +126,10 @@ final class EditorDirectSaveService {
       legacyFilePathToPersist: legacyPath,
     );
   }
+
+  static bool _isSrtDocument(String path) =>
+      path.trim().toLowerCase().split('?').first.endsWith('.srt');
+
+  static bool _isSafeSrtSource(String source) =>
+      source.startsWith('content://') || _isSrtDocument(source);
 }

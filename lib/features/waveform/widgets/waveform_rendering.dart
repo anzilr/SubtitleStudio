@@ -639,16 +639,16 @@ extension _WaveformRendering on WaveformWidgetState {
                     decoration: BoxDecoration(
                       color: Theme.of(context).colorScheme.surface,
                     ),
-                    child: Stack(
+                    child: Listener(
+                      onPointerSignal: (event) {
+                        if (event is PointerScrollEvent) _handleScroll(event);
+                      },
+                      onPointerPanZoomUpdate: _handleTrackpadScroll,
+                      child: Stack(
                       children: [
                         // Waveform background with tap detection
                         ClipRect(
                           child: Listener(
-                            onPointerSignal: (event) {
-                              if (event is PointerScrollEvent) {
-                                _handleScroll(event);
-                              }
-                            },
                             onPointerDown: (event) {
                               if (widget.compact && editing &&
                                   !_timeEditFocus.hasFocus) {
@@ -666,6 +666,14 @@ extension _WaveformRendering on WaveformWidgetState {
                               }
                             },
                             child: GestureDetector(
+                              // Trackpad two-finger gestures must scroll the
+                              // waveform, not drag the subtitle overlay.
+                              supportedDevices: const {
+                                PointerDeviceKind.mouse,
+                                PointerDeviceKind.touch,
+                                PointerDeviceKind.stylus,
+                                PointerDeviceKind.invertedStylus,
+                              },
                               behavior: HitTestBehavior.opaque,
                               onTapUp: (details) => _handleTapUp(details, state),
                               onLongPressStart: (details) => _handleLongPressStart(details, state),
@@ -797,6 +805,7 @@ extension _WaveformRendering on WaveformWidgetState {
                           ),
                         ),
                       ],
+                      ),
                     ),
                   ),
                 ),

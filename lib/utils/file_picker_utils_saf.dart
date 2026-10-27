@@ -372,14 +372,15 @@ class FilePickerSAF {
 /// Convenience class for specific file operations using SAF
 class FilePickerConvenience {
   
-  /// Pick a subtitle file (SRT, VTT, ASS, SSA)
+  /// Pick an SRT subtitle file. Other formats remain read-only research
+  /// until their metadata-preserving editor/export paths are implemented.
   static Future<String?> pickSubtitleFile({
     required BuildContext context,
   }) async {
     return FilePickerSAF.pickFile(
       context: context,
       title: 'Select Subtitle File',
-      allowedExtensions: ['.srt', '.vtt', '.ass', '.ssa'], // Show all subtitle formats
+      allowedExtensions: ['.srt'],
       pickText: 'Select Subtitle',
     );
   }
@@ -392,7 +393,7 @@ class FilePickerConvenience {
     return FilePickerSAF.pickFileWithInfo(
       context: context,
       title: 'Select Subtitle File',
-      allowedExtensions: ['.srt', '.vtt', '.ass', '.ssa'],
+      allowedExtensions: ['.srt'],
     );
   }
   

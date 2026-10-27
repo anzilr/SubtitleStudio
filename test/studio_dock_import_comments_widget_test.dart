@@ -31,7 +31,7 @@ void main() {
   }
 
   Future<void> chooseComments(WidgetTester tester) async {
-    await tester.tap(find.byKey(const ValueKey('studio-tools-menu')));
+    await tester.tap(find.byKey(const ValueKey('studio-review-menu')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Import Comments (.msone)…').last);
     await tester.pumpAndSettle();
@@ -40,7 +40,7 @@ void main() {
   testWidgets('Read-only session does not offer project comment import',
       (tester) async {
     await launch(tester);
-    await tester.tap(find.byKey(const ValueKey('studio-tools-menu')));
+    await tester.tap(find.byKey(const ValueKey('studio-review-menu')));
     await tester.pumpAndSettle();
     expect(find.textContaining('Import Comments'), findsNothing);
     await tester.binding.handlePopRoute();
@@ -118,7 +118,7 @@ void main() {
     await launch(tester, empty: true, openImport: (_) async { opens++; });
     expect(find.byKey(const ValueKey('studio-tool-import-comments')),
         findsNothing);
-    expect(find.byKey(const ValueKey('studio-tools-menu')), findsNothing);
+    expect(find.byKey(const ValueKey('studio-review-menu')), findsNothing);
     expect(opens, 0);
     expect(tester.takeException(), isNull);
   });

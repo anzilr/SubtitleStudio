@@ -24,13 +24,8 @@ Future<Map?> pickSRT(BuildContext context) async {
       fileName = displayPath.split(Platform.pathSeparator).last;
     }
     
-    // Ensure the filename has the correct extension
-    if (!fileName.toLowerCase().endsWith('.srt') && 
-        !fileName.toLowerCase().endsWith('.vtt') &&
-        !fileName.toLowerCase().endsWith('.ass') &&
-        !fileName.toLowerCase().endsWith('.ssa')) {
-      fileName += '.srt'; // Default to .srt if no extension
-    }
+    // Keep the real filename. Relabeling an unsupported format as .srt would
+    // bypass the import guard and could later overwrite its source on Save.
     
     return {
       'filePath': displayPath,

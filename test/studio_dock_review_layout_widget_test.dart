@@ -256,7 +256,7 @@ void main() {
   testWidgets('Tools Show marked lines shares mobile review navigation',
       (tester) async {
     await launch(tester);
-    await tester.tap(find.byKey(const ValueKey('studio-tools-menu')));
+    await tester.tap(find.byKey(const ValueKey('studio-review-menu')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Show marked lines'));
     await tester.pumpAndSettle();

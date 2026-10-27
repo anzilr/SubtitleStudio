@@ -41,7 +41,7 @@ void main() {
   }
 
   Future<void> openQuality(WidgetTester tester) async {
-    await tester.tap(find.byKey(const ValueKey('studio-tools-menu')));
+    await tester.tap(find.byKey(const ValueKey('studio-review-menu')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Check subtitle quality…'));
     await tester.pumpAndSettle();

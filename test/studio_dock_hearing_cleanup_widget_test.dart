@@ -31,7 +31,7 @@ void main() {
   }
 
   Future<void> chooseFromMenu(WidgetTester tester) async {
-    await tester.tap(find.byKey(const ValueKey('studio-tools-menu')));
+    await tester.tap(find.byKey(const ValueKey('studio-subtitle-menu')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Remove Hearing Impaired…').last);
     await tester.pumpAndSettle();
@@ -40,7 +40,7 @@ void main() {
   testWidgets('Read-only and empty sessions do not expose cleanup',
       (tester) async {
     await launch(tester);
-    await tester.tap(find.byKey(const ValueKey('studio-tools-menu')));
+    await tester.tap(find.byKey(const ValueKey('studio-subtitle-menu')));
     await tester.pumpAndSettle();
     expect(find.textContaining('Remove Hearing Impaired'), findsNothing);
     await tester.binding.handlePopRoute();
@@ -57,8 +57,8 @@ void main() {
     await tester.pumpAndSettle();
     await launch(tester, empty: true,
         cleanup: (_) async => null);
-    // The empty-project landing does not mount the editor's Tools menu.
-    expect(find.byKey(const ValueKey('studio-tools-menu')), findsNothing);
+    // The empty-project landing does not mount the editor's Subtitle menu.
+    expect(find.byKey(const ValueKey('studio-subtitle-menu')), findsNothing);
     expect(find.byKey(const ValueKey('studio-tool-hearing-cleanup')),
         findsNothing);
     expect(tester.takeException(), isNull);

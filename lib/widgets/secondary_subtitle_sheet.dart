@@ -275,7 +275,7 @@ class SecondarySubtitleSheet extends ConsumerWidget {
       if (Platform.isAndroid) {
         // On Android, use SAF which returns file content directly
         final fileInfo = await PlatformFileHandler.readFile(
-          mimeTypes: ['text/plain', 'application/x-subrip', 'text/vtt'],
+          mimeTypes: ['text/plain', 'application/x-subrip'],
         );
         
         if (fileInfo != null) {
@@ -292,11 +292,12 @@ class SecondarySubtitleSheet extends ConsumerWidget {
         filePath = await FilePickerSAF.pickFile(
           context: context,
           title: 'Pick a Subtitle File',
-          allowedExtensions: ['.srt', '.vtt', '.ass', '.ssa'],
+          allowedExtensions: ['.srt'],
           pickText: 'Select Subtitle File',
         );
         
-        final file = File(filePath!);
+        if (filePath == null) return;
+        final file = File(filePath);
         fileContent = await file.readAsString();
         
         // Handle both forward slashes and backslashes for cross-platform compatibility
@@ -315,6 +316,11 @@ class SecondarySubtitleSheet extends ConsumerWidget {
 
       // Guard against context disposal after the picker
       if (!context.mounted) return;
+      if (!fileName.toLowerCase().endsWith('.srt')) {
+        SnackbarHelper.showError(context,
+            'Only SRT files can be loaded as external secondary subtitles for now.');
+        return;
+      }
 
       // Parse subtitle file based on extension
       List<SimpleSubtitleLine> parsedSubtitles = [];

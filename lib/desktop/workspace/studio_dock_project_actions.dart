@@ -18,9 +18,9 @@ class StudioDockProjectActions {
   final SubtitleImportRepository subtitleImporter;
   final SessionProjectImportRepository projectImporter;
 
-  static const supportedExtensions = <String>{
-    '.srt', '.vtt', '.ass', '.ssa', '.msone',
-  };
+  // Full VTT/ASS/SSA document round-trip support is still on the roadmap.
+  // Do not link a format-flattened import to a source that Save could replace.
+  static const supportedExtensions = <String>{'.srt', '.msone'};
 
   static String extensionOf(String path) {
     final name = Uri.file(path).pathSegments.last.toLowerCase();
@@ -42,11 +42,7 @@ class StudioDockProjectActions {
     }
     if (extension == '.msone') return _importProject(path);
     final decoded = await SubtitleEncodingDecoder.decodeFile(file);
-    final parsed = switch (extension) {
-      '.vtt' => SubtitleParser.parseVtt(decoded.content),
-      '.ass' || '.ssa' => SubtitleParser.parseAss(decoded.content),
-      _ => SubtitleParser.parseSrt(decoded.content),
-    };
+    final parsed = SubtitleParser.parseSrt(decoded.content);
     if (parsed.isEmpty) {
       throw const FormatException('No valid subtitle lines were found.');
     }

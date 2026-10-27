@@ -10,6 +10,8 @@ void main() {
   Future<void> launch(WidgetTester tester, {
     Future<void> Function()? settings,
     Future<void> Function()? help,
+    VoidCallback? newProject,
+    VoidCallback? importFile,
   }) async {
     tester.view.physicalSize = const Size(1680, 1000);
     tester.view.devicePixelRatio = 1;
@@ -39,6 +41,8 @@ void main() {
       onApplyCueText: (_, __) async => true,
       onOpenAppSettings: settings,
       onOpenHelp: help,
+      onNewProject: newProject,
+      onImportFile: importFile,
     )));
     await tester.pumpAndSettle();
   }
@@ -51,7 +55,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('Settings rail and View menu invoke the shared settings host',
+  testWidgets('Settings rail and File menu invoke the shared settings host',
       (tester) async {
     var opens = 0;
     await launch(tester, settings: () async { opens++; });
@@ -63,7 +67,7 @@ void main() {
     expect(opens, 1);
     expect(find.text('Unsaved draft'), findsWidgets);
     expect(find.text('Unsaved subtitle edit'), findsNothing);
-    await choose(tester, 'studio-view-menu', 'Settings');
+    await choose(tester, 'studio-file-menu', 'Application Settings');
     expect(opens, 2);
     expect(find.text('Unsaved draft'), findsWidgets);
     expect(tester.takeException(), isNull);
@@ -76,6 +80,43 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('studio-help-menu')));
     await tester.pumpAndSettle();
     expect(opens, 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('File menu exposes new SRT/project import actions',
+      (tester) async {
+    var created = 0;
+    var imported = 0;
+    await launch(tester,
+        newProject: () => created++, importFile: () => imported++);
+    await choose(tester, 'studio-file-menu', 'New project');
+    await choose(tester, 'studio-file-menu', 'Open SRT / Import project');
+    expect(created, 1);
+    expect(imported, 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('desktop commands are grouped by purpose', (tester) async {
+    await launch(tester);
+    await tester.tap(find.byKey(const ValueKey('studio-review-menu')));
+    await tester.pumpAndSettle();
+    expect(find.text('Show marked lines'), findsOneWidget);
+    expect(find.text('Check subtitle quality…'), findsOneWidget);
+    expect(find.text('Subtitle tools'), findsNothing);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('studio-subtitle-menu')));
+    await tester.pumpAndSettle();
+    expect(find.text('Subtitle tools'), findsOneWidget);
+    expect(find.text('Review notes'), findsNothing);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('studio-edit-menu')));
+    await tester.pumpAndSettle();
+    expect(find.text('Bold (Ctrl+B)'), findsOneWidget);
+    expect(find.text('Find & Replace'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -132,9 +173,9 @@ void main() {
     await choose(tester, 'studio-timing-menu', 'Edit start and end time');
     expect(find.byKey(const ValueKey('inspector-tab-Timing')), findsNothing);
     expect(find.text('START'), findsWidgets);
-    await choose(tester, 'studio-subtitle-menu', 'Review notes');
+    await choose(tester, 'studio-review-menu', 'Review notes');
     expect(find.text('REVIEW NOTES'), findsOneWidget);
-    await choose(tester, 'studio-tools-menu', 'Subtitle tools');
+    await choose(tester, 'studio-subtitle-menu', 'Subtitle tools');
     expect(find.byKey(const ValueKey('studio-tools-section')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

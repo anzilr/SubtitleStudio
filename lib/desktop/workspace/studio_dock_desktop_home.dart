@@ -104,8 +104,8 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
     final path = initialPath ?? await (widget.pickFile?.call(context) ??
         FilePickerSAF.pickFile(
           context: context,
-          title: 'Open subtitles or project',
-          allowedExtensions: const ['srt', 'vtt', 'ass', 'ssa', 'msone'],
+          title: 'Open SRT or SubtitleStudio project',
+          allowedExtensions: const ['srt', 'msone'],
         ));
     if (path == null || !mounted) return; // Cancellation makes no project.
     setState(() { _busy = true; _error = null; });
