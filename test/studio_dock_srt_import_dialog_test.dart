@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -27,7 +28,15 @@ void main() {
         onPressed: () async {
           final choice = await showDialog<String>(
             context: context,
-            builder: (_) => StudioDockSrtImportDialog(filePath: source.path),
+            builder: (_) => StudioDockSrtImportDialog(
+              filePath: source.path,
+              readBytes: (_) async => Uint8List.fromList([
+                ...'1\n00:00:01,000 --> 00:00:02,000\nIt'.codeUnits,
+                0x92, ...'s a preview\n'.codeUnits,
+              ]),
+              availableEncodings: () async =>
+                  const ['UTF-8', 'Windows-1252'],
+            ),
           );
           result.value = choice ?? 'cancelled';
         },

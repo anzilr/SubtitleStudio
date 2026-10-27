@@ -51,3 +51,8 @@ Cancel/Confirm. Run `flutter analyze`, Studio Dock widget tests and the full
 Flutter suite through the existing GitHub quality workflows only (never
 platform builds in CI). Native Windows import-dialog and history-theme checks
 remain required.
+
+The import dialog exposes injectable source-byte and available-encoding
+functions for widget tests; production defaults are unchanged. This avoids
+depending on live disk I/O/native charset probes inside Flutter's fake-async
+widget test environment.

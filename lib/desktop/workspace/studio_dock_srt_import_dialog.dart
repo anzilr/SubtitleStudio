@@ -10,9 +10,18 @@ import 'package:subtitle_studio/services/subtitle_text_codec.dart';
 /// or changes the previously active project. The selected encoding is passed
 /// to the same strict decoder used by mobile's import preview.
 class StudioDockSrtImportDialog extends StatefulWidget {
-  const StudioDockSrtImportDialog({super.key, required this.filePath});
+  const StudioDockSrtImportDialog({
+    super.key,
+    required this.filePath,
+    this.readBytes,
+    this.availableEncodings,
+  });
 
   final String filePath;
+  /// Injectable boundaries keep widget tests deterministic; production uses
+  /// real desktop file access and the OS charset catalogue.
+  final Future<Uint8List> Function(String path)? readBytes;
+  final Future<List<String>> Function()? availableEncodings;
 
   @override
   State<StudioDockSrtImportDialog> createState() =>
@@ -34,8 +43,8 @@ class _StudioDockSrtImportDialogState extends State<StudioDockSrtImportDialog> {
 
   Future<void> _loadEncodings() async {
     try {
-      final encodings = await SubtitleExtendedEncodingService.standard
-          .availableEncodings();
+      final encodings = await (widget.availableEncodings?.call() ??
+          SubtitleExtendedEncodingService.standard.availableEncodings());
       if (mounted) setState(() => _encodings = encodings);
     } catch (_) {
       // The portable decoder's built-in charsets remain available.
@@ -46,7 +55,8 @@ class _StudioDockSrtImportDialogState extends State<StudioDockSrtImportDialog> {
     if (_previewBusy) return;
     setState(() { _previewBusy = true; _error = null; });
     try {
-      final bytes = _bytes ??= await File(widget.filePath).readAsBytes();
+      final bytes = _bytes ??= await (widget.readBytes?.call(widget.filePath) ??
+          File(widget.filePath).readAsBytes());
       final preview = await const SubtitleEncodingPreview().generate(
         bytes,
         selectedEncoding: _encoding == 'Auto' ? null : _encoding,
