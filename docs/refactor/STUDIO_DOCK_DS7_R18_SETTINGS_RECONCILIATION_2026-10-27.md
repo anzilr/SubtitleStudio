@@ -43,6 +43,13 @@ desktop editor unless a future, explicitly designed opt-in is requested.
   through CI. Do not run Android, desktop, or other platform builds in CI.
 - Native Windows/Android visual and file-save acceptance still pending.
 
+### CI acceptance — source commit `b339a6276937af319943e57868f961706bef7ce3`
+
+- [Studio Dock Flutter quality](https://github.com/anzilr/SubtitleStudio/actions/runs/40448627262): **381 tests passed**, analyzer clean.
+- [Migration quality checks](https://github.com/anzilr/SubtitleStudio/actions/runs/40448627231): **1,233 tests passed**, analyzer clean.
+- Both workflows run only `flutter pub get`, `flutter analyze`, and Flutter
+  tests; no platform builds were performed in GitHub Actions.
+
 ## Pending parity and format work
 
 Keep ASS/SSA and WebVTT editing, plus Subtitle Edit feature parity and audio
