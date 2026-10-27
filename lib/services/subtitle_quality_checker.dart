@@ -74,12 +74,18 @@ class SubtitleQualityCue {
     required this.start,
     required this.end,
     required this.text,
+    this.effectGroupId,
   });
 
   final int id;
   final String start;
   final String end;
   final String text;
+
+  /// First persisted cue ID of a recognized, multi-frame SRT effect.
+  /// Null means this cue is ordinary dialogue. Effect frames remain subject
+  /// to timecode validity checks, but not per-frame reading heuristics.
+  final int? effectGroupId;
 }
 
 class SubtitleQualityProfile {
@@ -310,6 +316,9 @@ class SubtitleQualityChecker {
     }) {
     final suggestions = <SubtitleQualityFix>[];
     for (final cue in cues) {
+      // A generated frame's tags, spaces and line shape are part of the
+      // animation. Editing one frame independently can break the effect.
+      if (cue.effectGroupId != null) continue;
       final whitespaceFix = normalizeSpaces(cue.text);
       if (whitespaceFix != cue.text) {
         suggestions.add(SubtitleQualityFix(
@@ -376,6 +385,10 @@ class SubtitleQualityChecker {
       }
       final preceding = valid[i - 1];
       final next = valid[i];
+      // Timing changes to a single animation frame would desynchronize the
+      // entire effect; do not offer such a proposal as a safe fix.
+      if (preceding.cue.effectGroupId != null ||
+          next.cue.effectGroupId != null) continue;
       if (!_canonicalTimePattern.hasMatch(preceding.cue.start) ||
           !_canonicalTimePattern.hasMatch(preceding.cue.end) ||
           !_canonicalTimePattern.hasMatch(next.cue.start) ||
@@ -441,14 +454,15 @@ class SubtitleQualityChecker {
       } else {
         positions.add((index: index, start: start, end: end));
         final duration = end - start;
-        if (duration < profile.minDurationMs) {
+        if (cue.effectGroupId == null && duration < profile.minDurationMs) {
           add(SubtitleQualityIssueType.shortDuration,
               '$duration ms · minimum ${profile.minDurationMs} ms');
-        } else if (duration > profile.maxDurationMs) {
+        } else if (cue.effectGroupId == null &&
+            duration > profile.maxDurationMs) {
           add(SubtitleQualityIssueType.longDuration,
               '$duration ms · maximum ${profile.maxDurationMs} ms');
         }
-        if (text.trim().isNotEmpty) {
+        if (cue.effectGroupId == null && text.trim().isNotEmpty) {
           final charCount = text.replaceAll('\n', ' ').trim().characters.length;
           final cps = charCount * 1000 / duration;
           if (cps > profile.maxCharactersPerSecond) {
@@ -459,7 +473,10 @@ class SubtitleQualityChecker {
         }
       }
 
-      if (text.trim().isEmpty) {
+      if (cue.effectGroupId != null) {
+        // Empty blink frames, progressively revealed words, and explicit
+        // formatting are meaningful states, not poor-quality dialogue.
+      } else if (text.trim().isEmpty) {
         add(SubtitleQualityIssueType.emptyText, 'No visible subtitle text.');
       } else {
         final lines = text.split('\n');
@@ -474,7 +491,8 @@ class SubtitleQualityChecker {
               '$longest characters · limit ${profile.maxCharactersPerLine}');
         }
       }
-      if (normalizeSpaces(cue.text) != cue.text) {
+      if (cue.effectGroupId == null &&
+          normalizeSpaces(cue.text) != cue.text) {
         add(SubtitleQualityIssueType.unnecessaryWhitespace,
             'Repeated or trailing spaces can be simplified.');
       }
@@ -487,15 +505,20 @@ class SubtitleQualityChecker {
       return byStart != 0 ? byStart : a.index.compareTo(b.index);
     });
     int? maxEnd;
+    int? maxEndEffectGroupId;
     String? precedingText;
     int? precedingCueId;
+    int? precedingEffectGroupId;
     for (final position in positions) {
       final cue = cues[position.index];
       final normalized = visibleText(cue.text)
           .replaceAll(RegExp(r'\s+'), ' ')
           .trim()
           .toLowerCase();
-      if (normalized.isNotEmpty && normalized == precedingText) {
+      final sameEffect = cue.effectGroupId != null &&
+          cue.effectGroupId == precedingEffectGroupId;
+      if (!sameEffect && normalized.isNotEmpty &&
+          normalized == precedingText) {
         issues.add(SubtitleQualityIssue(
           cueId: cue.id,
           type: SubtitleQualityIssueType.repeatedText,
@@ -506,7 +529,11 @@ class SubtitleQualityChecker {
       }
       precedingText = normalized;
       precedingCueId = cue.id;
-      if (maxEnd != null) {
+      precedingEffectGroupId = cue.effectGroupId;
+      // Only suppress a gap/overlap *inside* one animation. An unrelated
+      // subtitle overlapping the animation still needs a warning.
+      if (maxEnd != null && !(cue.effectGroupId != null &&
+          cue.effectGroupId == maxEndEffectGroupId)) {
         final gap = position.start - maxEnd;
         if (gap < 0) {
           issues.add(SubtitleQualityIssue(
@@ -524,7 +551,10 @@ class SubtitleQualityChecker {
           ));
         }
       }
-      if (maxEnd == null || position.end > maxEnd) maxEnd = position.end;
+      if (maxEnd == null || position.end > maxEnd) {
+        maxEnd = position.end;
+        maxEndEffectGroupId = cue.effectGroupId;
+      }
     }
 
     final order = {for (var i = 0; i < cues.length; i++) cues[i].id: i};

@@ -498,14 +498,22 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
     final label = _shortName(historyRef);
     if (historyRef.kind == 'branch') {
       final color = branchColors[historyRef.name]!;
+      final focused = _selectedBranchName == historyRef.name;
       return Row(mainAxisSize: MainAxisSize.min, children: [
         Tooltip(message: 'Show only ${_shortName(historyRef)} history',
           child: ChoiceChip(
           key: ValueKey('history-branch-filter-' + historyRef.name),
           label: Text(CheckpointHistoryLabels.referenceLabel(historyRef)),
           avatar: Icon(Icons.call_split, color: color, size: 16),
-          selected: _selectedBranchName == historyRef.name,
-          selectedColor: color.withValues(alpha: 0.20),
+          // A branch's color identifies its path even when the filter is not
+          // selected. The active HEAD branch should never look disabled.
+          selected: focused,
+          backgroundColor: color.withValues(alpha: 0.13),
+          selectedColor: color.withValues(alpha: 0.27),
+          disabledColor: color.withValues(alpha: 0.13),
+          labelStyle: TextStyle(color: color,
+              fontWeight: historyRef.isAttached || focused
+                  ? FontWeight.w700 : FontWeight.w500),
           side: BorderSide(color: color.withValues(alpha: 0.75)),
           onSelected: _busy ? null : (_) => _focusBranch(historyRef),
           visualDensity: VisualDensity.compact,
@@ -637,6 +645,19 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
                           : null,
                       label: Text(CheckpointHistoryLabels.referenceLabel(
                           historyRef)),
+                      backgroundColor: historyRef.kind == 'branch'
+                          ? branchColors[historyRef.name]?.withValues(alpha: 0.14)
+                          : null,
+                      labelStyle: historyRef.kind == 'branch'
+                          ? TextStyle(color: branchColors[historyRef.name],
+                              fontWeight: historyRef.isAttached
+                                  ? FontWeight.w700 : FontWeight.w500)
+                          : null,
+                      side: historyRef.kind == 'branch'
+                          ? BorderSide(color: (branchColors[historyRef.name] ??
+                              Theme.of(context).colorScheme.outline)
+                              .withValues(alpha: 0.7))
+                          : null,
                       onPressed: _busy || historyRef.kind == 'head' ? null : () {
                         if (historyRef.kind == 'branch') {
                           _focusBranch(historyRef);

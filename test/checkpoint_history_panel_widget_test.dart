@@ -157,6 +157,30 @@ FakeHistoryCommands _forkedCommands() {
 }
 
 void main() {
+  testWidgets('each branch keeps a colored chip even when not filtered',
+      (tester) async {
+    await tester.pumpWidget(_host(_forkedCommands()));
+    await tester.pumpAndSettle();
+    final main = tester.widget<ChoiceChip>(find.byKey(
+        const ValueKey('history-branch-filter-refs/heads/main')));
+    final review = tester.widget<ChoiceChip>(find.byKey(
+        const ValueKey('history-branch-filter-refs/heads/review')));
+    expect(main.selected, isFalse);
+    expect(review.selected, isFalse);
+    expect(main.backgroundColor, isNotNull);
+    expect(review.backgroundColor, isNotNull);
+    expect(main.backgroundColor, isNot(review.backgroundColor));
+    expect(main.labelStyle?.color, isNot(review.labelStyle?.color));
+    await tester.tap(find.byKey(
+        const ValueKey('history-branch-filter-refs/heads/review')));
+    await tester.pumpAndSettle();
+    final focused = tester.widget<ChoiceChip>(find.byKey(
+        const ValueKey('history-branch-filter-refs/heads/review')));
+    expect(focused.selected, isTrue);
+    expect(focused.selectedColor, isNotNull);
+    expect(focused.labelStyle?.color, review.labelStyle?.color);
+  });
+
   testWidgets('displays actual HEAD and named branch labels', (tester) async {
     await tester.pumpWidget(_host(FakeHistoryCommands()));
     await tester.pumpAndSettle();

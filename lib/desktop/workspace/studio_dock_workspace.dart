@@ -2686,10 +2686,15 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     if (!mounted || _cues.isEmpty ||
         _applyingQualityFixes ||
         !await _confirmDraftBeforeLeaving() || !mounted) return;
+    final effectGroupsByCueId = {
+      for (final group in _effectGroups)
+        for (final frame in group.frames) frame.id: group.firstId,
+    };
     final cues = [
       for (final cue in _cues)
         SubtitleQualityCue(
           id: cue.id, start: cue.start, end: cue.end, text: cue.edited,
+          effectGroupId: effectGroupsByCueId[cue.id],
         ),
     ];
     SharedPreferences? preferences;

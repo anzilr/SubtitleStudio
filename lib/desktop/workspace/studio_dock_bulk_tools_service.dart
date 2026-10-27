@@ -4,6 +4,7 @@ import 'package:subtitle_studio/screens/edit/repositories/subtitle_repository.da
 import 'package:subtitle_studio/utils/time_input_formatter.dart';
 import 'package:subtitle_studio/services/subtitle_quality_checker.dart';
 
+import 'studio_dock_effect_groups.dart';
 import 'studio_dock_session_loader.dart';
 import 'studio_dock_session_snapshot.dart';
 import 'studio_dock_style_actions.dart';
@@ -28,6 +29,21 @@ class StudioDockBulkToolsService {
     ..marked = cue.marked
     ..comment = cue.comment
     ..resolved = cue.resolved;
+
+  static Map<int, int> _effectGroupByCue(StudioDockSessionSnapshot baseline) {
+    final groups = StudioDockEffectGroups.detect([
+      for (final cue in baseline.cues)
+        StudioDockEffectFrame(
+          id: cue.index, start: cue.start, end: cue.end,
+          original: cue.original, edited: cue.storedEdited ?? '',
+          effectiveText: cue.storedEdited ?? cue.original,
+        ),
+    ]);
+    return {
+      for (final group in groups)
+        for (final frame in group.frames) frame.id: group.firstId,
+    };
+  }
 
   static String formatMilliseconds(int milliseconds) {
     if (milliseconds < 0 || milliseconds > _lastSrtMillisecond) {
@@ -338,6 +354,7 @@ class StudioDockBulkToolsService {
   }) async {
     if (fixes.isEmpty) return baseline;
     final cuesById = {for (final cue in baseline.cues) cue.index: cue};
+    final effectGroupById = _effectGroupByCue(baseline);
     final seen = <int>{};
     final updated = <SubtitleLine>[];
     for (final fix in fixes) {
@@ -349,7 +366,8 @@ class StudioDockBulkToolsService {
           SubtitleQualityChecker.balancedLineBreak(fix.before,
               maxCharactersPerLine: fix.maxCharactersPerLine),
       };
-      if (cue == null || !seen.add(fix.cueId) ||
+      if (cue == null || effectGroupById.containsKey(fix.cueId) ||
+          !seen.add(fix.cueId) ||
           (cue.storedEdited ?? cue.original) != fix.before ||
           expectedAfter == null || expectedAfter != fix.after ||
           fix.before == fix.after) {
@@ -380,6 +398,7 @@ class StudioDockBulkToolsService {
     final updated = <int, SubtitleLine>{};
     final plannedByProfile = <String,
         Map<int, SubtitleQualityTimingSuggestion>>{};
+    final effectGroupById = _effectGroupByCue(baseline);
     final qualityCues = [
       for (final cue in baseline.cues)
         SubtitleQualityCue(
@@ -387,6 +406,7 @@ class StudioDockBulkToolsService {
           start: cue.start,
           end: cue.end,
           text: cue.storedEdited ?? cue.original,
+          effectGroupId: effectGroupById[cue.index],
         ),
     ];
 

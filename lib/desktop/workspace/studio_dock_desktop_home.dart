@@ -9,6 +9,7 @@ import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
 import 'package:subtitle_studio/widgets/session_selection/session_project_import_repository.dart';
 
 import 'studio_dock_project_actions.dart';
+import 'studio_dock_srt_import_dialog.dart';
 
 import 'studio_dock_session_view.dart';
 import 'studio_dock_workspace.dart';
@@ -108,9 +109,20 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
           allowedExtensions: const ['srt', 'msone'],
         ));
     if (path == null || !mounted) return; // Cancellation makes no project.
+    String? selectedEncoding;
+    if (StudioDockProjectActions.extensionOf(path) == '.srt') {
+      final choice = await showDialog<String>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => StudioDockSrtImportDialog(filePath: path),
+      );
+      if (!mounted || choice == null) return;
+      selectedEncoding = choice == 'Auto' ? null : choice;
+    }
     setState(() { _busy = true; _error = null; });
     try {
-      final imported = await _actions.importFile(path);
+      final imported = await _actions.importFile(path,
+          selectedEncoding: selectedEncoding);
       if (!mounted) return;
       _chosenSessionId = imported.id;
       _refresh();

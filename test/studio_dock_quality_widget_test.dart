@@ -47,6 +47,24 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  testWidgets('recognized typewriter frames are not poor-quality dialogue',
+      (tester) async {
+    await launch(tester, initialCues: const [
+      StudioDockCue(id: 1, start: '00:00:01,000',
+          end: '00:00:01,200', original: 'H', edited: 'H'),
+      StudioDockCue(id: 2, start: '00:00:01,200',
+          end: '00:00:01,400', original: 'He', edited: 'He'),
+      StudioDockCue(id: 3, start: '00:00:01,400',
+          end: '00:00:01,600', original: 'Hel', edited: 'Hel'),
+    ]);
+    await openQuality(tester);
+    expect(find.text('No issues detected in 3 subtitles.'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('studio-quality-fixes-tab')));
+    await tester.pumpAndSettle();
+    expect(find.text('Suggested fixes (0)'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('quality checker opens via Tools and reports without edits',
       (tester) async {
     await launch(tester);

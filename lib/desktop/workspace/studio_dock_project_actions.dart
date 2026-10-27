@@ -31,7 +31,7 @@ class StudioDockProjectActions {
   static String displayName(String path) =>
       Uri.file(path).pathSegments.last;
 
-  Future<Session> importFile(String path) async {
+  Future<Session> importFile(String path, {String? selectedEncoding}) async {
     final file = File(path);
     if (!await file.exists()) {
       throw const FileSystemException('The selected file does not exist.');
@@ -41,7 +41,8 @@ class StudioDockProjectActions {
       throw const FormatException('Unsupported subtitle or project file.');
     }
     if (extension == '.msone') return _importProject(path);
-    final decoded = await SubtitleEncodingDecoder.decodeFile(file);
+    final decoded = await SubtitleEncodingDecoder.decodeFile(file,
+        selectedEncoding: selectedEncoding);
     final parsed = SubtitleParser.parseSrt(decoded.content);
     if (parsed.isEmpty) {
       throw const FormatException('No valid subtitle lines were found.');

@@ -40,6 +40,24 @@ void main() {
     expect(await harness.isar.sessions.count(), 1);
   });
 
+  test('explicit desktop charset override decodes exactly the previewed SRT',
+      () async {
+    final file = File('${harness.directory.path}/legacy.srt');
+    await file.writeAsBytes([
+      ...'1\n00:00:01,000 --> 00:00:02,000\nIt'.codeUnits,
+      0x92, ...'s ready\n'.codeUnits,
+    ]);
+    await expectLater(actions.importFile(file.path), throwsFormatException);
+    expect(await harness.isar.sessions.count(), 0);
+    final session = await actions.importFile(file.path,
+        selectedEncoding: 'Windows-1252');
+    final stored = await harness.isar.subtitleCollections.get(
+        session.subtitleCollectionId);
+    expect(stored!.encoding, 'Windows-1252');
+    expect(stored.lines.single.original, 'It\u2019s ready');
+    expect(await harness.isar.sessions.count(), 1);
+  });
+
   test('VTT/ASS/SSA import is blocked before creating a writable project', () async {
     for (final extension in ['vtt', 'ass', 'ssa']) {
       final file = File('${harness.directory.path}/test.$extension');

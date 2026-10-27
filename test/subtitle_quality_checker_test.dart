@@ -2,6 +2,42 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:subtitle_studio/services/subtitle_quality_checker.dart';
 
 void main() {
+  test('animation frames skip dialogue heuristics but retain real errors', () {
+    const cues = [
+      SubtitleQualityCue(id: 1, start: '00:00:01,000',
+          end: '00:00:01,200', text: 'H', effectGroupId: 1),
+      SubtitleQualityCue(id: 2, start: '00:00:01,200',
+          end: '00:00:01,400', text: 'He', effectGroupId: 1),
+      SubtitleQualityCue(id: 3, start: '00:00:01,400',
+          end: '00:00:01,600', text: 'Hello', effectGroupId: 1),
+      SubtitleQualityCue(id: 4, start: '00:00:03,000',
+          end: '00:00:03,100', text: 'Ordinary dialogue'),
+      SubtitleQualityCue(id: 5, start: '00:00:04,000',
+          end: '00:00:03,500', text: 'Bad timing', effectGroupId: 5),
+    ];
+    final report = SubtitleQualityChecker.scan(cues);
+    expect(report.issues.where((issue) => issue.cueId <= 3), isEmpty);
+    expect(report.issues.any((issue) => issue.cueId == 4 &&
+        issue.type == SubtitleQualityIssueType.shortDuration), isTrue);
+    expect(report.issues.any((issue) => issue.cueId == 5 &&
+        issue.type == SubtitleQualityIssueType.invalidDuration), isTrue);
+    expect(SubtitleQualityChecker.proposeSafeFixes(cues), isEmpty);
+    expect(SubtitleQualityChecker.proposeTimingSuggestions(cues), isEmpty);
+  });
+
+  test('unrelated subtitles still trigger overlaps with an effect', () {
+    final report = SubtitleQualityChecker.scan(const [
+      SubtitleQualityCue(id: 1, start: '00:00:01,000',
+          end: '00:00:02,000', text: 'Ordinary'),
+      SubtitleQualityCue(id: 2, start: '00:00:01,500',
+          end: '00:00:01,700', text: 'H', effectGroupId: 2),
+      SubtitleQualityCue(id: 3, start: '00:00:01,700',
+          end: '00:00:01,900', text: 'Hi', effectGroupId: 2),
+    ]);
+    expect(report.issues.where((issue) =>
+        issue.type == SubtitleQualityIssueType.overlap).length, 2);
+  });
+
   const checker = SubtitleQualityProfile();
 
   test('clean subtitles are not flagged', () {
