@@ -113,6 +113,18 @@ void main() {
     expect(report.count(SubtitleQualityIssueType.emptyText), 1);
   });
 
+  test('nested font/bold tags retain Malayalam dialogue as visible text', () {
+    const text = '<font color="#00ff00"><b>"ദ ഗോൾഡൻ വോയേജ്\n'
+        'ഓഫ് സിൻബാദ്"</b></font>';
+    expect(SubtitleQualityChecker.visibleText(text),
+        '"ദ ഗോൾഡൻ വോയേജ്\nഓഫ് സിൻബാദ്"');
+    final report = SubtitleQualityChecker.scan(const [
+      SubtitleQualityCue(id: 1, start: '00:00:01,000',
+          end: '00:00:04,000', text: text),
+    ]);
+    expect(report.count(SubtitleQualityIssueType.emptyText), 0);
+  });
+
   test('reading speed, line length and duration rules are configurable', () {
     final report = SubtitleQualityChecker.scan(const [
       SubtitleQualityCue(id: 1, start: '00:00:01,000',

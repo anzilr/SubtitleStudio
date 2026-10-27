@@ -21,12 +21,13 @@ void main() {
     if (directory.existsSync()) directory.deleteSync(recursive: true);
   });
 
-  Future<ValueNotifier<String?>> launch(WidgetTester tester) async {
-    final result = ValueNotifier<String?>(null);
+  Future<ValueNotifier<StudioDockSrtImportChoice?>> launch(
+      WidgetTester tester) async {
+    final result = ValueNotifier<StudioDockSrtImportChoice?>(null);
     await tester.pumpWidget(MaterialApp(home: Scaffold(body: Builder(
       builder: (context) => TextButton(
         onPressed: () async {
-          final choice = await showDialog<String>(
+          final choice = await showDialog<StudioDockSrtImportChoice>(
             context: context,
             builder: (_) => StudioDockSrtImportDialog(
               filePath: source.path,
@@ -38,7 +39,7 @@ void main() {
                   const ['UTF-8', 'Windows-1252'],
             ),
           );
-          result.value = choice ?? 'cancelled';
+          result.value = choice;
         },
         child: const Text('Open import options'),
       ),
@@ -53,7 +54,7 @@ void main() {
     expect(find.text('Import SRT'), findsWidgets);
     await tester.tap(find.byKey(const ValueKey('studio-srt-import-cancel')));
     await tester.pumpAndSettle();
-    expect(result.value, 'cancelled');
+    expect(result.value, isNull);
     expect(source.lengthSync(), greaterThan(0));
   });
 
@@ -73,6 +74,24 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('studio-srt-import-confirm')));
     await tester.pumpAndSettle();
-    expect(result.value, 'Windows-1252');
+    expect(result.value?.encoding, 'Windows-1252');
+    expect(result.value?.removeHearingImpaired, isFalse);
+    expect(result.value?.mergeOverlapping, isFalse);
+  });
+
+  testWidgets('optional cleanup and overlap merge are explicit opt-ins',
+      (tester) async {
+    final result = await launch(tester);
+    await tester.tap(find.byKey(
+        const ValueKey('studio-srt-import-hearing-cleanup')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(
+        const ValueKey('studio-srt-import-merge-overlaps')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('studio-srt-import-confirm')));
+    await tester.pumpAndSettle();
+    expect(result.value?.encoding, isNull);
+    expect(result.value?.removeHearingImpaired, isTrue);
+    expect(result.value?.mergeOverlapping, isTrue);
   });
 }

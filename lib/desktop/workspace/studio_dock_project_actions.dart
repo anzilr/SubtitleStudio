@@ -5,6 +5,7 @@ import 'package:subtitle_studio/services/project_document_codec.dart';
 import 'package:subtitle_studio/services/subtitle_encoding_decoder.dart';
 import 'package:subtitle_studio/services/subtitle_import_repository.dart';
 import 'package:subtitle_studio/utils/subtitle_parser.dart';
+import 'package:subtitle_studio/utils/subtitle_processor.dart';
 import 'package:subtitle_studio/widgets/session_selection/session_project_import_repository.dart';
 
 /// Shared, non-navigating persistence boundary for the Studio Dock desktop
@@ -31,7 +32,11 @@ class StudioDockProjectActions {
   static String displayName(String path) =>
       Uri.file(path).pathSegments.last;
 
-  Future<Session> importFile(String path, {String? selectedEncoding}) async {
+  Future<Session> importFile(String path, {
+    String? selectedEncoding,
+    bool removeHearingImpaired = false,
+    bool mergeOverlapping = false,
+  }) async {
     final file = File(path);
     if (!await file.exists()) {
       throw const FileSystemException('The selected file does not exist.');
@@ -43,6 +48,19 @@ class StudioDockProjectActions {
     if (extension == '.msone') return _importProject(path);
     final decoded = await SubtitleEncodingDecoder.decodeFile(file,
         selectedEncoding: selectedEncoding);
+    if (removeHearingImpaired || mergeOverlapping) {
+      // Reuse mobile's import transformations, including timing fixes and
+      // reindexing. Only the explicit opt-in path changes cue content.
+      final result = await processSubtitleContentWithoutContext(
+        decoded.content, displayName(path), path,
+        removeHearingImpairedLines: removeHearingImpaired,
+        mergeOverlappingSubtitles: mergeOverlapping,
+        contentUri: path,
+        encoding: decoded.encoding,
+        repository: subtitleImporter,
+      );
+      return result.session;
+    }
     final parsed = SubtitleParser.parseSrt(decoded.content);
     if (parsed.isEmpty) {
       throw const FormatException('No valid subtitle lines were found.');

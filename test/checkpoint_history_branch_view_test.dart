@@ -74,6 +74,28 @@ void main() {
     expect(owners[1], 'refs/heads/main');
   });
 
+  test('detached active path gets its own owner without recoloring main', () {
+    final graph = CheckpointHistoryGraph.build(
+      sessionId: 1,
+      checkpoints: [
+        _point(1, null), _point(2, 1), _point(3, 2),
+        _point(4, 2, active: true), _point(5, 4),
+      ],
+      persistentRefs: [
+        _ref('HEAD', 'head', 4),
+        _ref('refs/heads/main', 'branch', 3),
+      ],
+    );
+    expect(graph.isDetached, isTrue);
+    final owners = CheckpointHistoryBranchView.displayOwners(graph);
+    expect(owners[4], CheckpointHistoryBranchView.detachedPathOwner);
+    expect(owners[3], 'refs/heads/main');
+    expect(owners[2], 'refs/heads/main');
+    expect(owners[1], 'refs/heads/main');
+    expect(owners[5], isNull,
+        reason: 'Unrelated, unnamed future points are not active HEAD.');
+  });
+
   test('incomplete selection is rejected without drawing false edges', () {
     final graph = _fork();
     expect(() => CheckpointHistoryLaneLayout.fromGraph(graph,

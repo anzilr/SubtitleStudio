@@ -5,6 +5,10 @@ import 'package:subtitle_studio/services/checkpoint_history_graph.dart';
 class CheckpointHistoryBranchView {
   const CheckpointHistoryBranchView._();
 
+  /// Display-only owner for the active path when HEAD is not attached to a
+  /// saved branch. Never persist this as a branch reference.
+  static const detachedPathOwner = '@detached-head';
+
   static Set<int> ancestorIds(
       CheckpointHistoryGraph graph, String branchName) {
     final references = graph.references.where((ref) =>
@@ -37,6 +41,16 @@ class CheckpointHistoryBranchView {
       int? id = ref.checkpointId;
       while (id != null && !owners.containsKey(id)) {
         owners[id] = ref.name;
+        id = byId[id]?.parentCheckpointId;
+      }
+    }
+    // Detached HEAD is a real editing path even though it has no named ref.
+    // Named paths retain ownership of shared ancestors; only the active
+    // unnamed continuation receives this synthetic presentation color.
+    if (graph.isDetached) {
+      int? id = graph.headCheckpointId;
+      while (id != null && !owners.containsKey(id)) {
+        owners[id] = detachedPathOwner;
         id = byId[id]?.parentCheckpointId;
       }
     }

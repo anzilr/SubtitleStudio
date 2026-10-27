@@ -156,7 +156,39 @@ FakeHistoryCommands _forkedCommands() {
   return fake;
 }
 
+FakeHistoryCommands _detachedCommands() {
+  final fake = FakeHistoryCommands(
+    detached: true,
+    additionalCheckpoints: [
+      _childPoint(2, 1),
+      _childPoint(3, 2),
+      _childPoint(4, 2, active: true),
+    ],
+  );
+  fake.checkpoint.isActive = false;
+  fake.refs[0].targetCheckpointId = 4;
+  fake.refs[1].targetCheckpointId = 3;
+  return fake;
+}
+
 void main() {
+  testWidgets('detached HEAD has a visible colored path separate from main',
+      (tester) async {
+    await tester.pumpWidget(_host(_detachedCommands()));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('history-detached-path-legend')),
+        findsOneWidget);
+    final detached = tester.widget<CustomPaint>(find.byKey(
+        const ValueKey('history-rail-4'))).painter!
+        as CheckpointHistoryRailPainter;
+    final main = tester.widget<CustomPaint>(find.byKey(
+        const ValueKey('history-rail-3'))).painter!
+        as CheckpointHistoryRailPainter;
+    expect(detached.markerColor, isNot(main.markerColor));
+    expect(detached.markerColor, isNot(detached.colors.outline));
+    expect(main.markerColor, isNot(main.colors.outline));
+  });
+
   testWidgets('each branch keeps a colored chip even when not filtered',
       (tester) async {
     await tester.pumpWidget(_host(_forkedCommands()));

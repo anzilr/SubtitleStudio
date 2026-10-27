@@ -65,6 +65,32 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('source formatting is checked when no edited text was saved',
+      (tester) async {
+    const malayalam = '<font color="#00ff00"><b>"ദ ഗോൾഡൻ വോയേജ്\n'
+        'ഓഫ് സിൻബാദ്"</b></font>';
+    await launch(tester, initialCues: const [
+      StudioDockCue(id: 1, start: '00:00:01,000',
+          end: '00:00:04,000', original: malayalam, edited: ''),
+    ]);
+    await openQuality(tester);
+    expect(find.byKey(const ValueKey('studio-quality-issue-1-emptyText')),
+        findsNothing);
+    expect(find.text('No issues detected in 1 subtitles.'), findsOneWidget);
+  });
+
+  testWidgets('an intentionally saved empty edit is still checked as empty',
+      (tester) async {
+    await launch(tester, initialCues: const [
+      StudioDockCue(id: 1, start: '00:00:01,000',
+          end: '00:00:04,000', original: '<b>Visible original</b>',
+          edited: '', storedEdited: ''),
+    ]);
+    await openQuality(tester);
+    expect(find.byKey(const ValueKey('studio-quality-issue-1-emptyText')),
+        findsOneWidget);
+  });
+
   testWidgets('quality checker opens via Tools and reports without edits',
       (tester) async {
     await launch(tester);

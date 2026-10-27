@@ -186,6 +186,10 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
           1, (35 + index * 137.508) % 360, 0.68,
           brightness == Brightness.dark ? 0.67 : 0.39,
         ).toColor(),
+      if (graph.isDetached)
+        CheckpointHistoryBranchView.detachedPathOwner:
+            HSLColor.fromAHSL(1, 215, 0.76,
+                brightness == Brightness.dark ? 0.72 : 0.38).toColor(),
     };
   }
 
@@ -866,25 +870,36 @@ class _CheckpointHistoryPanelState extends ConsumerState<CheckpointHistoryPanel>
           child: Text('Many paths overlap here. Tap a branch to see its '
               'history clearly; the list keeps every point available.'),
         ),
-      if (_showVisualLanes) const SizedBox(
+      if (_showVisualLanes) SizedBox(
         height: 36,
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
-          padding: EdgeInsets.symmetric(horizontal: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Row(
-            key: ValueKey('history-legend'),
+            key: const ValueKey('history-legend'),
             children: [
-              Icon(Icons.radio_button_checked, size: 16),
-              SizedBox(width: 4),
-              Text('Current point'),
-              SizedBox(width: 16),
-              Icon(Icons.linear_scale, size: 16),
-              SizedBox(width: 4),
-              Text('Earlier points'),
-              SizedBox(width: 16),
-              Icon(Icons.call_split, size: 16),
-              SizedBox(width: 4),
-              Text('History split'),
+              const Icon(Icons.radio_button_checked, size: 16),
+              const SizedBox(width: 4),
+              const Text('Current point'),
+              const SizedBox(width: 16),
+              const Icon(Icons.linear_scale, size: 16),
+              const SizedBox(width: 4),
+              const Text('Earlier points'),
+              const SizedBox(width: 16),
+              const Icon(Icons.call_split, size: 16),
+              const SizedBox(width: 4),
+              const Text('History split'),
+              if (graph.isDetached) ...[
+                const SizedBox(width: 16),
+                Icon(Icons.alt_route, size: 16,
+                  color: branchColors[
+                      CheckpointHistoryBranchView.detachedPathOwner]),
+                const SizedBox(width: 4),
+                Text('Current separate path',
+                  key: const ValueKey('history-detached-path-legend'),
+                  style: TextStyle(color: branchColors[
+                      CheckpointHistoryBranchView.detachedPathOwner])),
+              ],
             ],
           ),
         ),

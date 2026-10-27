@@ -58,6 +58,32 @@ void main() {
     expect(await harness.isar.sessions.count(), 1);
   });
 
+  test('desktop import transformations are opt-in and do not edit the SRT',
+      () async {
+    final file = File('${harness.directory.path}/cleanup.srt');
+    const source = '1\n00:00:01,000 --> 00:00:02,000\n'
+        '[music playing] Hello\n\n'
+        '2\n00:00:01,000 --> 00:00:02,000\nWorld\n';
+    await file.writeAsString(source);
+
+    final untouched = await actions.importFile(file.path);
+    final before = await harness.isar.subtitleCollections.get(
+        untouched.subtitleCollectionId);
+    expect(before!.lines, hasLength(2));
+    expect(before.lines.first.original, contains('[music playing]'));
+
+    final cleaned = await actions.importFile(file.path,
+        removeHearingImpaired: true, mergeOverlapping: true);
+    final after = await harness.isar.subtitleCollections.get(
+        cleaned.subtitleCollectionId);
+    expect(after!.lines, hasLength(1));
+    expect(after.lines.single.original, contains('Hello'));
+    expect(after.lines.single.original, contains('World'));
+    expect(after.lines.single.original, isNot(contains('[music playing]')));
+    expect(await file.readAsString(), source,
+        reason: 'Import cleanup must never rewrite the original file.');
+  });
+
   test('VTT/ASS/SSA import is blocked before creating a writable project', () async {
     for (final extension in ['vtt', 'ass', 'ssa']) {
       final file = File('${harness.directory.path}/test.$extension');

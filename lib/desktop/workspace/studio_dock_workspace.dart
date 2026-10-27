@@ -2693,7 +2693,10 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     final cues = [
       for (final cue in _cues)
         SubtitleQualityCue(
-          id: cue.id, start: cue.start, end: cue.end, text: cue.edited,
+          id: cue.id, start: cue.start, end: cue.end,
+          // Empty display drafts mean "use original" until an edit is
+          // persisted. An explicitly saved empty edit still remains empty.
+          text: cue.storedEdited ?? cue.original,
           effectGroupId: effectGroupsByCueId[cue.id],
         ),
     ];

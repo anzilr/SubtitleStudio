@@ -6,6 +6,20 @@ import 'package:subtitle_studio/services/subtitle_encoding_preview.dart';
 import 'package:subtitle_studio/services/subtitle_extended_encoding_service.dart';
 import 'package:subtitle_studio/services/subtitle_text_codec.dart';
 
+/// User-confirmed SRT preflight. No import or source-file mutation happens in
+/// this dialog, and both optional transformations default to disabled.
+class StudioDockSrtImportChoice {
+  const StudioDockSrtImportChoice({
+    required this.encoding,
+    this.removeHearingImpaired = false,
+    this.mergeOverlapping = false,
+  });
+
+  final String? encoding;
+  final bool removeHearingImpaired;
+  final bool mergeOverlapping;
+}
+
 /// Native desktop preflight for an SRT file. Cancelling never writes a session
 /// or changes the previously active project. The selected encoding is passed
 /// to the same strict decoder used by mobile's import preview.
@@ -33,6 +47,8 @@ class _StudioDockSrtImportDialogState extends State<StudioDockSrtImportDialog> {
   List<String> _encodings = SubtitleTextCodec.supportedEncodings;
   Uint8List? _bytes;
   bool _previewBusy = false;
+  bool _removeHearingImpaired = false;
+  bool _mergeOverlapping = false;
   String? _error;
 
   @override
@@ -136,6 +152,29 @@ class _StudioDockSrtImportDialogState extends State<StudioDockSrtImportDialog> {
               : const Icon(Icons.visibility_outlined),
           label: const Text('Preview text'),
         ),
+        const Divider(height: 24),
+        CheckboxListTile(
+          key: const ValueKey('studio-srt-import-hearing-cleanup'),
+          contentPadding: EdgeInsets.zero,
+          dense: true,
+          value: _removeHearingImpaired,
+          title: const Text('Remove hearing-impaired text'),
+          subtitle: const Text('Remove accessibility descriptions using the '
+              'same import cleanup as mobile.'),
+          onChanged: _previewBusy ? null : (value) =>
+              setState(() => _removeHearingImpaired = value ?? false),
+        ),
+        CheckboxListTile(
+          key: const ValueKey('studio-srt-import-merge-overlaps'),
+          contentPadding: EdgeInsets.zero,
+          dense: true,
+          value: _mergeOverlapping,
+          title: const Text('Merge matching-time subtitles'),
+          subtitle: const Text('Combine adjacent cues with identical start '
+              'and end times; leave off to preserve the cue structure.'),
+          onChanged: _previewBusy ? null : (value) =>
+              setState(() => _mergeOverlapping = value ?? false),
+        ),
         if (_error != null) ...[
           const SizedBox(height: 8),
           Text(_error!, style: TextStyle(
@@ -151,7 +190,11 @@ class _StudioDockSrtImportDialogState extends State<StudioDockSrtImportDialog> {
       FilledButton(
         key: const ValueKey('studio-srt-import-confirm'),
         onPressed: _previewBusy ? null : () => Navigator.pop(context,
-            _encoding),
+            StudioDockSrtImportChoice(
+              encoding: _encoding == 'Auto' ? null : _encoding,
+              removeHearingImpaired: _removeHearingImpaired,
+              mergeOverlapping: _mergeOverlapping,
+            )),
         child: const Text('Import SRT')),
     ],
   );

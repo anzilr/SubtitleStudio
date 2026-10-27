@@ -109,20 +109,21 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
           allowedExtensions: const ['srt', 'msone'],
         ));
     if (path == null || !mounted) return; // Cancellation makes no project.
-    String? selectedEncoding;
+    StudioDockSrtImportChoice? srtChoice;
     if (StudioDockProjectActions.extensionOf(path) == '.srt') {
-      final choice = await showDialog<String>(
+      srtChoice = await showDialog<StudioDockSrtImportChoice>(
         context: context,
         barrierDismissible: false,
         builder: (_) => StudioDockSrtImportDialog(filePath: path),
       );
-      if (!mounted || choice == null) return;
-      selectedEncoding = choice == 'Auto' ? null : choice;
+      if (!mounted || srtChoice == null) return;
     }
     setState(() { _busy = true; _error = null; });
     try {
       final imported = await _actions.importFile(path,
-          selectedEncoding: selectedEncoding);
+          selectedEncoding: srtChoice?.encoding,
+          removeHearingImpaired: srtChoice?.removeHearingImpaired ?? false,
+          mergeOverlapping: srtChoice?.mergeOverlapping ?? false);
       if (!mounted) return;
       _chosenSessionId = imported.id;
       _refresh();
