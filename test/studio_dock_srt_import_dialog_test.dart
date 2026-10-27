@@ -9,16 +9,16 @@ void main() {
   late Directory directory;
   late File source;
 
-  setUp(() async {
-    directory = await Directory.systemTemp.createTemp('studio_srt_import_');
+  setUp(() {
+    directory = Directory.systemTemp.createTempSync('studio_srt_import_');
     source = File('${directory.path}/example.srt');
-    await source.writeAsBytes([
+    source.writeAsBytesSync([
       ...'1\n00:00:01,000 --> 00:00:02,000\nIt'.codeUnits,
       0x92, ...'s a preview\n'.codeUnits,
     ]);
   });
-  tearDown(() async {
-    if (await directory.exists()) await directory.delete(recursive: true);
+  tearDown(() {
+    if (directory.existsSync()) directory.deleteSync(recursive: true);
   });
 
   Future<ValueNotifier<String?>> launch(WidgetTester tester) async {
@@ -54,7 +54,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('studio-srt-import-cancel')));
     await tester.pumpAndSettle();
     expect(result.value, 'cancelled');
-    expect(await source.length(), greaterThan(0));
+    expect(source.lengthSync(), greaterThan(0));
   });
 
   testWidgets('encoding selection drives preview and confirmed import choice',
