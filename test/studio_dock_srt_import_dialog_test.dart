@@ -82,8 +82,14 @@ void main() {
   testWidgets('optional cleanup and overlap merge are explicit opt-ins',
       (tester) async {
     final result = await launch(tester);
+    await tester.ensureVisible(find.byKey(
+        const ValueKey('studio-srt-import-hearing-cleanup')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(
         const ValueKey('studio-srt-import-hearing-cleanup')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(
+        const ValueKey('studio-srt-import-merge-overlaps')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(
         const ValueKey('studio-srt-import-merge-overlaps')));

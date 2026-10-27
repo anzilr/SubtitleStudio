@@ -117,7 +117,7 @@ class _StudioDockSrtImportDialogState extends State<StudioDockSrtImportDialog> {
     title: const Text('Import SRT'),
     content: SizedBox(
       width: 510,
-      child: Column(mainAxisSize: MainAxisSize.min,
+      child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(widget.filePath.split(Platform.pathSeparator).last,
             maxLines: 2, overflow: TextOverflow.ellipsis),
@@ -180,7 +180,7 @@ class _StudioDockSrtImportDialogState extends State<StudioDockSrtImportDialog> {
           Text(_error!, style: TextStyle(
               color: Theme.of(context).colorScheme.error)),
         ],
-      ]),
+      ])),
     ),
     actions: [
       TextButton(
