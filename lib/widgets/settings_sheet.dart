@@ -202,7 +202,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                       if (ResponsiveLayout.isMobilePlatform()) ListTile(
                         leading: Icon(Icons.save, color: Theme.of(context).colorScheme.primary),
                         title: const Text('Write SRT When Saving a Line'),
-                        subtitle: const Text('Save the edit in Isar and also update the source SRT file. When off, the edit remains safely in the project until you export or save it.'),
+                        subtitle: const Text('Save the edit in your project and also update the source SRT file. When off, your edits remain in the project until you export or save them.'),
                         trailing: Switch(
                   value: _isSaveToFileEnabled,
                   onChanged: (bool value) async {
@@ -220,7 +220,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                 const ListTile(
                   leading: Icon(Icons.save_outlined),
                   title: Text('Saving Subtitle Files'),
-                  subtitle: Text('Edits are kept in Isar. Use File > Save or Save As in Studio Dock to write the SRT file.'),
+                  subtitle: Text('Edits are saved in your SubtitleStudio project. Use File > Save or Save As to write an SRT file.'),
                 ),
               
               // Max Line Length Setting
@@ -404,7 +404,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                 leading: Icon(Icons.account_tree, color: Theme.of(context).colorScheme.primary),
                 title: const Text('Edit History Strategy'),
                 subtitle: Text(_checkpointStrategy == 'hybrid'
-                    ? 'Hybrid: periodic snapshots plus recorded changes'
+                    ? 'Smart Backup: periodic snapshots plus recorded changes'
                     : _checkpointStrategy == 'snapshot'
                         ? 'Full snapshots: faster restore, more storage'
                         : 'Recorded changes: less storage, slower restore'),
