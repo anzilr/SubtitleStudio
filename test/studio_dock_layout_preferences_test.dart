@@ -188,7 +188,7 @@ void main() {
         findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('studio-dock-toolbar-more')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Import subtitles or project'));
+    await tester.tap(find.text('Open SRT / Import project'));
     await tester.pumpAndSettle();
     expect(imports, 1);
     expect(tester.takeException(), isNull);
