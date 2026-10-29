@@ -129,7 +129,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Export SRT…').last);
     await tester.pumpAndSettle();
-    expect(find.text('Export SRT'), findsOneWidget);
+    expect(find.byKey(const ValueKey('studio-export-confirm')), findsOneWidget);
     expect(find.byKey(const ValueKey('studio-export-original')), findsNothing);
     await tester.tap(find.byKey(const ValueKey('studio-export-confirm')));
     await tester.pumpAndSettle();
