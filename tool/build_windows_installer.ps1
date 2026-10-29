@@ -3,6 +3,7 @@
   Builds and packages the Subtitle Studio Windows x64 installer locally.
 .DESCRIPTION
   Requires Flutter Windows tooling and Inno Setup 6.5.2 or newer.
+  Packages offline FFmpeg/FFprobe binaries from installer/deps/ffmpeg.
   Never downloads or executes third-party installers. Flutter platform builds
   must run on a local Windows machine, not in GitHub Actions.
 .EXAMPLE
@@ -18,6 +19,7 @@ param(
   [switch]$ReplaceExistingInstaller,
   [string]$InnoCompilerPath,
   [string]$VcRuntimeSourceDirectory,
+  [string]$FfmpegBundleDirectory,
   [ValidatePattern('^[A-Fa-f0-9]{40}$')]
   [string]$SigningCertificateThumbprint,
   [string]$TimestampServer = 'http://timestamp.digicert.com'
@@ -79,6 +81,26 @@ if (Test-Path -LiteralPath $installerPath -PathType Leaf) {
   }
 }
 
+# Validate offline media inputs before spending time on the Flutter build.
+if ([string]::IsNullOrWhiteSpace($FfmpegBundleDirectory)) {
+  $FfmpegBundleDirectory = Join-Path $repoRoot 'installer\deps\ffmpeg'
+}
+$ffmpegFiles = @(
+  'bin\ffmpeg.exe',
+  'bin\ffprobe.exe',
+  'LICENSE.txt',
+  'SOURCE.txt'
+)
+foreach ($relative in $ffmpegFiles) {
+  $source = Join-Path $FfmpegBundleDirectory $relative
+  if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
+    throw "FFmpeg bundle is incomplete: $source. Supply a complete -FfmpegBundleDirectory containing ffmpeg.exe, ffprobe.exe, LICENSE.txt, and SOURCE.txt."
+  }
+  if ((Get-Item -LiteralPath $source).Length -eq 0) {
+    throw "FFmpeg bundle contains an empty file: $source"
+  }
+}
+
 if (-not $SkipFlutterBuild) {
   if ($null -eq (Get-Command 'flutter' -ErrorAction SilentlyContinue)) {
     throw 'flutter was not found on PATH. Install the Flutter Windows toolchain.'
@@ -126,6 +148,17 @@ foreach ($runtime in $vcRuntimeFiles) {
   if (-not (Test-Path -LiteralPath $target -PathType Leaf)) {
     throw "Missing application-local $runtime. Provide -VcRuntimeSourceDirectory with the x64 Microsoft VC runtime DLLs from your licensed toolchain."
   }
+}
+
+# The Windows app resolves these two executables next to itself, so the user
+# never needs to install FFmpeg, edit PATH, or enable package-manager access.
+$ffmpegDestination = Join-Path $releaseDir 'tools\ffmpeg'
+foreach ($relative in $ffmpegFiles) {
+  $source = Join-Path $FfmpegBundleDirectory $relative
+  $destination = Join-Path $ffmpegDestination $relative
+  [void](New-Item -ItemType Directory -Force -Path (Split-Path -Parent $destination))
+  Copy-Item -LiteralPath $source -Destination $destination -Force
+  Write-Host "FFmpeg bundle: $relative SHA-256 $((Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash)"
 }
 
 $compilerArguments = @(

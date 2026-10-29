@@ -9,6 +9,7 @@ import 'package:path/path.dart' as path;
 import 'package:flutter/foundation.dart';
 import 'dart:math' show min;
 import 'package:subtitle_studio/utils/logging_helpers.dart';
+import 'package:subtitle_studio/utils/desktop_ffmpeg_executables.dart';
 
 /// Interface for FFmpeg operations
 abstract class FFmpegInterface {
@@ -643,11 +644,13 @@ class SystemFFmpeg implements FFmpegInterface {
 
     try {
       // Check if ffmpeg is available
-      final ffmpegResult = await Process.run('ffmpeg', ['-version']);
+      final ffmpegResult = await Process.run(
+        DesktopFfmpegExecutables.ffmpeg(), ['-version']);
       _ffmpegAvailable = ffmpegResult.exitCode == 0;
 
       // Check if ffprobe is available
-      final ffprobeResult = await Process.run('ffprobe', ['-version']);
+      final ffprobeResult = await Process.run(
+        DesktopFfmpegExecutables.ffprobe(), ['-version']);
       _ffprobeAvailable = ffprobeResult.exitCode == 0;
 
       if (kDebugMode) {
@@ -670,7 +673,7 @@ class SystemFFmpeg implements FFmpegInterface {
     if (!_ffmpegAvailable || !_ffprobeAvailable) {
       String installInstructions;
       if (Platform.isWindows) {
-        installInstructions = 'Windows: Download from ffmpeg.org or use: choco install ffmpeg / winget install ffmpeg';
+        installInstructions = 'Windows: Repair Subtitle Studio or reinstall the application to restore the bundled media tools.';
       } else if (Platform.isMacOS) {
         installInstructions = 'macOS: brew install ffmpeg';
       } else if (Platform.isLinux) {
@@ -680,10 +683,7 @@ class SystemFFmpeg implements FFmpegInterface {
       }
       
       throw Exception(
-        'FFmpeg is not available on this system. '
-        'Please install FFmpeg and ensure it is in your PATH.\n\n'
-        'Installation instructions:\n'
-        '• $installInstructions',
+        'FFmpeg or FFprobe is unavailable.\n\n$installInstructions',
       );
     }
   }
@@ -713,7 +713,7 @@ class SystemFFmpeg implements FFmpegInterface {
         print('Prepared system FFprobe input locator');
       }
       
-      final result = await Process.run('ffprobe', [
+      final result = await Process.run(DesktopFfmpegExecutables.ffprobe(), [
         '-v',
         'quiet',
         '-print_format',
@@ -825,7 +825,7 @@ class SystemFFmpeg implements FFmpegInterface {
         print('Prepared system FFmpeg input and output locators');
       }
       
-      final result = await Process.run('ffmpeg', [
+      final result = await Process.run(DesktopFfmpegExecutables.ffmpeg(), [
         '-y', // Overwrite output file
         '-i', normalizedVideoPath,
         '-map', '0:s:$streamIndex',
@@ -930,7 +930,7 @@ class SystemFFmpeg implements FFmpegInterface {
         print('Prepared system FFmpeg input and output locators');
       }
       
-      final result = await Process.run('ffmpeg', [
+      final result = await Process.run(DesktopFfmpegExecutables.ffmpeg(), [
         '-y', // Overwrite output file
         '-i', normalizedVideoPath,
         '-map', '0:s:$streamIndex',
@@ -986,7 +986,7 @@ class SystemFFmpeg implements FFmpegInterface {
         print('Prepared system FFprobe input locator');
       }
       
-      final result = await Process.run('ffprobe', [
+      final result = await Process.run(DesktopFfmpegExecutables.ffprobe(), [
         '-v',
         'quiet',
         '-print_format',

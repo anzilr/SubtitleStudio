@@ -17,6 +17,7 @@ import 'package:subtitle_studio/features/waveform/services/waveform_peak_cache_j
 import 'package:subtitle_studio/features/waveform/services/waveform_ffmpeg_plan.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_saf_input.dart';
 import 'package:subtitle_studio/utils/ffmpeg_helper.dart';
+import 'package:subtitle_studio/utils/desktop_ffmpeg_executables.dart';
 import 'package:ffmpeg_kit_flutter_new_min_gpl/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new_min_gpl/ffmpeg_kit_config.dart';
 import 'package:subtitle_studio/features/waveform/repositories/waveform_preferences_repository.dart';
@@ -499,7 +500,8 @@ class AudioProcessor {
   /// Check if FFmpeg is available on the system
   Future<void> _checkFFmpegAvailability() async {
     try {
-      final result = await Process.run('ffmpeg', ['-version']);
+      final result = await Process.run(
+        DesktopFfmpegExecutables.ffmpeg(), ['-version']);
       if (result.exitCode != 0) {
         throw Exception('FFmpeg is not properly installed');
       }
@@ -509,11 +511,9 @@ class AudioProcessor {
       }
     } catch (_) {
       throw const WaveformProcessingFailure(
-        'FFmpeg is not available on this system. '
-        'Please install FFmpeg and ensure it is in your PATH.\n\n'
-        'Installation instructions:\n'
-        '• Windows: Download from ffmpeg.org or use: winget install ffmpeg\n'
-        '• Linux: sudo apt install ffmpeg (Ubuntu/Debian)'
+        'FFmpeg is unavailable. On Windows, repair or reinstall Subtitle Studio '
+        'to restore the bundled media tools. On Linux, install FFmpeg through '
+        'your package manager.'
       );
     }
   }
@@ -578,7 +578,8 @@ class AudioProcessor {
         }
 
         final ffmpegWatch = Stopwatch()..start();
-        final process = await Process.start('ffmpeg', args);
+        final process = await Process.start(
+          DesktopFfmpegExecutables.ffmpeg(), args);
         _activeDesktopProcess = process;
         if (extractionEpoch != _requestEpoch) {
           process.kill();

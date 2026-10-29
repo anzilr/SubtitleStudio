@@ -23,6 +23,17 @@ void main() {
     expect(builder, contains('Get-FileHash'));
   });
 
+  test('Windows release includes an offline FFmpeg and FFprobe bundle', () {
+    expect(builder, contains('FfmpegBundleDirectory'));
+    expect(builder, contains(r"'bin\ffmpeg.exe'"));
+    expect(builder, contains(r"'bin\ffprobe.exe'"));
+    expect(builder, contains("'LICENSE.txt'"));
+    expect(builder, contains("'SOURCE.txt'"));
+    expect(builder, contains(r"'tools\ffmpeg'"));
+    expect(builder, contains('Copy-Item -LiteralPath $source'));
+    expect(builder, isNot(contains('winget install')));
+  });
+
   test('installer offers safe per-user and optional all-users mode', () {
     expect(installer, contains('PrivilegesRequired=lowest'));
     expect(installer, contains('PrivilegesRequiredOverridesAllowed=dialog'));
