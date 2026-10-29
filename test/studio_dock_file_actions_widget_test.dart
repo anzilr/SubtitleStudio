@@ -18,7 +18,7 @@ void main() {
     WidgetTester tester, {
     required Future<StudioDockFileResult> Function() save,
     Future<StudioDockFileResult> Function()? saveAs,
-    Future<StudioDockFileResult> Function(bool)? exportFile,
+    Future<StudioDockFileResult> Function(StudioDockExportOptions)? exportFile,
     Future<StudioDockFileResult> Function()? saveProject,
     Future<StudioDockFileResult> Function()? saveProjectAs,
     Future<bool> Function(int, String)? edit,
@@ -73,7 +73,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('File menu exposes Save As and both export text choices',
+  testWidgets('File menu distinguishes Save As from export with text choices',
       (tester) async {
     var saveAsCalls = 0;
     final choices = <bool>[];
@@ -83,8 +83,8 @@ void main() {
         saveAsCalls++;
         return StudioDockFileResult.saved;
       },
-      exportFile: (original) async {
-        choices.add(original);
+      exportFile: (options) async {
+        choices.add(options.originalOnly);
         return StudioDockFileResult.saved;
       },
     );
@@ -96,7 +96,7 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    await pick('Save As…');
+    await pick('Save SRT As… (switch working file)');
     expect(saveAsCalls, 1);
     await pick('Export SRT…');
     await tester.tap(find.text('Cancel'));
@@ -105,29 +105,34 @@ void main() {
 
     await pick('Export SRT…');
     await tester.tap(find.byKey(const ValueKey('studio-export-original')));
+    await tester.tap(find.byKey(const ValueKey('studio-export-confirm')));
     await tester.pumpAndSettle();
     await pick('Export SRT…');
     await tester.tap(find.byKey(const ValueKey('studio-export-edited')));
+    await tester.tap(find.byKey(const ValueKey('studio-export-confirm')));
     await tester.pumpAndSettle();
     expect(choices, [true, false]);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('scratch Edit Mode exports subtitle text without a translation choice',
+  testWidgets('scratch Edit Mode can configure export without translation choice',
       (tester) async {
     final choices = <bool>[];
     await launch(tester,
       isEditMode: true,
       save: () async => StudioDockFileResult.saved,
-      exportFile: (originalOnly) async {
-        choices.add(originalOnly);
+      exportFile: (options) async {
+        choices.add(options.originalOnly);
         return StudioDockFileResult.saved;
       });
     await tester.tap(find.byKey(const ValueKey('studio-file-menu')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Export SRT…').last);
     await tester.pumpAndSettle();
-    expect(find.text('Export subtitle file'), findsNothing);
+    expect(find.text('Export SRT'), findsOneWidget);
+    expect(find.byKey(const ValueKey('studio-export-original')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('studio-export-confirm')));
+    await tester.pumpAndSettle();
     expect(choices, [false]);
   });
 

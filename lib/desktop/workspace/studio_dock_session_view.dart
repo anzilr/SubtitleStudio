@@ -1141,12 +1141,13 @@ class _StudioDockSessionViewState
   Future<StudioDockFileResult> _saveAsSubtitleFile() =>
       _pickAndWriteFile(relink: true);
 
-  Future<StudioDockFileResult> _exportSubtitleFile(bool originalOnly) =>
-      _pickAndWriteFile(relink: false, originalOnly: originalOnly);
+  Future<StudioDockFileResult> _exportSubtitleFile(
+      StudioDockExportOptions options) =>
+      _pickAndWriteFile(relink: false, exportOptions: options);
 
   Future<StudioDockFileResult> _pickAndWriteFile({
     required bool relink,
-    bool originalOnly = false,
+    StudioDockExportOptions? exportOptions,
   }) async {
     try {
       final actions = _fileActions;
@@ -1155,10 +1156,14 @@ class _StudioDockSessionViewState
               sessionId: widget.sessionId, collectionId: widget.collectionId)
           : await actions.prepareExport(
               sessionId: widget.sessionId, collectionId: widget.collectionId,
-              originalOnly: originalOnly);
+              originalOnly: exportOptions!.originalOnly,
+              encoding: exportOptions.encoding,
+              customTag: exportOptions.customTag);
       if (prepared == null || !mounted) return StudioDockFileResult.failed;
       final picked = await fp.FilePicker.platform.saveFile(
-        dialogTitle: relink ? 'Save Subtitle As' : 'Export Subtitle',
+        dialogTitle: relink
+            ? 'Save SRT As (switch project working file)'
+            : 'Export SRT copy (keep project source)',
         fileName: prepared.plan.fileName,
         type: fp.FileType.custom,
         allowedExtensions: const ['srt'],

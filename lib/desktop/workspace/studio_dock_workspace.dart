@@ -33,6 +33,7 @@ import 'studio_dock_insert_cue_dialog.dart';
 import 'studio_dock_split_cue_dialog.dart';
 import 'studio_dock_go_to_line_dialog.dart';
 import 'studio_dock_file_actions.dart';
+import 'studio_dock_export_dialog.dart';
 import 'studio_dock_style_actions.dart';
 import 'studio_dock_style_color_dialog.dart';
 import 'studio_dock_effect_groups.dart';
@@ -361,7 +362,8 @@ class StudioDockWorkspace extends StatefulWidget {
   /// File Save is separate from the already checkpoint-backed inspector Apply.
   final Future<StudioDockFileResult> Function()? onSaveFile;
   final Future<StudioDockFileResult> Function()? onSaveAsFile;
-  final Future<StudioDockFileResult> Function(bool originalOnly)? onExportFile;
+  final Future<StudioDockFileResult> Function(StudioDockExportOptions options)?
+      onExportFile;
   /// Complete .msone document with checkpoint graph, separate from SRT Save.
   final Future<StudioDockFileResult> Function()? onSaveProject;
   final Future<StudioDockFileResult> Function()? onSaveProjectAs;
@@ -2435,7 +2437,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       StudioDockFileResult.needsLocation =>
         projectDocument
           ? 'No writable project file. Use Save Project As to choose a destination.'
-          : 'No writable source file. Use Save As to choose a destination.',
+          : 'No writable source file. Use Save SRT As to choose a destination.',
       StudioDockFileResult.alreadyExists =>
         'Existing file was kept. No bytes were overwritten.',
       StudioDockFileResult.stale =>
@@ -2499,42 +2501,18 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
   Future<void> _exportFileSafely() async {
     if (widget.onExportFile == null || _savingFile ||
         !await _confirmDraftBeforeLeaving() || !mounted) return;
-    // A scratch-created project has no source/translation pair to choose from.
-    if (widget.isEditMode) {
-      await _runFileAction(
-        () => widget.onExportFile!(false), draftAlreadyHandled: true);
-      return;
-    }
-    final originalOnly = await showDialog<bool>(
+    final options = await showDialog<StudioDockExportOptions>(
       context: context,
-      builder: (dialog) => _modalKeys<bool?>(dialog,
-        confirm: false, cancel: null, child: AlertDialog(
-        title: const Text('Export subtitle file'),
-        content: const Text('Choose which text to include in the SRT. '
-            'Export does not change the current project or its save location.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialog),
-            child: const Text('Cancel'),
-          ),
-          OutlinedButton(
-            key: const ValueKey('studio-export-original'),
-            onPressed: () => Navigator.pop(dialog, true),
-            child: const Text('Original text'),
-          ),
-          FilledButton(
-            key: const ValueKey('studio-export-edited'),
-            onPressed: () => Navigator.pop(dialog, false),
-            child: const Text('Edited text'),
-          ),
-        ],
-      )),
+      builder: (_) => StudioDockExportDialog(
+        isEditMode: widget.isEditMode,
+        currentEncoding: widget.encoding ?? 'UTF-8',
+        availableEncodings: widget.onLoadEncodings,
+      ),
     );
-    if (originalOnly == null || !mounted) return;
+    if (options == null || !mounted) return;
     await _runFileAction(
-      () => widget.onExportFile!(originalOnly), draftAlreadyHandled: true);
+      () => widget.onExportFile!(options), draftAlreadyHandled: true);
   }
-
 
   Future<void> _selectCueAfterConfirmation(int id,
       {bool range = false, bool toggle = false}) async {
@@ -3099,7 +3077,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                 PopupMenuItem(height: 34, value: _StudioDockFileMenuAction.save,
                   child: Text('Save subtitle file')),
                 PopupMenuItem(height: 34, value: _StudioDockFileMenuAction.saveAs,
-                  child: Text('Save As…')),
+                  child: Text('Save SRT As… (switch working file)')),
                 PopupMenuItem(height: 34, value: _StudioDockFileMenuAction.export,
                   child: Text('Export SRT…')),
               ],

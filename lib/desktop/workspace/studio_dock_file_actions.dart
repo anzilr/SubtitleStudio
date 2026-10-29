@@ -22,6 +22,20 @@ enum StudioDockFileResult {
   failed,
 }
 
+/// Export produces an independent copy. Unlike Save As, it never changes the
+/// source file linked to the active project.
+class StudioDockExportOptions {
+  const StudioDockExportOptions({
+    required this.originalOnly,
+    required this.encoding,
+    required this.customTag,
+  });
+
+  final bool originalOnly;
+  final String encoding;
+  final String customTag;
+}
+
 /// Immutable byte plan captured *before* a potentially long system dialog.
 /// Save As rechecks it against fresh Isar state before writing any bytes.
 class StudioDockPreparedFile {
@@ -123,14 +137,16 @@ class StudioDockFileActions {
     required int sessionId,
     required int collectionId,
     required bool originalOnly,
+    String? encoding,
+    String customTag = 'MSone',
   }) async {
     final collection = await _ownedCollection(sessionId, collectionId);
     if (collection == null) return null;
     final plan = await _exporter.prepare(
       lines: collection.lines,
-      encoding: collection.encoding,
+      encoding: encoding ?? collection.encoding,
       requestedName: collection.fileName,
-      customTag: 'MSone',
+      customTag: customTag,
       originalOnly: originalOnly,
     );
     return _prepare(collection, sessionId, plan, relink: false);

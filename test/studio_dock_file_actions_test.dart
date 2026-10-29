@@ -139,6 +139,30 @@ void main() {
     expect(await db.isar.checkpoints.count(), 0);
   });
 
+  test('Export uses selected output encoding and filename tag without relinking',
+      () async {
+    final ids = await seed();
+    final prepared = await actions.prepareExport(
+      sessionId: ids.sessionId,
+      collectionId: ids.collectionId,
+      originalOnly: false,
+      encoding: 'ISO-8859-1',
+      customTag: 'Review',
+    );
+    expect(prepared, isNotNull);
+    expect(prepared!.plan.fileName, 'Desktop.Review.srt');
+    final path = '${temp.path}/Copy.srt';
+    expect(await actions.writeToPath(
+      prepared: prepared, selectedPath: path), StudioDockFileResult.saved);
+    expect(latin1.decode(await File(path).readAsBytes()),
+      contains('Translated second'));
+    final collection =
+        (await db.isar.subtitleCollections.get(ids.collectionId))!;
+    expect(collection.encoding, 'UTF-8');
+    expect(collection.originalFileUri, isNull);
+    expect(collection.filePath, isNull);
+  });
+
   test('Overwrite is refused until explicitly approved', () async {
     final ids = await seed();
     final prepared = (await actions.prepareSaveAs(
