@@ -180,7 +180,7 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
     }
     setState(() { _busy = true; _error = null; });
     try {
-      final Session imported;
+      late Session imported;
       if (projectPlan != null && projectDocument != null) {
         try {
           imported = await _actions.importProject(
