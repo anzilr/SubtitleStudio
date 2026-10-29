@@ -380,7 +380,7 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
       final preparedProject = await projects.prepare(
         sessionId: created.id, collectionId: created.subtitleCollectionId);
       if (preparedProject == null) return StudioDockFileResult.failed;
-      return projects.writeToPath(
+      return await projects.writeToPath(
         prepared: preparedProject, selectedPath: choice.projectPath!);
     } on FormatException {
       return StudioDockFileResult.invalidEncoding;

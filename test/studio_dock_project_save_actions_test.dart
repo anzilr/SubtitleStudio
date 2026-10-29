@@ -188,7 +188,7 @@ void main() {
     await db.isar.writeTxn(() async {
       final collection = (await db.isar.subtitleCollections.get(
           created.subtitleCollectionId))!;
-      collection.lines.add(SubtitleLine()
+      collection.lines = List<SubtitleLine>.of(collection.lines)..add(SubtitleLine()
         ..index = 1
         ..startTime = '00:00:01,000'
         ..endTime = '00:00:02,000'
