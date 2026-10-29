@@ -8,6 +8,37 @@ import 'package:subtitle_studio/utils/subtitle_parser.dart';
 import 'package:subtitle_studio/utils/subtitle_processor.dart';
 import 'package:subtitle_studio/widgets/session_selection/session_project_import_repository.dart';
 
+enum StudioDockProjectSrtSource {
+  archive,
+  existingSession,
+  locatedFile,
+  unlinked,
+}
+
+/// The user's explicit choices after inspecting a portable project archive.
+/// A missing source file is never silently linked to a writable SRT.
+class StudioDockProjectImportPlan {
+  const StudioDockProjectImportPlan({
+    required this.source,
+    this.replaceSessionId,
+    this.locatedSrtPath,
+  });
+
+  final StudioDockProjectSrtSource source;
+  final int? replaceSessionId;
+  final String? locatedSrtPath;
+}
+
+class StudioDockProjectImportTarget {
+  const StudioDockProjectImportTarget({
+    required this.session,
+    this.srtPath,
+  });
+
+  final Session session;
+  final String? srtPath;
+}
+
 /// Shared, non-navigating persistence boundary for the Studio Dock desktop
 /// project actions. Reuses the production encoding, parser and Isar services.
 class StudioDockProjectActions {
@@ -45,7 +76,11 @@ class StudioDockProjectActions {
     if (!supportedExtensions.contains(extension)) {
       throw const FormatException('Unsupported subtitle or project file.');
     }
-    if (extension == '.msone') return _importProject(path);
+    if (extension == '.msone') {
+      throw const FormatException(
+        'Review the project import options before importing a .msone file.',
+      );
+    }
     final decoded = await SubtitleEncodingDecoder.decodeFile(file,
         selectedEncoding: selectedEncoding);
     if (removeHearingImpaired || mergeOverlapping) {
@@ -88,16 +123,134 @@ class StudioDockProjectActions {
     return result.session;
   }
 
-  Future<Session> _importProject(String path) async {
-    final data = ProjectDocumentCodec.decode(await File(path).readAsString());
-    // Keep the complete history graph, including bookmarks and checkpoint
-    // references. Link the archive's existing subtitle identity where
-    // available; the source file may need relinking at future Save As.
-    final session = await projectImporter.importAsNewSession(
-      projectDocument: data,
-      srtFileInfo: const {'useImportingFile': 'true'},
-      originalProjectUri: path,
-    );
+  Future<ProjectDocument> readProjectDocument(String path) async {
+    if (extensionOf(path) != '.msone') {
+      throw const FormatException('Choose a .msone project file.');
+    }
+    final file = File(path);
+    if (!await file.exists()) {
+      throw const FileSystemException('The selected project does not exist.');
+    }
+    return ProjectDocumentCodec.decode(await file.readAsString());
+  }
+
+  Future<List<StudioDockProjectImportTarget>> importTargets() async {
+    final sessions = await projectImporter.fetchSessions();
+    final targets = <StudioDockProjectImportTarget>[];
+    for (final session in sessions) {
+      final collection = await projectImporter.getSubtitleCollection(
+        session.subtitleCollectionId,
+      );
+      targets.add(StudioDockProjectImportTarget(
+        session: session,
+        srtPath: collection?.filePath ?? collection?.originalFileUri,
+      ));
+    }
+    return targets;
+  }
+
+  static String? archivedSrtPath(ProjectDocument document) =>
+      document.subtitleCollection.filePath ?? document.originalFileUri;
+
+  /// A desktop reference must be an existing local SRT. The archive's path
+  /// may point to another computer; merely having a path is not sufficient.
+  static Future<bool> isUsableSrtPath(String? path) async {
+    if (path == null || path.trim().isEmpty || extensionOf(path) != '.srt') {
+      return false;
+    }
+    return File(path).exists();
+  }
+
+  Future<Session> importProject({
+    required String archivePath,
+    required ProjectDocument document,
+    required StudioDockProjectImportPlan plan,
+    bool importSubtitlesOnly = false,
+  }) async {
+    if (!await File(archivePath).exists() ||
+        extensionOf(archivePath) != '.msone') {
+      throw const FileSystemException('The project archive is unavailable.');
+    }
+
+    final targetId = plan.replaceSessionId;
+    Session? target;
+    if (targetId != null) {
+      final sessions = await projectImporter.fetchSessions();
+      for (final session in sessions) {
+        if (session.id == targetId) {
+          target = session;
+          break;
+        }
+      }
+      if (target == null) {
+        throw StateError('The project selected for replacement no longer exists.');
+      }
+    }
+
+    late final Map<String, String?> fileInfo;
+    switch (plan.source) {
+      case StudioDockProjectSrtSource.archive:
+        final source = archivedSrtPath(document);
+        if (!await isUsableSrtPath(source)) {
+          throw const FileSystemException(
+              'The SRT referenced by this archive is not available.');
+        }
+        fileInfo = {
+          'fileName': displayName(source!),
+          'filePath': source,
+          'fileUri': source,
+        };
+        break;
+      case StudioDockProjectSrtSource.existingSession:
+        if (target == null) {
+          throw const FormatException(
+              'An existing subtitle file requires a replacement project.');
+        }
+        final collection = await projectImporter.getSubtitleCollection(
+          target.subtitleCollectionId,
+        );
+        final source = collection?.filePath ?? collection?.originalFileUri;
+        if (!await isUsableSrtPath(source)) {
+          throw const FileSystemException(
+              'The selected project no longer has an accessible SRT file.');
+        }
+        fileInfo = const {'useExistingProject': 'true'};
+        break;
+      case StudioDockProjectSrtSource.locatedFile:
+        final source = plan.locatedSrtPath;
+        if (!await isUsableSrtPath(source)) {
+          throw const FileSystemException('Choose an existing .srt file.');
+        }
+        fileInfo = {
+          'fileName': displayName(source!),
+          'filePath': source,
+          'fileUri': source,
+        };
+        break;
+      case StudioDockProjectSrtSource.unlinked:
+        fileInfo = {
+          'fileName': document.subtitleCollection.fileName ??
+              document.session.fileName ?? 'Imported subtitles.srt',
+          'filePath': null,
+          'fileUri': null,
+        };
+        break;
+    }
+
+    final session = target == null
+        ? await projectImporter.importAsNewSession(
+            projectDocument: document,
+            srtFileInfo: fileInfo,
+            originalProjectUri: archivePath,
+            importSubtitlesOnly: importSubtitlesOnly,
+          )
+        : await projectImporter.replaceSession(
+            session: target,
+            projectDocument: document,
+            srtFileInfo: fileInfo,
+            originalProjectUri: archivePath,
+            importSubtitlesOnly: importSubtitlesOnly,
+          );
     await subtitleImporter.updateLastEditedSession(session.id);
     return session;
   }

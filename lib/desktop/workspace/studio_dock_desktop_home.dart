@@ -5,10 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/screens/home/repositories/session_repository.dart';
+import 'package:subtitle_studio/services/project_document_codec.dart';
 import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
+import 'package:subtitle_studio/widgets/session_selection/project_history_import_plan.dart';
 import 'package:subtitle_studio/widgets/session_selection/session_project_import_repository.dart';
 
 import 'studio_dock_project_actions.dart';
+import 'studio_dock_project_import_dialog.dart';
 import 'studio_dock_srt_import_dialog.dart';
 
 import 'studio_dock_session_view.dart';
@@ -110,6 +113,8 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
         ));
     if (path == null || !mounted) return; // Cancellation makes no project.
     StudioDockSrtImportChoice? srtChoice;
+    StudioDockProjectImportPlan? projectPlan;
+    ProjectDocument? projectDocument;
     if (StudioDockProjectActions.extensionOf(path) == '.srt') {
       srtChoice = await showDialog<StudioDockSrtImportChoice>(
         context: context,
@@ -117,13 +122,110 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
         builder: (_) => StudioDockSrtImportDialog(filePath: path),
       );
       if (!mounted || srtChoice == null) return;
+    } else if (StudioDockProjectActions.extensionOf(path) == '.msone') {
+      try {
+        projectDocument = await _actions.readProjectDocument(path);
+        final targets = await _actions.importTargets();
+        final archiveAvailable = await StudioDockProjectActions.isUsableSrtPath(
+          StudioDockProjectActions.archivedSrtPath(projectDocument),
+        );
+        final existingAvailability = <int, bool>{};
+        for (final target in targets) {
+          existingAvailability[target.session.id] =
+              await StudioDockProjectActions.isUsableSrtPath(target.srtPath);
+        }
+        if (!mounted) return;
+        projectPlan = await showDialog<StudioDockProjectImportPlan>(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => StudioDockProjectImportDialog(
+            document: projectDocument!,
+            targets: targets,
+            archiveSrtAvailable: archiveAvailable,
+            existingSrtAvailability: existingAvailability,
+          ),
+        );
+        if (!mounted || projectPlan == null) return;
+        if (projectPlan.replaceSessionId != null) {
+          final target = targets.firstWhere(
+            (entry) => entry.session.id == projectPlan!.replaceSessionId,
+          );
+          final approved = await showDialog<bool>(
+            context: context,
+            builder: (dialog) => AlertDialog(
+              title: const Text('Replace project?'),
+              content: Text('Replace "${target.session.fileName}" with '
+                  'the imported subtitles and history? This replaces the '
+                  'current project data and its saved edit history. '
+                  'The source SRT file itself will not be overwritten.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialog, false),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  key: const ValueKey('studio-dock-msone-replace-approve'),
+                  onPressed: () => Navigator.pop(dialog, true),
+                  child: const Text('Replace project'),
+                ),
+              ],
+            ),
+          );
+          if (!mounted || approved != true) return;
+        }
+      } catch (e) {
+        if (mounted) setState(() => _error = 'Unable to read project: $e');
+        return;
+      }
     }
     setState(() { _busy = true; _error = null; });
     try {
-      final imported = await _actions.importFile(path,
-          selectedEncoding: srtChoice?.encoding,
-          removeHearingImpaired: srtChoice?.removeHearingImpaired ?? false,
-          mergeOverlapping: srtChoice?.mergeOverlapping ?? false);
+      final Session imported;
+      if (projectPlan != null && projectDocument != null) {
+        try {
+          imported = await _actions.importProject(
+            archivePath: path,
+            document: projectDocument,
+            plan: projectPlan,
+          );
+        } on ProjectHistoryImportException catch (error) {
+          if (!mounted) return;
+          final proceed = await showDialog<bool>(
+            context: context,
+            barrierDismissible: false,
+            builder: (dialog) => AlertDialog(
+              title: const Text('Project history cannot be restored'),
+              content: Text('${error.message}\n\n'
+                  'No project has been changed. Importing subtitles only '
+                  'discards the archive’s history. If replacing an existing '
+                  'project, its current history will also be replaced.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialog, false),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  key: const ValueKey('studio-dock-msone-subtitles-only'),
+                  onPressed: () => Navigator.pop(dialog, true),
+                  child: const Text('Import subtitles only'),
+                ),
+              ],
+            ),
+          );
+          if (!mounted || proceed != true) return;
+          imported = await _actions.importProject(
+            archivePath: path,
+            document: projectDocument,
+            plan: projectPlan,
+            importSubtitlesOnly: true,
+          );
+        }
+      } else {
+        imported = await _actions.importFile(path,
+            selectedEncoding: srtChoice?.encoding,
+            removeHearingImpaired: srtChoice?.removeHearingImpaired ?? false,
+            mergeOverlapping: srtChoice?.mergeOverlapping ?? false);
+      }
       if (!mounted) return;
       _chosenSessionId = imported.id;
       _refresh();
@@ -279,7 +381,7 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
         if (snapshot.sessions.isEmpty) {
           return _landing(
             'Welcome to Studio Dock',
-            'Import SRT, VTT, ASS or .msone files, or create a new project.',
+            'Import SRT or .msone files, or create a new project.',
           );
         }
 
