@@ -67,6 +67,7 @@ generated*
 
 # Installer output
 /installer/installer_output/
+/installer/output/
 
 # Keystore files
 /android/key.properties

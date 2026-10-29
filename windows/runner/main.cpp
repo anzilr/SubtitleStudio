@@ -36,7 +36,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   std::wstring version_wstr(version_str.begin(), version_str.end());
   title += L" v" + version_wstr;
 #else
-  title += L" v2.0.0";
+  // When build metadata is absent, avoid displaying a stale hard-coded
+  // product version in the Windows title bar.
 #endif
   
   if (!window.Create(title.c_str(), origin, size)) {

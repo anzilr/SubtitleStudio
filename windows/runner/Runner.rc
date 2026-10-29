@@ -89,12 +89,12 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "Malayalam Subtitles" "\0"
+            VALUE "CompanyName", "Anzil R" "\0"
             VALUE "FileDescription", "Subtitle Studio - Professional Subtitle Editor" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "SubtitleStudio" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2025 Malayalam Subtitles. All rights reserved." "\0"
-            VALUE "OriginalFilename", "subtitle_studio.exe" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 Anzil R. Licensed under GNU GPL v3." "\0"
+            VALUE "OriginalFilename", "SubtitleStudio.exe" "\0"
             VALUE "ProductName", "Subtitle Studio" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
