@@ -12,6 +12,7 @@ void main() {
     Future<void> Function()? help,
     VoidCallback? newProject,
     VoidCallback? importFile,
+    VoidCallback? extractSubtitles,
   }) async {
     tester.view.physicalSize = const Size(1680, 1000);
     tester.view.devicePixelRatio = 1;
@@ -43,6 +44,7 @@ void main() {
       onOpenHelp: help,
       onNewProject: newProject,
       onImportFile: importFile,
+      onExtractSubtitles: extractSubtitles,
     )));
     await tester.pumpAndSettle();
   }
@@ -94,6 +96,35 @@ void main() {
     expect(created, 1);
     expect(imported, 1);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('video extraction is accessible from File and the toolbar',
+      (tester) async {
+    var extracts = 0;
+    await launch(tester, extractSubtitles: () => extracts++);
+    await choose(tester, 'studio-file-menu',
+        'Extract subtitles from video…');
+    expect(extracts, 1);
+    await tester.tap(find.byKey(
+        const ValueKey('studio-dock-toolbar-extract')));
+    await tester.pumpAndSettle();
+    expect(extracts, 2);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('video extraction confirms before discarding a text draft',
+      (tester) async {
+    var extracts = 0;
+    await launch(tester, extractSubtitles: () => extracts++);
+    await tester.enterText(find.byKey(const ValueKey('studio-edit-1-0')),
+        'Unsaved edit');
+    await tester.pump();
+    await choose(tester, 'studio-file-menu',
+        'Extract subtitles from video…');
+    expect(find.text('Unsaved subtitle edit'), findsOneWidget);
+    await tester.tap(find.text('Cancel').last);
+    await tester.pumpAndSettle();
+    expect(extracts, 0);
   });
 
   testWidgets('desktop commands are grouped by purpose', (tester) async {

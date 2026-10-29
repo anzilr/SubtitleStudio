@@ -45,7 +45,7 @@ import '../../utils/msone_hotkey_manager.dart';
 enum _StudioDockReviewFilter { all, effects, marked, unresolved, resolved }
 
 enum _StudioDockToolbarOverflow {
-  newProject, import, attachVideo,
+  newProject, import, extractSubtitles, attachVideo,
 }
 
 enum _StudioDockCueHeaderAction { insert, split, merge, delete, selectByIndex }
@@ -160,7 +160,7 @@ class StudioDockProjectEntry {
 }
 
 enum _StudioDockFileMenuAction {
-  newProject, importFile, save, saveAs, export,
+  newProject, importFile, extractSubtitles, save, saveAs, export,
   saveProject, saveProjectAs, projectSettings, appSettings,
 }
 
@@ -187,6 +187,7 @@ class StudioDockWorkspace extends StatefulWidget {
     this.activeProjectId,
     this.onSelectProject,
     this.onImportFile,
+    this.onExtractSubtitles,
     this.onNewProject,
     this.onApplyCueText,
     this.onApplyCueOriginal,
@@ -274,6 +275,8 @@ class StudioDockWorkspace extends StatefulWidget {
   final int? activeProjectId;
   final ValueChanged<int>? onSelectProject;
   final VoidCallback? onImportFile;
+  /// Opens the shared video subtitle-track extraction workflow.
+  final VoidCallback? onExtractSubtitles;
   final VoidCallback? onNewProject;
   /// Non-null only when the production checkpoint-backed edit bridge is ready.
   final Future<bool> Function(int cueNumber, String editedText)? onApplyCueText;
@@ -2014,6 +2017,14 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     }
   }
 
+  Future<void> _extractSubtitlesSafely({ModalRoute<dynamic>? afterMenu}) async {
+    if (afterMenu != null) await afterMenu.completed;
+    if (!mounted) return;
+    if (await _confirmDraftBeforeLeaving() && mounted) {
+      widget.onExtractSubtitles?.call();
+    }
+  }
+
   Future<void> _chooseVideoSafely({ModalRoute<dynamic>? afterMenu}) async {
     if (afterMenu != null) await afterMenu.completed;
     if (!mounted) return;
@@ -3020,6 +3031,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
         if (widget.onSaveFile != null || widget.onSaveProject != null ||
             widget.onOpenProjectSettings != null ||
             widget.onNewProject != null || widget.onImportFile != null ||
+            widget.onExtractSubtitles != null ||
             widget.onOpenAppSettings != null)
           PopupMenuButton<_StudioDockFileMenuAction>(
             key: const ValueKey('studio-file-menu'),
@@ -3036,6 +3048,10 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                   final menuRoute = _fileNavigationMenuRoute;
                   _fileNavigationMenuRoute = null;
                   unawaited(_importFileSafely(afterMenu: menuRoute));
+                case _StudioDockFileMenuAction.extractSubtitles:
+                  final menuRoute = _fileNavigationMenuRoute;
+                  _fileNavigationMenuRoute = null;
+                  unawaited(_extractSubtitlesSafely(afterMenu: menuRoute));
                 case _StudioDockFileMenuAction.save:
                   unawaited(_saveFileSafely());
                 case _StudioDockFileMenuAction.saveAs:
@@ -3069,7 +3085,15 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
                     _fileNavigationMenuRoute = ModalRoute.of(popupContext);
                     return const Text('Open SRT / Import project');
                   })),
-              if ((widget.onNewProject != null || widget.onImportFile != null) &&
+              if (widget.onExtractSubtitles != null)
+                PopupMenuItem(height: 34,
+                  value: _StudioDockFileMenuAction.extractSubtitles,
+                  child: Builder(builder: (popupContext) {
+                    _fileNavigationMenuRoute = ModalRoute.of(popupContext);
+                    return const Text('Extract subtitles from video…');
+                  })),
+              if ((widget.onNewProject != null || widget.onImportFile != null ||
+                  widget.onExtractSubtitles != null) &&
                   (widget.onSaveFile != null || widget.onSaveProject != null ||
                    widget.onOpenProjectSettings != null))
                 const PopupMenuDivider(),
@@ -3105,6 +3129,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
               if (widget.onOpenAppSettings != null) ...[
                 if (widget.onNewProject != null ||
                     widget.onImportFile != null ||
+                    widget.onExtractSubtitles != null ||
                     widget.onSaveFile != null ||
                     widget.onSaveProject != null ||
                     widget.onOpenProjectSettings != null)
@@ -3987,6 +4012,13 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             tooltip: 'Open SRT / Import project',
             onPressed: () => unawaited(_importFileSafely()),
           ),
+        if (widget.onExtractSubtitles != null)
+          IconButton(
+            key: const ValueKey('studio-dock-toolbar-extract'),
+            icon: const Icon(Icons.subtitles_outlined),
+            tooltip: 'Extract subtitles from video',
+            onPressed: () => unawaited(_extractSubtitlesSafely()),
+          ),
         if (widget.onChooseVideo != null)
           IconButton(
             key: const ValueKey('studio-dock-toolbar-video'),
@@ -3995,6 +4027,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
             onPressed: () => unawaited(_chooseVideoSafely()),
           ),
       ] else if (widget.onNewProject != null || widget.onImportFile != null ||
+          widget.onExtractSubtitles != null ||
           widget.onChooseVideo != null)
         _toolbarOverflowMenu(),
       if (widget.onSaveFile != null)
@@ -4052,7 +4085,7 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
 
   Widget _toolbarOverflowMenu() => PopupMenuButton<_StudioDockToolbarOverflow>(
     key: const ValueKey('studio-dock-toolbar-more'),
-    tooltip: 'New, import and video actions',
+    tooltip: 'New, import, extract and video actions',
     icon: const Icon(Icons.more_horiz),
     onSelected: (action) {
       switch (action) {
@@ -4060,6 +4093,8 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
           unawaited(_newProjectSafely());
         case _StudioDockToolbarOverflow.import:
           unawaited(_importFileSafely());
+        case _StudioDockToolbarOverflow.extractSubtitles:
+          unawaited(_extractSubtitlesSafely());
         case _StudioDockToolbarOverflow.attachVideo:
           unawaited(_chooseVideoSafely());
       }
@@ -4071,6 +4106,9 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
       if (widget.onImportFile != null)
         const PopupMenuItem(value: _StudioDockToolbarOverflow.import,
           child: Text('Open SRT / Import project')),
+      if (widget.onExtractSubtitles != null)
+        const PopupMenuItem(value: _StudioDockToolbarOverflow.extractSubtitles,
+          child: Text('Extract subtitles from video…')),
       if (widget.onChooseVideo != null)
         const PopupMenuItem(value: _StudioDockToolbarOverflow.attachVideo,
           child: Text('Attach or change video')),

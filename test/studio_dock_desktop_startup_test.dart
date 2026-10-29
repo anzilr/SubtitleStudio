@@ -106,5 +106,45 @@ void main() {
         findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('extraction from landing opens the new session in Studio Dock',
+      (tester) async {
+    tester.view.physicalSize = const Size(1680, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    var catalog = const StudioDockSessionCatalog([], null);
+    final extracted = session(9, 'Extracted.srt');
+    await tester.pumpWidget(ProviderScope(child: MaterialApp(
+      home: StudioDockDesktopHome(
+        loadSessions: () async => catalog,
+        extractionSheetBuilder: (onExtracted) => Builder(
+          builder: (context) => Center(child: TextButton(
+            key: const ValueKey('simulate-video-extraction'),
+            onPressed: () {
+              catalog = StudioDockSessionCatalog([extracted], null);
+              onExtracted(extracted);
+              Navigator.pop(context);
+            },
+            child: const Text('Finish extraction'),
+          )),
+        ),
+        sessionViewBuilder: (active, _) => Scaffold(
+          body: Text('Studio Dock: ${active.fileName}'),
+        ),
+      ),
+    )));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(
+        const ValueKey('studio-dock-extract-first')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('simulate-video-extraction')),
+        findsOneWidget);
+    await tester.tap(find.byKey(
+        const ValueKey('simulate-video-extraction')));
+    await tester.pumpAndSettle();
+    expect(find.text('Studio Dock: Extracted.srt'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }
 

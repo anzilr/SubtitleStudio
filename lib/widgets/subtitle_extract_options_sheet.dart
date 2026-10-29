@@ -5,11 +5,14 @@ import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
 // Removed platform_check - using pure SAF implementation without permission checks
 import 'package:subtitle_studio/utils/ffmpeg_helper.dart';
 import 'package:subtitle_studio/services/subtitle_extraction_file_service.dart';
+import 'package:subtitle_studio/services/subtitle_extraction_track_policy.dart';
 import 'package:subtitle_studio/utils/subtitle_processor.dart';
 import 'package:subtitle_studio/widgets/subtitle_tracks_sheet.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/models/subtitle_import_result.dart';
 import 'package:subtitle_studio/screens/edit/providers/subtitle_repository_provider.dart';
+import 'package:subtitle_studio/screens/edit/repositories/subtitle_repository.dart';
+import 'package:subtitle_studio/services/subtitle_import_repository.dart';
 import 'package:subtitle_studio/widgets/loading_overlay.dart';
 import 'package:subtitle_studio/utils/snackbar_helper.dart';
 import 'package:subtitle_studio/utils/app_logger.dart';
@@ -122,25 +125,10 @@ class _SubtitleExtractOptionsSheetState
         final ffmpegHelper = FFmpegHelper();
         final allSubtitleTracks = await ffmpegHelper.getSubtitleTracks(videoPath);
         
-        // Filter to only include text-based subtitle formats (exclude bitmap formats like PGS, DVB, etc.)
-        final List<String> textBasedCodecs = [
-          'subrip', 'srt',           // SubRip (.srt)
-          'ass', 'ssa',              // Advanced SubStation Alpha (.ass, .ssa)
-          'webvtt', 'vtt',           // WebVTT (.vtt)
-          'mov_text',                // QuickTime text
-          'text', 'txt',             // Plain text
-          'microdvd',                // MicroDVD
-          'subviewer', 'subviewer1', // SubViewer
-          'mpl2',                    // MPL2
-          'dvbsub',                  // DVB Subtitle (text variant)
-          'ttml',                    // Timed Text Markup Language
-          'stl',                     // Spruce subtitle format
-        ];
-        
-        final subtitleTracks = allSubtitleTracks.where((track) {
-          final codec = (track['codec'] as String?)?.toLowerCase() ?? '';
-          return textBasedCodecs.contains(codec);
-        }).toList();
+        // DVB/PGS/DVD subtitle streams are images, not editable text. Keep
+        // this policy shared and unit-tested for mobile and desktop.
+        final subtitleTracks =
+            SubtitleExtractionTrackPolicy.textTracks(allSubtitleTracks);
 
         if (!mounted) return;
 
@@ -190,7 +178,13 @@ class _SubtitleExtractOptionsSheetState
       );
       if (!mounted) return;
 
-      SnackbarHelper.showError(context, 'Could not open the selected video. Please try again.');
+      final needsDesktopTools =
+          (Platform.isWindows || Platform.isLinux) &&
+          e.toString().contains('FFmpeg is not available');
+      SnackbarHelper.showError(context, needsDesktopTools
+          ? 'Video extraction requires FFmpeg and FFprobe installed and '
+              'available in your system PATH.'
+          : 'Could not open the selected video. Please try again.');
 
       setState(() {
         _isLoading = false;
@@ -236,6 +230,11 @@ class _SubtitleExtractOptionsSheetState
     }
 
     try {
+      // The options sheet closes before the native extraction finishes. Keep
+      // repository handles while this ConsumerState is still mounted; reading
+      // ref after disposal can abort an otherwise successful extraction.
+      final importRepository = ref.read(subtitleImportRepositoryProvider);
+      final subtitleRepository = ref.read(subtitleRepositoryProvider);
       // Clear any previous SAF URI
       _currentSafUri = null;
 
@@ -405,6 +404,8 @@ class _SubtitleExtractOptionsSheetState
           track: track,
           rootContext: rootContext,
           callback: widget.onSubtitleExtracted,
+          importRepository: importRepository,
+          subtitleRepository: subtitleRepository,
         ),
       );
     } catch (_) {
@@ -447,6 +448,8 @@ class _SubtitleExtractOptionsSheetState
     required Map<String, dynamic> track,
     required BuildContext rootContext,
     required Function(Session) callback,
+    required SubtitleImportRepository importRepository,
+    required SubtitleRepository subtitleRepository,
   }) async {
     Session? extractedSession;
 
@@ -903,7 +906,7 @@ class _SubtitleExtractOptionsSheetState
             removeHearingImpairedLines: removeHI,
             mergeOverlappingSubtitles: mergeOverlapping,
             contentUri: null, // No SAF URI for extracted files
-            repository: ref.read(subtitleImportRepositoryProvider),
+            repository: importRepository,
           );
         } else {
           throw Exception('Context not available');
@@ -921,7 +924,7 @@ class _SubtitleExtractOptionsSheetState
           outputFilePath, // Display path for UI  
           removeHearingImpairedLines: removeHI,
           mergeOverlappingSubtitles: mergeOverlapping,
-          repository: ref.read(subtitleImportRepositoryProvider),
+          repository: importRepository,
         );
       }        if (kDebugMode) {
           print(
@@ -937,14 +940,11 @@ class _SubtitleExtractOptionsSheetState
         if (_currentSafUri != null && _currentSafUri != outputFilePath) {
           try {
             final subtitleCollectionId = subtitleData.subtitleCollectionId;
-            final subtitle = await ref
-                .read(subtitleRepositoryProvider)
+            final subtitle = await subtitleRepository
                 .fetchSubtitleCollection(subtitleCollectionId);
             if (subtitle != null) {
               subtitle.originalFileUri = _currentSafUri!;
-              await ref
-                  .read(subtitleRepositoryProvider)
-                  .updateCollection(subtitle);
+              await subtitleRepository.updateCollection(subtitle);
 
               if (kDebugMode) {
                 print('Updated original subtitle file locator');
@@ -1092,7 +1092,7 @@ class _SubtitleExtractOptionsSheetState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Extract Subtitle',
+                          'Extract subtitles',
                           style: Theme.of(context).textTheme.titleLarge
                               ?.copyWith(fontWeight: FontWeight.bold),
                         ),

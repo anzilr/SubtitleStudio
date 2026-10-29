@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:path/path.dart' as path;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:subtitle_studio/services/subtitle_extraction_file_service.dart';
 
@@ -31,7 +33,9 @@ void main() {
           outputFilePath: destination.path,
         ),
       );
-      expect(savedPath, destination.path);
+      // Desktop extraction normalizes destination separators. Windows uses
+      // backslashes even when the test constructed a path with '/'.
+      expect(savedPath, path.normalize(destination.path));
       expect(await destination.readAsString(), content);
       expect(await source.exists(), isFalse);
 

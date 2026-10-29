@@ -67,6 +67,7 @@ class StudioDockSessionView extends ConsumerStatefulWidget {
     this.activeProjectId,
     this.onSelectProject,
     this.onImportFile,
+    this.onExtractSubtitles,
     this.onNewProject,
     this.enableEditing = false,
     this.allowNativePlayback = false,
@@ -80,6 +81,7 @@ class StudioDockSessionView extends ConsumerStatefulWidget {
   final int? activeProjectId;
   final ValueChanged<int>? onSelectProject;
   final VoidCallback? onImportFile;
+  final VoidCallback? onExtractSubtitles;
   final VoidCallback? onNewProject;
   /// Opt in to checkpoint-backed edits for an existing session.
   final bool enableEditing;
@@ -1927,6 +1929,7 @@ class _StudioDockSessionViewState
         activeProjectId: widget.activeProjectId,
         onSelectProject: widget.onSelectProject,
         onImportFile: widget.onImportFile,
+        onExtractSubtitles: widget.onExtractSubtitles,
         onNewProject: widget.onNewProject,
         onChooseVideo: widget.allowNativePlayback ? _chooseVideo : null,
         onUnloadVideo: widget.allowNativePlayback ? _unloadVideo : null,

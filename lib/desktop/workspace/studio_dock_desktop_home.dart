@@ -7,6 +7,7 @@ import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/screens/home/repositories/session_repository.dart';
 import 'package:subtitle_studio/services/project_document_codec.dart';
 import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
+import 'package:subtitle_studio/widgets/subtitle_extract_options_sheet.dart';
 import 'package:subtitle_studio/widgets/session_selection/project_history_import_plan.dart';
 import 'package:subtitle_studio/widgets/session_selection/session_project_import_repository.dart';
 
@@ -27,6 +28,7 @@ class StudioDockDesktopHome extends ConsumerStatefulWidget {
     this.sessionViewBuilder,
     this.initialFilePath,
     this.pickFile,
+    this.extractionSheetBuilder,
   });
 
   /// Injectable boundaries for desktop-route tests. Production uses the
@@ -37,6 +39,10 @@ class StudioDockDesktopHome extends ConsumerStatefulWidget {
   final String? initialFilePath;
   /// Testable desktop system picker; production uses the existing file picker.
   final Future<String?> Function(BuildContext)? pickFile;
+  /// Injectable only for desktop navigation tests. Production reuses the
+  /// mobile extraction sheet and its FFmpeg/SRT processing workflow.
+  final Widget Function(ValueChanged<Session> onExtracted)?
+      extractionSheetBuilder;
 
   @override
   ConsumerState<StudioDockDesktopHome> createState() =>
@@ -102,6 +108,28 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
     subtitleImporter: ref.read(subtitleImportRepositoryProvider),
     projectImporter: SessionProjectImportRepository(ref.read(isarProvider)),
   );
+
+  void _activateExtractedSession(Session session) {
+    if (!mounted) return;
+    _chosenSessionId = session.id;
+    _refresh();
+    unawaited(_rememberProject(session.id));
+  }
+
+  Future<void> _extractSubtitlesFromVideo() async {
+    if (_busy || !mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      constraints: const BoxConstraints(maxWidth: 720),
+      builder: (_) => widget.extractionSheetBuilder?.call(
+        _activateExtractedSession,
+      ) ?? SubtitleExtractOptionsSheet(
+        onSubtitleExtracted: _activateExtractedSession,
+      ),
+    );
+  }
 
   Future<void> _importFile([String? initialPath]) async {
     if (_busy) return;
@@ -334,6 +362,12 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
             label: const Text('Import file'),
           ),
           TextButton.icon(
+            key: const ValueKey('studio-dock-extract-project'),
+            icon: const Icon(Icons.subtitles_outlined),
+            onPressed: () => Navigator.pop(dialogContext, -4),
+            label: const Text('Extract from video'),
+          ),
+          TextButton.icon(
             key: const ValueKey('studio-dock-create-project'),
             icon: const Icon(Icons.add),
             onPressed: () => Navigator.pop(dialogContext, -3),
@@ -353,6 +387,10 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
     }
     if (selectedId == -3) {
       await _createProject();
+      return;
+    }
+    if (selectedId == -4) {
+      await _extractSubtitlesFromVideo();
       return;
     }
     if (snapshot.sessions.any((session) => session.id == selectedId)) {
@@ -414,6 +452,7 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
           ],
           onSelectProject: (id) => unawaited(_selectProject(id, snapshot)),
           onImportFile: () => _importFile(),
+          onExtractSubtitles: () => unawaited(_extractSubtitlesFromVideo()),
           onNewProject: _createProject,
           enableEditing: true,
           allowNativePlayback: true,
@@ -472,6 +511,13 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
               onPressed: _busy ? null : _createProject,
               icon: const Icon(Icons.add),
               label: const Text('New project'),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              key: const ValueKey('studio-dock-extract-first'),
+              onPressed: _busy ? null : _extractSubtitlesFromVideo,
+              icon: const Icon(Icons.subtitles_outlined),
+              label: const Text('Extract subtitles from video'),
             ),
             if (_busy) const CircularProgressIndicator(),
             if (_error != null)
