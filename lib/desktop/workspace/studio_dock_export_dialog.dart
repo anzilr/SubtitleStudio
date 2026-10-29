@@ -73,19 +73,23 @@ class _StudioDockExportDialogState extends State<StudioDockExportDialog> {
           if (!widget.isEditMode) ...[
             const SizedBox(height: 16),
             const Text('Subtitle text'),
-            RadioListTile<bool>(
-              key: const ValueKey('studio-export-edited'),
-              title: const Text('Edited text'),
-              value: false,
+            RadioGroup<bool>(
               groupValue: _originalOnly,
-              onChanged: (value) => setState(() => _originalOnly = value!),
-            ),
-            RadioListTile<bool>(
-              key: const ValueKey('studio-export-original'),
-              title: const Text('Original text'),
-              value: true,
-              groupValue: _originalOnly,
-              onChanged: (value) => setState(() => _originalOnly = value!),
+              onChanged: (value) {
+                if (value != null) setState(() => _originalOnly = value);
+              },
+              child: const Column(children: [
+                RadioListTile<bool>(
+                  key: ValueKey('studio-export-edited'),
+                  title: Text('Edited text'),
+                  value: false,
+                ),
+                RadioListTile<bool>(
+                  key: ValueKey('studio-export-original'),
+                  title: Text('Original text'),
+                  value: true,
+                ),
+              ]),
             ),
           ],
           const SizedBox(height: 12),
