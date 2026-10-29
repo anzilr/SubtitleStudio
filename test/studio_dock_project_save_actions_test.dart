@@ -4,11 +4,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:subtitle_studio/app/repositories/project_repository.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_file_actions.dart';
+import 'package:subtitle_studio/desktop/workspace/studio_dock_project_actions.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_project_save_actions.dart';
 import 'package:subtitle_studio/screens/edit/repositories/subtitle_repository.dart';
 import 'package:subtitle_studio/services/checkpoint_repository.dart';
 import 'package:subtitle_studio/services/project_document_codec.dart';
 import 'package:subtitle_studio/services/project_save_coordinator.dart';
+import 'package:subtitle_studio/services/subtitle_import_repository.dart';
+import 'package:subtitle_studio/widgets/session_selection/session_project_import_repository.dart';
 
 import 'support/test_isar_harness.dart';
 
@@ -106,6 +109,45 @@ void main() {
     expect(await projects.saveExisting(
       sessionId: ids.sessionId, collectionId: ids.collectionId),
       StudioDockFileResult.needsLocation);
+  });
+
+  test('optional project save after SRT import preserves source and session',
+      () async {
+    const source = '1\n00:00:01,000 --> 00:00:02,000\nHello\n';
+    final srtPath = '${temp.path}/Imported.srt';
+    await File(srtPath).writeAsString(source);
+    final importActions = StudioDockProjectActions(
+      subtitleImporter: SubtitleImportRepository(db.isar),
+      projectImporter: SessionProjectImportRepository(db.isar),
+    );
+    final imported = await importActions.importFile(srtPath);
+
+    // The optional checkbox is off by default. Merely importing an SRT must
+    // not create a second file or link an external project location.
+    expect(await ProjectRepository(db.isar).getProjectFilePath(imported.id),
+        isNull);
+    expect(File('${temp.path}/Imported.msone').existsSync(), isFalse);
+    expect(await File(srtPath).readAsString(), source);
+
+    // When the user opts in, the same guarded Save As service produces the
+    // complete portable document without replacing or modifying the SRT.
+    final prepared = await projects.prepare(
+      sessionId: imported.id,
+      collectionId: imported.subtitleCollectionId,
+    );
+    expect(prepared?.fileName, 'Imported.msone');
+    final projectPath = '${temp.path}/Imported.msone';
+    expect(await projects.writeToPath(
+      prepared: prepared!, selectedPath: projectPath,
+    ), StudioDockFileResult.saved);
+    final saved = ProjectDocumentCodec.decode(
+        await File(projectPath).readAsString());
+    expect(saved.subtitleCollection.lines.single.original, 'Hello');
+    expect(saved.subtitleCollection.filePath, srtPath);
+    expect(await ProjectRepository(db.isar).getProjectFilePath(imported.id),
+        projectPath);
+    expect(await db.isar.sessions.count(), 1);
+    expect(await File(srtPath).readAsString(), source);
   });
 
   test('Save As refuses replacement without explicit authorization', () async {

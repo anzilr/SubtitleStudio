@@ -77,6 +77,7 @@ void main() {
     expect(result.value?.encoding, 'Windows-1252');
     expect(result.value?.removeHearingImpaired, isFalse);
     expect(result.value?.mergeOverlapping, isFalse);
+    expect(result.value?.savePortableProject, isFalse);
   });
 
   testWidgets('optional cleanup and overlap merge are explicit opt-ins',
@@ -104,5 +105,30 @@ void main() {
     expect(result.value?.encoding, isNull);
     expect(result.value?.removeHearingImpaired, isTrue);
     expect(result.value?.mergeOverlapping, isTrue);
+    expect(result.value?.savePortableProject, isFalse);
+  });
+
+  testWidgets('portable project save is an explicit optional import choice',
+      (tester) async {
+    final result = await launch(tester);
+    const saveKey = ValueKey('studio-srt-import-save-project');
+    expect(find.text('Save a portable project file after import'),
+        findsOneWidget);
+    expect(find.textContaining('Canceling the save keeps the imported'),
+        findsOneWidget);
+    expect(tester.widget<CheckboxListTile>(find.byKey(saveKey)).value,
+        isFalse);
+    await tester.ensureVisible(find.byKey(saveKey));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(saveKey));
+    await tester.pumpAndSettle();
+    expect(tester.widget<CheckboxListTile>(find.byKey(saveKey)).value, isTrue);
+    await tester.tap(find.byKey(const ValueKey('studio-srt-import-confirm')));
+    await tester.pumpAndSettle();
+    expect(result.value?.savePortableProject, isTrue);
+    expect(result.value?.encoding, isNull);
+    expect(result.value?.removeHearingImpaired, isFalse);
+    expect(result.value?.mergeOverlapping, isFalse);
+    expect(source.existsSync(), isTrue);
   });
 }

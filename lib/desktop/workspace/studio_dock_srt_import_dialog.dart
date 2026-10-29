@@ -13,11 +13,14 @@ class StudioDockSrtImportChoice {
     required this.encoding,
     this.removeHearingImpaired = false,
     this.mergeOverlapping = false,
+    this.savePortableProject = false,
   });
 
   final String? encoding;
   final bool removeHearingImpaired;
   final bool mergeOverlapping;
+  /// An optional .msone save dialog opens after a successful SRT import.
+  final bool savePortableProject;
 }
 
 /// Native desktop preflight for an SRT file. Cancelling never writes a session
@@ -49,6 +52,7 @@ class _StudioDockSrtImportDialogState extends State<StudioDockSrtImportDialog> {
   bool _previewBusy = false;
   bool _removeHearingImpaired = false;
   bool _mergeOverlapping = false;
+  bool _savePortableProject = false;
   String? _error;
 
   @override
@@ -176,6 +180,18 @@ class _StudioDockSrtImportDialogState extends State<StudioDockSrtImportDialog> {
           onChanged: _previewBusy ? null : (value) =>
               setState(() => _mergeOverlapping = value ?? false),
         ),
+        CheckboxListTile(
+          key: const ValueKey('studio-srt-import-save-project'),
+          contentPadding: EdgeInsets.zero,
+          dense: true,
+          value: _savePortableProject,
+          title: const Text('Save a portable project file after import'),
+          subtitle: const Text('Choose a location for a .msone project copy '
+              'after importing. Canceling the save keeps the imported '
+              'subtitles in SubtitleStudio.'),
+          onChanged: _previewBusy ? null : (value) =>
+              setState(() => _savePortableProject = value ?? false),
+        ),
         if (_error != null) ...[
           const SizedBox(height: 8),
           Text(_error!, style: TextStyle(
@@ -195,6 +211,7 @@ class _StudioDockSrtImportDialogState extends State<StudioDockSrtImportDialog> {
               encoding: _encoding == 'Auto' ? null : _encoding,
               removeHearingImpaired: _removeHearingImpaired,
               mergeOverlapping: _mergeOverlapping,
+              savePortableProject: _savePortableProject,
             )),
         child: const Text('Import SRT')),
     ],

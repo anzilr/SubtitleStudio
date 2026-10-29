@@ -1,9 +1,11 @@
 import 'dart:async';
 
+import 'package:file_picker/file_picker.dart' as fp;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/database/models/models.dart';
+import 'package:subtitle_studio/screens/edit/providers/subtitle_repository_provider.dart';
 import 'package:subtitle_studio/screens/home/repositories/session_repository.dart';
 import 'package:subtitle_studio/services/project_document_codec.dart';
 import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
@@ -12,7 +14,9 @@ import 'package:subtitle_studio/widgets/session_selection/project_history_import
 import 'package:subtitle_studio/widgets/session_selection/session_project_import_repository.dart';
 
 import 'studio_dock_project_actions.dart';
+import 'studio_dock_file_actions.dart';
 import 'studio_dock_project_import_dialog.dart';
+import 'studio_dock_project_save_actions.dart';
 import 'studio_dock_srt_import_dialog.dart';
 
 import 'studio_dock_session_view.dart';
@@ -129,6 +133,67 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
         onSubtitleExtracted: _activateExtractedSession,
       ),
     );
+  }
+
+  /// Optional mobile-parity project copy after a successful SRT import. A
+  /// canceled picker leaves the new session intact and the source SRT alone.
+  Future<StudioDockFileResult> _saveImportedProject(Session imported) async {
+    try {
+      final actions = StudioDockProjectSaveActions(
+        ref.read(projectRepositoryProvider),
+        ref.read(subtitleRepositoryProvider),
+        ref.read(projectSaveCoordinatorProvider),
+      );
+      final prepared = await actions.prepare(
+        sessionId: imported.id,
+        collectionId: imported.subtitleCollectionId,
+      );
+      if (prepared == null || !mounted) return StudioDockFileResult.failed;
+      final selectedPath = await fp.FilePicker.platform.saveFile(
+        dialogTitle: 'Save imported SubtitleStudio project',
+        fileName: prepared.fileName,
+        type: fp.FileType.custom,
+        allowedExtensions: const ['msone'],
+      );
+      if (selectedPath == null || selectedPath.isEmpty || !mounted) {
+        return StudioDockFileResult.canceled;
+      }
+      var outcome = await actions.writeToPath(
+        prepared: prepared, selectedPath: selectedPath,
+      );
+      if (outcome != StudioDockFileResult.alreadyExists || !mounted) {
+        return outcome;
+      }
+      final replace = await showDialog<bool>(
+        context: context,
+        builder: (dialog) => AlertDialog(
+          title: const Text('Replace existing project file?'),
+          content: const Text('The selected .msone file already exists. '
+              'Replacing it will overwrite the saved project at that '
+              'location. Your imported subtitles will remain in the app.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialog, false),
+              child: const Text('Keep existing file'),
+            ),
+            FilledButton(
+              key: const ValueKey('studio-import-confirm-project-overwrite'),
+              onPressed: () => Navigator.pop(dialog, true),
+              child: const Text('Replace project file'),
+            ),
+          ],
+        ),
+      );
+      if (replace != true || !mounted) return StudioDockFileResult.canceled;
+      outcome = await actions.writeToPath(
+        prepared: prepared,
+        selectedPath: selectedPath,
+        replaceExisting: true,
+      );
+      return outcome;
+    } catch (_) {
+      return StudioDockFileResult.failed;
+    }
   }
 
   Future<void> _importFile([String? initialPath]) async {
@@ -258,6 +323,28 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
       _chosenSessionId = imported.id;
       _refresh();
       await _rememberProject(imported.id);
+      if (srtChoice?.savePortableProject == true && mounted) {
+        final result = await _saveImportedProject(imported);
+        if (!mounted) return;
+        final feedback = switch (result) {
+          StudioDockFileResult.saved =>
+            'Subtitles imported and portable project saved.',
+          StudioDockFileResult.canceled =>
+            'Subtitles imported. Portable project file was not saved.',
+          StudioDockFileResult.savedButUnlinked =>
+            'Project file saved, but its location could not be linked.',
+          StudioDockFileResult.stale =>
+            'Subtitles imported, but the project changed before saving. '
+                'Save the project again.',
+          _ => 'Subtitles imported, but the portable project file could '
+              'not be saved. Use Save Project As to retry.',
+        };
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(feedback),
+          backgroundColor: result == StudioDockFileResult.failed
+              ? Theme.of(context).colorScheme.errorContainer : null,
+        ));
+      }
     } catch (e) {
       if (mounted) {
         setState(() => _error = 'Unable to open project: $e');
