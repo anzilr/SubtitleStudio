@@ -158,9 +158,9 @@ class _StudioDockSrtImportDialogState extends State<StudioDockSrtImportDialog> {
           contentPadding: EdgeInsets.zero,
           dense: true,
           value: _removeHearingImpaired,
-          title: const Text('Remove hearing-impaired text'),
-          subtitle: const Text('Remove accessibility descriptions using the '
-              'same import cleanup as mobile.'),
+          title: const Text('Remove sound and speaker descriptions'),
+          subtitle: const Text('Remove non-dialogue annotations such as '
+              '[music], [door closes], and speaker labels.'),
           onChanged: _previewBusy ? null : (value) =>
               setState(() => _removeHearingImpaired = value ?? false),
         ),
@@ -169,9 +169,10 @@ class _StudioDockSrtImportDialogState extends State<StudioDockSrtImportDialog> {
           contentPadding: EdgeInsets.zero,
           dense: true,
           value: _mergeOverlapping,
-          title: const Text('Merge matching-time subtitles'),
-          subtitle: const Text('Combine adjacent cues with identical start '
-              'and end times; leave off to preserve the cue structure.'),
+          title: const Text('Combine subtitles with matching times'),
+          subtitle: const Text('Join consecutive subtitle lines with '
+              'identical start and end times. Subtitles with custom '
+              'positioning remain separate.'),
           onChanged: _previewBusy ? null : (value) =>
               setState(() => _mergeOverlapping = value ?? false),
         ),

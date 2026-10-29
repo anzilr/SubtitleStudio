@@ -61,7 +61,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('studio-source-apply')));
     await tester.pumpAndSettle();
     expect(applied, 0);
-    expect(find.textContaining('Invalid SRT cue'), findsOneWidget);
+    expect(find.textContaining('Invalid subtitle line'), findsOneWidget);
     expect(tester.widget<TextField>(find.byKey(const ValueKey('raw-srt-editor')))
         .controller!.text, '1\nInvalid timecode');
   });

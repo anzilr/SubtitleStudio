@@ -15,7 +15,7 @@ abstract final class RawSrtDocument {
     final normalized = text.replaceFirst('\uFEFF', '')
         .replaceAll('\r\n', '\n').replaceAll('\r', '\n');
     if (normalized.trim().isEmpty) {
-      throw const FormatException('Source is empty. Restore or add an SRT cue before saving.');
+      throw const FormatException('The subtitle source is empty. Add a subtitle line before saving.');
     }
     // A blank line in subtitle text is not automatically a cue separator.
     // Split only when the following text looks like a *numbered cue header*.
@@ -30,7 +30,7 @@ abstract final class RawSrtDocument {
     for (var i = 0; i < blocks.length; i++) {
       final entry = SubtitleEntry.fromSrtText(blocks[i]);
       if (entry == null) {
-        throw FormatException('Invalid SRT cue ${i + 1}: expected a cue number and time range.');
+        throw FormatException('Invalid subtitle line ${i + 1}: expected a line number and time range.');
       }
       entries.add(entry);
     }

@@ -1245,9 +1245,9 @@ class _SubtitleEffectsSheetState extends State<SubtitleEffectsSheet> with Single
           _recomputePreviewDurations();
         }),
       ),
-      Text('Each visible frame is a real, timed SRT cue. '
-          'Complex characters are never split. '
-          'Longer effects add subtitle cues to your list.',
+      Text('Each animation frame becomes a timed subtitle line in the SRT file. '
+          'Complete characters stay intact. Longer effects create more '
+          'subtitle lines.',
           style: Theme.of(context).textTheme.bodySmall),
     ]);
   }

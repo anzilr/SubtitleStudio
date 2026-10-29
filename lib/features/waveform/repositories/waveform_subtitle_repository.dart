@@ -61,7 +61,7 @@ class WaveformSubtitleRepository {
             final replacement = updates[current.index];
             if (replacement == null) continue;
             if (!matchedIndexes.add(current.index)) {
-              throw StateError('Duplicate destination subtitle cue index.');
+              throw StateError('Duplicate destination subtitle line number.');
             }
 
             final before = expected[current.index];

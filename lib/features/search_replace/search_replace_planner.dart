@@ -54,24 +54,24 @@ class SubtitleSearchReplacePlanner {
     for (final match in matches) {
       final source = match.line;
       if (source.index <= 0) {
-        throw const FormatException('Subtitle cue numbers must be positive.');
+        throw const FormatException('Subtitle line numbers must be positive.');
       }
       final effectiveText = source.edited ?? source.original;
       if (match.start < 0 ||
           match.end > effectiveText.length ||
           match.start >= match.end) {
-        throw FormatException('Invalid match range in cue ${source.index}.');
+        throw FormatException('Invalid match range in subtitle line ${source.index}.');
       }
       final actual = effectiveText.substring(match.start, match.end);
       if ((caseSensitive ? actual : actual.toLowerCase()) !=
           (caseSensitive ? searchTerm : searchTerm.toLowerCase())) {
-        throw FormatException('Search results are stale for cue ${source.index}.');
+        throw FormatException('Search results are outdated for subtitle line ${source.index}.');
       }
 
       final previous = expectedByCue[source.index];
       if (previous != null &&
           !CheckpointStateReducer.samePersistedLine(previous, source)) {
-        throw FormatException('Conflicting snapshots for cue ${source.index}.');
+        throw FormatException('Conflicting versions of subtitle line ${source.index}.');
       }
       expectedByCue.putIfAbsent(
         source.index,
@@ -92,7 +92,7 @@ class SubtitleSearchReplacePlanner {
       var nextBoundary = content.length;
       for (final match in ranges) {
         if (match.end > nextBoundary) {
-          throw FormatException('Overlapping matches in cue ${entry.key}.');
+          throw FormatException('Overlapping matches in subtitle line ${entry.key}.');
         }
         content = content.replaceRange(match.start, match.end, replacement);
         nextBoundary = match.start;

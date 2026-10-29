@@ -82,6 +82,11 @@ void main() {
   testWidgets('optional cleanup and overlap merge are explicit opt-ins',
       (tester) async {
     final result = await launch(tester);
+    expect(find.text('Remove sound and speaker descriptions'), findsOneWidget);
+    expect(find.textContaining('[door closes]'), findsOneWidget);
+    expect(find.text('Combine subtitles with matching times'), findsOneWidget);
+    expect(find.textContaining('custom positioning remain separate.'),
+        findsOneWidget);
     await tester.ensureVisible(find.byKey(
         const ValueKey('studio-srt-import-hearing-cleanup')));
     await tester.pumpAndSettle();

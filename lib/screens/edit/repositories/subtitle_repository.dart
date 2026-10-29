@@ -170,7 +170,7 @@ class SubtitleRepository {
       final expectedByCue = <int, SubtitleLine>{};
       for (final line in expectedLines) {
         if (line.index <= 0 || expectedByCue.containsKey(line.index)) {
-          throw const FormatException('Expected cue numbers must be unique and positive.');
+          throw const FormatException('Subtitle line numbers must be unique and positive.');
         }
         expectedByCue[line.index] = CheckpointStateReducer.copyLine(line);
       }
@@ -179,7 +179,7 @@ class SubtitleRepository {
       for (final line in updatedLines) {
         if (line.index <= 0 || updatedByCue.containsKey(line.index) ||
             !expectedByCue.containsKey(line.index)) {
-          throw const FormatException('Updated cues must be unique and present in the expected snapshot.');
+          throw const FormatException('Updated subtitle lines must be unique and present in the current version.');
         }
         updatedByCue[line.index] = CheckpointStateReducer.copyLine(line);
       }
@@ -199,11 +199,11 @@ class SubtitleRepository {
             final replacement = updatedByCue[current.index];
             if (replacement == null) continue;
             if (!seen.add(current.index)) {
-              throw StateError('Duplicate destination cue ${current.index}.');
+              throw StateError('Duplicate subtitle line number ${current.index}.');
             }
             final expected = expectedByCue[current.index]!;
             if (!CheckpointStateReducer.samePersistedLine(current, expected)) {
-              throw StateError('Subtitle cue ${current.index} changed after preview; refresh before applying.');
+              throw StateError('Subtitle line ${current.index} changed after preview; refresh before applying.');
             }
             if (CheckpointStateReducer.samePersistedLine(current, replacement)) {
               continue;
@@ -217,7 +217,7 @@ class SubtitleRepository {
           }
 
           if (seen.length != updatedByCue.length) {
-            throw StateError('One or more subtitle cues were removed or renumbered since preview.');
+            throw StateError('One or more subtitle lines were removed or renumbered since preview.');
           }
           return CheckpointMutationPlan(
             nextLines: nextLines,
