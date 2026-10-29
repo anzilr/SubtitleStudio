@@ -14,6 +14,7 @@ class StudioDockProjectImportDialog extends StatefulWidget {
     required this.archiveSrtAvailable,
     required this.existingSrtAvailability,
     this.pickSrtFile,
+    this.validateSrtFile,
   });
 
   final ProjectDocument document;
@@ -21,6 +22,8 @@ class StudioDockProjectImportDialog extends StatefulWidget {
   final bool archiveSrtAvailable;
   final Map<int, bool> existingSrtAvailability;
   final Future<String?> Function(BuildContext)? pickSrtFile;
+  /// Injectable for widget tests; production validates the real local path.
+  final Future<bool> Function(String)? validateSrtFile;
 
   @override
   State<StudioDockProjectImportDialog> createState() =>
@@ -65,7 +68,8 @@ class _StudioDockProjectImportDialogState
             allowedExtensions: const ['srt'],
           ));
       if (!mounted || path == null) return;
-      if (!await StudioDockProjectActions.isUsableSrtPath(path)) {
+      if (!await (widget.validateSrtFile?.call(path) ??
+          StudioDockProjectActions.isUsableSrtPath(path))) {
         if (mounted) setState(() => _fileError =
             'Choose a local SRT file that still exists.');
         return;

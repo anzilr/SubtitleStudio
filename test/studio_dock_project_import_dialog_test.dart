@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:subtitle_studio/database/models/models.dart';
@@ -35,6 +33,7 @@ void main() {
     bool archiveAvailable = false,
     Map<int, bool> existingAvailability = const {},
     Future<String?> Function(BuildContext)? pickSrtFile,
+    Future<bool> Function(String)? validateSrtFile,
     required void Function(StudioDockProjectImportPlan?) onChoice,
   }) async {
     tester.view.physicalSize = const Size(950, 760);
@@ -52,6 +51,7 @@ void main() {
                 archiveSrtAvailable: archiveAvailable,
                 existingSrtAvailability: existingAvailability,
                 pickSrtFile: pickSrtFile,
+                validateSrtFile: validateSrtFile,
               ),
             ));
           },
@@ -112,25 +112,23 @@ void main() {
   });
 
   testWidgets('browsing a local SRT associates that path', (tester) async {
-    final directory = await Directory.systemTemp.createTemp('msone-preview-');
-    addTearDown(() => directory.delete(recursive: true));
-    final source = File('${directory.path}/new-source.srt');
-    await source.writeAsString('1\n00:00:01,000 --> 00:00:02,000\nHello\n');
+    const source = '/some/local/new-source.srt';
     StudioDockProjectImportPlan? selected;
     await openDialog(tester, targets: const [],
-      pickSrtFile: (_) async => source.path,
+      pickSrtFile: (_) async => source,
+      validateSrtFile: (_) async => true,
       onChoice: (choice) => selected = choice);
     await tester.ensureVisible(find.byKey(
       const ValueKey('studio-dock-msone-browse')));
     await tester.tap(find.byKey(const ValueKey('studio-dock-msone-browse')));
     await tester.pumpAndSettle();
-    expect(find.text(source.path), findsOneWidget);
+    expect(find.text(source), findsOneWidget);
     await tester.ensureVisible(find.byKey(
       const ValueKey('studio-dock-msone-confirm')));
     await tester.tap(find.byKey(const ValueKey('studio-dock-msone-confirm')));
     await tester.pumpAndSettle();
     expect(selected!.source, StudioDockProjectSrtSource.locatedFile);
-    expect(selected!.locatedSrtPath, source.path);
+    expect(selected!.locatedSrtPath, source);
     expect(tester.takeException(), isNull);
   });
 

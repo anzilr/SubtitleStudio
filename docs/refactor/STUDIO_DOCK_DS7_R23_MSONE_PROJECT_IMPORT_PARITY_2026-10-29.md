@@ -29,6 +29,8 @@ Predecessor: DS7 R22b (`4cb41e45b8b1f69f425caba8f4cdcbef180349fb`)
 - Preview and unavailable archive disabled.
 - Explicit replacement target and existing SRT source.
 - Browse local source.
+- Filesystem existence is injected in the widget test; production and
+  repository integration continue validating the actual local SRT path.
 - Cancel does not select an import.
 
 ## Remaining parity
