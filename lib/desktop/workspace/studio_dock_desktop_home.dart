@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:file_picker/file_picker.dart' as fp;
 import 'package:flutter/material.dart';
@@ -14,6 +15,7 @@ import 'package:subtitle_studio/widgets/session_selection/project_history_import
 import 'package:subtitle_studio/widgets/session_selection/session_project_import_repository.dart';
 
 import 'studio_dock_project_actions.dart';
+import 'studio_dock_create_project_dialog.dart';
 import 'studio_dock_file_actions.dart';
 import 'studio_dock_project_import_dialog.dart';
 import 'studio_dock_project_save_actions.dart';
@@ -354,54 +356,103 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
     }
   }
 
+  Future<StudioDockFileResult> _writeNewProjectFiles(
+    Session created, StudioDockCreateProjectChoice choice,
+  ) async {
+    try {
+      final files = StudioDockFileActions(
+        ref.read(projectRepositoryProvider),
+        ref.read(subtitleRepositoryProvider),
+      );
+      final preparedSrt = await files.prepareSaveAs(
+        sessionId: created.id, collectionId: created.subtitleCollectionId);
+      if (preparedSrt == null) return StudioDockFileResult.failed;
+      final srtResult = await files.writeToPath(
+        prepared: preparedSrt, selectedPath: choice.srtPath!);
+      if (srtResult != StudioDockFileResult.saved) return srtResult;
+
+      // Build the portable document after the new SRT has been linked.
+      final projects = StudioDockProjectSaveActions(
+        ref.read(projectRepositoryProvider),
+        ref.read(subtitleRepositoryProvider),
+        ref.read(projectSaveCoordinatorProvider),
+      );
+      final preparedProject = await projects.prepare(
+        sessionId: created.id, collectionId: created.subtitleCollectionId);
+      if (preparedProject == null) return StudioDockFileResult.failed;
+      return projects.writeToPath(
+        prepared: preparedProject, selectedPath: choice.projectPath!);
+    } on FormatException {
+      return StudioDockFileResult.invalidEncoding;
+    } on UnsupportedError {
+      return StudioDockFileResult.invalidEncoding;
+    } catch (_) {
+      return StudioDockFileResult.failed;
+    }
+  }
+
   Future<void> _createProject() async {
     if (_busy) return;
-    // A local string avoids disposing a TextEditingController while Flutter
-    // is still animating the modal route out of the tree.
-    var projectName = '';
-    final name = await showDialog<String>(
+    final choice = await showDialog<StudioDockCreateProjectChoice>(
       context: context,
-      builder: (dialog) => AlertDialog(
-        title: const Text('New Studio Dock project'),
-        content: SizedBox(
-          width: 420,
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Text('Create subtitles from scratch in Edit Mode.'),
-            const SizedBox(height: 12),
-            TextField(
-              key: const ValueKey('studio-dock-new-project-name'),
-              onChanged: (value) => projectName = value,
-              autofocus: true,
-              decoration: const InputDecoration(
-                labelText: 'Project name',
-                hintText: 'Untitled subtitles',
-              ),
-              onSubmitted: (value) => Navigator.pop(dialog, value),
-            ),
-          ]),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialog),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialog, projectName),
-            child: const Text('Create'),
-          ),
-        ],
-      ),
+      barrierDismissible: false,
+      builder: (_) => const StudioDockCreateProjectDialog(),
     );
-    if (!mounted || name == null) return;
+    if (!mounted || choice == null) return;
+
+    if (choice.saveFilesNow) {
+      final srtPath = choice.srtPath!;
+      final projectPath = choice.projectPath!;
+      // Preflight before a new session is persisted. Save As writers also
+      // reject any file that appears between this check and the write.
+      final validPaths = File(srtPath).isAbsolute &&
+          srtPath.toLowerCase().endsWith('.srt') &&
+          File(projectPath).isAbsolute &&
+          projectPath.toLowerCase().endsWith('.msone');
+      if (!validPaths || await File(srtPath).exists() ||
+          await File(projectPath).exists()) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Choose new .srt and .msone file locations. '
+              'Existing files are not overwritten when creating a project.'),
+        ));
+        return;
+      }
+    }
+
     setState(() { _busy = true; _error = null; });
     try {
-      final created = await _actions.createEmpty(name);
+      final created = await _actions.createEmpty(
+        choice.name, encoding: choice.encoding);
+      final saveResult = choice.saveFilesNow
+          ? await _writeNewProjectFiles(created, choice)
+          : null;
       if (!mounted) return;
       _chosenSessionId = created.id;
       _refresh();
       await _rememberProject(created.id);
+      if (!mounted || saveResult == null) return;
+      final message = switch (saveResult) {
+        StudioDockFileResult.saved =>
+          'New subtitle and portable project files saved.',
+        StudioDockFileResult.alreadyExists =>
+          'Project created, but a destination file now exists. '
+              'Choose a new location using Save As.',
+        StudioDockFileResult.savedButUnlinked =>
+          'Project created, but a saved file could not be linked. '
+              'Use Save As to finish setting up the files.',
+        StudioDockFileResult.invalidEncoding =>
+          'Project created, but the selected encoding could not save the SRT.',
+        _ => 'Project created, but its files could not all be saved. '
+            'Use Save As to finish setting up the files.',
+      };
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
     } catch (e) {
-      if (mounted) setState(() => _error = 'Could not create project: $e');
+      if (mounted) {
+        setState(() => _error = 'Could not create project: $e');
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Could not create project: $e'),
+        ));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }

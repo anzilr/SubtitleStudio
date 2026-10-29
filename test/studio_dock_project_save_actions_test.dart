@@ -150,6 +150,67 @@ void main() {
     expect(await File(srtPath).readAsString(), source);
   });
 
+  test('new Edit Mode project saves both files and reopens edited content',
+      () async {
+    final imports = StudioDockProjectActions(
+      subtitleImporter: SubtitleImportRepository(db.isar),
+      projectImporter: SessionProjectImportRepository(db.isar),
+    );
+    final created = await imports.createEmpty('Fresh scene',
+        encoding: 'ISO-8859-1');
+    final savedSrt = '${temp.path}/Fresh scene.srt';
+    final savedProject = '${temp.path}/Fresh scene.msone';
+    final subtitles = SubtitleRepository(
+        db.isar, CheckpointRepository(db.isar));
+    final files = StudioDockFileActions(ProjectRepository(db.isar), subtitles);
+
+    final initial = await files.prepareSaveAs(
+      sessionId: created.id, collectionId: created.subtitleCollectionId);
+    expect(initial, isNotNull);
+    expect(await files.writeToPath(
+      prepared: initial!, selectedPath: savedSrt,
+    ), StudioDockFileResult.saved);
+    expect(await File(savedSrt).readAsString(), isEmpty);
+
+    final preparedProject = await projects.prepare(
+      sessionId: created.id, collectionId: created.subtitleCollectionId);
+    expect(preparedProject, isNotNull);
+    expect(await projects.writeToPath(
+      prepared: preparedProject!, selectedPath: savedProject,
+    ), StudioDockFileResult.saved);
+    final initialDocument = ProjectDocumentCodec.decode(
+        await File(savedProject).readAsString());
+    expect(initialDocument.subtitleCollection.encoding, 'ISO-8859-1');
+    expect(initialDocument.subtitleCollection.filePath, savedSrt);
+    expect(initialDocument.subtitleCollection.lines, isEmpty);
+
+    // Simulate the first Edit Mode subtitle and save both linked documents.
+    await db.isar.writeTxn(() async {
+      final collection = (await db.isar.subtitleCollections.get(
+          created.subtitleCollectionId))!;
+      collection.lines.add(SubtitleLine()
+        ..index = 1
+        ..startTime = '00:00:01,000'
+        ..endTime = '00:00:02,000'
+        ..original = ''
+        ..edited = 'Cafe');
+      await db.isar.subtitleCollections.put(collection);
+    });
+    expect(await files.saveExisting(
+      sessionId: created.id, collectionId: created.subtitleCollectionId,
+    ), StudioDockFileResult.saved);
+    expect(await projects.saveExisting(
+      sessionId: created.id, collectionId: created.subtitleCollectionId,
+    ), StudioDockFileResult.saved);
+    expect(await File(savedSrt).readAsString(), contains('Cafe'));
+    final reloaded = ProjectDocumentCodec.decode(
+        await File(savedProject).readAsString());
+    expect(reloaded.subtitleCollection.lines.single.edited, 'Cafe');
+    expect(await ProjectRepository(db.isar).getProjectFilePath(created.id),
+        savedProject);
+    expect(await db.isar.sessions.count(), 1);
+  });
+
   test('Save As refuses replacement without explicit authorization', () async {
     final ids = await seed();
     final prepared = (await projects.prepare(

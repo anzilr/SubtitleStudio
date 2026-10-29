@@ -91,8 +91,12 @@ void main() {
     await launch(tester, const StudioDockSessionCatalog([], null));
     await tester.tap(find.byKey(const ValueKey('studio-dock-create-first')));
     await tester.pumpAndSettle();
-    expect(find.text('New Studio Dock project'), findsOneWidget);
-    await tester.tap(find.text('Cancel'));
+    expect(find.text('Create subtitle project'), findsOneWidget);
+    expect(find.byKey(const ValueKey('studio-dock-new-project-encoding')),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey('studio-dock-new-project-save-now')),
+        findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('studio-dock-new-project-cancel')));
     await tester.pumpAndSettle();
     expect(find.text('Welcome to Studio Dock'), findsOneWidget);
     expect(tester.takeException(), isNull);

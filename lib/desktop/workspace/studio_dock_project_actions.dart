@@ -255,19 +255,34 @@ class StudioDockProjectActions {
     return session;
   }
 
-  Future<Session> createEmpty(String title) async {
+  static String fileNameForNewProject(String title) {
     final normalized = title.trim();
-    if (normalized.isEmpty) {
+    if (normalized.isEmpty || normalized == '.' || normalized == '..') {
       throw const FormatException('Enter a project name.');
     }
-    final fileName = normalized.toLowerCase().endsWith('.srt')
+    if (RegExp(r'[<>:"/\\|?*\x00-\x1F]').hasMatch(normalized)) {
+      throw const FormatException('Project names cannot contain file-path characters.');
+    }
+    if (RegExp(r'\.(vtt|ass|ssa)$', caseSensitive: false)
+        .hasMatch(normalized)) {
+      throw const FormatException('New projects currently support SRT only.');
+    }
+    return normalized.toLowerCase().endsWith('.srt')
         ? normalized : '$normalized.srt';
+  }
+
+  Future<Session> createEmpty(String title, {String encoding = 'UTF-8'}) async {
+    final fileName = fileNameForNewProject(title);
+    if (!const ['UTF-8', 'ISO-8859-1', 'Windows-1252']
+        .contains(encoding)) {
+      throw const FormatException('Choose a supported SRT encoding.');
+    }
     // An empty project has no export location until the user explicitly
     // chooses one. Never silently create or overwrite an external .srt.
     final result = await subtitleImporter.storeSubtitleData(
       lines: <SubtitleLine>[],
       fileName: fileName,
-      encoding: 'UTF-8',
+      encoding: encoding,
       filePath: '',
       editMode: true,
     );

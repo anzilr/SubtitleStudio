@@ -136,6 +136,10 @@ void main() {
   test('empty new project is persisted only after explicit creation', () async {
     expect(await harness.isar.sessions.count(), 0);
     await expectLater(actions.createEmpty('  '), throwsFormatException);
+    await expectLater(actions.createEmpty('../escape'), throwsFormatException);
+    await expectLater(actions.createEmpty('Unsupported.vtt'), throwsFormatException);
+    await expectLater(actions.createEmpty('New desktop', encoding: 'ASCII'),
+        throwsFormatException);
     expect(await harness.isar.sessions.count(), 0);
     final session = await actions.createEmpty('New desktop');
     expect(session.fileName, 'New desktop.srt');
@@ -144,6 +148,18 @@ void main() {
         await harness.isar.subtitleCollections.get(session.subtitleCollectionId);
     expect(collection!.lines, isEmpty);
     expect(collection.filePath, isEmpty);
+  });
+
+  test('new Edit Mode project preserves the chosen SRT encoding', () async {
+    final session = await actions.createEmpty('Episode.srt',
+        encoding: 'Windows-1252');
+    final collection = await harness.isar.subtitleCollections.get(
+        session.subtitleCollectionId);
+    expect(session.fileName, 'Episode.srt');
+    expect(session.editMode, isTrue);
+    expect(collection!.encoding, 'Windows-1252');
+    expect(collection.filePath, isEmpty);
+    expect(session.projectFilePath, isNull);
   });
 
   test('invalid or missing imports never create sessions', () async {
