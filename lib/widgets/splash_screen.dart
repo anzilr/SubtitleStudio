@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter_svg/flutter_svg.dart'; // Import for SVG support
 import 'dart:ui'; // Import for BackdropFilter
 import 'package:subtitle_studio/utils/app_info.dart'; // Add this import
 
@@ -126,20 +125,15 @@ class _SvgSplashScreenState extends State<SvgSplashScreen>
                         // Main content
                         Column(
                           children: [
-                            RepaintBoundary( // Isolate SVG repaints
-                              child: SvgPicture.asset(
-                                'assets/msone.svg',
+                            RepaintBoundary( // Isolate logo repaints
+                              child: Image.asset(
+                                'assets/subtitle_studio_logo.png',
+                                key: const ValueKey('subtitle-studio-splash-logo'),
                                 width: isPortrait 
                                     ? screenSize.width * 0.2
                                     : screenSize.height * 0.2,
-                                placeholderBuilder: (BuildContext context) => SizedBox(
-                                  width: isPortrait 
-                                      ? screenSize.width * 0.2
-                                      : screenSize.height * 0.2,
-                                  height: isPortrait 
-                                      ? screenSize.width * 0.2
-                                      : screenSize.height * 0.2,
-                                ),
+                                filterQuality: FilterQuality.high,
+                                fit: BoxFit.contain,
                               ),
                             ),
                             SizedBox(height: screenSize.height * 0.01),

@@ -3947,7 +3947,15 @@ class StudioDockWorkspaceState extends State<StudioDockWorkspace> {
     decoration: BoxDecoration(border:
         Border(bottom: BorderSide(color: _border))),
     child: Row(children: [
-      Icon(Icons.subtitles_rounded, color: _accent, size: 22),
+      Image.asset(
+        'assets/subtitle_studio_brand_icon.png',
+        key: const ValueKey('studio-dock-brand-icon'),
+        width: 26,
+        height: 24,
+        color: _accent,
+        filterQuality: FilterQuality.high,
+        fit: BoxFit.contain,
+      ),
       if (showBrand) ...[
         const SizedBox(width: 8),
         const Text('Subtitle', key: ValueKey('studio-brand-subtitle'), style:

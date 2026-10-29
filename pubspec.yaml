@@ -68,6 +68,8 @@ flutter:
   assets:
     - assets/movie_off.svg
     - assets/msone.svg
+    - assets/subtitle_studio_logo.png
+    - assets/subtitle_studio_brand_icon.png
     - assets/olam_logo.svg
     - assets/olam_dictionary_icon.svg
     - assets/urban_dictionary_icon.svg
