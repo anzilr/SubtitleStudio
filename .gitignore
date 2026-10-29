@@ -70,6 +70,9 @@ generated*
 /installer/output/
 /installer/deps/
 
+# Locally copied Isar native runtime (not source-controlled)
+/libisar.dll
+
 # Keystore files
 /android/key.properties
 /android/*.jks
