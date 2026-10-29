@@ -30,7 +30,7 @@ void main() {
     expect(builder, contains("'LICENSE.txt'"));
     expect(builder, contains("'SOURCE.txt'"));
     expect(builder, contains(r"'tools\ffmpeg'"));
-    expect(builder, contains('Copy-Item -LiteralPath $source'));
+    expect(builder, contains(r'Copy-Item -LiteralPath $source'));
     expect(builder, isNot(contains('winget install')));
   });
 
