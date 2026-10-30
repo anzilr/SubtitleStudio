@@ -267,8 +267,25 @@ class StudioDockProjectActions {
         .hasMatch(normalized)) {
       throw const FormatException('New projects currently support SRT only.');
     }
-    return normalized.toLowerCase().endsWith('.srt')
-        ? normalized : '$normalized.srt';
+    final hasSrtExtension = normalized.toLowerCase().endsWith('.srt');
+    final base = hasSrtExtension
+        ? normalized.substring(0, normalized.length - 4)
+        : normalized;
+    if (base.isEmpty || base == '.' || base == '..' ||
+        base.endsWith('.') || base.endsWith(' ')) {
+      throw const FormatException('Enter a valid SRT project name.');
+    }
+
+    // Windows reserves device names even with an extension (e.g. CON.srt).
+    // Validate them on every host so portable projects stay saveable.
+    final deviceName = base.split('.').first.trimRight();
+    if (RegExp(
+      r'^(CON|PRN|AUX|NUL|CONIN\$|CONOUT\$|COM[1-9¹²³]|LPT[1-9¹²³])$',
+      caseSensitive: false,
+    ).hasMatch(deviceName)) {
+      throw const FormatException('This project name is reserved by Windows.');
+    }
+    return hasSrtExtension ? normalized : '$normalized.srt';
   }
 
   Future<Session> createEmpty(String title, {String encoding = 'UTF-8'}) async {

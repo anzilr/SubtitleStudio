@@ -150,6 +150,26 @@ void main() {
     expect(collection.filePath, isEmpty);
   });
 
+  test('new projects reject empty base names and Windows device filenames', () async {
+    for (final name in [
+      '.srt', '..srt', 'Episode..srt', 'Episode .srt',
+      'CON', 'con.srt', 'PrN.srt', 'AUX.txt', 'NUL',
+      'COM1', 'COM9.srt', 'LPT1.srt', 'lpt9.notes.srt',
+      'COM¹.srt', 'LPT³.srt', r'CONIN$.srt', r'CONOUT$.srt',
+    ]) {
+      expect(
+        () => StudioDockProjectActions.fileNameForNewProject(name),
+        throwsFormatException,
+        reason: name,
+      );
+    }
+    expect(StudioDockProjectActions.fileNameForNewProject('Console'),
+        'Console.srt');
+    expect(StudioDockProjectActions.fileNameForNewProject('COM10.srt'),
+        'COM10.srt');
+    expect(await harness.isar.sessions.count(), 0);
+  });
+
   test('new Edit Mode project preserves the chosen SRT encoding', () async {
     final session = await actions.createEmpty('Episode.srt',
         encoding: 'Windows-1252');

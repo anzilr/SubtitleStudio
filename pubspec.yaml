@@ -4,7 +4,7 @@ publish_to: 'none'
 version: 3.0.0+30
 
 environment:
-  sdk: ^3.7.2
+  sdk: ^3.13.0
 
 dependencies:
   characters: ^1.4.1                  # Grapheme-aware subtitle quality metrics
@@ -28,11 +28,11 @@ dependencies:
   flutter_riverpod: 3.4.3             # Incremental state management migration
   flex_color_picker: ^3.7.1
   flutter_svg: ^2.3.2
-  ffmpeg_kit_flutter_new_min_gpl: ^2.1.1
-  google_fonts: ^6.3.0
+  ffmpeg_kit_flutter_new_min_gpl: ^2.6.7
+  google_fonts: ^9.0.0
   html: ^0.15.6
   shared_preferences: ^2.5.6
-  package_info_plus: ^8.3.0
+  package_info_plus: ^8.3.1
   flutter_file_dialog: ^3.0.2
   file_picker: ^10.2.1
   share_plus: ^11.0.0

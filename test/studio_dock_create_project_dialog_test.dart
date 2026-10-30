@@ -56,6 +56,26 @@ void main() {
     expect(directory.listSync(), isEmpty);
   });
 
+  testWidgets('invalid Windows project names keep Create disabled',
+      (tester) async {
+    await launch(tester);
+    final nameField =
+        find.byKey(const ValueKey('studio-dock-new-project-name'));
+    final create =
+        find.byKey(const ValueKey('studio-dock-new-project-confirm'));
+    for (final name in ['.srt', 'CON.srt', 'LPT1.srt']) {
+      await tester.enterText(nameField, name);
+      await tester.pumpAndSettle();
+      expect(tester.widget<FilledButton>(create).onPressed, isNull,
+          reason: name);
+    }
+    await tester.enterText(nameField, 'Conversation');
+    await tester.pumpAndSettle();
+    expect(tester.widget<FilledButton>(create).onPressed, isNotNull);
+    await tester.tap(find.byKey(const ValueKey('studio-dock-new-project-cancel')));
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('new unsaved Edit Mode project has a configurable encoding',
       (tester) async {
     final result = await launch(tester);
