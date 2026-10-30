@@ -36,6 +36,13 @@ jobs:
       - name: Resolve dependencies
         run: flutter pub get
 
+      - name: Save resolved lockfile for dependency review
+        uses: actions/upload-artifact@v4
+        with:
+          name: resolved-pubspec-lock
+          path: pubspec.lock
+          retention-days: 3
+
       - name: Analyze
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
