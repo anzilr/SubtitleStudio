@@ -36,11 +36,16 @@ jobs:
       - name: Resolve dependencies
         run: flutter pub get
 
-      - name: Save resolved lockfile for dependency review
+      - name: Regenerate database models for dependency migration
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Save resolved lockfile and generated models
         uses: actions/upload-artifact@v4
         with:
-          name: resolved-pubspec-lock
-          path: pubspec.lock
+          name: resolved-dependency-artifacts
+          path: |
+            pubspec.lock
+            lib/database/models/models.g.dart
           retention-days: 3
 
       - name: Analyze
