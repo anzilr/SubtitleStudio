@@ -17,8 +17,8 @@ dependencies:
     sdk: flutter
   hotkey_manager: ^0.2.3                  # Desktop keyboard shortcuts
   http: ^1.4.0
-  isar_community: ^3.3.0
-  isar_community_flutter_libs: ^3.3.0
+  isar_community: ^3.4.1
+  isar_community_flutter_libs: ^3.4.1
   media_kit: ^1.2.1                       # Primary package
   media_kit_video: ^2.0.0                # For video rendering
   media_kit_native_event_loop: ^1.0.9    # Support for higher number of concurrent instances
@@ -60,8 +60,8 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
-  build_runner: ^2.7.1
-  isar_community_generator: ^3.3.0-dev.3
+  build_runner: ^2.16.2
+  isar_community_generator: ^3.4.1
 
 flutter:
   uses-material-design: true
