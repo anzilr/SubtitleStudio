@@ -65,10 +65,11 @@ generated*
 # Flutter build args
 .flutter-args
 
-# Installer output
+# Installer output and local third-party FFmpeg build inputs
 /installer/installer_output/
 /installer/output/
 /installer/deps/
+/installer/ffmpeg-*-essentials_build/
 
 # Locally copied Isar native runtime (not source-controlled)
 /libisar.dll

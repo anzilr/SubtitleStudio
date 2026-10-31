@@ -51,6 +51,55 @@ void main() {
     expect(builder, isNot(contains(r'& $source -version')));
   });
 
+  test('supplied Gyan.dev essentials bundle is staged without extra tools', () {
+    expect(builder, contains("-Filter 'ffmpeg-*-essentials_build'"));
+    expect(builder, contains(r"Join-Path $FfmpegBundleDirectory 'LICENSE'"));
+    expect(builder, contains(r"Join-Path $FfmpegBundleDirectory 'README.txt'"));
+    expect(builder, contains(r'$ffmpegSourceFiles[$relative] = $source'));
+    expect(builder, contains(r'$source = $ffmpegSourceFiles[$relative]'));
+    expect(builder, contains('Unrecognized FFmpeg build manifest'));
+    expect(builder, contains('third-party licensing'));
+    expect(builder, isNot(contains("'bin\\ffplay.exe'")));
+    expect(File('.gitignore').readAsStringSync(),
+        contains('/installer/ffmpeg-*-essentials_build/'));
+  });
+
+  test('local FFmpeg tools have Windows AMD64 headers when provided', () async {
+    final bundles = Directory('installer').listSync(followLinks: false)
+        .whereType<Directory>()
+        .where((folder) {
+          final name = folder.path.split(Platform.pathSeparator).last;
+          return name.startsWith('ffmpeg-') &&
+              name.endsWith('-essentials_build');
+        }).toList();
+    if (bundles.isEmpty) return; // CI has no downloaded vendor assets.
+    expect(bundles, hasLength(1));
+    final bundle = bundles.single;
+    for (final name in ['ffmpeg.exe', 'ffprobe.exe']) {
+      final file = File('${bundle.path}${Platform.pathSeparator}bin'
+          '${Platform.pathSeparator}$name');
+      expect(file.existsSync(), isTrue, reason: name);
+      final input = await file.open();
+      try {
+        final length = await input.length();
+        expect(length, greaterThan(70), reason: name);
+        await input.setPosition(0);
+        expect(await input.read(2), [0x4d, 0x5a], reason: name);
+        await input.setPosition(0x3c);
+        final bytes = await input.read(4);
+        expect(bytes.length, 4, reason: name);
+        final offset = bytes[0] | (bytes[1] << 8) |
+            (bytes[2] << 16) | (bytes[3] << 24);
+        expect(offset, inInclusiveRange(64, length - 6), reason: name);
+        await input.setPosition(offset);
+        expect(await input.read(6), [0x50, 0x45, 0, 0, 0x64, 0x86],
+            reason: name);
+      } finally {
+        await input.close();
+      }
+    }
+  });
+
   test('installer offers safe per-user and optional all-users mode', () {
     expect(installer, contains('PrivilegesRequired=lowest'));
     expect(installer, contains('PrivilegesRequiredOverridesAllowed=dialog'));

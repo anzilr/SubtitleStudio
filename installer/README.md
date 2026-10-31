@@ -33,6 +33,32 @@ installer/deps/ffmpeg/
   SOURCE.txt
 ```
 
+For the supplied Gyan.dev essentials archive, **no manual renaming or moving is
+required**. Leave its original folder intact under `installer/`:
+
+```text
+installer/ffmpeg-9.0.2-essentials_build/
+  bin/ffmpeg.exe
+  bin/ffprobe.exe
+  bin/ffplay.exe        # Not included in Subtitle Studio's installer
+  LICENSE
+  README.txt
+  doc/ ...              # Not included
+  presets/ ...          # Not included
+```
+
+The packaging script discovers a single `ffmpeg-*-essentials_build` directory
+automatically when no curated `installer/deps/ffmpeg` bundle exists. It maps
+the original `LICENSE` and build manifest `README.txt` into application-local
+`LICENSE.txt` and `SOURCE.txt` while copying just FFmpeg and FFprobe. The
+original download remains untouched and is ignored by Git. Multiple matching
+folders require an explicit `-FfmpegBundleDirectory` choice.
+
+The upstream GPL license and build manifest make the package useful for
+internal testing, but **they do not establish complete public redistribution
+compliance**. Verify the exact corresponding source, enabled third-party
+licenses and notices before publishing the installer.
+
 - `LICENSE.txt` must contain the licensing and attribution notices for the
   **exact build** being redistributed, including notices for enabled
   third-party libraries. Do not substitute Subtitle Studio's GPL license.

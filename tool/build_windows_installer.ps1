@@ -115,23 +115,65 @@ if (Test-Path -LiteralPath $installerPath -PathType Leaf) {
 }
 
 # Validate offline media inputs before spending time on the Flutter build.
+# Prefer a curated bundle, but accept a single untouched Gyan.dev essentials
+# folder placed directly under installer/. Never alter the user's source files.
 if ([string]::IsNullOrWhiteSpace($FfmpegBundleDirectory)) {
   $FfmpegBundleDirectory = Join-Path $repoRoot 'installer\deps\ffmpeg'
+  if (-not (Test-Path -LiteralPath $FfmpegBundleDirectory -PathType Container)) {
+    $localBundles = @(Get-ChildItem -LiteralPath (Join-Path $repoRoot 'installer') -Directory -Filter 'ffmpeg-*-essentials_build')
+    if ($localBundles.Count -eq 1) {
+      $FfmpegBundleDirectory = $localBundles[0].FullName
+      Write-Host "Using local FFmpeg bundle: $FfmpegBundleDirectory"
+    } elseif ($localBundles.Count -gt 1) {
+      throw 'Multiple FFmpeg essentials bundles found. Choose one with -FfmpegBundleDirectory.'
+    }
+  }
 }
+$preparedLicense = Join-Path $FfmpegBundleDirectory 'LICENSE.txt'
+$preparedSource = Join-Path $FfmpegBundleDirectory 'SOURCE.txt'
+$vendorLicense = Join-Path $FfmpegBundleDirectory 'LICENSE'
+$vendorSource = Join-Path $FfmpegBundleDirectory 'README.txt'
+if ((Test-Path -LiteralPath $preparedLicense -PathType Leaf) -and
+    (Test-Path -LiteralPath $preparedSource -PathType Leaf)) {
+  $licenseNotice = $preparedLicense
+  $sourceNotice = $preparedSource
+} elseif ((Test-Path -LiteralPath $vendorLicense -PathType Leaf) -and
+          (Test-Path -LiteralPath $vendorSource -PathType Leaf)) {
+  $manifest = Get-Content -LiteralPath $vendorSource -Raw
+  if ($manifest -notmatch '(?m)^FFmpeg 64-bit static Windows build from www\.gyan\.dev' -or
+      $manifest -notmatch '(?m)^Version:\s+\S+' -or
+      $manifest -notmatch '(?m)^Source Code:\s+https://\S+') {
+    throw "Unrecognized FFmpeg build manifest: $vendorSource"
+  }
+  $licenseNotice = $vendorLicense
+  $sourceNotice = $vendorSource
+  Write-Warning 'Packaging upstream GPL license and build manifest as local notices. Verify corresponding source and third-party licensing before any public distribution.'
+} else {
+  throw "FFmpeg notices missing in $FfmpegBundleDirectory. Supply LICENSE.txt and SOURCE.txt, or an untouched Gyan.dev LICENSE and README.txt pair."
+}
+
 $ffmpegFiles = @(
   'bin\ffmpeg.exe',
   'bin\ffprobe.exe',
   'LICENSE.txt',
   'SOURCE.txt'
 )
+$ffmpegSourceFiles = @{}
 foreach ($relative in $ffmpegFiles) {
-  $source = Join-Path $FfmpegBundleDirectory $relative
+  if ($relative -eq 'LICENSE.txt') {
+    $source = $licenseNotice
+  } elseif ($relative -eq 'SOURCE.txt') {
+    $source = $sourceNotice
+  } else {
+    $source = Join-Path $FfmpegBundleDirectory $relative
+  }
   if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
-    throw "FFmpeg bundle is incomplete: $source. Supply a complete -FfmpegBundleDirectory containing ffmpeg.exe, ffprobe.exe, LICENSE.txt, and SOURCE.txt."
+    throw "FFmpeg bundle is incomplete: $source. Supply ffmpeg.exe, ffprobe.exe and matching licensing/source notices."
   }
   if ((Get-Item -LiteralPath $source).Length -eq 0) {
     throw "FFmpeg bundle contains an empty file: $source"
   }
+  $ffmpegSourceFiles[$relative] = $source
 }
 foreach ($relative in @('bin\ffmpeg.exe', 'bin\ffprobe.exe')) {
   Assert-WindowsX64Binary -FilePath (Join-Path $FfmpegBundleDirectory $relative)
@@ -207,7 +249,7 @@ foreach ($runtime in $vcRuntimeFiles) {
 # never needs to install FFmpeg, edit PATH, or enable package-manager access.
 $ffmpegDestination = Join-Path $releaseDir 'tools\ffmpeg'
 foreach ($relative in $ffmpegFiles) {
-  $source = Join-Path $FfmpegBundleDirectory $relative
+  $source = $ffmpegSourceFiles[$relative]
   $destination = Join-Path $ffmpegDestination $relative
   [void](New-Item -ItemType Directory -Force -Path (Split-Path -Parent $destination))
   Copy-Item -LiteralPath $source -Destination $destination -Force
