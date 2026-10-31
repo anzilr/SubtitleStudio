@@ -14,7 +14,8 @@ import 'package:subtitle_studio/core/file_access/studio_picked_file_reference.da
 /// 
 /// This utility provides a unified interface for file and folder picking across different platforms:
 /// - Android: Uses Storage Access Framework (SAF) for secure file access
-/// - Windows, Linux, macOS: Uses file_picker for traditional desktop experience
+/// - Windows: Uses file_selector for native path-based file/folder dialogs
+/// - Linux, macOS: Retain the existing file_picker dialog behavior
 /// - iOS: Uses file_picker for native iOS file access
 class FilePickerSAF {
   /// Choose a desktop file destination without creating or replacing it.
@@ -306,7 +307,7 @@ class FilePickerSAF {
     }
   }
 
-  /// Desktop file picker implementation using file_picker package
+  /// Native Windows picker; retain the existing plugin on other platforms
   static Future<String?> _pickFileDesktop({
     required String title,
     List<String>? allowedExtensions,
@@ -314,39 +315,59 @@ class FilePickerSAF {
     try {
       await _initLastUsedDirectory();
 
-      fp.FilePickerResult? result = await fp.FilePicker.platform.pickFiles(
-        dialogTitle: title,
-        type: allowedExtensions != null ? fp.FileType.custom : fp.FileType.any,
-        allowedExtensions: allowedExtensions?.map((e) => e.replaceFirst('.', '')).toList(),
-        allowMultiple: false,
-        initialDirectory: _lastUsedDirectory,
-      );
-
-      if (result != null && result.files.single.path != null) {
-        final filePath = result.files.single.path!;
-        _lastUsedDirectory = File(filePath).parent.path;
-        await _persistLastUsedDirectory();
-        return filePath;
+      final String? filePath;
+      if (Platform.isWindows) {
+        final extensions = allowedExtensions
+            ?.map((extension) => extension.replaceFirst('.', ''))
+            .where((extension) => extension.isNotEmpty)
+            .toList();
+        final picked = await fs.openFile(
+          initialDirectory: _lastUsedDirectory,
+          acceptedTypeGroups: extensions == null || extensions.isEmpty
+              ? const []
+              : [fs.XTypeGroup(label: title, extensions: extensions)],
+        );
+        filePath = picked?.path;
+      } else {
+        // Preserve existing iOS and Unix file-provider behavior for now.
+        final result = await fp.FilePicker.platform.pickFiles(
+          dialogTitle: title,
+          type: allowedExtensions != null ? fp.FileType.custom : fp.FileType.any,
+          allowedExtensions: allowedExtensions
+              ?.map((extension) => extension.replaceFirst('.', ''))
+              .toList(),
+          allowMultiple: false,
+          initialDirectory: _lastUsedDirectory,
+        );
+        filePath = result?.files.single.path;
       }
-      return null;
+
+      if (filePath == null || filePath.isEmpty) return null;
+      _lastUsedDirectory = File(filePath).parent.path;
+      await _persistLastUsedDirectory();
+      return filePath;
     } catch (e) {
       debugPrint('FilePickerSAF: desktop selection failed (${e.runtimeType})');
       return null;
     }
   }
 
-  /// Desktop folder picker implementation using file_picker package
+  /// Native Windows folder picker with persisted last-used directory
   static Future<String?> _pickFolderDesktop({
     required String title,
   }) async {
     try {
       await _initLastUsedDirectory();
 
-      String? selectedDirectory = await fp.FilePicker.platform.getDirectoryPath(
-        dialogTitle: title,
-        initialDirectory: _lastUsedDirectory,
-      );
+      final selectedDirectory = Platform.isWindows
+          ? await fs.getDirectoryPath(initialDirectory: _lastUsedDirectory)
+          : await fp.FilePicker.platform.getDirectoryPath(
+              dialogTitle: title,
+              initialDirectory: _lastUsedDirectory,
+            );
 
+      // Canceling the dialog must not erase the last successful location.
+      if (selectedDirectory == null || selectedDirectory.isEmpty) return null;
       _lastUsedDirectory = selectedDirectory;
       await _persistLastUsedDirectory();
       return selectedDirectory;
