@@ -16,6 +16,7 @@
 [CmdletBinding()]
 param(
   [switch]$SkipFlutterBuild,
+  [switch]$CleanFlutterBuild,
   [switch]$ReplaceExistingInstaller,
   [string]$InnoCompilerPath,
   [string]$VcRuntimeSourceDirectory,
@@ -27,6 +28,10 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+if ($SkipFlutterBuild -and $CleanFlutterBuild) {
+  throw '-SkipFlutterBuild and -CleanFlutterBuild cannot be used together.'
+}
 
 if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) {
   throw 'The Windows installer must be built on a Windows computer.'
@@ -107,6 +112,17 @@ if (-not $SkipFlutterBuild) {
   }
   Push-Location $repoRoot
   try {
+    if ($CleanFlutterBuild) {
+      Write-Host 'Cleaning stale Flutter build artifacts before the Windows Release build...'
+      & flutter clean
+      if ($LASTEXITCODE -ne 0) {
+        throw "Flutter clean failed with exit code $LASTEXITCODE."
+      }
+      & flutter pub get
+      if ($LASTEXITCODE -ne 0) {
+        throw "Flutter pub get failed with exit code $LASTEXITCODE."
+      }
+    }
     & flutter build windows --release
     if ($LASTEXITCODE -ne 0) {
       throw "Flutter Windows Release build failed with exit code $LASTEXITCODE."

@@ -68,6 +68,17 @@ For an existing Windows Release bundle:
 .\tool\build_windows_installer.ps1 -SkipFlutterBuild
 ```
 
+If switching from a Debug build causes missing `cpp_client_wrapper/*.cc` files
+in the Windows Release build, request a clean rebuild explicitly:
+
+```powershell
+.\tool\build_windows_installer.ps1 -CleanFlutterBuild
+```
+
+This runs `flutter clean` and `flutter pub get` before building Release.
+It is slower than an incremental build, so it is optional and cannot be combined
+with `-SkipFlutterBuild`.
+
 If the app-local VC runtime DLLs are missing, locate the `x64\Microsoft.VC143.CRT`
 folder in your Visual Studio `VC\Redist\MSVC` installation and supply:
 
