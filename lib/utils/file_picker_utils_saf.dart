@@ -329,17 +329,16 @@ class FilePickerSAF {
         );
         filePath = picked?.path;
       } else {
-        // Preserve existing iOS and Unix file-provider behavior for now.
-        final result = await fp.FilePicker.platform.pickFiles(
+        // Preserve iOS and Unix file-provider behavior with single-file picking.
+        final result = await fp.FilePicker.pickFile(
           dialogTitle: title,
           type: allowedExtensions != null ? fp.FileType.custom : fp.FileType.any,
           allowedExtensions: allowedExtensions
               ?.map((extension) => extension.replaceFirst('.', ''))
               .toList(),
-          allowMultiple: false,
           initialDirectory: _lastUsedDirectory,
         );
-        filePath = result?.files.single.path;
+        filePath = result?.path;
       }
 
       if (filePath == null || filePath.isEmpty) return null;
@@ -361,7 +360,7 @@ class FilePickerSAF {
 
       final selectedDirectory = Platform.isWindows
           ? await fs.getDirectoryPath(initialDirectory: _lastUsedDirectory)
-          : await fp.FilePicker.platform.getDirectoryPath(
+          : await fp.FilePicker.getDirectoryPath(
               dialogTitle: title,
               initialDirectory: _lastUsedDirectory,
             );

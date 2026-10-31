@@ -759,11 +759,9 @@ class _SubtitleExtractOptionsSheetState
             }
 
             // Use iOS file picker to save the file
-            final result = await fp.FilePicker.platform.saveFile(
+            final result = await fp.FilePicker.saveFile(
               dialogTitle: 'Save Subtitle File',
               fileName: outputFileName,
-              type: fp.FileType.custom,
-              allowedExtensions: ['srt'],
               bytes: contentBytes,
             );
 
@@ -771,7 +769,9 @@ class _SubtitleExtractOptionsSheetState
               throw Exception('User canceled save operation');
             }
 
-            finalOutputPath = result;
+            finalOutputPath = result.scheme == 'file'
+                ? result.toFilePath()
+                : result.toString();
             
             // For iOS, we need to preserve the original temp file path for content reading
             // The temp file will be cleaned up later after content processing
@@ -839,9 +839,12 @@ class _SubtitleExtractOptionsSheetState
         return; // Return instead of throwing
       }
 
+      // iOS exports bytes through its document provider. The selected URI
+      // may not be directly readable afterwards, so validate the local
+      // extracted content used for import rather than the exported URI.
       final verification =
           await SubtitleExtractionFileService.verifyOutputFile(
-        outputFilePath: outputFilePath,
+        outputFilePath: Platform.isIOS ? tempOutputFile : outputFilePath,
       );
 
       if (!verification.isValid) {

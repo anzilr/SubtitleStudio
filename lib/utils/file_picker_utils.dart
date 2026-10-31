@@ -82,14 +82,14 @@ class FilePicker {
             .toList();
       }
 
-      fp.FilePickerResult? result = await fp.FilePicker.platform.pickFiles(
+      final result = await fp.FilePicker.pickFile(
         type: extensions != null ? fp.FileType.custom : fp.FileType.any,
         allowedExtensions: extensions,
         dialogTitle: title,
       );
 
-      if (result != null && result.files.single.path != null) {
-        return result.files.single.path!;
+      if (result?.path != null) {
+        return result!.path;
       }
       return null;
     } catch (e) {
@@ -103,7 +103,7 @@ class FilePicker {
     required String title,
   }) async {
     try {
-      String? selectedDirectory = await fp.FilePicker.platform.getDirectoryPath(
+      String? selectedDirectory = await fp.FilePicker.getDirectoryPath(
         dialogTitle: title,
       );
       return selectedDirectory;

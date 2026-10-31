@@ -119,13 +119,13 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
           IconButton(
             icon: const Icon(Icons.folder_open),
             onPressed: () async {
-              final result = await FilePicker.platform.pickFiles(
+              final result = await FilePicker.pickFile(
                 type: FileType.custom,
                 allowedExtensions: ['ttf', 'otf'],
               );
               
-              if (result != null) {
-                await themeController.setCustomFont(result.files.single.path);
+              if (result?.path != null) {
+                await themeController.setCustomFont(result!.path);
               }
             },
           ),

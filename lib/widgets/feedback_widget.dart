@@ -126,14 +126,13 @@ class _FeedbackWidgetState extends State<FeedbackWidget> {
   /// Pick screenshots from device gallery
   Future<void> _pickScreenshots() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await FilePicker.pickFiles(
         type: FileType.image,
-        allowMultiple: true,
         dialogTitle: 'Select Screenshots',
       );
 
-      if (result != null && result.files.isNotEmpty) {
-        final newScreenshots = result.files
+      if (result.isNotEmpty) {
+        final newScreenshots = result
             .where((file) => file.path != null)
             .map((file) => File(file.path!))
             .toList();

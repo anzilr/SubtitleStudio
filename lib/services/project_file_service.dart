@@ -30,16 +30,16 @@ class ProjectFileService {
   static Future<String?> saveIosProject({
     required String content,
     required String fileName,
-  }) {
+  }) async {
     final contentBytes = Uint8List.fromList(utf8.encode(content));
 
-    return fp.FilePicker.platform.saveFile(
+    final saved = await fp.FilePicker.saveFile(
       dialogTitle: 'Save Project File',
       fileName: fileName,
-      type: fp.FileType.custom,
-      allowedExtensions: const ['msone'],
       bytes: contentBytes,
     );
+    if (saved == null) return null;
+    return saved.scheme == 'file' ? saved.toFilePath() : saved.toString();
   }
 
   static Future<String> saveDesktopProject({

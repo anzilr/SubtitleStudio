@@ -56,18 +56,25 @@ final class DeviceEditLineSaveAsPicker implements EditLineSaveAsPicker {
 
     // iOS' document picker receives bytes and performs the file-provider
     // export. Its returned location must never be written again with File().
-    final path = Platform.isIOS
-        ? await fp.FilePicker.platform.saveFile(
-            dialogTitle: 'Save Subtitle File',
-            fileName: fileName,
-            type: fp.FileType.custom,
-            allowedExtensions: const ['srt'],
-            bytes: bytes,
-          )
-        : await FilePickerSAF.pickDesktopSaveLocation(
-            fileName: fileName,
-            extension: 'srt',
-          );
+    final String? path;
+    final String? originalFileUri;
+    if (Platform.isIOS) {
+      final saved = await fp.FilePicker.saveFile(
+        dialogTitle: 'Save Subtitle File',
+        fileName: fileName,
+        bytes: bytes,
+      );
+      if (saved == null) return null;
+      path = saved.scheme == 'file' ? saved.toFilePath() : saved.toString();
+      originalFileUri = saved.toString();
+    } else {
+      path = await FilePickerSAF.pickDesktopSaveLocation(
+        fileName: fileName,
+        extension: 'srt',
+      );
+      originalFileUri = path;
+    }
+
     if (path == null || path.isEmpty) return null;
     if (!Platform.isIOS) {
       final identity = StudioFileIdentity.fromLocator(path);
@@ -76,7 +83,10 @@ final class DeviceEditLineSaveAsPicker implements EditLineSaveAsPicker {
       }
       await File(path).writeAsBytes(bytes, flush: true);
     }
-    return EditLineSavedLocation(filePath: path, originalFileUri: path);
+    return EditLineSavedLocation(
+      filePath: path,
+      originalFileUri: originalFileUri!,
+    );
   }
 }
 

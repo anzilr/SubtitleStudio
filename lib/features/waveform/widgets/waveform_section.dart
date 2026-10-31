@@ -80,7 +80,7 @@ class _WaveformSectionContent extends ConsumerWidget {
     WidgetRef ref,
   ) async {
     try {
-      final result = await fp.FilePicker.platform.pickFiles(
+      final result = await fp.FilePicker.pickFile(
         type: fp.FileType.custom,
         allowedExtensions: [
           'mp3',
@@ -97,9 +97,9 @@ class _WaveformSectionContent extends ConsumerWidget {
         dialogTitle: 'Select audio/video file for waveform',
       );
 
-      if (result == null || result.files.isEmpty) return;
+      if (result == null) return;
 
-      final filePath = result.files.single.path;
+      final filePath = result.path;
       if (filePath == null) return;
 
       await ref

@@ -170,11 +170,9 @@ class ExportBottomSheetState extends State<ExportBottomSheet> {
   }
 
   Future<bool> _exportWithFilePicker(EditorExportPlan plan) async {
-    final saved = await fp.FilePicker.platform.saveFile(
+    final saved = await fp.FilePicker.saveFile(
       dialogTitle: 'Save Subtitle File',
       fileName: plan.fileName,
-      type: fp.FileType.custom,
-      allowedExtensions: const ['srt'],
       bytes: plan.bytes,
     );
     return saved != null;
