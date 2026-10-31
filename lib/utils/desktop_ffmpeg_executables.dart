@@ -15,6 +15,26 @@ class DesktopFfmpegExecutables {
 
   static String ffprobe() => resolve('ffprobe');
 
+  /// Only identify the known media-dependency failure signature. Do not show
+  /// arbitrary exception text because it may contain the user's video path.
+  static bool isMissingToolsError(Object error) {
+    final message = error.toString();
+    return message.contains('FFmpeg or FFprobe is unavailable') ||
+        message.contains('FFmpeg is not available');
+  }
+
+  /// Windows installers ship both tools; Linux uses the system PATH.
+  static String missingToolsGuidance({required bool isWindows}) {
+    if (isWindows) {
+      return 'Video subtitle extraction requires FFmpeg and FFprobe. '
+          'Repair or reinstall SubtitleStudio to restore the bundled media '
+          'tools. For a portable development build, install both tools '
+          'and make them available on PATH.';
+    }
+    return 'Video subtitle extraction requires FFmpeg and FFprobe installed '
+        'and available on your system PATH.';
+  }
+
   /// Injectable inputs keep Windows path lookup testable on other hosts.
   static String resolve(
     String tool, {

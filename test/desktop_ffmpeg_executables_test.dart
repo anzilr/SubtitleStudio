@@ -52,6 +52,41 @@ void main() {
     );
   });
 
+  test('recognizes current and legacy FFmpeg availability errors', () {
+    expect(
+      DesktopFfmpegExecutables.isMissingToolsError(
+        Exception('FFmpeg or FFprobe is unavailable.'),
+      ),
+      isTrue,
+    );
+    expect(
+      DesktopFfmpegExecutables.isMissingToolsError(
+        Exception('FFmpeg is not available'),
+      ),
+      isTrue,
+    );
+    expect(
+      DesktopFfmpegExecutables.isMissingToolsError(
+        Exception('Cannot read a private video file'),
+      ),
+      isFalse,
+    );
+  });
+
+  test('dependency guidance matches bundled Windows and system Linux tools',
+      () {
+    final windows = DesktopFfmpegExecutables.missingToolsGuidance(
+      isWindows: true,
+    );
+    final linux = DesktopFfmpegExecutables.missingToolsGuidance(
+      isWindows: false,
+    );
+    expect(windows, contains('Repair or reinstall SubtitleStudio'));
+    expect(windows, contains('bundled media'));
+    expect(linux, contains('system PATH'));
+    expect(linux, isNot(contains('reinstall SubtitleStudio')));
+  });
+
   test('rejects arbitrary tool names', () {
     expect(
       () => DesktopFfmpegExecutables.resolve('../malicious', isWindows: true),

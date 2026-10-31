@@ -157,11 +157,18 @@ Do not use live MSone submission accounts for test payloads.
 ### Automated evidence at this checkpoint
 
 - Local Flutter analysis: **0 issues** (2026-10-31).
-- Local Flutter test suite: **1,297 passed** (2026-10-31), including the
-  desktop rapid-reopen cursor regression.
+- Local Flutter test suite: **1,299 passed** (2026-10-31) with
+  `flutter test --concurrency=4`, including desktop rapid-reopen cursor and
+  newly added FFmpeg dependency-message regressions. The default-concurrency
+  run stalled without a failure summary; its last active inspector test also
+  passed in isolation (19/19).
 - Latest-source native Windows Release startup: **PASS** on 2026-10-31
   with `flutter run -d windows --release` (197.8 s build). The process
   initialized Impeller, FFmpegKit, MediaKit, Isar and registered the desktop
   hotkeys. No startup exception was logged. Interaction checks remain
   **pending** until completed on actual mouse, keyboard and media fixtures.
+- Windows extraction now detects the backend's current missing FFmpeg/FFprobe
+  signature and offers bundled-installer repair guidance; Linux directs the
+  user to PATH-installed tools. This is source/test verified, not real-video
+  extraction acceptance.
 - Platform builds must remain local, never in GitHub Actions.
