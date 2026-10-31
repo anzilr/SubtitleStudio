@@ -54,6 +54,27 @@ import 'studio_dock_bulk_tools_service.dart';
 import 'studio_dock_waveform_edit_plan.dart';
 import 'studio_dock_effect_restore_service.dart';
 
+/// Serializes line-position writes independently of a mounted editor widget.
+/// Each queued operation retains the session ID and writer captured at selection
+/// time, so switching or closing a project cannot drop its final line.
+class StudioDockSelectionWriteQueue {
+  Future<void> _pending = Future<void>.value();
+
+  Future<void> record(
+    int sessionId,
+    int cueId,
+    Future<bool> Function(int, int) write,
+  ) {
+    if (cueId <= 0) return _pending;
+    _pending = _pending.then((_) async {
+      await write(sessionId, cueId);
+    }).catchError((Object error) {
+      debugPrint('Studio Dock could not save the current line: $error');
+    });
+    return _pending;
+  }
+}
+
 /// Live Studio Dock host backed by the shared project, subtitle, history,
 /// native media and file services.
 class StudioDockSessionView extends ConsumerStatefulWidget {
@@ -124,7 +145,8 @@ class _StudioDockSessionViewState
   bool _showSecondary = true;
   int _secondaryRevision = 0;
   VideoPlayerWidgetState? _nativePlayerState;
-  Future<void> _selectionWrite = Future<void>.value();
+  final StudioDockSelectionWriteQueue _selectionWrites =
+      StudioDockSelectionWriteQueue();
 
   /// Save the working position in the same Session field as the mobile editor.
   /// Serialize writes so quick keyboard navigation cannot restore an older
@@ -132,13 +154,8 @@ class _StudioDockSessionViewState
   void _rememberCue(int cueId) {
     if (!widget.enableEditing || cueId <= 0) return;
     final sessionId = widget.sessionId;
-    _selectionWrite = _selectionWrite.then((_) async {
-      if (!mounted || widget.sessionId != sessionId) return;
-      await ref.read(subtitleRepositoryProvider)
-          .updateLastEditedIndex(sessionId, cueId);
-    }).catchError((Object error) {
-      debugPrint('Studio Dock could not save the current line: $error');
-    });
+    final writer = ref.read(subtitleRepositoryProvider).updateLastEditedIndex;
+    unawaited(_selectionWrites.record(sessionId, cueId, writer));
   }
 
   void _onSelectedCueChanged(int cueId) {

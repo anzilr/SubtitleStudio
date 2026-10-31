@@ -1,4 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:isar_community/isar.dart';
+import 'package:subtitle_studio/desktop/workspace/studio_dock_session_view.dart';
 import 'package:subtitle_studio/app/repositories/project_repository.dart';
 import 'package:subtitle_studio/database/models/models.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_session_loader.dart';
@@ -17,6 +21,29 @@ SubtitleLine cue(int number, {String? edited, String original = ''}) =>
       ..marked = true
       ..comment = 'Note'
       ..resolved = false;
+
+class _DelayedSelectionRepository extends SubtitleRepository {
+  _DelayedSelectionRepository(Isar isar, CheckpointRepository checkpoints)
+      : super(isar, checkpoints);
+
+  final firstWriteStarted = Completer<void>();
+  final releaseFirstWrite = Completer<void>();
+  final lastWriteFinished = Completer<void>();
+  int writeCount = 0;
+
+  @override
+  Future<bool> updateLastEditedIndex(int sessionId, int index) async {
+    if (++writeCount == 1) {
+      firstWriteStarted.complete();
+      await releaseFirstWrite.future;
+    }
+    final saved = await super.updateLastEditedIndex(sessionId, index);
+    if (index == 3 && !lastWriteFinished.isCompleted) {
+      lastWriteFinished.complete();
+    }
+    return saved;
+  }
+}
 
 void main() {
   late TestIsarHarness harness;
@@ -109,6 +136,34 @@ void main() {
     final reopened = await loader.load(
         sessionId: ids.session, collectionId: ids.collection);
     expect(reopened.lastEditedIndex, 3);
+  });
+
+  test('queued position writes retain the final line after project closure',
+      () async {
+    final ids = await seed(name: 'ResumeAfterSwitch.srt', lines: [
+      cue(1, original: 'One'),
+      cue(2, original: 'Two'),
+      cue(3, original: 'Three'),
+    ]);
+    final subtitles = _DelayedSelectionRepository(
+        harness.isar, CheckpointRepository(harness.isar));
+    final writes = StudioDockSelectionWriteQueue();
+
+    final first = writes.record(
+        ids.session, 2, subtitles.updateLastEditedIndex);
+    await subtitles.firstWriteStarted.future;
+    // The queued final selection must still be written after the first
+    // request resumes, even if the UI that enqueued it has closed.
+    final last = writes.record(
+        ids.session, 3, subtitles.updateLastEditedIndex);
+    subtitles.releaseFirstWrite.complete();
+    await Future.wait([first, last]);
+    await subtitles.lastWriteFinished.future;
+
+    final reopened = await loader.load(
+        sessionId: ids.session, collectionId: ids.collection);
+    expect(reopened.lastEditedIndex, 3);
+    expect(subtitles.writeCount, 2);
   });
 
   test('loader exposes the already-read collection for desktop settings',
