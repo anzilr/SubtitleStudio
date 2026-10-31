@@ -157,11 +157,11 @@ Do not use live MSone submission accounts for test payloads.
 ### Automated evidence at this checkpoint
 
 - Local Flutter analysis: **0 issues** (2026-10-31).
-- Local Flutter test suite: **1,299 passed** (2026-10-31) with
-  `flutter test --concurrency=4`, including desktop rapid-reopen cursor and
-  newly added FFmpeg dependency-message regressions. The default-concurrency
-  run stalled without a failure summary; its last active inspector test also
-  passed in isolation (19/19).
+- Local Flutter test suite: **1,302 passed** (2026-10-31) with
+  `flutter test --concurrency=4`, including desktop rapid-reopen cursor,
+  bundled-FFmpeg dependency guidance, and extraction output file-safety tests.
+  Default-concurrency runs exhibited resource contention; the affected
+  inspector file passed in isolation (19/19).
 - Latest-source native Windows Release startup: **PASS** on 2026-10-31
   with `flutter run -d windows --release` (197.8 s build). The process
   initialized Impeller, FFmpegKit, MediaKit, Isar and registered the desktop
@@ -171,4 +171,8 @@ Do not use live MSone submission accounts for test payloads.
   signature and offers bundled-installer repair guidance; Linux directs the
   user to PATH-installed tools. This is source/test verified, not real-video
   extraction acceptance.
+- Desktop extracted-SRT replacement now stages and verifies the new copy
+  before changing an existing destination, retains a rollback copy during
+  replacement, and preserves prior content on failed or truncated copies.
+  Native real-video/antivirus/disk-full acceptance remains outstanding.
 - Platform builds must remain local, never in GitHub Actions.

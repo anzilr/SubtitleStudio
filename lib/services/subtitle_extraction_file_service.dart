@@ -157,27 +157,31 @@ class SubtitleExtractionFileService {
     }
   }
 
+  /// Saves a completed desktop extraction without removing an existing SRT
+  /// until its replacement has been copied and verified on the same volume.
+  ///
+  /// [copyFile] is injectable to regression-test failed copies safely.
   static Future<String> copyDesktopResult({
     required String tempOutputFile,
     required String outputFilePath,
+    Future<File> Function(File source, String target)? copyFile,
   }) async {
     final normalizedOutputFilePath =
         FFmpegHelper.normalizePath(outputFilePath);
     final destinationFile = File(normalizedOutputFilePath);
     final tempFile = File(tempOutputFile);
-    if (kDebugMode) {
-      print('Desktop extraction complete');
-    }
 
+    if (path.equals(
+      path.absolute(tempFile.path),
+      path.absolute(destinationFile.path),
+    )) {
+      throw StateError('Extraction source and destination must differ.');
+    }
     if (!await tempFile.exists()) {
       throw Exception('Temporary extraction file not found');
     }
 
     final tempFileSize = await tempFile.length();
-    if (kDebugMode) {
-      print('Temp file size: $tempFileSize bytes');
-    }
-
     if (tempFileSize == 0) {
       await tempFile.delete();
       throw Exception(
@@ -186,36 +190,52 @@ class SubtitleExtractionFileService {
       );
     }
 
-    if (await destinationFile.exists()) {
-      await destinationFile.delete();
-      if (kDebugMode) {
-        print('Deleted existing destination file');
+    // Stage in the destination directory so the final rename stays on its
+    // filesystem. If copying fails, the previous destination is untouched.
+    final stagingDirectory =
+        await destinationFile.parent.createTemp('.subtitle-extraction-');
+    final stagedFile = File(path.join(stagingDirectory.path, 'next.srt'));
+    final backupFile = File(path.join(stagingDirectory.path, 'previous.srt'));
+    var committed = false;
+
+    try {
+      if (copyFile == null) {
+        await tempFile.copy(stagedFile.path);
+      } else {
+        await copyFile(tempFile, stagedFile.path);
+      }
+      if (!await stagedFile.exists() ||
+          await stagedFile.length() != tempFileSize) {
+        throw StateError('Extracted subtitle copy failed verification.');
+      }
+
+      if (await destinationFile.exists()) {
+        await destinationFile.rename(backupFile.path);
+      }
+      try {
+        await stagedFile.rename(destinationFile.path);
+      } catch (_) {
+        // Never remove the backup if restoration fails: it remains available
+        // in the staging directory for recovery.
+        if (await backupFile.exists()) {
+          await backupFile.rename(destinationFile.path);
+        }
+        rethrow;
+      }
+      committed = true;
+    } finally {
+      // An unsuccessful rollback leaves previous.srt intact for recovery.
+      if (committed || !await backupFile.exists()) {
+        try {
+          await stagingDirectory.delete(recursive: true);
+        } catch (_) {
+          if (kDebugMode) print('Could not clean up extraction staging files');
+        }
       }
     }
 
-    await tempFile.copy(normalizedOutputFilePath);
-    if (kDebugMode) {
-      print('Copied extracted file to final location');
-      print('Verifying copied file...');
-    }
-
-    final copiedFileSize = await destinationFile.length();
-    if (kDebugMode) {
-      print('Copied file size: $copiedFileSize bytes');
-    }
-
-    if (copiedFileSize != tempFileSize && kDebugMode) {
-      print(
-        'WARNING: File size mismatch! '
-        'Temp: $tempFileSize, Copied: $copiedFileSize',
-      );
-    }
-
     await tempFile.delete();
-    if (kDebugMode) {
-      print('Cleaned up temporary extraction file');
-    }
-
+    if (kDebugMode) print('Copied extracted file to final location (verified)');
     return normalizedOutputFilePath;
   }
 

@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:subtitle_studio/utils/ffmpeg_helper.dart';
+import 'package:subtitle_studio/services/subtitle_extraction_file_service.dart';
 
 void main() {
   test('filename extraction does not print private media identities', () {
@@ -44,6 +45,78 @@ void main() {
       expect(result, isNot(contains('secret_marker')));
       expect(traces.join('\n'), isNot(contains(root.path)));
       expect(traces.join('\n'), isNot(contains('secret_marker')));
+    } finally {
+      await root.delete(recursive: true);
+    }
+  });
+
+  test('failed desktop extraction copy preserves existing SRT', () async {
+    final root = await Directory.systemTemp.createTemp('srt_copy_');
+    try {
+      final existing = File('${root.path}/existing.srt');
+      final extracted = File('${root.path}/extracted.srt');
+      await existing.writeAsString('previous subtitle');
+      await extracted.writeAsString('replacement subtitle');
+
+      await expectLater(
+        SubtitleExtractionFileService.copyDesktopResult(
+          tempOutputFile: extracted.path,
+          outputFilePath: existing.path,
+          copyFile: (_, __) async =>
+              throw const FileSystemException('Simulated copy failure'),
+        ),
+        throwsA(isA<FileSystemException>()),
+      );
+      expect(await existing.readAsString(), 'previous subtitle');
+      expect(await extracted.readAsString(), 'replacement subtitle');
+    } finally {
+      await root.delete(recursive: true);
+    }
+  });
+
+  test('short staged extraction copy cannot overwrite a valid SRT', () async {
+    final root = await Directory.systemTemp.createTemp('srt_copy_');
+    try {
+      final existing = File('${root.path}/existing.srt');
+      final extracted = File('${root.path}/extracted.srt');
+      await existing.writeAsString('previous subtitle');
+      await extracted.writeAsString('replacement subtitle');
+
+      await expectLater(
+        SubtitleExtractionFileService.copyDesktopResult(
+          tempOutputFile: extracted.path,
+          outputFilePath: existing.path,
+          copyFile: (_, target) => File(target).writeAsString('short'),
+        ),
+        throwsStateError,
+      );
+      expect(await existing.readAsString(), 'previous subtitle');
+      expect(await extracted.readAsString(), 'replacement subtitle');
+    } finally {
+      await root.delete(recursive: true);
+    }
+  });
+
+  test('successful desktop extraction replaces SRT after staging', () async {
+    final root = await Directory.systemTemp.createTemp('srt_copy_');
+    try {
+      final existing = File('${root.path}/existing.srt');
+      final extracted = File('${root.path}/extracted.srt');
+      await existing.writeAsString('previous subtitle');
+      await extracted.writeAsString('replacement subtitle');
+
+      final result = await SubtitleExtractionFileService.copyDesktopResult(
+        tempOutputFile: extracted.path,
+        outputFilePath: existing.path,
+      );
+      expect(File(result).readAsStringSync(), 'replacement subtitle');
+      expect(await extracted.exists(), isFalse);
+      expect(
+        await root.list().where(
+          (entity) => entity.path.contains('.subtitle-extraction-'),
+        ).toList(),
+        isEmpty,
+      );
     } finally {
       await root.delete(recursive: true);
     }
