@@ -230,18 +230,86 @@ foreach ($relative in @('SubtitleStudio.exe', 'flutter_windows.dll')) {
 # redistributable installer as admin from a per-user installation. The DLLs
 # must originate from a properly licensed Microsoft Visual Studio toolchain.
 $vcRuntimeFiles = @('msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll')
-foreach ($runtime in $vcRuntimeFiles) {
-  $target = Join-Path $releaseDir $runtime
-  if (-not (Test-Path -LiteralPath $target -PathType Leaf) -and
-      -not [string]::IsNullOrWhiteSpace($VcRuntimeSourceDirectory)) {
-    $source = Join-Path $VcRuntimeSourceDirectory $runtime
-    if (Test-Path -LiteralPath $source -PathType Leaf) {
-      Copy-Item -LiteralPath $source -Destination $target
+$missingVcRuntimeFiles = @($vcRuntimeFiles | Where-Object {
+  -not (Test-Path -LiteralPath (Join-Path $releaseDir $_) -PathType Leaf)
+})
+if ($missingVcRuntimeFiles.Count -gt 0) {
+  if ([string]::IsNullOrWhiteSpace($VcRuntimeSourceDirectory)) {
+    # The developer prompt exposes this when using Visual Studio build tools.
+    # Otherwise search standard Visual Studio installation locations, including
+    # Community, Professional, Enterprise, and Build Tools installations.
+    $vcRedistRoots = @()
+    if (-not [string]::IsNullOrWhiteSpace($env:VCToolsRedistDir)) {
+      $vcRedistRoots += $env:VCToolsRedistDir
+    }
+    foreach ($programFilesRoot in @(
+      [Environment]::GetFolderPath('ProgramFiles'),
+      [Environment]::GetFolderPath('ProgramFilesX86')
+    ) | Select-Object -Unique) {
+      if ([string]::IsNullOrWhiteSpace($programFilesRoot)) {
+        continue
+      }
+      $vsRoot = Join-Path $programFilesRoot 'Microsoft Visual Studio'
+      if (-not (Test-Path -LiteralPath $vsRoot -PathType Container)) {
+        continue
+      }
+      foreach ($vsYear in Get-ChildItem -LiteralPath $vsRoot -Directory) {
+        foreach ($vsEdition in Get-ChildItem -LiteralPath $vsYear.FullName -Directory) {
+          $redistRoot = Join-Path $vsEdition.FullName 'VC\Redist\MSVC'
+          if (Test-Path -LiteralPath $redistRoot -PathType Container) {
+            foreach ($vcVersion in Get-ChildItem -LiteralPath $redistRoot -Directory) {
+              $vcRedistRoots += $vcVersion.FullName
+            }
+          }
+        }
+      }
+    }
+
+    foreach ($redistRoot in @($vcRedistRoots | Sort-Object -Unique -Descending)) {
+      $x64Root = Join-Path $redistRoot 'x64'
+      if (-not (Test-Path -LiteralPath $x64Root -PathType Container)) {
+        continue
+      }
+      foreach ($crtFolder in (Get-ChildItem -LiteralPath $x64Root -Directory -Filter 'Microsoft.VC*.CRT' |
+          Sort-Object -Property Name -Descending)) {
+        $complete = $true
+        foreach ($runtime in $vcRuntimeFiles) {
+          if (-not (Test-Path -LiteralPath (Join-Path $crtFolder.FullName $runtime) -PathType Leaf)) {
+            $complete = $false
+            break
+          }
+        }
+        if ($complete) {
+          $VcRuntimeSourceDirectory = $crtFolder.FullName
+          Write-Host "Using Visual Studio x64 VC runtime: $VcRuntimeSourceDirectory"
+          break
+        }
+      }
+      if (-not [string]::IsNullOrWhiteSpace($VcRuntimeSourceDirectory)) {
+        break
+      }
     }
   }
-  if (-not (Test-Path -LiteralPath $target -PathType Leaf)) {
-    throw "Missing application-local $runtime. Provide -VcRuntimeSourceDirectory with the x64 Microsoft VC runtime DLLs from your licensed toolchain."
+
+  if ([string]::IsNullOrWhiteSpace($VcRuntimeSourceDirectory)) {
+    throw "Missing application-local VC runtime DLLs: $($missingVcRuntimeFiles -join ', '). No complete x64 Microsoft VC runtime found under Visual Studio. Install the MSVC C++ redistributable components in Visual Studio Installer, or pass -VcRuntimeSourceDirectory pointing to x64\Microsoft.VC143.CRT."
   }
+
+  # Check the entire source set before copying anything. A partial Release
+  # bundle must not mix DLL versions from different Visual Studio toolchains.
+  foreach ($runtime in $vcRuntimeFiles) {
+    $source = Join-Path $VcRuntimeSourceDirectory $runtime
+    if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
+      throw "VC runtime source is incomplete: $source. Pass a directory containing all three x64 runtime DLLs."
+    }
+    Assert-WindowsX64Binary -FilePath $source
+  }
+  foreach ($runtime in $vcRuntimeFiles) {
+    Copy-Item -LiteralPath (Join-Path $VcRuntimeSourceDirectory $runtime) -Destination (Join-Path $releaseDir $runtime) -Force
+  }
+}
+foreach ($runtime in $vcRuntimeFiles) {
+  $target = Join-Path $releaseDir $runtime
   Assert-WindowsX64Binary -FilePath $target
 }
 

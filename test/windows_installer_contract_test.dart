@@ -23,6 +23,20 @@ void main() {
     expect(builder, contains('Get-FileHash'));
   });
 
+  test('missing app-local VC runtime is found in installed Visual Studio', () {
+    expect(builder, contains(r'$env:VCToolsRedistDir'));
+    expect(builder, contains("'Microsoft Visual Studio'"));
+    expect(builder, contains(r"'VC\Redist\MSVC'"));
+    expect(builder, contains(r"'Microsoft.VC*.CRT'"));
+    expect(builder, contains(r'$missingVcRuntimeFiles.Count -gt 0'));
+    expect(builder, contains(r'$VcRuntimeSourceDirectory = $crtFolder.FullName'));
+    expect(builder, contains('No complete x64 Microsoft VC runtime found'));
+    expect(builder, contains('VC runtime source is incomplete'));
+    expect(builder, contains(r'Assert-WindowsX64Binary -FilePath $source'));
+    expect(builder, contains(r'Copy-Item -LiteralPath (Join-Path $VcRuntimeSourceDirectory $runtime)'));
+    expect(builder, isNot(contains(r"'C:\Windows\System32'")));
+  });
+
   test('Windows release includes an offline FFmpeg and FFprobe bundle', () {
     expect(builder, contains('FfmpegBundleDirectory'));
     expect(builder, contains(r"'bin\ffmpeg.exe'"));

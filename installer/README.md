@@ -110,12 +110,24 @@ This runs `flutter clean` and `flutter pub get` before building Release.
 It is slower than an incremental build, so it is optional and cannot be combined
 with `-SkipFlutterBuild`.
 
-If the app-local VC runtime DLLs are missing, locate the `x64\Microsoft.VC143.CRT`
-folder in your Visual Studio `VC\Redist\MSVC` installation and supply:
+If any app-local VC runtime DLLs are missing, the script automatically
+locates a complete **x64** runtime set in installed Visual Studio C++
+redistributable folders (or via `VCToolsRedistDir` in a developer shell).
+It checks their Windows x64 PE headers and copies all three DLLs as a matching
+set into the existing Release folder. **No separate VC++ installer is run.**
+
+If auto-discovery cannot find the files (for example, with a custom Visual
+Studio installation), locate the `x64\Microsoft.VC143.CRT` folder in your
+Visual Studio `VC\Redist\MSVC` installation and supply it explicitly:
 
 ```powershell
-.\tool\build_windows_installer.ps1 -VcRuntimeSourceDirectory 'C:\path\to\x64\Microsoft.VC143.CRT'
+.\tool\build_windows_installer.ps1 -SkipFlutterBuild -VcRuntimeSourceDirectory 'C:\path\to\x64\Microsoft.VC143.CRT'
 ```
+
+An explicitly supplied folder must contain `msvcp140.dll`,
+`vcruntime140.dll`, and `vcruntime140_1.dll`. If the files are not
+installed, use Visual Studio Installer to add the MSVC C++ redistributable
+components. Do not copy DLLs from `System32` or arbitrary download sites.
 
 The script builds the **complete** Flutter release folder, checks its engine,
 assets, application executable and three principal x64 VC runtime DLLs,
