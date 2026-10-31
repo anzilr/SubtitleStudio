@@ -13,6 +13,9 @@
 #ifndef InstallerOutputDir
   #error InstallerOutputDir must be supplied by the packaging script.
 #endif
+#ifndef WizardSmallBitmap
+  #error WizardSmallBitmap must point to the validated Windows wizard BMP.
+#endif
 
 #define StudioName "Subtitle Studio"
 #define StudioExe "SubtitleStudio.exe"
@@ -44,7 +47,7 @@ OutputDir={#InstallerOutputDir}
 OutputBaseFilename=SubtitleStudio_{#AppVersion}_{#BuildNumber}_Windows_x64_Setup
 SetupIconFile=..\windows\runner\resources\app_icon.ico
 WizardStyle=modern
-WizardSmallImageFile=..\assets\subtitle_studio_brand_icon.png
+WizardSmallImageFile={#WizardSmallBitmap}
 WizardSmallImageBackColor=$202020
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog commandline

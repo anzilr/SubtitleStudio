@@ -48,6 +48,28 @@ void main() {
     expect(builder, isNot(contains('winget install')));
   });
 
+  test('installer wizard image is a standard BMP built from the Windows icon',
+      () {
+    expect(installer, contains('WizardSmallImageFile={#WizardSmallBitmap}'));
+    expect(installer, isNot(contains(
+      r'WizardSmallImageFile=..\assets\subtitle_studio_brand_icon.png',
+    )));
+    expect(builder, contains(r"'windows\runner\resources\app_icon.ico'"));
+    expect(builder, contains('Format24bppRgb'));
+    expect(builder, contains('ImageFormat]::Bmp'));
+    expect(builder, contains(r'/DWizardSmallBitmap=$wizardBitmapPath'));
+    expect(builder, contains('Could not create a valid installer wizard BMP'));
+
+    final icon = File('windows/runner/resources/app_icon.ico');
+    expect(icon.existsSync(), isTrue);
+    final bytes = icon.openSync();
+    try {
+      expect(bytes.readSync(4), [0, 0, 1, 0]);
+    } finally {
+      bytes.closeSync();
+    }
+  });
+
   test('installer rejects mismatched Windows architectures before packaging',
       () {
     expect(builder, contains('function Assert-WindowsX64Binary'));

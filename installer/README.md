@@ -160,7 +160,21 @@ installer **and its uninstaller**. Timestamping uses DigiCert's RFC 3161
 service. No private keys or passwords belong in this repository.
 
 If the versioned installer already exists, rebuild explicitly with
-`-ReplaceExistingInstaller`. Verify the final signature with:
+`-ReplaceExistingInstaller`. If only installer resources changed, skip the
+Flutter rebuild:
+
+```powershell
+.\tool\build_windows_installer.ps1 -SkipFlutterBuild -ReplaceExistingInstaller
+```
+
+The packaging script renders the original green Windows application icon
+into a standard **24-bit BMP** for the wizard's upper-right artwork. This
+avoids unsupported PNG encodings surfacing as a `Bitmap image not valid`
+error when switching from the installation-scope page to the next page.
+The generated bitmap is local to `installer/output`; the original icon and
+in-app branding images are not modified.
+
+Verify the final signature with:
 
 ```powershell
 Get-AuthenticodeSignature .\installer\output\SubtitleStudio_3.0.1_31_Windows_x64_Setup.exe
@@ -197,6 +211,8 @@ Perform on a clean Windows 10/11 x64 VM and on an upgrading installation.
 - [ ] Installer build reports a SHA-256 digest and matching version numbers.
 - [ ] Installer starts on a fresh x64 Windows machine without relying on
       Flutter or Visual Studio being installed on that machine.
+- [ ] Both **Install only for me** and **Install for all users** choices
+      proceed past the wizard artwork without bitmap errors.
 - [ ] Current-user mode installs without an elevation prompt; optional
       all-users mode requests elevation intentionally.
 - [ ] Launch from Start Menu/desktop shortcut works; application icon and

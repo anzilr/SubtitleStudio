@@ -324,11 +324,47 @@ foreach ($relative in $ffmpegFiles) {
   Write-Host "FFmpeg bundle: $relative SHA-256 $((Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash)"
 }
 
+# Inno Setup's wizard must receive a conventional Windows BMP, not a PNG
+# that may contain an unsupported color profile, bit depth or compression.
+# Render it from the original green-background Windows application icon.
+# Use 24-bit RGB to avoid a deferred "Bitmap image not valid" wizard crash.
+[void](New-Item -ItemType Directory -Force -Path $outputDir)
+$wizardIconPath = Join-Path $repoRoot 'windows\runner\resources\app_icon.ico'
+$wizardBitmapPath = Join-Path $outputDir 'subtitle_studio_wizard_small.bmp'
+Add-Type -AssemblyName System.Drawing
+$wizardIcon = $null
+$iconBitmap = $null
+$wizardBitmap = $null
+$wizardGraphics = $null
+try {
+  $wizardIcon = [Drawing.Icon]::new($wizardIconPath, 256, 256)
+  $iconBitmap = $wizardIcon.ToBitmap()
+  $wizardBitmap = [Drawing.Bitmap]::new(147, 147, [Drawing.Imaging.PixelFormat]::Format24bppRgb)
+  $wizardGraphics = [Drawing.Graphics]::FromImage($wizardBitmap)
+  $wizardGraphics.Clear([Drawing.Color]::FromArgb(32, 32, 32))
+  $wizardGraphics.InterpolationMode = [Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+  $wizardGraphics.SmoothingMode = [Drawing.Drawing2D.SmoothingMode]::HighQuality
+  $wizardGraphics.DrawImage($iconBitmap, 0, 0, 147, 147)
+  $wizardBitmap.Save($wizardBitmapPath, [Drawing.Imaging.ImageFormat]::Bmp)
+} catch {
+  throw "Could not create a valid installer wizard BMP from $wizardIconPath. $($_.Exception.Message)"
+} finally {
+  if ($null -ne $wizardGraphics) { $wizardGraphics.Dispose() }
+  if ($null -ne $wizardBitmap) { $wizardBitmap.Dispose() }
+  if ($null -ne $iconBitmap) { $iconBitmap.Dispose() }
+  if ($null -ne $wizardIcon) { $wizardIcon.Dispose() }
+}
+if (-not (Test-Path -LiteralPath $wizardBitmapPath -PathType Leaf) -or
+    (Get-Item -LiteralPath $wizardBitmapPath).Length -lt 1024) {
+  throw "The generated installer wizard bitmap is missing or incomplete: $wizardBitmapPath"
+}
+
 $compilerArguments = @(
   "/DAppVersion=$appVersion",
   "/DBuildNumber=$buildNumber",
   "/DReleaseDir=$releaseDir",
-  "/DInstallerOutputDir=$outputDir"
+  "/DInstallerOutputDir=$outputDir",
+  "/DWizardSmallBitmap=$wizardBitmapPath"
 )
 
 if (-not [string]::IsNullOrWhiteSpace($SigningCertificateThumbprint)) {
