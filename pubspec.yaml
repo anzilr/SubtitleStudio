@@ -38,7 +38,7 @@ dependencies:
   file_selector: ^1.1.0             # Path-only native Save As dialogs on desktop
   share_plus: ^13.3.1
   url_launcher: ^6.3.3
-  in_app_update: ^4.2.5
+  in_app_update: ^5.0.0
   dio: ^5.8.0  # For downloading files
   archive: ^4.5.2  # For extracting tar.gz files
   uuid: ^4.5.1  # For generating unique command IDs
@@ -60,7 +60,7 @@ dependency_overrides:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^5.0.0
+  flutter_lints: ^6.0.0
   build_runner: ^2.16.2
   isar_community_generator: ^3.4.1
 
