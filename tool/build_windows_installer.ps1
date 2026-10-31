@@ -58,6 +58,34 @@ $installerName = "SubtitleStudio_${appVersion}_${buildNumber}_Windows_x64_Setup.
 $installerPath = Join-Path $outputDir $installerName
 $scriptPath = Join-Path $repoRoot 'installer\SubtitleStudio.iss'
 
+# Inspect PE headers without executing downloaded tool binaries. Reject wrong-
+# architecture media and runtime files before they enter a Windows x64 setup.
+function Assert-WindowsX64Binary {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$FilePath
+  )
+  $stream = [IO.File]::OpenRead($FilePath)
+  try {
+    $reader = [IO.BinaryReader]::new($stream)
+    if ($stream.Length -lt 64 -or $reader.ReadUInt16() -ne 0x5A4D) {
+      throw "Not a Windows PE executable: $FilePath"
+    }
+    [void]$stream.Seek(0x3C, [IO.SeekOrigin]::Begin)
+    $peOffset = $reader.ReadInt32()
+    if ($peOffset -lt 64 -or $peOffset -gt ($stream.Length - 6)) {
+      throw "Invalid Windows PE header: $FilePath"
+    }
+    [void]$stream.Seek($peOffset, [IO.SeekOrigin]::Begin)
+    if ($reader.ReadUInt32() -ne 0x00004550 -or
+        $reader.ReadUInt16() -ne 0x8664) {
+      throw "Expected a Windows x64 (AMD64) executable: $FilePath"
+    }
+  } finally {
+    $stream.Dispose()
+  }
+}
+
 if ([string]::IsNullOrWhiteSpace($InnoCompilerPath)) {
   $knownCompiler = Get-Command 'ISCC.exe' -ErrorAction SilentlyContinue
   if ($null -ne $knownCompiler) {
@@ -105,6 +133,9 @@ foreach ($relative in $ffmpegFiles) {
     throw "FFmpeg bundle contains an empty file: $source"
   }
 }
+foreach ($relative in @('bin\ffmpeg.exe', 'bin\ffprobe.exe')) {
+  Assert-WindowsX64Binary -FilePath (Join-Path $FfmpegBundleDirectory $relative)
+}
 
 if (-not $SkipFlutterBuild) {
   if ($null -eq (Get-Command 'flutter' -ErrorAction SilentlyContinue)) {
@@ -148,6 +179,11 @@ foreach ($relative in $requiredReleaseFiles) {
   }
 }
 
+# The app and Flutter engine must also match the installer architecture.
+foreach ($relative in @('SubtitleStudio.exe', 'flutter_windows.dll')) {
+  Assert-WindowsX64Binary -FilePath (Join-Path $releaseDir $relative)
+}
+
 # Use application-local C++ runtime deployment to avoid running a global
 # redistributable installer as admin from a per-user installation. The DLLs
 # must originate from a properly licensed Microsoft Visual Studio toolchain.
@@ -164,6 +200,7 @@ foreach ($runtime in $vcRuntimeFiles) {
   if (-not (Test-Path -LiteralPath $target -PathType Leaf)) {
     throw "Missing application-local $runtime. Provide -VcRuntimeSourceDirectory with the x64 Microsoft VC runtime DLLs from your licensed toolchain."
   }
+  Assert-WindowsX64Binary -FilePath $target
 }
 
 # The Windows app resolves these two executables next to itself, so the user

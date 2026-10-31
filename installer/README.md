@@ -44,6 +44,11 @@ installer/deps/ffmpeg/
 - Do not commit downloaded binaries to Git. The compiler copies the four
   required files into the Flutter Release bundle and prints their SHA-256
   hashes. It stops if a required file is absent or empty.
+- Before packaging, the build script checks Windows PE headers for AMD64/x64
+  compatibility in FFmpeg/FFprobe, the Flutter executable/engine, and the
+  application-local VC runtime DLLs. It reads headers without executing
+  third-party binaries. This is an architecture check, **not** a signature,
+  integrity, licensing, or malware verification.
 
 Alternatively, place this folder elsewhere and pass:
 

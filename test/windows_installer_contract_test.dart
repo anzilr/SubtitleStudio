@@ -34,6 +34,23 @@ void main() {
     expect(builder, isNot(contains('winget install')));
   });
 
+  test('installer rejects mismatched Windows architectures before packaging',
+      () {
+    expect(builder, contains('function Assert-WindowsX64Binary'));
+    expect(builder, contains('0x5A4D')); // DOS MZ header
+    expect(builder, contains('0x00004550')); // PE signature
+    expect(builder, contains('0x8664')); // AMD64 machine
+    expect(builder, contains(r'Assert-WindowsX64Binary -FilePath $target'));
+    expect(builder, contains(
+      r'Assert-WindowsX64Binary -FilePath (Join-Path $FfmpegBundleDirectory',
+    ));
+    expect(builder, contains(
+      r'Assert-WindowsX64Binary -FilePath (Join-Path $releaseDir',
+    ));
+    // Reading PE headers must never launch downloaded binaries.
+    expect(builder, isNot(contains(r'& $source -version')));
+  });
+
   test('installer offers safe per-user and optional all-users mode', () {
     expect(installer, contains('PrivilegesRequired=lowest'));
     expect(installer, contains('PrivilegesRequiredOverridesAllowed=dialog'));
