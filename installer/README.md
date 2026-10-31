@@ -96,9 +96,9 @@ assets, application executable and three principal x64 VC runtime DLLs,
 includes the offline FFmpeg tools and notices, then passes the version and
 build number from `pubspec.yaml` to Inno Setup.
 
-Example when `pubspec.yaml` says `3.0.0+30`:
+Example when `pubspec.yaml` says `3.0.1+31`:
 
-- Installer: `installer/output/SubtitleStudio_3.0.0_30_Windows_x64_Setup.exe`
+- Installer: `installer/output/SubtitleStudio_3.0.1_31_Windows_x64_Setup.exe`
 - Checksum: matching `.exe.sha256` file
 
 The output directory is ignored by Git. The installer includes the GPL v3
@@ -125,7 +125,7 @@ If the versioned installer already exists, rebuild explicitly with
 `-ReplaceExistingInstaller`. Verify the final signature with:
 
 ```powershell
-Get-AuthenticodeSignature .\installer\output\SubtitleStudio_3.0.0_30_Windows_x64_Setup.exe
+Get-AuthenticodeSignature .\installer\output\SubtitleStudio_3.0.1_31_Windows_x64_Setup.exe
 ```
 
 ## Important behavior

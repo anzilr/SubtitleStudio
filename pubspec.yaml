@@ -1,7 +1,7 @@
 name: subtitle_studio
 description: "Subtitle Studio - Multi platform professional subtitle editing app"
 publish_to: 'none'
-version: 3.0.0+30
+version: 3.0.1+31
 
 environment:
   sdk: ^3.13.0
