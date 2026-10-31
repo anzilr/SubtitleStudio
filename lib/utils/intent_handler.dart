@@ -149,22 +149,16 @@ class IntentHandler {
     return uri.toLowerCase().contains('msone') ? 'imported_project.msone' : 'imported_subtitle_${DateTime.now().millisecondsSinceEpoch}.srt';
   }
 
-  /// Check if the given path is a valid SRT file
+  /// Recognize supported SRT file paths. Android content URIs are first
+  /// materialized to temporary files by [processFileWithInfo].
+  /// Other subtitle formats must not be advertised until import is supported.
   static bool isSrtFile(String? path) {
-    if (path == null) return false;
-    final lowercasePath = path.toLowerCase();
-    return lowercasePath.endsWith('.srt') || 
-           lowercasePath.endsWith('.ass') || 
-           lowercasePath.endsWith('.vtt') || 
-           lowercasePath.contains('.srt') ||
-           lowercasePath.contains('.ass') ||
-           lowercasePath.contains('.vtt');
+    return path != null && path.toLowerCase().endsWith('.srt');
   }
 
-  /// Check if the given path is a valid MSone project file
+  /// Recognize supported MSone project file paths.
   static bool isMsoneFile(String? path) {
-    if (path == null) return false;
-    return path.toLowerCase().endsWith('.msone') || path.toLowerCase().contains('.msone');
+    return path != null && path.toLowerCase().endsWith('.msone');
   }
 
   /// Check if we should use SAF for the given file info

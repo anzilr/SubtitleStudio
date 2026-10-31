@@ -5,6 +5,37 @@ import 'package:subtitle_studio/services/subtitle_text_codec.dart';
 import 'package:subtitle_studio/utils/intent_handler.dart';
 
 void main() {
+  test('file associations recognize only complete supported extensions', () {
+    for (final path in <String>[
+      r'C:\Movies\scene.srt',
+      '/storage/emulated/0/Download/Scene.SRT',
+    ]) {
+      expect(IntentHandler.isSrtFile(path), isTrue, reason: path);
+      expect(IntentHandler.isMsoneFile(path), isFalse, reason: path);
+    }
+    for (final path in <String>[
+      r'C:\Projects\Movie.msone',
+      '/storage/emulated/0/Download/Archive.MSONE',
+    ]) {
+      expect(IntentHandler.isMsoneFile(path), isTrue, reason: path);
+      expect(IntentHandler.isSrtFile(path), isFalse, reason: path);
+    }
+    for (final path in <String>[
+      '/Downloads/subtitle.ass',
+      '/Downloads/subtitle.ssa',
+      '/Downloads/subtitle.vtt',
+      '/Downloads/subtitle.srt.backup',
+      '/Downloads/subtitle.msone.tmp',
+      '/Downloads/subtitle.srt/other.txt',
+      '/Downloads/not-a-subtitle.txt',
+    ]) {
+      expect(IntentHandler.isSrtFile(path), isFalse, reason: path);
+      expect(IntentHandler.isMsoneFile(path), isFalse, reason: path);
+    }
+    expect(IntentHandler.isSrtFile(null), isFalse);
+    expect(IntentHandler.isMsoneFile(null), isFalse);
+  });
+
   test('intent file reader retains bytes for charset selection', () async {
     final folder = await Directory.systemTemp.createTemp('intent_charset_');
     addTearDown(() => folder.delete(recursive: true));

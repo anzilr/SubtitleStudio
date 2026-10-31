@@ -65,18 +65,14 @@ Future<void> main(List<String> args) async {
   await AppLogger.instance.initialize();
   await AppLogger.instance.info('Application starting...');
   
-  // Process command line arguments for file associations (Windows)
+  // Desktop file associations accept only currently supported import types.
   String? initialFile;
   if (args.isNotEmpty) {
     final filePath = args[0];
-    final lowercasePath = filePath.toLowerCase();
-    if (lowercasePath.endsWith('.srt') || 
-        lowercasePath.endsWith('.ass') || 
-        lowercasePath.endsWith('.vtt') || 
-        lowercasePath.endsWith('.ssa') || 
-        lowercasePath.endsWith('.msone')) {
+    if (IntentHandler.isSrtFile(filePath) ||
+        IntentHandler.isMsoneFile(filePath)) {
       initialFile = filePath;
-      await AppLogger.instance.info('Opening file from command line: $filePath');
+      await AppLogger.instance.info('Opening supported file from command line');
     }
   }
   
@@ -265,7 +261,7 @@ class MainApp extends ConsumerWidget {
   /// Get the appropriate initial screen based on platform
   Widget _getInitialScreen() {
     // Studio Dock is the only native desktop UI, including when the user
-    // opens an SRT/VTT/ASS/.msone from the operating system. Never route a
+    // opens an .srt or .msone file from the operating system. Never route a
     // desktop file association through the classic Home or Editor.
     if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.windows ||
         defaultTargetPlatform == TargetPlatform.macOS ||
@@ -372,7 +368,7 @@ class _SplashTransitionWrapperState extends State<SplashTransitionWrapper> {
         if (processedPath != null) {
           _intentFilePath = processedPath;
           _isMsoneFile = IntentHandler.isMsoneFile(widget.initialFile!);
-          await AppLogger.instance.info('File from command line: $_intentFilePath, isMsoneFile: $_isMsoneFile');
+          await AppLogger.instance.info('Opening file association (project: $_isMsoneFile)');
         }
         return;
       }
