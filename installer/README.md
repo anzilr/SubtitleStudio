@@ -130,6 +130,9 @@ Get-AuthenticodeSignature .\installer\output\SubtitleStudio_3.0.0_30_Windows_x64
 
 ## Important behavior
 
+- The Windows executable, shortcuts and installer use the original green-background
+  icon in `windows/runner/resources/app_icon.ico`. Keep the separate SVG branding
+  assets for the in-app interface; do not replace the Windows icon with them.
 - Register supported `.srt` and `.msone` files as optional **Open with**
   choices. The installer does not take over the user's default apps.
 - Do **not** register `.ass`, `.ssa`, or `.vtt` until true format support is
