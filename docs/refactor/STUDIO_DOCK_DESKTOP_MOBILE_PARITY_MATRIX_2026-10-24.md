@@ -20,7 +20,7 @@ acceptance. A wired callback is not proof of a working native interaction.
 
 | Mobile capability | Studio Dock state | Required parity work / verification |
 | --- | --- | --- |
-| Create/open project, SRT/VTT/ASS/.msone import | Wired via desktop Home | Verify native file associations and reopened projects |
+| Create/open project, SRT/.msone only | DS7 R23–R27: reviewed .msone import, SRT options, optional project save, extraction and new-project options are wired | Verify native file associations and reopened projects; VTT/ASS/SSA editing is future work |
 | Save, Save As, SRT export, complete .msone project save | Wired to shared services | Native filename/encoding/round-trip acceptance |
 | Edit Mode (create subtitles from scratch) vs Translation Mode | Wired in DS5 R6 | Native mode-dependent inspector, cue insert/split, Source View and SRT export acceptance |
 | Video attach/unload, playback, fullscreen, repeat | DS5 R19 adds View → Toggle video fullscreen and the existing F11/Cmd+F manager action on the mounted player. DS5 R22 adds current-cue/custom-range repeat (View, fullscreen and shared hotkeys) with mobile-equivalent lead/tail timing and player-attachment guards. DS5 R25 adds direct View → Unload video through the existing repository, with cancel/failure preserving media and successful unlink detaching the existing surface. Shared `VideoPlayerSection` / `VideoPlayerWidget` remains the only native player | Native fullscreen keyboard/menu, attach/unload/replace, repeat boundary accuracy, playback/seek, OS hotkey conflict and dialog acceptance |
@@ -108,3 +108,60 @@ Dock's native menubar, shared services, and player controls:
 
 Keep this ledger current after each checkpoint. Studio Dock must not be called
 "feature-parity complete" while any missing/partial row remains.
+
+## DS7 parity verification update — 2026-10-31
+
+This dated update supersedes the older wording above where subsequent DS7 R19–R27
+checkpoints closed source-level gaps. **Source parity and native acceptance are
+different states.** All checked import/edit/export routes operate on SRT or
+portable .msone projects; ASS/SSA/VTT editing and conversion remain future work.
+
+| Mobile capability / desktop route | Current source/test evidence | Native acceptance |
+| --- | --- | --- |
+| Open/import SRT; encoding preview, hearing-impaired cleanup, overlap merge, optional .msone save | DS7 R21, R22, R26; SRT dialog, import and on-disk repository tests | **Pending** real file pickers, charset fixtures and Cancel/no-write checks |
+| Import .msone as new or replace; source relink and history-fallback choice | DS7 R23; project plan, dialog and atomic repository tests | **Pending** actual archive/replacement and history-recovery paths |
+| New Edit Mode project; encoding and optional initial SRT/.msone locations | DS7 R27; dialog and create-to-reopen integration tests | **Pending** native Save As locations and cancel paths |
+| Save SRT, Save As (relink) and Export SRT (copy) with original/edited track, encoding and tag | DS7 R24; file actions, export dialog, stale/overwrite guards and on-disk tests | **Pending** native path selection, export/reopen and Windows file association |
+| Reopen the last selected project and subtitle line | SessionRepository and DS7 R17; rapid-reopen queued-write regression added in c210255 | **Pending** actual desktop app restart and immediate project switching |
+| Extract embedded text subtitles from video | DS7 R25; shared mobile extraction sheet, desktop navigation/widget and codec-filter tests | **Pending** real video with multiple text/bitmap subtitle tracks and FFmpeg availability |
+| Video playback, fullscreen, repeat, secondary subtitles and synchronized list/waveform | DS5 R18–R25; shared player/repositories and desktop media/widget tests | **Pending** interactive seek/drag/track switching and runtime-error inspection |
+| Text/timing/formatting, inserts/splits/combines, multi-selection, context menu and keyboard commands | DS5 R11–R26; command palette, hotkey, inspector, context-menu and service tests | **Pending** physical keyboard modifiers, focus/shortcuts and pointer acceptance |
+| Marked/resolved lines, effects, Edit History, Source View, search/replace and quality review | Shared services; graph, effect-grapheme, notes/history/source/quality tests | **Pending** real documents and desktop gesture/undo acceptance |
+| App/Project Settings, Help, dictionaries and MSone submission | Shared mobile surfaces and desktop wiring tests; MSone gated by settings | **Pending** native dialog focus, route return and optional account/network flows; do not send test submissions to production |
+
+### Native Windows acceptance pass (operator checklist)
+
+Use a disposable test project and copies of source media. Record PASS/FAIL,
+OS, Flutter build mode, exact steps, and Debug Console logs for any failure.
+Do not use live MSone submission accounts for test payloads.
+
+- [ ] Open a UTF-8 SRT and a Windows-1252 SRT. Verify preview, encoding override,
+      import-time toggles, Cancel/no-write and the expected unchanged source bytes.
+- [ ] Create a new Edit Mode project with each file-location choice; reopen
+      the saved SRT and .msone, then check subtitle text, timing and encoding.
+- [ ] Import a complete .msone as new and replace an existing project; try
+      archived/located/unlinked SRT options and incompatible-history recovery.
+- [ ] Save, Save As (switch working file), Export SRT (separate copy), restart,
+      and confirm both the linked source and last edited line survive.
+- [ ] Attach video, select an audio track, generate/regenerate waveform,
+      zoom to a 4–5 s window, drag start/end and verify cursor/list/video sync.
+- [ ] Check repeat current/custom range, fullscreen, secondary subtitles,
+      original text overlay, floating transport and media unload/reload.
+- [ ] Extract text subtitles from a real video; verify bitmap-only streams
+      are not offered, select a text track, and reopen the extracted SRT.
+- [ ] Exercise keyboard navigation, Shift+Enter focus, shortcut toggle-close,
+      right-click multi-selection, mark/resolve, undo/redo and history branches.
+- [ ] Test App and Project Settings, dictionaries, Source View, comments,
+      effects (including Malayalam graphemes), and modal focus/escape behavior.
+
+### Automated evidence at this checkpoint
+
+- Local Flutter analysis: **0 issues** (2026-10-31).
+- Local Flutter test suite: **1,297 passed** (2026-10-31), including the
+  desktop rapid-reopen cursor regression.
+- Latest-source native Windows Release startup: **PASS** on 2026-10-31
+  with `flutter run -d windows --release` (197.8 s build). The process
+  initialized Impeller, FFmpegKit, MediaKit, Isar and registered the desktop
+  hotkeys. No startup exception was logged. Interaction checks remain
+  **pending** until completed on actual mouse, keyboard and media fixtures.
+- Platform builds must remain local, never in GitHub Actions.
