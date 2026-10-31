@@ -166,6 +166,41 @@ void main() {
     expect(subtitles.writeCount, 2);
   });
 
+  test('an immediate desktop reopen waits for the previous view save',
+      () async {
+    final ids = await seed(name: 'RapidReopen.srt', lines: [
+      cue(1, original: 'One'),
+      cue(2, original: 'Two'),
+      cue(3, original: 'Three'),
+    ]);
+    final subtitles = _DelayedSelectionRepository(
+        harness.isar, CheckpointRepository(harness.isar));
+    // The next editor instance uses the same queue after the old one closes.
+    final writes = StudioDockSelectionWriteQueue.shared;
+    final first = writes.record(
+        ids.session, 2, subtitles.updateLastEditedIndex);
+    await subtitles.firstWriteStarted.future;
+    final last = writes.record(
+        ids.session, 3, subtitles.updateLastEditedIndex);
+
+    var reopened = false;
+    final pendingReopen = () async {
+      await writes.waitForPending();
+      final snapshot = await loader.load(
+          sessionId: ids.session, collectionId: ids.collection);
+      reopened = true;
+      return snapshot;
+    }();
+    await Future<void>.delayed(Duration.zero);
+    expect(reopened, isFalse, reason: 'Do not show an outdated line on reopen');
+
+    subtitles.releaseFirstWrite.complete();
+    final snapshot = await pendingReopen;
+    await Future.wait([first, last]);
+    expect(snapshot.lastEditedIndex, 3);
+    expect(subtitles.writeCount, 2);
+  });
+
   test('loader exposes the already-read collection for desktop settings',
       () async {
     final ids = await seed(name: 'Settings.srt', lines: [

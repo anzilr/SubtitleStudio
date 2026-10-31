@@ -58,7 +58,14 @@ import 'studio_dock_effect_restore_service.dart';
 /// Each queued operation retains the session ID and writer captured at selection
 /// time, so switching or closing a project cannot drop its final line.
 class StudioDockSelectionWriteQueue {
+  /// Survives individual Studio Dock views being disposed during project switches.
+  static final StudioDockSelectionWriteQueue shared =
+      StudioDockSelectionWriteQueue();
+
   Future<void> _pending = Future<void>.value();
+
+  /// A newly opened view waits for an earlier view's final selection write.
+  Future<void> waitForPending() => _pending;
 
   Future<void> record(
     int sessionId,
@@ -146,7 +153,7 @@ class _StudioDockSessionViewState
   int _secondaryRevision = 0;
   VideoPlayerWidgetState? _nativePlayerState;
   final StudioDockSelectionWriteQueue _selectionWrites =
-      StudioDockSelectionWriteQueue();
+      StudioDockSelectionWriteQueue.shared;
 
   /// Save the working position in the same Session field as the mobile editor.
   /// Serialize writes so quick keyboard navigation cannot restore an older
@@ -1653,16 +1660,22 @@ class _StudioDockSessionViewState
     ));
   }
 
-  Future<StudioDockSessionSnapshot> _load() {
+  Future<StudioDockSessionSnapshot> _load() async {
+    final sessionId = widget.sessionId;
+    final collectionId = widget.collectionId;
     final loader = StudioDockSessionLoader(
       ref.read(projectRepositoryProvider),
       ref.read(subtitleRepositoryProvider),
     );
+    // The previous view may have closed while its last selection was queued.
+    // Read only after that write settles, including on an immediate reopen.
+    await _selectionWrites.waitForPending();
     return loader.load(
-      sessionId: widget.sessionId,
-      collectionId: widget.collectionId,
+      sessionId: sessionId,
+      collectionId: collectionId,
       onCollectionLoaded: (collection) {
-        if (widget.collectionId == collection.id) {
+        if (mounted && widget.collectionId == collectionId &&
+            collection.id == collectionId) {
           _loadedCollection = collection;
         }
       },

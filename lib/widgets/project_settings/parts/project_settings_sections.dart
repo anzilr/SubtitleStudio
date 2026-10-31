@@ -215,7 +215,7 @@ extension _ProjectSettingsSections on _ProjectSettingsSheetState {
                       Icons.edit_location,
                       'Last Edited Line',
                       widget.session.lastEditedIndex != null 
-                        ? '#${widget.session.lastEditedIndex! + 1}'
+                        ? '#${widget.session.lastEditedIndex!}'
                         : 'None',
                       Theme.of(context).colorScheme.primary,
                     ),

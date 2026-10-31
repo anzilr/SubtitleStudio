@@ -509,7 +509,7 @@ class _SessionSelectionSheetState extends ConsumerState<SessionSelectionSheet> {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              'Line ${session.lastEditedIndex! + 1}',
+                              'Line ${session.lastEditedIndex!}',
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 color: mutedColor,
                                 fontWeight: FontWeight.w400,
