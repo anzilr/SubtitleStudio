@@ -8,6 +8,7 @@ import 'package:subtitle_studio/screens/source_view/source_view_file_access.dart
 import 'package:subtitle_studio/screens/source_view/source_view_file_target.dart';
 import 'package:subtitle_studio/services/subtitle_extended_encoding_service.dart';
 import 'package:subtitle_studio/utils/platform_file_handler.dart';
+import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
 import 'package:subtitle_studio/utils/srt_compiler.dart';
 
 /// The actual destination selected by Save As. The display path is kept for
@@ -63,11 +64,9 @@ final class DeviceEditLineSaveAsPicker implements EditLineSaveAsPicker {
             allowedExtensions: const ['srt'],
             bytes: bytes,
           )
-        : await fp.FilePicker.platform.saveFile(
-            dialogTitle: 'Save Subtitle File',
+        : await FilePickerSAF.pickDesktopSaveLocation(
             fileName: fileName,
-            type: fp.FileType.custom,
-            allowedExtensions: const ['srt'],
+            extension: 'srt',
           );
     if (path == null || path.isEmpty) return null;
     if (!Platform.isIOS) {

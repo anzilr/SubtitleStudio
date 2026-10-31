@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart' as fp;
+import 'package:file_selector/file_selector.dart' as fs;
 import 'package:subtitle_studio/utils/platform_file_handler.dart';
 import 'package:subtitle_studio/utils/saf_file_handler.dart';
 import 'package:subtitle_studio/utils/saf_path_converter.dart';
@@ -16,6 +17,46 @@ import 'package:subtitle_studio/core/file_access/studio_picked_file_reference.da
 /// - Windows, Linux, macOS: Uses file_picker for traditional desktop experience
 /// - iOS: Uses file_picker for native iOS file access
 class FilePickerSAF {
+  /// Choose a desktop file destination without creating or replacing it.
+  ///
+  /// The caller must perform the actual write and ask for confirmation before
+  /// replacing an existing file. Android SAF and iOS document-provider saves
+  /// require their own byte-based paths and must not use this method.
+  static Future<String?> pickDesktopSaveLocation({
+    required String fileName,
+    required String extension,
+    @visibleForTesting Future<String?> Function()? pickPath,
+  }) async {
+    if (!Platform.isWindows && !Platform.isLinux && !Platform.isMacOS) {
+      throw UnsupportedError('Path-only Save As is supported on desktop only.');
+    }
+    final suffix = (extension.startsWith('.')
+            ? extension.substring(1)
+            : extension)
+        .toLowerCase();
+    if (!RegExp(r'^[a-z0-9]+$').hasMatch(suffix) ||
+        !fileName.toLowerCase().endsWith('.$suffix')) {
+      throw ArgumentError.value(fileName, 'fileName', 'Expected a .$suffix file.');
+    }
+
+    final selected = pickPath != null
+        ? await pickPath()
+        : (await fs.getSaveLocation(
+            suggestedName: fileName,
+            acceptedTypeGroups: [
+              fs.XTypeGroup(
+                label: '${suffix.toUpperCase()} files',
+                extensions: [suffix],
+              ),
+            ],
+          ))?.path;
+    if (selected == null || selected.isEmpty) return null;
+    if (!File(selected).isAbsolute ||
+        !selected.toLowerCase().endsWith('.$suffix')) {
+      throw FormatException('Choose an absolute .$suffix file path.');
+    }
+    return selected;
+  }
   static String? _lastUsedDirectory;
   static FilePickerPreferencesRepository? _preferencesRepository;
 

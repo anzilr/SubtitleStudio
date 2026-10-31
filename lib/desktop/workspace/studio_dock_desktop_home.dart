@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:file_picker/file_picker.dart' as fp;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/app/providers/core_providers.dart';
@@ -151,11 +150,9 @@ class _StudioDockDesktopHomeState extends ConsumerState<StudioDockDesktopHome> {
         collectionId: imported.subtitleCollectionId,
       );
       if (prepared == null || !mounted) return StudioDockFileResult.failed;
-      final selectedPath = await fp.FilePicker.platform.saveFile(
-        dialogTitle: 'Save imported SubtitleStudio project',
+      final selectedPath = await FilePickerSAF.pickDesktopSaveLocation(
         fileName: prepared.fileName,
-        type: fp.FileType.custom,
-        allowedExtensions: const ['msone'],
+        extension: 'msone',
       );
       if (selectedPath == null || selectedPath.isEmpty || !mounted) {
         return StudioDockFileResult.canceled;

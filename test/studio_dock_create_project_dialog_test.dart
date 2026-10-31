@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:subtitle_studio/desktop/workspace/studio_dock_create_project_dialog.dart';
+import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
 
 void main() {
   late Directory directory;
@@ -158,5 +159,66 @@ void main() {
     await tester.pumpAndSettle();
     expect(result.value, isNull);
     expect(directory.listSync(), isEmpty);
+  });
+
+  test('desktop destination selection never creates or replaces a file',
+      () async {
+    final selectedFile = File(
+        '${directory.path}${Platform.pathSeparator}Existing.srt')
+      ..writeAsStringSync('original subtitle');
+    final selected = await FilePickerSAF.pickDesktopSaveLocation(
+      fileName: 'Existing.srt',
+      extension: 'srt',
+      pickPath: () async => selectedFile.path,
+    );
+    expect(selected, selectedFile.path);
+    expect(selectedFile.readAsStringSync(), 'original subtitle');
+
+    final newPath = '${directory.path}${Platform.pathSeparator}New.msone';
+    expect(
+      await FilePickerSAF.pickDesktopSaveLocation(
+        fileName: 'New.msone',
+        extension: '.msone',
+        pickPath: () async => newPath,
+      ),
+      newPath,
+    );
+    expect(File(newPath).existsSync(), isFalse);
+  });
+
+  test('desktop destination selection rejects mismatched or relative paths',
+      () async {
+    await expectLater(
+      FilePickerSAF.pickDesktopSaveLocation(
+        fileName: 'Episode.srt',
+        extension: 'srt',
+        pickPath: () async => 'relative.srt',
+      ),
+      throwsA(isA<FormatException>()),
+    );
+    await expectLater(
+      FilePickerSAF.pickDesktopSaveLocation(
+        fileName: 'Episode.srt',
+        extension: 'srt',
+        pickPath: () async => '${directory.path}/Episode.txt',
+      ),
+      throwsA(isA<FormatException>()),
+    );
+    await expectLater(
+      FilePickerSAF.pickDesktopSaveLocation(
+        fileName: 'Episode.srt',
+        extension: 'msone',
+        pickPath: () async => 'ignored',
+      ),
+      throwsA(isA<ArgumentError>()),
+    );
+    expect(
+      await FilePickerSAF.pickDesktopSaveLocation(
+        fileName: 'Episode.srt',
+        extension: 'srt',
+        pickPath: () async => null,
+      ),
+      isNull,
+    );
   });
 }

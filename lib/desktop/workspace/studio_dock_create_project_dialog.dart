@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:file_picker/file_picker.dart' as fp;
+import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
 import 'package:flutter/material.dart';
 
 import 'studio_dock_project_actions.dart';
@@ -68,13 +68,9 @@ class _StudioDockCreateProjectDialogState
           ? fileName
           : '${fileName.substring(0, fileName.length - 4)}.msone';
       final selected = await (widget.pickLocation?.call(extension, suggested) ??
-          fp.FilePicker.platform.saveFile(
-            dialogTitle: extension == 'srt'
-                ? 'Choose new SRT file location'
-                : 'Choose new SubtitleStudio project file location',
+          FilePickerSAF.pickDesktopSaveLocation(
             fileName: suggested,
-            type: fp.FileType.custom,
-            allowedExtensions: [extension],
+            extension: extension,
           ));
       if (!mounted || selected == null || selected.isEmpty) return;
       if (!File(selected).isAbsolute ||

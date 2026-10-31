@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'dart:async';
 
-import 'package:file_picker/file_picker.dart' as fp;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtitle_studio/app/providers/core_providers.dart';
@@ -1085,11 +1084,9 @@ class _StudioDockSessionViewState
       final prepared = await actions.prepare(
         sessionId: widget.sessionId, collectionId: widget.collectionId);
       if (prepared == null || !mounted) return StudioDockFileResult.failed;
-      final picked = await fp.FilePicker.platform.saveFile(
-        dialogTitle: 'Save SubtitleStudio Project As',
+      final picked = await FilePickerSAF.pickDesktopSaveLocation(
         fileName: prepared.fileName,
-        type: fp.FileType.custom,
-        allowedExtensions: const ['msone'],
+        extension: 'msone',
       );
       if (picked == null || picked.isEmpty || !mounted) {
         return StudioDockFileResult.canceled;
@@ -1162,13 +1159,9 @@ class _StudioDockSessionViewState
               encoding: exportOptions.encoding,
               customTag: exportOptions.customTag);
       if (prepared == null || !mounted) return StudioDockFileResult.failed;
-      final picked = await fp.FilePicker.platform.saveFile(
-        dialogTitle: relink
-            ? 'Save SRT As (switch project working file)'
-            : 'Export SRT copy (keep project source)',
+      final picked = await FilePickerSAF.pickDesktopSaveLocation(
         fileName: prepared.plan.fileName,
-        type: fp.FileType.custom,
-        allowedExtensions: const ['srt'],
+        extension: 'srt',
       );
       if (picked == null || picked.isEmpty) return StudioDockFileResult.canceled;
       if (!mounted) return StudioDockFileResult.canceled;
