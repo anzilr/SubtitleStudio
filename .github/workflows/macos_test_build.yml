@@ -2,6 +2,7 @@ name: macOS test build (unsigned)
 
 # Explicitly requested cross-platform test build. Unlike the ordinary
 # quality workflows, this job compiles a macOS app only on demand or when
+# the macOS 12-compatible build instructions are updated.
 # this workflow file is updated on the Studio Dock feature branch.
 on:
   workflow_dispatch:
