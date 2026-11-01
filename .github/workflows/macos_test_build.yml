@@ -40,6 +40,29 @@ jobs:
           flutter config --enable-macos-desktop
           flutter pub get
 
+      - name: Use ad-hoc signing for this CI build only
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          project = Path('macos/Runner.xcodeproj/project.pbxproj')
+          original = project.read_text()
+          replacements = {
+              'DEVELOPMENT_TEAM = 79FRM6486J;': 'DEVELOPMENT_TEAM = "";',
+              '"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";':
+                  '"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";',
+              'CODE_SIGN_STYLE = Automatic;': 'CODE_SIGN_STYLE = Manual;',
+          }
+          edited = original
+          for before, after in replacements.items():
+              if before not in edited:
+                  raise SystemExit(f'Expected Xcode signing setting not found: {before}')
+              edited = edited.replace(before, after)
+          project.write_text(edited)
+          print('Adjusted macOS code-sign settings in the CI checkout only.')
+          PY
+
       - name: Build macOS Release (no signing identity)
         env:
           CODE_SIGNING_ALLOWED: 'NO'
