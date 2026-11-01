@@ -1,0 +1,94 @@
+name: macOS test build (unsigned)
+
+# Explicitly requested cross-platform test build. Unlike the ordinary
+# quality workflows, this job compiles a macOS app only on demand or when
+# this workflow file is updated on the Studio Dock feature branch.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/studio-dock-integration
+    paths:
+      - .github/workflows/macos_test_build.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: macos-test-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  macos-test-build:
+    name: Build and package macOS app
+    runs-on: macos-15
+    timeout-minutes: 60
+
+    steps:
+      - name: Check out Studio Dock source
+        uses: actions/checkout@v4
+
+      - name: Configure Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.5'
+          channel: stable
+          cache: true
+
+      - name: Enable macOS desktop and resolve dependencies
+        run: |
+          flutter config --enable-macos-desktop
+          flutter pub get
+
+      - name: Build macOS Release (no signing identity)
+        env:
+          CODE_SIGNING_ALLOWED: 'NO'
+          CODE_SIGNING_REQUIRED: 'NO'
+        run: flutter build macos --release
+
+      - name: Verify and package .app
+        shell: bash
+        run: |
+          set -euo pipefail
+          app="$(find build/macos/Build/Products/Release -maxdepth 1 -type d -name '*.app' -print -quit)"
+          if [[ -z "$app" ]]; then
+            echo "::error::Flutter did not produce a macOS .app bundle"
+            exit 1
+          fi
+          plist="$app/Contents/Info.plist"
+          test -f "$plist"
+          executable_name="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$plist")"
+          executable="$app/Contents/MacOS/$executable_name"
+          test -x "$executable"
+          file "$executable"
+          architectures="$(lipo -archs "$executable")"
+          echo "Built architectures: $architectures"
+
+          version="$(sed -nE 's/^version: ([0-9]+\.[0-9]+\.[0-9]+)\+([0-9]+).*$/\1_\2/p' pubspec.yaml | head -n 1)"
+          test -n "$version"
+          mkdir -p dist
+          archive="SubtitleStudio_${version}_macOS_test_unsigned.zip"
+          ditto -c -k --sequesterRsrc --keepParent "$app" "dist/$archive"
+          (cd dist && shasum -a 256 "$archive" > "$archive.sha256")
+          {
+            echo "Subtitle Studio macOS test build"
+            echo "Version: $version"
+            echo "Architectures: $architectures"
+            echo "Commit: $GITHUB_SHA"
+            echo
+            echo "Unsigned and not notarized; for private testing only."
+            echo "Extract the ZIP on macOS and move the .app to Applications."
+            echo "If macOS blocks the app, use System Settings > Privacy & Security > Open Anyway."
+            echo "Do not disable Gatekeeper system-wide."
+            echo
+            echo "Check playback, waveform, SRT import/export, project restore and editor mode."
+          } > dist/TESTING.txt
+
+      - name: Upload test build
+        uses: actions/upload-artifact@v4
+        with:
+          name: SubtitleStudio-macOS-test-${{ github.run_number }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
