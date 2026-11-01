@@ -101,12 +101,32 @@ jobs:
             echo "Commit: $GITHUB_SHA"
             echo
             echo "Unsigned and not notarized; for private testing only."
-            echo "Extract the ZIP on macOS and move the .app to Applications."
+            echo "Open the DMG on macOS and drag the .app into Applications."\n            echo "The ZIP is provided as a portable alternative."
             echo "If macOS blocks the app, use System Settings > Privacy & Security > Open Anyway."
             echo "Do not disable Gatekeeper system-wide."
             echo
             echo "Check playback, waveform, SRT import/export, project restore and editor mode."
           } > dist/TESTING.txt
+
+      - name: Create and verify drag-to-Applications DMG
+        shell: bash
+        run: |
+          set -euo pipefail
+          app="$(find build/macos/Build/Products/Release -maxdepth 1 -type d -name '*.app' -print -quit)"
+          test -n "$app"
+          version="$(sed -nE 's/^version: ([0-9]+\.[0-9]+\.[0-9]+)\+([0-9]+).*$/\1_\2/p' pubspec.yaml | head -n 1)"
+          test -n "$version"
+
+          # Build a standard drag-to-Applications disk image with Apple's native tool.
+          staging="$(mktemp -d)"
+          ditto "$app" "$staging/$(basename "$app")"
+          ln -s /Applications "$staging/Applications"
+          dmg="SubtitleStudio_${version}_macOS_test_unsigned.dmg"
+          hdiutil create -volname "SubtitleStudio" -srcfolder "$staging" \
+            -format UDZO -imagekey zlib-level=9 -ov "dist/$dmg"
+          hdiutil verify "dist/$dmg"
+          (cd dist && shasum -a 256 "$dmg" > "$dmg.sha256")
+          echo "Created verified DMG: dist/$dmg"
 
       - name: Upload test build
         uses: actions/upload-artifact@v4
