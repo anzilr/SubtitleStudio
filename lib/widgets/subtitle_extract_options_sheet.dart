@@ -4,7 +4,6 @@ import 'package:subtitle_studio/app/providers/core_providers.dart';
 import 'package:subtitle_studio/utils/file_picker_utils_saf.dart';
 // Removed platform_check - using pure SAF implementation without permission checks
 import 'package:subtitle_studio/utils/ffmpeg_helper.dart';
-import 'package:subtitle_studio/utils/desktop_ffmpeg_executables.dart';
 import 'package:subtitle_studio/services/subtitle_extraction_file_service.dart';
 import 'package:subtitle_studio/services/subtitle_extraction_track_policy.dart';
 import 'package:subtitle_studio/utils/subtitle_processor.dart';
@@ -179,16 +178,10 @@ class _SubtitleExtractOptionsSheetState
       );
       if (!mounted) return;
 
-      final needsDesktopTools =
-          (Platform.isWindows || Platform.isLinux) &&
-          DesktopFfmpegExecutables.isMissingToolsError(e);
       SnackbarHelper.showError(
         context,
-        needsDesktopTools
-            ? DesktopFfmpegExecutables.missingToolsGuidance(
-                isWindows: Platform.isWindows,
-              )
-            : 'Could not open the selected video. Please try again.',
+        'Could not read subtitle tracks from this video. '
+        'Check file access and format, then try again.',
       );
 
       setState(() {

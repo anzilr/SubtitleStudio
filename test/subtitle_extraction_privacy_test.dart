@@ -94,6 +94,7 @@ void main() {
   test('extraction screen does not contain previous path-bearing traces', () {
     final source = File('lib/widgets/subtitle_extract_options_sheet.dart')
         .readAsStringSync();
+    expect(source, isNot(contains('DesktopFfmpegExecutables')));
     for (final unsafeTrace in <String>[
       'Selected video path:',
       'Original filename:',
