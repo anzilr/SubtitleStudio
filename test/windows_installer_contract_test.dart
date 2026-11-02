@@ -37,15 +37,26 @@ void main() {
     expect(builder, isNot(contains(r"'C:\Windows\System32'")));
   });
 
-  test('Windows release includes an offline FFmpeg and FFprobe bundle', () {
-    expect(builder, contains('FfmpegBundleDirectory'));
-    expect(builder, contains(r"'bin\ffmpeg.exe'"));
-    expect(builder, contains(r"'bin\ffprobe.exe'"));
-    expect(builder, contains("'LICENSE.txt'"));
-    expect(builder, contains("'SOURCE.txt'"));
-    expect(builder, contains(r"'tools\ffmpeg'"));
-    expect(builder, contains(r'Copy-Item -LiteralPath $source'));
+  test('Windows installer packages native FFmpegKit without standalone CLIs',
+      () {
+    expect(builder, contains("ffmpeg_kit_flutter_new_min_gpl"));
+    expect(builder, contains(r"'licenses\ffmpeg_kit_flutter_new_min_gpl\NOTICE.txt'"));
+    expect(builder, contains(r'Test-Path -LiteralPath $ffmpegKitNotice'));
+    expect(builder, contains("FFmpegKit native license notices are missing"));
+    expect(builder, isNot(contains('FfmpegBundleDirectory')));
+    expect(builder, isNot(contains(r"'bin\ffmpeg.exe'")));
+    expect(builder, isNot(contains(r"'bin\ffprobe.exe'")));
+    expect(builder, isNot(contains(r'$ffmpegSourceFiles')));
     expect(builder, isNot(contains('winget install')));
+    expect(installer, contains(r'Source: "{#ReleaseDir}\*"'));
+  });
+
+  test('installer rejects legacy FFmpeg CLI build outputs without deleting them',
+      () {
+    expect(builder, contains(r"$legacyFfmpegDir = Join-Path $releaseDir 'tools\ffmpeg'"));
+    expect(builder, contains(r'Test-Path -LiteralPath $legacyFfmpegDir'));
+    expect(builder, contains('Obsolete standalone FFmpeg bundle found'));
+    expect(builder, isNot(contains(r'Remove-Item -LiteralPath $legacyFfmpegDir')));
   });
 
   test('installer wizard image is a standard BMP built from the Windows icon',
@@ -70,7 +81,7 @@ void main() {
     }
   });
 
-  test('installer rejects mismatched Windows architectures before packaging',
+  test('installer rejects mismatched Windows app and runtime architectures',
       () {
     expect(builder, contains('function Assert-WindowsX64Binary'));
     expect(builder, contains('0x5A4D')); // DOS MZ header
@@ -78,62 +89,10 @@ void main() {
     expect(builder, contains('0x8664')); // AMD64 machine
     expect(builder, contains(r'Assert-WindowsX64Binary -FilePath $target'));
     expect(builder, contains(
-      r'Assert-WindowsX64Binary -FilePath (Join-Path $FfmpegBundleDirectory',
-    ));
-    expect(builder, contains(
       r'Assert-WindowsX64Binary -FilePath (Join-Path $releaseDir',
     ));
-    // Reading PE headers must never launch downloaded binaries.
+    // Validating PE headers must not launch untrusted files.
     expect(builder, isNot(contains(r'& $source -version')));
-  });
-
-  test('supplied Gyan.dev essentials bundle is staged without extra tools', () {
-    expect(builder, contains("-Filter 'ffmpeg-*-essentials_build'"));
-    expect(builder, contains(r"Join-Path $FfmpegBundleDirectory 'LICENSE'"));
-    expect(builder, contains(r"Join-Path $FfmpegBundleDirectory 'README.txt'"));
-    expect(builder, contains(r'$ffmpegSourceFiles[$relative] = $source'));
-    expect(builder, contains(r'$source = $ffmpegSourceFiles[$relative]'));
-    expect(builder, contains('Unrecognized FFmpeg build manifest'));
-    expect(builder, contains('third-party licensing'));
-    expect(builder, isNot(contains("'bin\\ffplay.exe'")));
-    expect(File('.gitignore').readAsStringSync(),
-        contains('/installer/ffmpeg-*-essentials_build/'));
-  });
-
-  test('local FFmpeg tools have Windows AMD64 headers when provided', () async {
-    final bundles = Directory('installer').listSync(followLinks: false)
-        .whereType<Directory>()
-        .where((folder) {
-          final name = folder.path.split(Platform.pathSeparator).last;
-          return name.startsWith('ffmpeg-') &&
-              name.endsWith('-essentials_build');
-        }).toList();
-    if (bundles.isEmpty) return; // CI has no downloaded vendor assets.
-    expect(bundles, hasLength(1));
-    final bundle = bundles.single;
-    for (final name in ['ffmpeg.exe', 'ffprobe.exe']) {
-      final file = File('${bundle.path}${Platform.pathSeparator}bin'
-          '${Platform.pathSeparator}$name');
-      expect(file.existsSync(), isTrue, reason: name);
-      final input = await file.open();
-      try {
-        final length = await input.length();
-        expect(length, greaterThan(70), reason: name);
-        await input.setPosition(0);
-        expect(await input.read(2), [0x4d, 0x5a], reason: name);
-        await input.setPosition(0x3c);
-        final bytes = await input.read(4);
-        expect(bytes.length, 4, reason: name);
-        final offset = bytes[0] | (bytes[1] << 8) |
-            (bytes[2] << 16) | (bytes[3] << 24);
-        expect(offset, inInclusiveRange(64, length - 6), reason: name);
-        await input.setPosition(offset);
-        expect(await input.read(6), [0x50, 0x45, 0, 0, 0x64, 0x86],
-            reason: name);
-      } finally {
-        await input.close();
-      }
-    }
   });
 
   test('installer offers safe per-user and optional all-users mode', () {

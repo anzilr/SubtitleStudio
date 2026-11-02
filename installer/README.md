@@ -14,78 +14,34 @@ Requirements:
 3. Redistributable **x64 Microsoft Visual C++ runtime DLLs** from a properly
    licensed Visual Studio toolchain. The Flutter Release folder may already
    contain them. The script refuses to package an incomplete runtime.
-4. A **Windows x64 FFmpeg/FFprobe bundle** with its redistribution notices,
-   prepared as described below. Unlike the legacy setup, this is installed
-   *inside Subtitle Studio*, without Winget, PATH edits, or online setup.
+4. The `ffmpeg_kit_flutter_new_min_gpl` dependency resolved through
+   `flutter pub get`. Its Windows plugin supplies native FFmpeg and FFprobe
+   libraries during the Flutter build.
 
-### Prepare portable FFmpeg (required)
+### FFmpegKit native libraries (no separate download)
 
-Obtain a compatible **self-contained/static Windows x64** build from a reputable provider linked on
-[FFmpeg's download page](https://ffmpeg.org/download.html). Check the
-provider's published integrity information before using the binaries. Stage
-the following files inside the ignored local build-input folder:
+Subtitle Studio now invokes FFmpeg and FFprobe through
+[`ffmpeg_kit_flutter_new_min_gpl`](https://pub.dev/packages/ffmpeg_kit_flutter_new_min_gpl)
+on Android, iOS, macOS, Windows and Linux. The plugin installs the matching
+Windows x64 native libraries into the Flutter Release bundle. There is no need
+to download a standalone `ffmpeg.exe` / `ffprobe.exe`, modify PATH, or
+run a separate FFmpeg installer.
 
-```text
-installer/deps/ffmpeg/
-  bin/ffmpeg.exe
-  bin/ffprobe.exe
-  LICENSE.txt
-  SOURCE.txt
-```
+The Windows build also installs its required redistribution notices at
+`build/windows/x64/runner/Release/licenses/ffmpeg_kit_flutter_new_min_gpl/NOTICE.txt`.
+The packaging script checks that file and Inno Setup includes the complete
+Release folder (native DLLs, plugin notices and Flutter assets).
 
-For the supplied Gyan.dev essentials archive, **no manual renaming or moving is
-required**. Leave its original folder intact under `installer/`:
+If an older local installer build left
+`build/windows/x64/runner/Release/tools/ffmpeg/`, the script stops rather
+than silently repackage the obsolete CLI executables. Move that **generated**
+folder out of Release and rebuild. Your original downloaded source folder
+(such as `installer/ffmpeg-9.0.2-essentials_build/`) is left untouched and
+is no longer used by the script.
 
-```text
-installer/ffmpeg-9.0.2-essentials_build/
-  bin/ffmpeg.exe
-  bin/ffprobe.exe
-  bin/ffplay.exe        # Not included in Subtitle Studio's installer
-  LICENSE
-  README.txt
-  doc/ ...              # Not included
-  presets/ ...          # Not included
-```
-
-The packaging script discovers a single `ffmpeg-*-essentials_build` directory
-automatically when no curated `installer/deps/ffmpeg` bundle exists. It maps
-the original `LICENSE` and build manifest `README.txt` into application-local
-`LICENSE.txt` and `SOURCE.txt` while copying just FFmpeg and FFprobe. The
-original download remains untouched and is ignored by Git. Multiple matching
-folders require an explicit `-FfmpegBundleDirectory` choice.
-
-The upstream GPL license and build manifest make the package useful for
-internal testing, but **they do not establish complete public redistribution
-compliance**. Verify the exact corresponding source, enabled third-party
-licenses and notices before publishing the installer.
-
-- `LICENSE.txt` must contain the licensing and attribution notices for the
-  **exact build** being redistributed, including notices for enabled
-  third-party libraries. Do not substitute Subtitle Studio's GPL license.
-- `SOURCE.txt` must identify the build provider, exact version/build options,
-  download origin, and how to obtain corresponding source code for that
-  release. A source link alone may not satisfy all redistribution obligations;
-  review [FFmpeg's legal guidance](https://ffmpeg.org/legal.html) before
-  distributing the setup publicly.
-- Do not commit downloaded binaries to Git. The compiler copies the four
-  required files into the Flutter Release bundle and prints their SHA-256
-  hashes. It stops if a required file is absent or empty.
-- Before packaging, the build script checks Windows PE headers for AMD64/x64
-  compatibility in FFmpeg/FFprobe, the Flutter executable/engine, and the
-  application-local VC runtime DLLs. It reads headers without executing
-  third-party binaries. This is an architecture check, **not** a signature,
-  integrity, licensing, or malware verification.
-
-Alternatively, place this folder elsewhere and pass:
-
-```powershell
-.\tool\build_windows_installer.ps1 -FfmpegBundleDirectory 'D:\release-assets\ffmpeg'
-```
-
-Once installed, Subtitle Studio uses its app-local `ffmpeg.exe` and
-`ffprobe.exe` automatically. System FFmpeg on PATH is a fallback for local
-development and unpackaged desktop runs. The user does not need to install or
-configure FFmpeg.
+**Licensing:** this plugin's GPL variant includes GPL-licensed codecs.
+Review the plugin's exact FFmpegKit and third-party library notices and
+corresponding-source obligations before public redistribution.
 
 From the repository root in PowerShell:
 
@@ -131,7 +87,7 @@ components. Do not copy DLLs from `System32` or arbitrary download sites.
 
 The script builds the **complete** Flutter release folder, checks its engine,
 assets, application executable and three principal x64 VC runtime DLLs,
-includes the offline FFmpeg tools and notices, then passes the version and
+includes the FFmpegKit native libraries and notices, then passes the version and
 build number from `pubspec.yaml` to Inno Setup.
 
 Example when `pubspec.yaml` says `3.0.1+31`:
@@ -189,9 +145,9 @@ Get-AuthenticodeSignature .\installer\output\SubtitleStudio_3.0.1_31_Windows_x64
   choices. The installer does not take over the user's default apps.
 - Do **not** register `.ass`, `.ssa`, or `.vtt` until true format support is
   implemented. These file types are not currently imported in Studio Dock.
-- **FFmpeg and FFprobe are bundled application-local tools** for waveform
-  generation, video subtitle extraction and other media workflows. The setup
-  does not run `winget`, download FFmpeg, or modify PATH.
+- **FFmpegKit native libraries** support waveform generation and subtitle
+  extraction. The setup includes their notices and does not run `winget`,
+  download standalone FFmpeg, or modify PATH.
 - The installer uses application-local VC runtime DLLs rather than running a
   machine-wide redist installer. No old DirectX web setup is bundled.
 - Upgrades reuse the stable Inno `AppId` in `SubtitleStudio.iss`.
@@ -221,11 +177,11 @@ Perform on a clean Windows 10/11 x64 VM and on an upgrading installation.
       `.msone` opens the full project import options.
 - [ ] `.ass` and `.vtt` are not claimed as supported file associations.
 - [ ] On a clean Windows VM **without system FFmpeg**, waveform generation,
-      subtitle-track detection and extraction all work from the bundled tools.
-- [ ] The installed `tools/ffmpeg` directory contains both executables and
-      their license/source notices; verify package hashes and provenance.
-- [ ] Removing the bundled executables produces a clear repair message, not
-      a silent failure; a developer PATH installation remains a fallback.
+      subtitle-track detection and extraction work via FFmpegKit native libraries.
+- [ ] The installed `licenses/ffmpeg_kit_flutter_new_min_gpl/NOTICE.txt`
+      exists alongside FFmpegKit native DLLs; review provenance and licensing.
+- [ ] An outdated `tools/ffmpeg` folder in the generated Release directory
+      prevents packaging until moved out of that directory.
 - [ ] Upgrading from a prior installer with the new `AppId` preserves the
       user's sessions and choices.
 - [ ] Uninstall removes application, shortcuts, and only our registration;

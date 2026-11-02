@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:convert';
 import 'package:ffmpeg_kit_flutter_new_min_gpl/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new_min_gpl/ffprobe_kit.dart';
 import 'package:ffmpeg_kit_flutter_new_min_gpl/media_information.dart';
@@ -9,7 +8,6 @@ import 'package:path/path.dart' as path;
 import 'package:flutter/foundation.dart';
 import 'dart:math' show min;
 import 'package:subtitle_studio/utils/logging_helpers.dart';
-import 'package:subtitle_studio/utils/desktop_ffmpeg_executables.dart';
 import 'package:subtitle_studio/utils/ffmpeg_backend_policy.dart';
 
 /// Interface for FFmpeg operations
@@ -32,16 +30,22 @@ abstract class FFmpegInterface {
   Future<double?> getVideoFramerate(String videoPath);
 }
 
-/// Mobile implementation using ffmpeg_kit_flutter_new package
-class MobileFFmpeg implements FFmpegInterface {
+/// Native FFmpegKit backend shared by Android, iOS, macOS, Windows and Linux.
+class NativeFFmpeg implements FFmpegInterface {
   
-  /// Convert URI or path to a proper file path for mobile platforms
-  static String convertToFilePath(String uriOrPath) {
+  /// Convert a file URI or mixed-separator path without exposing its contents.
+  /// [operatingSystem] is injectable so desktop path rules remain testable
+  /// without a Windows/macOS Flutter engine.
+  static String convertToFilePath(
+    String uriOrPath, {
+    String? operatingSystem,
+  }) {
+    final currentPlatform = operatingSystem ?? Platform.operatingSystem;
     // If it's a file URI, convert it properly
     if (uriOrPath.startsWith('file://')) {
       try {
         final uri = Uri.parse(uriOrPath);
-        return uri.toFilePath();
+        return uri.toFilePath(windows: currentPlatform == 'windows');
       } catch (_) {
         if (kDebugMode) {
           print('Could not parse media file URI; using original locator');
@@ -51,9 +55,16 @@ class MobileFFmpeg implements FFmpegInterface {
       }
     }
     
-    // For mobile platforms and macOS, normalize any mixed separators
-    // Android, iOS, and macOS use Unix-style paths, so convert backslashes to forward slashes
-    if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
+    if (currentPlatform == 'windows') {
+      return uriOrPath.replaceAll('/', '\\');
+    }
+
+    // Android content:// locators are preserved for FFmpegKit SAF handling.
+    // Unix targets use forward-slash separators.
+    if (currentPlatform == 'android' ||
+        currentPlatform == 'ios' ||
+        currentPlatform == 'macos' ||
+        currentPlatform == 'linux') {
       String normalizedPath = uriOrPath;
       
       // Convert any backslashes to forward slashes for Unix-style systems
@@ -66,8 +77,7 @@ class MobileFFmpeg implements FFmpegInterface {
       return normalizedPath;
     }
     
-    // Return as-is for other cases
-    // Android content:// URIs are handled separately in _getSafReadableParameter
+    // Unsupported targets retain their locator; backend selection rejects them.
     return uriOrPath;
   }
 
@@ -128,7 +138,7 @@ class MobileFFmpeg implements FFmpegInterface {
       if (mediaInformation == null) {
         // Native FFprobe messages may include local paths and SAF parameters.
         final errorMsg = 'FFprobe did not return media information';
-        await logError(errorMsg, context: 'MobileFFmpeg.getSubtitleTracks');
+        await logError(errorMsg, context: 'NativeFFmpeg.getSubtitleTracks');
         throw Exception(errorMsg);
       }
 
@@ -575,519 +585,6 @@ class MobileFFmpeg implements FFmpegInterface {
   }
 }
 
-/// Desktop implementation using system FFmpeg via Process.run
-class SystemFFmpeg implements FFmpegInterface {
-  static bool _ffmpegAvailable = false;
-  static bool _ffprobeAvailable = false;
-  static bool _availabilityChecked = false;
-
-  /// Convert URI or path to a proper file path for the current platform
-  static String convertToFilePath(String uriOrPath) {
-    // If it's a file URI, convert it properly
-    if (uriOrPath.startsWith('file://')) {
-      try {
-        final uri = Uri.parse(uriOrPath);
-        return uri.toFilePath();
-      } catch (_) {
-        if (kDebugMode) {
-          print('Could not parse media file URI; using original locator');
-        }
-        // Fallback to removing file:// prefix and normalizing
-        return path.normalize(uriOrPath.replaceFirst('file://', ''));
-      }
-    }
-    
-    // Platform-specific path handling
-    if (Platform.isWindows) {
-      // For Windows, normalize all separators to backslashes
-      // Handle mixed separators like "C:\Users\anzil\Downloads\Telegram Desktop/file.srt"
-      String normalizedPath = uriOrPath;
-      
-      // Replace all forward slashes with backslashes
-      normalizedPath = normalizedPath.replaceAll('/', '\\');
-      
-      // Use path.normalize to clean up any double separators or relative paths
-      normalizedPath = path.normalize(normalizedPath);
-      
-      if (kDebugMode) {
-        print('Normalized Windows media path separators');
-      }
-      
-      return normalizedPath;
-    } else if (Platform.isMacOS || Platform.isLinux) {
-      // For Unix-like systems (macOS, Linux), use forward slashes
-      String normalizedPath = uriOrPath;
-      
-      // Replace all backslashes with forward slashes (in case of mixed separators)
-      normalizedPath = normalizedPath.replaceAll('\\', '/');
-      
-      // Use path.normalize to clean up
-      normalizedPath = path.normalize(normalizedPath);
-      
-      if (kDebugMode) {
-        print('Normalized Unix media path separators');
-      }
-      
-      return normalizedPath;
-    } else {
-      // Fallback for other desktop platforms
-      return path.normalize(uriOrPath);
-    }
-  }
-
-  /// Check if FFmpeg and FFprobe are available on the system
-  static Future<void> _checkAvailability() async {
-    if (_availabilityChecked) return;
-
-    if (kDebugMode) {
-      print('Checking FFmpeg availability on ${Platform.operatingSystem}...');
-    }
-
-    try {
-      // Check if ffmpeg is available
-      final ffmpegResult = await Process.run(
-        DesktopFfmpegExecutables.ffmpeg(), ['-version']);
-      _ffmpegAvailable = ffmpegResult.exitCode == 0;
-
-      // Check if ffprobe is available
-      final ffprobeResult = await Process.run(
-        DesktopFfmpegExecutables.ffprobe(), ['-version']);
-      _ffprobeAvailable = ffprobeResult.exitCode == 0;
-
-      if (kDebugMode) {
-        print('FFmpeg available on ${Platform.operatingSystem}: $_ffmpegAvailable');
-        print('FFprobe available on ${Platform.operatingSystem}: $_ffprobeAvailable');
-      }
-    } catch (_) {
-      if (kDebugMode) {
-        print('FFmpeg availability check failed on ${Platform.operatingSystem}');
-      }
-      _ffmpegAvailable = false;
-      _ffprobeAvailable = false;
-    }
-
-    _availabilityChecked = true;
-  }
-
-  /// Throw appropriate error if FFmpeg/FFprobe is not available
-  static void _ensureAvailable() {
-    if (!_ffmpegAvailable || !_ffprobeAvailable) {
-      String installInstructions;
-      if (Platform.isWindows) {
-        installInstructions = 'Windows: Repair Subtitle Studio or reinstall the application to restore the bundled media tools.';
-      } else if (Platform.isMacOS) {
-        installInstructions = 'macOS: Repair or reinstall SubtitleStudio to restore the bundled media tools, or install FFmpeg and FFprobe on PATH for development.';
-      } else if (Platform.isLinux) {
-        installInstructions = 'Linux: sudo apt install ffmpeg (Ubuntu/Debian) or sudo yum install ffmpeg (RHEL/CentOS)';
-      } else {
-        installInstructions = 'Please install FFmpeg for your platform and ensure it is in your PATH';
-      }
-      
-      throw Exception(
-        'FFmpeg or FFprobe is unavailable.\n\n$installInstructions',
-      );
-    }
-  }
-
-  @override
-  Future<List<Map<String, dynamic>>> getSubtitleTracks(String videoPath) async {
-    await _checkAvailability();
-    _ensureAvailable();
-    try {
-      if (kDebugMode) {
-        print('Analyzing video subtitle tracks with system FFprobe on ${Platform.operatingSystem}');
-      }
-      await logInfo(
-        'Starting subtitle track analysis with system FFprobe on ${Platform.operatingSystem}',
-      );
-
-      // Verify input file exists
-      final videoFile = File(videoPath);
-      if (!await videoFile.exists()) {
-        throw Exception('Input video file is unavailable');
-      }
-
-      // Use ffprobe to get stream information in JSON format
-      final normalizedVideoPath = convertToFilePath(videoPath);
-      
-      if (kDebugMode) {
-        print('Prepared system FFprobe input locator');
-      }
-      
-      final result = await Process.run(DesktopFfmpegExecutables.ffprobe(), [
-        '-v',
-        'quiet',
-        '-print_format',
-        'json',
-        '-show_streams',
-        normalizedVideoPath,
-      ]);
-
-      if (result.exitCode != 0) {
-        throw Exception('FFprobe failed with exit code ${result.exitCode}');
-      }
-
-      // Parse JSON output
-      final jsonData = jsonDecode(result.stdout);
-      final streams = jsonData['streams'] as List<dynamic>? ?? [];
-
-      List<Map<String, dynamic>> subtitleTracks = [];
-      int subtitleIndex = 0;
-
-      for (var stream in streams) {
-        final codecType = stream['codec_type'] as String?;
-        if (codecType == 'subtitle') {
-          final streamIndex = stream['index'] as int? ?? -1;
-          final tags = stream['tags'] as Map<String, dynamic>? ?? {};
-
-          subtitleTracks.add({
-            'index': streamIndex,
-            'codec': stream['codec_name'] ?? 'unknown',
-            'language': tags['language'] ?? 'und',
-            'title': tags['title'] ?? 'Untitled',
-            'subtitle_index': subtitleIndex,
-          });
-          subtitleIndex++;
-        }
-      }
-
-      if (kDebugMode) {
-        print('Found ${subtitleTracks.length} subtitle tracks');
-      }
-
-      return subtitleTracks;
-    } catch (_) {
-      if (kDebugMode) {
-        print('System FFprobe subtitle track analysis failed');
-      }
-      await logError(
-        'Failed to get subtitle tracks with system FFprobe',
-        context: 'SystemFFmpeg.getSubtitleTracks',
-      );
-      throw Exception('Failed to get subtitle tracks. Check media access and retry.');
-    }
-  }
-
-  @override
-  Future<String> extractSubtitle(
-    String videoPath,
-    String outputPath,
-    int streamIndex,
-  ) async {
-    await _checkAvailability();
-    _ensureAvailable();
-    try {
-      final videoFileName = FFmpegHelper.extractBaseFilename(videoPath);
-      final outputFile = path.normalize(path.join(
-        outputPath,
-        '${videoFileName}_track$streamIndex.srt',
-      ));
-
-      if (kDebugMode) {
-        print('Extracting subtitle with system FFmpeg on ${Platform.operatingSystem}');
-        print('Stream index: $streamIndex');
-      }
-
-      // Check if input file exists and is readable
-      final videoFile = File(videoPath);
-      if (!await videoFile.exists()) {
-        throw Exception('Input video file is unavailable');
-      }
-
-      // Check if output directory exists and is writable
-      final outputDir = Directory(outputPath);
-      if (!await outputDir.exists()) {
-        if (kDebugMode) {
-          print('Output directory does not exist; attempting to create it');
-        }
-        await outputDir.create(recursive: true);
-      }
-
-      // Try to create a test file to verify write permissions
-      try {
-        final testFile = File('$outputPath/test_write_permission.tmp');
-        await testFile.writeAsString('test');
-        await testFile.delete();
-        if (kDebugMode) {
-          print('Successfully verified write permissions for output directory');
-        }
-      } catch (_) {
-        if (kDebugMode) {
-          print('Output directory write check failed');
-        }
-        throw Exception('Cannot write to output directory');
-      }
-
-      // Execute FFmpeg to extract subtitle
-      final normalizedVideoPath = convertToFilePath(videoPath);
-      final normalizedOutputFile = convertToFilePath(outputFile);
-      
-      if (kDebugMode) {
-        print('Prepared system FFmpeg input and output locators');
-      }
-      
-      final result = await Process.run(DesktopFfmpegExecutables.ffmpeg(), [
-        '-y', // Overwrite output file
-        '-i', normalizedVideoPath,
-        '-map', '0:s:$streamIndex',
-        '-c:s', 'srt',
-        normalizedOutputFile,
-      ]);
-
-      if (result.exitCode != 0) {
-        if (kDebugMode) {
-          print('FFmpeg extraction failed with exit code ${result.exitCode}');
-        }
-        throw Exception('FFmpeg failed with exit code ${result.exitCode}');
-      }
-
-      if (kDebugMode) {
-        print('FFmpeg completed successfully');
-      }
-
-      // Verify the output file exists and has content
-      await Future.delayed(
-        const Duration(milliseconds: 1000),
-      ); // Wait a bit for file system
-
-      final outputFileObj = File(outputFile);
-      if (kDebugMode) {
-        print('Checking whether FFmpeg created its output file');
-      }
-      
-      if (!await outputFileObj.exists()) {
-        throw Exception('Output file was not created after successful FFmpeg execution');
-      }
-
-      final fileSize = await outputFileObj.length();
-      if (kDebugMode) {
-        print('Output file size: $fileSize bytes');
-      }
-
-      if (fileSize == 0) {
-        throw Exception('Output file was created but is empty (0 bytes)');
-      }
-
-      // Try to read the first few bytes to verify file is accessible
-      try {
-        final bytes =
-            await outputFileObj.openRead(0, min(fileSize, 100)).toList();
-        if (kDebugMode) {
-          print('Successfully read ${bytes.length} bytes from output file');
-        }
-      } catch (_) {
-        if (kDebugMode) {
-          print('Output file readability check failed');
-        }
-        throw Exception('Output file exists but cannot be read');
-      }
-
-      return outputFile;
-    } catch (_) {
-      if (kDebugMode) {
-        print('System FFmpeg subtitle extraction failed');
-      }
-      throw Exception('Failed to extract subtitle. Check media access and retry.');
-    }
-  }
-
-  @override
-  Future<String> extractSubtitleWithTrackInfo(
-    String videoPath,
-    String outputPath,
-    int streamIndex,
-    Map<String, dynamic> trackInfo,
-  ) async {
-    await _checkAvailability();
-    _ensureAvailable();
-    try {
-      // Extract filename properly by handling both forward and back slashes
-      final videoFileName = FFmpegHelper.extractBaseFilename(videoPath);
-      
-      // Generate better filename with language code or track number
-      String trackIdentifier;
-      final language = trackInfo['language'] as String?;
-      final trackIndex = trackInfo['subtitle_index'] as int?;
-      
-      // Use language code if available and not "und" (undefined), otherwise use track number
-      if (language != null && language.isNotEmpty && language != 'und') {
-        trackIdentifier = language;
-      } else {
-        trackIdentifier = 'track${trackIndex ?? streamIndex}';
-      }
-      
-      final outputFile = path.join(outputPath, '$videoFileName.$trackIdentifier.srt');
-
-      if (kDebugMode) {
-        print('Extracting subtitle with system FFmpeg on ${Platform.operatingSystem}');
-        print('Stream index: $streamIndex');
-      }
-
-      // Normalize paths for cross-platform compatibility
-      final normalizedVideoPath = FFmpegHelper.normalizePath(videoPath);
-      final normalizedOutputFile = FFmpegHelper.normalizePath(outputFile);
-
-      if (kDebugMode) {
-        print('Prepared system FFmpeg input and output locators');
-      }
-      
-      final result = await Process.run(DesktopFfmpegExecutables.ffmpeg(), [
-        '-y', // Overwrite output file
-        '-i', normalizedVideoPath,
-        '-map', '0:s:$streamIndex',
-        '-c:s', 'srt',
-        normalizedOutputFile,
-      ]);
-
-      if (kDebugMode) {
-        print('FFmpeg exit code: ${result.exitCode}');
-      }
-
-      if (result.exitCode != 0) {
-        throw Exception('FFmpeg failed with exit code ${result.exitCode}');
-      }
-
-      // Verify output file exists
-      if (!File(normalizedOutputFile).existsSync()) {
-        throw Exception('Output file was not created after FFmpeg execution');
-      }
-
-      await logInfo('Successfully extracted subtitle with track information');
-
-      return outputFile;
-    } catch (_) {
-      await logError('Failed to extract subtitle with system FFmpeg and track information');
-      if (kDebugMode) {
-        print('System FFmpeg subtitle extraction with track information failed');
-      }
-      throw Exception('Failed to extract subtitle. Check media access and retry.');
-    }
-  }
-
-  @override
-  Future<double?> getVideoFramerate(String videoPath) async {
-    try {
-      await _checkAvailability();
-      _ensureAvailable();
-
-      if (kDebugMode) {
-        print('Getting video framerate with system FFprobe on ${Platform.operatingSystem}');
-      }
-
-      // Verify input file exists
-      final videoFile = File(videoPath);
-      if (!await videoFile.exists()) {
-        throw Exception('Input video file is unavailable');
-      }
-
-      // Use ffprobe to get stream information in JSON format
-      final normalizedVideoPath = convertToFilePath(videoPath);
-      
-      if (kDebugMode) {
-        print('Prepared system FFprobe input locator');
-      }
-      
-      final result = await Process.run(DesktopFfmpegExecutables.ffprobe(), [
-        '-v',
-        'quiet',
-        '-print_format',
-        'json',
-        '-show_streams',
-        normalizedVideoPath,
-      ]);
-
-      if (result.exitCode != 0) {
-        throw Exception('FFprobe failed with exit code ${result.exitCode}');
-      }
-
-      // Parse JSON output
-      final jsonData = jsonDecode(result.stdout);
-      final streams = jsonData['streams'] as List<dynamic>? ?? [];
-
-      // Find the video stream
-      for (var stream in streams) {
-        final codecType = stream['codec_type'] as String?;
-        if (codecType == 'video') {
-          // First try to get the average framerate
-          final avgFramerate = stream['avg_frame_rate'] as String?;
-          if (avgFramerate != null && avgFramerate != '0/0') {
-            try {
-              // Parse fraction like "24000/1001" into a double
-              final parts = avgFramerate.split('/');
-              if (parts.length == 2) {
-                final num = double.parse(parts[0]);
-                final den = double.parse(parts[1]);
-                if (den > 0) {
-                  final fps = num / den;
-                  if (kDebugMode) {
-                    print('Detected video framerate: $fps fps');
-                  }
-                  return _normalizeFramerate(fps);
-                }
-              }
-            } catch (_) {
-              if (kDebugMode) {
-                print('Could not parse average framerate');
-              }
-            }
-          }
-
-          // If average framerate didn't work, try r_frame_rate
-          final rFramerate = stream['r_frame_rate'] as String?;
-          if (rFramerate != null && rFramerate != '0/0') {
-            try {
-              final parts = rFramerate.split('/');
-              if (parts.length == 2) {
-                final num = double.parse(parts[0]);
-                final den = double.parse(parts[1]);
-                if (den > 0) {
-                  final fps = num / den;
-                  if (kDebugMode) {
-                    print('Detected video framerate (r_frame_rate): $fps fps');
-                  }
-                  return _normalizeFramerate(fps);
-                }
-              }
-            } catch (_) {
-              if (kDebugMode) {
-                print('Could not parse r_frame_rate');
-              }
-            }
-          }
-        }
-      }
-
-      if (kDebugMode) {
-        print('Could not determine framerate from video streams');
-      }
-      return null;
-    } catch (_) {
-      if (kDebugMode) {
-        print('System FFprobe video framerate detection failed');
-      }
-      return null;
-    }
-  }
-
-  // Helper method to normalize common framerates to standard values
-  double _normalizeFramerate(double fps) {
-    // Round to 3 decimal places
-    final rounded = double.parse(fps.toStringAsFixed(3));
-
-    // Check for common framerates
-    if ((rounded - 23.976).abs() < 0.01) return 23.976;
-    if ((rounded - 24.0).abs() < 0.01) return 24.0;
-    if ((rounded - 25.0).abs() < 0.01) return 25.0;
-    if ((rounded - 29.97).abs() < 0.01) return 29.97;
-    if ((rounded - 30.0).abs() < 0.01) return 30.0;
-    if ((rounded - 50.0).abs() < 0.01) return 50.0;
-    if ((rounded - 59.94).abs() < 0.01) return 59.94;
-    if ((rounded - 60.0).abs() < 0.01) return 60.0;
-
-    return rounded;
-  }
-}
-
 /// Main FFmpegHelper class that selects the appropriate implementation based on platform
 class FFmpegHelper implements FFmpegInterface {
   static FFmpegInterface? _instance;
@@ -1100,22 +597,20 @@ class FFmpegHelper implements FFmpegInterface {
   /// Public method to normalize file paths for the current platform
   /// This ensures consistent path handling between FFmpegHelper and calling code
   static String normalizePath(String filePath) {
-    if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
-      return MobileFFmpeg.convertToFilePath(filePath);
-    } else if (Platform.isWindows || Platform.isLinux) {
-      return SystemFFmpeg.convertToFilePath(filePath);
-    } else {
+    if (!FfmpegKitPlatformSupport.supports(Platform.operatingSystem)) {
       throw UnsupportedError(
-        'Path normalization is not supported on this platform: ${Platform.operatingSystem}',
+        'Path normalization is not supported on this platform: '
+        '${Platform.operatingSystem}',
       );
     }
+    return NativeFFmpeg.convertToFilePath(filePath);
   }
 
   static FFmpegInterface _createImplementation() {
     // FFmpegKit ships native FFmpeg/FFprobe implementations for all five
     // supported operating systems. No desktop ffmpeg executable is needed.
     if (FfmpegKitPlatformSupport.supports(Platform.operatingSystem)) {
-      return MobileFFmpeg();
+      return NativeFFmpeg();
     }
     throw UnsupportedError(
       'FFmpeg operations are not supported on this platform: '

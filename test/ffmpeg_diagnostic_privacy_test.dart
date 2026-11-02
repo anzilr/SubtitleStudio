@@ -22,32 +22,45 @@ void main() {
     expect(traces.join('\n'), isNot(contains('secret_marker')));
   });
 
-  test('unavailable desktop media does not escape through errors or prints',
-      () async {
-    final root = await Directory.systemTemp.createTemp('ffmpeg_secret_marker_');
-    try {
-      final missing = '${root.path}/missing_secret_marker.mkv';
-      final traces = <String>[];
-      final result = await runZoned<Future<String>>(
-        () async {
-          try {
-            await SystemFFmpeg().getSubtitleTracks(missing);
-          } catch (error) {
-            return error.toString();
-          }
-          fail('An unavailable input must not produce subtitle tracks');
-        },
-        zoneSpecification: ZoneSpecification(
-          print: (self, parent, zone, message) => traces.add(message),
-        ),
-      );
-      expect(result, isNot(contains(root.path)));
-      expect(result, isNot(contains('secret_marker')));
-      expect(traces.join('\n'), isNot(contains(root.path)));
-      expect(traces.join('\n'), isNot(contains('secret_marker')));
-    } finally {
-      await root.delete(recursive: true);
-    }
+  test('native FFmpegKit normalizes desktop paths without leaking identities',
+      () {
+    final traces = <String>[];
+    const privateLocator = r'C:\private_media_marker\secret_marker.mkv';
+
+    final normalized = runZoned(
+      () => NativeFFmpeg.convertToFilePath(
+        privateLocator.replaceAll('\\', '/'),
+        operatingSystem: 'windows',
+      ),
+      zoneSpecification: ZoneSpecification(
+        print: (self, parent, zone, message) => traces.add(message),
+      ),
+    );
+    expect(normalized, privateLocator);
+    expect(traces.join('\n'), isNot(contains('secret_marker')));
+    expect(traces.join('\n'), isNot(contains('private_media_marker')));
+
+    expect(
+      NativeFFmpeg.convertToFilePath(
+        r'folder\clip.mkv',
+        operatingSystem: 'linux',
+      ),
+      'folder/clip.mkv',
+    );
+    expect(
+      NativeFFmpeg.convertToFilePath(
+        r'folder\clip.mkv',
+        operatingSystem: 'macos',
+      ),
+      'folder/clip.mkv',
+    );
+    expect(
+      NativeFFmpeg.convertToFilePath(
+        'content://media/external/video/media/123',
+        operatingSystem: 'android',
+      ),
+      'content://media/external/video/media/123',
+    );
   });
 
   test('failed desktop extraction copy preserves existing SRT', () async {

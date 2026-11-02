@@ -35,4 +35,4 @@ jobs:
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
       - name: Run Studio Dock regression suite
         shell: bash
-        run: flutter test -j 1 test/studio_dock*_test.dart test/waveform_manual_seek_test.dart test/waveform_time_range_planner_test.dart test/desktop_ffmpeg_executables_test.dart test/ffmpeg_backend_policy_test.dart test/waveform_ffmpeg_plan_test.dart test/ffmpeg_diagnostic_privacy_test.dart
+        run: flutter test -j 1 test/studio_dock*_test.dart test/waveform_manual_seek_test.dart test/waveform_time_range_planner_test.dart test/ffmpeg_backend_policy_test.dart test/waveform_ffmpeg_plan_test.dart test/ffmpeg_diagnostic_privacy_test.dart test/windows_installer_contract_test.dart test/subtitle_extraction_privacy_test.dart

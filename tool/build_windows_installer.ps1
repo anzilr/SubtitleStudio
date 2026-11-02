@@ -3,7 +3,7 @@
   Builds and packages the Subtitle Studio Windows x64 installer locally.
 .DESCRIPTION
   Requires Flutter Windows tooling and Inno Setup 6.5.2 or newer.
-  Packages offline FFmpeg/FFprobe binaries from installer/deps/ffmpeg.
+  Uses native FFmpegKit libraries supplied by the Flutter Windows plugin.
   Never downloads or executes third-party installers. Flutter platform builds
   must run on a local Windows machine, not in GitHub Actions.
 .EXAMPLE
@@ -20,7 +20,6 @@ param(
   [switch]$ReplaceExistingInstaller,
   [string]$InnoCompilerPath,
   [string]$VcRuntimeSourceDirectory,
-  [string]$FfmpegBundleDirectory,
   [ValidatePattern('^[A-Fa-f0-9]{40}$')]
   [string]$SigningCertificateThumbprint,
   [string]$TimestampServer = 'http://timestamp.digicert.com'
@@ -58,8 +57,8 @@ $installerName = "SubtitleStudio_${appVersion}_${buildNumber}_Windows_x64_Setup.
 $installerPath = Join-Path $outputDir $installerName
 $scriptPath = Join-Path $repoRoot 'installer\SubtitleStudio.iss'
 
-# Inspect PE headers without executing downloaded tool binaries. Reject wrong-
-# architecture media and runtime files before they enter a Windows x64 setup.
+# Inspect PE headers without executing binaries. Reject wrong-architecture
+# application and runtime files before they enter a Windows x64 setup.
 function Assert-WindowsX64Binary {
   param(
     [Parameter(Mandatory = $true)]
@@ -112,71 +111,6 @@ if (Test-Path -LiteralPath $installerPath -PathType Leaf) {
   if (-not $ReplaceExistingInstaller) {
     throw "Installer already exists: $installerPath. Use -ReplaceExistingInstaller to rebuild it."
   }
-}
-
-# Validate offline media inputs before spending time on the Flutter build.
-# Prefer a curated bundle, but accept a single untouched Gyan.dev essentials
-# folder placed directly under installer/. Never alter the user's source files.
-if ([string]::IsNullOrWhiteSpace($FfmpegBundleDirectory)) {
-  $FfmpegBundleDirectory = Join-Path $repoRoot 'installer\deps\ffmpeg'
-  if (-not (Test-Path -LiteralPath $FfmpegBundleDirectory -PathType Container)) {
-    $localBundles = @(Get-ChildItem -LiteralPath (Join-Path $repoRoot 'installer') -Directory -Filter 'ffmpeg-*-essentials_build')
-    if ($localBundles.Count -eq 1) {
-      $FfmpegBundleDirectory = $localBundles[0].FullName
-      Write-Host "Using local FFmpeg bundle: $FfmpegBundleDirectory"
-    } elseif ($localBundles.Count -gt 1) {
-      throw 'Multiple FFmpeg essentials bundles found. Choose one with -FfmpegBundleDirectory.'
-    }
-  }
-}
-$preparedLicense = Join-Path $FfmpegBundleDirectory 'LICENSE.txt'
-$preparedSource = Join-Path $FfmpegBundleDirectory 'SOURCE.txt'
-$vendorLicense = Join-Path $FfmpegBundleDirectory 'LICENSE'
-$vendorSource = Join-Path $FfmpegBundleDirectory 'README.txt'
-if ((Test-Path -LiteralPath $preparedLicense -PathType Leaf) -and
-    (Test-Path -LiteralPath $preparedSource -PathType Leaf)) {
-  $licenseNotice = $preparedLicense
-  $sourceNotice = $preparedSource
-} elseif ((Test-Path -LiteralPath $vendorLicense -PathType Leaf) -and
-          (Test-Path -LiteralPath $vendorSource -PathType Leaf)) {
-  $manifest = Get-Content -LiteralPath $vendorSource -Raw
-  if ($manifest -notmatch '(?m)^FFmpeg 64-bit static Windows build from www\.gyan\.dev' -or
-      $manifest -notmatch '(?m)^Version:\s+\S+' -or
-      $manifest -notmatch '(?m)^Source Code:\s+https://\S+') {
-    throw "Unrecognized FFmpeg build manifest: $vendorSource"
-  }
-  $licenseNotice = $vendorLicense
-  $sourceNotice = $vendorSource
-  Write-Warning 'Packaging upstream GPL license and build manifest as local notices. Verify corresponding source and third-party licensing before any public distribution.'
-} else {
-  throw "FFmpeg notices missing in $FfmpegBundleDirectory. Supply LICENSE.txt and SOURCE.txt, or an untouched Gyan.dev LICENSE and README.txt pair."
-}
-
-$ffmpegFiles = @(
-  'bin\ffmpeg.exe',
-  'bin\ffprobe.exe',
-  'LICENSE.txt',
-  'SOURCE.txt'
-)
-$ffmpegSourceFiles = @{}
-foreach ($relative in $ffmpegFiles) {
-  if ($relative -eq 'LICENSE.txt') {
-    $source = $licenseNotice
-  } elseif ($relative -eq 'SOURCE.txt') {
-    $source = $sourceNotice
-  } else {
-    $source = Join-Path $FfmpegBundleDirectory $relative
-  }
-  if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
-    throw "FFmpeg bundle is incomplete: $source. Supply ffmpeg.exe, ffprobe.exe and matching licensing/source notices."
-  }
-  if ((Get-Item -LiteralPath $source).Length -eq 0) {
-    throw "FFmpeg bundle contains an empty file: $source"
-  }
-  $ffmpegSourceFiles[$relative] = $source
-}
-foreach ($relative in @('bin\ffmpeg.exe', 'bin\ffprobe.exe')) {
-  Assert-WindowsX64Binary -FilePath (Join-Path $FfmpegBundleDirectory $relative)
 }
 
 if (-not $SkipFlutterBuild) {
@@ -313,15 +247,20 @@ foreach ($runtime in $vcRuntimeFiles) {
   Assert-WindowsX64Binary -FilePath $target
 }
 
-# The Windows app resolves these two executables next to itself, so the user
-# never needs to install FFmpeg, edit PATH, or enable package-manager access.
-$ffmpegDestination = Join-Path $releaseDir 'tools\ffmpeg'
-foreach ($relative in $ffmpegFiles) {
-  $source = $ffmpegSourceFiles[$relative]
-  $destination = Join-Path $ffmpegDestination $relative
-  [void](New-Item -ItemType Directory -Force -Path (Split-Path -Parent $destination))
-  Copy-Item -LiteralPath $source -Destination $destination -Force
-  Write-Host "FFmpeg bundle: $relative SHA-256 $((Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash)"
+# Flutter's FFmpegKit Windows plugin installs native DLLs and redistributable
+# license notices in the Release directory. Keep the generated notices.
+$ffmpegKitNotice = Join-Path $releaseDir 'licenses\ffmpeg_kit_flutter_new_min_gpl\NOTICE.txt'
+if (-not (Test-Path -LiteralPath $ffmpegKitNotice -PathType Leaf) -or
+    (Get-Item -LiteralPath $ffmpegKitNotice).Length -eq 0) {
+  throw "FFmpegKit native license notices are missing from the Release bundle: $ffmpegKitNotice. Rebuild with 'flutter build windows --release' and ensure plugin native assets are present."
+}
+
+# Inno recurses through the entire Release directory. Prevent obsolete CLI
+# bundles left by older installer scripts from entering a native-only setup.
+# Never delete the user's existing generated files automatically.
+$legacyFfmpegDir = Join-Path $releaseDir 'tools\ffmpeg'
+if (Test-Path -LiteralPath $legacyFfmpegDir) {
+  throw "Obsolete standalone FFmpeg bundle found in the Release directory: $legacyFfmpegDir. Move that generated folder out of Release before running this native-only installer."
 }
 
 # Inno Setup's wizard must receive a conventional Windows BMP, not a PNG
