@@ -22,7 +22,7 @@ concurrency:
 jobs:
   macos-test-build:
     name: Build and package macOS app
-    runs-on: macos-15
+    runs-on: macos-15-intel
     timeout-minutes: 60
 
     steps:
@@ -40,6 +40,9 @@ jobs:
         run: |
           flutter config --enable-macos-desktop
           flutter pub get
+
+      - name: Verify portable FFmpeg path resolution
+        run: flutter test test/desktop_ffmpeg_executables_test.dart
 
       - name: Use ad-hoc signing for this CI build only
         shell: bash
