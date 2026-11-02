@@ -40,11 +40,58 @@ void main() {
     );
   });
 
+  test('macOS app resolves FFmpeg within Contents/Resources', () {
+    const app = '/Applications/Msone Subtitle Studio.app/Contents/MacOS/'
+        'Msone Subtitle Studio';
+    const expected = '/Applications/Msone Subtitle Studio.app/Contents/'
+        'Resources/tools/ffmpeg/bin/ffmpeg';
+    expect(
+      DesktopFfmpegExecutables.resolve(
+        'ffmpeg',
+        isWindows: false,
+        isMacOS: true,
+        executablePath: app,
+        fileExists: (candidate) => candidate == expected,
+      ),
+      expected,
+    );
+  });
+
+  test('macOS FFprobe resolves alongside FFmpeg with spaces in app path', () {
+    const expected = '/Users/tester/Downloads/Subtitle Studio.app/Contents/'
+        'Resources/tools/ffmpeg/bin/ffprobe';
+    expect(
+      DesktopFfmpegExecutables.resolve(
+        'ffprobe',
+        isWindows: false,
+        isMacOS: true,
+        executablePath:
+            '/Users/tester/Downloads/Subtitle Studio.app/Contents/MacOS/Runner',
+        fileExists: (candidate) => candidate == expected,
+      ),
+      expected,
+    );
+  });
+
+  test('macOS portable source build falls back to FFmpeg on PATH', () {
+    expect(
+      DesktopFfmpegExecutables.resolve(
+        'ffmpeg',
+        isWindows: false,
+        isMacOS: true,
+        executablePath: '/tmp/Runner.app/Contents/MacOS/Runner',
+        fileExists: (_) => false,
+      ),
+      'ffmpeg',
+    );
+  });
+
   test('other desktop platforms retain their existing PATH behavior', () {
     expect(
       DesktopFfmpegExecutables.resolve(
         'ffprobe',
         isWindows: false,
+        isMacOS: false,
         executablePath: '/usr/bin/subtitle_studio',
         fileExists: (_) => true,
       ),
@@ -81,8 +128,14 @@ void main() {
     final linux = DesktopFfmpegExecutables.missingToolsGuidance(
       isWindows: false,
     );
+    final macOS = DesktopFfmpegExecutables.missingToolsGuidance(
+      isWindows: false,
+      isMacOS: true,
+    );
     expect(windows, contains('Repair or reinstall SubtitleStudio'));
     expect(windows, contains('bundled media'));
+    expect(macOS, contains('bundled media'));
+    expect(macOS, contains('Repair or reinstall SubtitleStudio'));
     expect(linux, contains('system PATH'));
     expect(linux, isNot(contains('reinstall SubtitleStudio')));
   });
