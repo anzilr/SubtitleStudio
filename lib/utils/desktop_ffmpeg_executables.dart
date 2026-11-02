@@ -3,11 +3,12 @@ import 'dart:io';
 // ignore: depend_on_referenced_packages
 import 'package:path/path.dart' as path;
 
-/// Finds the portable FFmpeg tools installed alongside the Windows executable.
+/// Resolves portable FFmpeg tools inside a desktop application's own bundle.
 ///
-/// A developer's PATH installation remains a fallback, and other desktop
-/// platforms keep using their existing system tools. No PATH changes or
-/// elevation are required for the packaged Windows application.
+/// Windows packages use tools/ffmpeg/bin next to the executable. macOS
+/// packages use Contents/Resources/tools/ffmpeg/bin inside the .app. Developer
+/// and Linux installations can still fall back to executables on PATH.
+/// No PATH modifications, elevated privileges or Homebrew are required.
 class DesktopFfmpegExecutables {
   const DesktopFfmpegExecutables._();
 
@@ -15,17 +16,19 @@ class DesktopFfmpegExecutables {
 
   static String ffprobe() => resolve('ffprobe');
 
-  /// Only identify the known media-dependency failure signature. Do not show
-  /// arbitrary exception text because it may contain the user's video path.
+  /// Never expose raw process errors: they can contain private video paths.
   static bool isMissingToolsError(Object error) {
     final message = error.toString();
     return message.contains('FFmpeg or FFprobe is unavailable') ||
-        message.contains('FFmpeg is not available');
+        message.contains('FFmpeg is not available') ||
+        message.contains('FFmpeg is unavailable');
   }
 
-  /// Windows installers ship both tools; Linux uses the system PATH.
-  static String missingToolsGuidance({required bool isWindows}) {
-    if (isWindows) {
+  static String missingToolsGuidance({
+    required bool isWindows,
+    bool isMacOS = false,
+  }) {
+    if (isWindows || isMacOS) {
       return 'Video subtitle extraction requires FFmpeg and FFprobe. '
           'Repair or reinstall SubtitleStudio to restore the bundled media '
           'tools. For a portable development build, install both tools '
@@ -35,10 +38,12 @@ class DesktopFfmpegExecutables {
         'and available on your system PATH.';
   }
 
-  /// Injectable inputs keep Windows path lookup testable on other hosts.
+  /// Injectable platform and filesystem inputs make bundled paths testable
+  /// without depending on the host architecture or operating system.
   static String resolve(
     String tool, {
     bool? isWindows,
+    bool? isMacOS,
     String? executablePath,
     bool Function(String)? fileExists,
   }) {
@@ -46,16 +51,28 @@ class DesktopFfmpegExecutables {
       throw ArgumentError.value(tool, 'tool', 'Unsupported media executable');
     }
 
-    if (!(isWindows ?? Platform.isWindows)) return tool;
+    final windows = isWindows ?? Platform.isWindows;
+    final macOS = isMacOS ?? Platform.isMacOS;
+    if (!windows && !macOS) return tool;
 
     final appExe = executablePath ?? Platform.resolvedExecutable;
-    final bundled = path.windows.join(
-      path.windows.dirname(appExe),
-      'tools',
-      'ffmpeg',
-      'bin',
-      '$tool.exe',
-    );
+    final bundled = windows
+        ? path.windows.join(
+            path.windows.dirname(appExe),
+            'tools',
+            'ffmpeg',
+            'bin',
+            '$tool.exe',
+          )
+        : path.posix.normalize(path.posix.join(
+            path.posix.dirname(appExe),
+            '..',
+            'Resources',
+            'tools',
+            'ffmpeg',
+            'bin',
+            tool,
+          ));
     if ((fileExists ?? (candidate) => File(candidate).existsSync())(bundled)) {
       return bundled;
     }
