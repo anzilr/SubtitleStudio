@@ -50,12 +50,11 @@ dependencies:
       url: https://github.com/AkhmadRamadani/flutter_gemini.git
       ref: 8c7c8047b903d7b01d9bf1d3516c11142cab8523
 
+# Keep the Linux hotkey Clang 21 fix in a reproducible local package.
+# See third_party/hotkey_manager_linux/VENDOR.md for upstream attribution.
 dependency_overrides:
   hotkey_manager_linux:
-    git:
-      url: https://github.com/gepbird/hotkey_manager.git
-      ref: 1b31e3ca4ab017ee72f54a7065b2073a88403d61
-      path: packages/hotkey_manager_linux
+    path: third_party/hotkey_manager_linux
 
 dev_dependencies:
   flutter_test:

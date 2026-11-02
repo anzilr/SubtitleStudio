@@ -553,11 +553,9 @@ packages:
   hotkey_manager_linux:
     dependency: "direct overridden"
     description:
-      path: "packages/hotkey_manager_linux"
-      ref: "1b31e3ca4ab017ee72f54a7065b2073a88403d61"
-      resolved-ref: "1b31e3ca4ab017ee72f54a7065b2073a88403d61"
-      url: "https://github.com/gepbird/hotkey_manager.git"
-    source: git
+      path: "third_party/hotkey_manager_linux"
+      relative: true
+    source: path
     version: "0.2.0"
   hotkey_manager_macos:
     dependency: transitive
