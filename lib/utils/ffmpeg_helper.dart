@@ -675,7 +675,7 @@ class SystemFFmpeg implements FFmpegInterface {
       if (Platform.isWindows) {
         installInstructions = 'Windows: Repair Subtitle Studio or reinstall the application to restore the bundled media tools.';
       } else if (Platform.isMacOS) {
-        installInstructions = 'macOS: brew install ffmpeg';
+        installInstructions = 'macOS: Repair or reinstall SubtitleStudio to restore the bundled media tools, or install FFmpeg and FFprobe on PATH for development.';
       } else if (Platform.isLinux) {
         installInstructions = 'Linux: sudo apt install ffmpeg (Ubuntu/Debian) or sudo yum install ffmpeg (RHEL/CentOS)';
       } else {
@@ -1111,12 +1111,13 @@ class FFmpegHelper implements FFmpegInterface {
   }
 
   static FFmpegInterface _createImplementation() {
-    // Use mobile implementation for Android, iOS, and macOS (ffmpeg_kit_flutter supports these platforms)
-    if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
+    // Mobile uses FFmpegKit. Desktop macOS uses the same portable FFmpeg
+    // processes as Windows/Linux so its packaged binaries are always used.
+    if (Platform.isAndroid || Platform.isIOS) {
       return MobileFFmpeg();
     } 
-    // Use system implementation for desktop platforms that require system FFmpeg (Windows, Linux)
-    else if (Platform.isWindows || Platform.isLinux) {
+    // Resolve bundled tools on Windows/macOS and system PATH on Linux.
+    else if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
       return SystemFFmpeg();
     } 
     // Throw error for unsupported platforms (web, fuchsia, etc.)
