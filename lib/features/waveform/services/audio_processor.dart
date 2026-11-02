@@ -511,9 +511,9 @@ class AudioProcessor {
       }
     } catch (_) {
       throw const WaveformProcessingFailure(
-        'FFmpeg is unavailable. On Windows, repair or reinstall Subtitle Studio '
-        'to restore the bundled media tools. On Linux, install FFmpeg through '
-        'your package manager.'
+        'FFmpeg is unavailable. On Windows or macOS, repair or reinstall '
+        'SubtitleStudio to restore the bundled tools. On Linux, install '
+        'FFmpeg through your package manager.'
       );
     }
   }
@@ -564,7 +564,7 @@ class AudioProcessor {
       }
 
       // Execute FFmpeg command based on platform
-      if (Platform.isWindows || Platform.isLinux) {
+      if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
         final plan = WaveformFfmpegPlan(
           inputPath: normalizedPath,
           outputPath: outputPath,
@@ -604,8 +604,8 @@ class AudioProcessor {
           );
         }
         ffmpegDuration = ffmpegWatch.elapsed;
-      } else if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
-        // Mobile/macOS platforms: Use FFmpegKit
+      } else if (Platform.isAndroid || Platform.isIOS) {
+        // Mobile platforms: Use FFmpegKit
         final inputPath = await _getSafReadableParameter(normalizedPath);
         
         final plan = WaveformFfmpegPlan(
