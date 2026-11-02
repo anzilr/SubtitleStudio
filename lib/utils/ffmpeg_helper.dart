@@ -10,6 +10,7 @@ import 'package:flutter/foundation.dart';
 import 'dart:math' show min;
 import 'package:subtitle_studio/utils/logging_helpers.dart';
 import 'package:subtitle_studio/utils/desktop_ffmpeg_executables.dart';
+import 'package:subtitle_studio/utils/ffmpeg_backend_policy.dart';
 
 /// Interface for FFmpeg operations
 abstract class FFmpegInterface {
@@ -1111,21 +1112,15 @@ class FFmpegHelper implements FFmpegInterface {
   }
 
   static FFmpegInterface _createImplementation() {
-    // Mobile uses FFmpegKit. Desktop macOS uses the same portable FFmpeg
-    // processes as Windows/Linux so its packaged binaries are always used.
-    if (Platform.isAndroid || Platform.isIOS) {
+    // FFmpegKit ships native FFmpeg/FFprobe implementations for all five
+    // supported operating systems. No desktop ffmpeg executable is needed.
+    if (FfmpegKitPlatformSupport.supports(Platform.operatingSystem)) {
       return MobileFFmpeg();
-    } 
-    // Resolve bundled tools on Windows/macOS and system PATH on Linux.
-    else if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
-      return SystemFFmpeg();
-    } 
-    // Throw error for unsupported platforms (web, fuchsia, etc.)
-    else {
-      throw UnsupportedError(
-        'FFmpeg operations are not supported on this platform: ${Platform.operatingSystem}',
-      );
     }
+    throw UnsupportedError(
+      'FFmpeg operations are not supported on this platform: '
+      '${Platform.operatingSystem}',
+    );
   }
 
   @override

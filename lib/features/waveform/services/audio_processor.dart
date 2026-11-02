@@ -17,7 +17,7 @@ import 'package:subtitle_studio/features/waveform/services/waveform_peak_cache_j
 import 'package:subtitle_studio/features/waveform/services/waveform_ffmpeg_plan.dart';
 import 'package:subtitle_studio/features/waveform/services/waveform_saf_input.dart';
 import 'package:subtitle_studio/utils/ffmpeg_helper.dart';
-import 'package:subtitle_studio/utils/desktop_ffmpeg_executables.dart';
+import 'package:subtitle_studio/utils/ffmpeg_backend_policy.dart';
 import 'package:ffmpeg_kit_flutter_new_min_gpl/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new_min_gpl/ffmpeg_kit_config.dart';
 import 'package:subtitle_studio/features/waveform/repositories/waveform_preferences_repository.dart';
@@ -43,13 +43,11 @@ class AudioProcessor {
   WaveformAcquisitionTimings? _acquisitionTimings;
   int _requestEpoch = 0;
   static int _nextTemporaryId = 0;
-  Process? _activeDesktopProcess;
   int? _activeNativeSessionId;
 
   /// Cancel only this instance's FFmpeg work, not unrelated media sessions.
   void cancelActive() {
     _requestEpoch++;
-    _activeDesktopProcess?.kill();
     final sessionId = _activeNativeSessionId;
     if (sessionId != null) {
       unawaited(FFmpegKit.cancel(sessionId));
@@ -173,10 +171,7 @@ class AudioProcessor {
         }
       } else {
         // No subtitle collection ID provided, process without caching
-        if (Platform.isWindows || Platform.isLinux) {
-          await _checkFFmpegAvailability();
-        }
-        
+
         onProgress?.call(0.05);
         waveformData = await _extractAudioToPCM(
           audioFilePath,
@@ -421,10 +416,6 @@ class AudioProcessor {
     String cacheOutputPath,
     {void Function(Duration)? onDecodedAudioTime}
   ) async {
-    if (Platform.isWindows || Platform.isLinux) {
-      await _checkFFmpegAvailability();
-    }
-
     onProgress?.call(0.05);
     
     // Extract audio to PCM (this saves the file before returning)
@@ -497,27 +488,6 @@ class AudioProcessor {
         safParameterForRead: FFmpegKitConfig.getSafParameterForRead,
       );
 
-  /// Check if FFmpeg is available on the system
-  Future<void> _checkFFmpegAvailability() async {
-    try {
-      final result = await Process.run(
-        DesktopFfmpegExecutables.ffmpeg(), ['-version']);
-      if (result.exitCode != 0) {
-        throw Exception('FFmpeg is not properly installed');
-      }
-      
-      if (kDebugMode) {
-        print('AudioProcessor: FFmpeg is available');
-      }
-    } catch (_) {
-      throw const WaveformProcessingFailure(
-        'FFmpeg is unavailable. On Windows or macOS, repair or reinstall '
-        'SubtitleStudio to restore the bundled tools. On Linux, install '
-        'FFmpeg through your package manager.'
-      );
-    }
-  }
-
   /// Extract audio from file using FFmpeg and convert to PCM
   /// If cacheForCollection is provided, saves the PCM file for future use
   /// If audioTrackId is provided, extracts that specific audio track
@@ -549,8 +519,7 @@ class AudioProcessor {
         }
       }
 
-      // Use FFmpegHelper to extract audio
-      // We need to use FFmpeg command directly for raw PCM extraction
+      // Extract raw PCM through the native FFmpegKit API.
       final normalizedPath = FFmpegHelper.normalizePath(audioFilePath);
       
       // Build FFmpeg command for PCM extraction
@@ -563,49 +532,9 @@ class AudioProcessor {
         print('AudioProcessor: Executing FFmpeg on ${Platform.operatingSystem}');
       }
 
-      // Execute FFmpeg command based on platform
-      if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-        final plan = WaveformFfmpegPlan(
-          inputPath: normalizedPath,
-          outputPath: outputPath,
-          selectedTrackId: audioTrackId,
-          pcmSampleRate: reduceToPeaks ? WaveformPeakCache.outputRate : 44100,
-        );
-        final args = plan.arguments();
-        if (kDebugMode) {
-          print('AudioProcessor: Audio stream map: ' +
-              plan.selectedStreamMap);
-        }
-
-        final ffmpegWatch = Stopwatch()..start();
-        final process = await Process.start(
-          DesktopFfmpegExecutables.ffmpeg(), args);
-        _activeDesktopProcess = process;
-        if (extractionEpoch != _requestEpoch) {
-          process.kill();
-        }
-        final stdoutDone = process.stdout.drain<void>();
-        // Drain both streams concurrently so FFmpeg cannot block on a full
-        // pipe. Native stderr can contain absolute paths and media metadata.
-        final stderrDone = process.stderr.drain<void>();
-        final exitCode = await process.exitCode;
-        await stdoutDone;
-        await stderrDone;
-        if (identical(_activeDesktopProcess, process)) {
-          _activeDesktopProcess = null;
-        }
-        if (extractionEpoch != _requestEpoch) {
-          throw StateError('Waveform extraction was cancelled.');
-        }
-        if (exitCode != 0) {
-          throw WaveformProcessingFailure(
-            'FFmpeg audio extraction failed (exit code $exitCode). '
-            'Check the selected audio track and file access.',
-          );
-        }
-        ffmpegDuration = ffmpegWatch.elapsed;
-      } else if (Platform.isAndroid || Platform.isIOS) {
-        // Mobile platforms: Use FFmpegKit
+      // One native FFmpegKit extraction path on Android, iOS, macOS, Windows and Linux.
+      if (FfmpegKitPlatformSupport.supports(Platform.operatingSystem)) {
+        // FFmpegKit provides native FFmpeg on mobile and desktop platforms.
         final inputPath = await _getSafReadableParameter(normalizedPath);
         
         final plan = WaveformFfmpegPlan(

@@ -1,3 +1,4 @@
 Studio Dock dependency refresh Batch 1: compatible package constraints (2026-10-30)
 Studio Dock macOS FFmpeg bundle regression: resolver, extraction and waveform (2026-11-02)
 Studio Dock portable CI dependency: vendor hotkey_manager_linux Clang21 source (2026-11-02)
+Studio Dock native FFmpegKit backend migration: all supported platforms (2026-11-02)
