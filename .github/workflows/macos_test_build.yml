@@ -5,6 +5,7 @@ name: macOS test build (unsigned)
 # the macOS 12-compatible build instructions are updated.
 # This workflow file is updated on the Studio Dock feature branch.
 # Nov 2026: Rebuild after vendoring Linux-only hotkey dependency for reproducible pub get.
+# Rebuild after correcting the FFmpeg thin-binary copy destination.
 on:
   workflow_dispatch:
   push:
