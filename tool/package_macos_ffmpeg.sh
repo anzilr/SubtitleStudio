@@ -47,7 +47,8 @@ fetch_arch_tool() {
     echo "::error::$tool archive has unexpected CPU architecture" >&2
     exit 1
   fi
-  cp "$binary" "$work/$arch-$tool"
+  # Keep the extracted archive directory distinct from our thin-binary inputs.
+  cp "$binary" "$work/thin-$arch-$tool"
 }
 
 fetch_arch_tool amd64 1789931006_9.0.2 ffmpeg \
@@ -60,7 +61,7 @@ fetch_arch_tool arm64 1789931890_9.0.2 ffprobe \
   fcbe839537485eaee7a7a8bc5cbc0f90d53617e80943e8a5b2e31cb851197ea6
 
 for tool in ffmpeg ffprobe; do
-  lipo -create "$work/amd64-$tool" "$work/arm64-$tool" \
+  lipo -create "$work/thin-amd64-$tool" "$work/thin-arm64-$tool" \
     -output "$bin/$tool"
   chmod 755 "$bin/$tool"
   if [[ "$(lipo -archs "$bin/$tool")" != *"x86_64"* ]] || \
