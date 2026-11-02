@@ -70,6 +70,14 @@ jobs:
           CODE_SIGNING_REQUIRED: 'NO'
         run: flutter build macos --release
 
+      - name: Bundle and smoke-test universal FFmpeg 9.0.2
+        shell: bash
+        run: |
+          set -euo pipefail
+          app="$(find build/macos/Build/Products/Release -maxdepth 1 -type d -name '*.app' -print -quit)"
+          test -n "$app"
+          bash tool/package_macos_ffmpeg.sh "$app"
+
       - name: Verify and package .app
         shell: bash
         run: |
@@ -101,6 +109,7 @@ jobs:
             echo "Commit: $GITHUB_SHA"
             echo
             echo "Unsigned and not notarized; for private testing only."
+            echo "Includes FFmpeg 9.0.2 and FFprobe for Intel and Apple Silicon."
             echo "Open the DMG on macOS and drag the .app into Applications."\n            echo "The ZIP is provided as a portable alternative."
             echo "If macOS blocks the app, use System Settings > Privacy & Security > Open Anyway."
             echo "Do not disable Gatekeeper system-wide."
