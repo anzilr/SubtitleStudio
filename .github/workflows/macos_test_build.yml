@@ -1,11 +1,11 @@
-name: macOS test build (unsigned)
+name: macOS native FFmpegKit test build (unsigned)
 
 # Explicitly requested cross-platform test build. Unlike the ordinary
 # quality workflows, this job compiles a macOS app only on demand or when
 # the macOS 12-compatible build instructions are updated.
 # This workflow file is updated on the Studio Dock feature branch.
 # Nov 2026: Rebuild after vendoring Linux-only hotkey dependency for reproducible pub get.
-# Rebuild after correcting the FFmpeg thin-binary copy destination.
+# Native-only FFmpegKit test build. Keep the prior bundled-CLI artifact for comparison.
 on:
   workflow_dispatch:
   push:
@@ -43,8 +43,8 @@ jobs:
           flutter config --enable-macos-desktop
           flutter pub get
 
-      - name: Verify portable FFmpeg path resolution
-        run: flutter test test/desktop_ffmpeg_executables_test.dart
+      - name: Verify FFmpegKit backend and waveform arguments
+        run: flutter test test/ffmpeg_backend_policy_test.dart test/waveform_ffmpeg_plan_test.dart
 
       - name: Use ad-hoc signing for this CI build only
         shell: bash
@@ -75,13 +75,21 @@ jobs:
           CODE_SIGNING_REQUIRED: 'NO'
         run: flutter build macos --release
 
-      - name: Bundle and smoke-test universal FFmpeg 9.0.2
+      - name: Verify native FFmpegKit desktop packaging
         shell: bash
         run: |
           set -euo pipefail
           app="$(find build/macos/Build/Products/Release -maxdepth 1 -type d -name '*.app' -print -quit)"
           test -n "$app"
-          bash tool/package_macos_ffmpeg.sh "$app"
+          # Waveform and subtitle extraction now use the plugin's Dart API.
+          # A separate ffmpeg/ffprobe CLI is no longer required for this test.
+          if [[ -e "$app/Contents/Resources/tools/ffmpeg/bin/ffmpeg" || \
+                -e "$app/Contents/Resources/tools/ffmpeg/bin/ffprobe" ]]; then
+            echo "::error::Native-only test must not ship standalone FFmpeg commands"
+            exit 1
+          fi
+          echo "Native-only macOS bundle (FFmpegKit plugin, no CLI binaries)."
+          find "$app/Contents/Frameworks" -maxdepth 3 -iname '*ffmpeg*' -print || true
 
       - name: Verify and package .app
         shell: bash
@@ -104,7 +112,7 @@ jobs:
           version="$(sed -nE 's/^version: ([0-9]+\.[0-9]+\.[0-9]+)\+([0-9]+).*$/\1_\2/p' pubspec.yaml | head -n 1)"
           test -n "$version"
           mkdir -p dist
-          archive="SubtitleStudio_${version}_macOS_test_unsigned.zip"
+          archive="SubtitleStudio_${version}_macOS_FFmpegKit_test_unsigned.zip"
           ditto -c -k --sequesterRsrc --keepParent "$app" "dist/$archive"
           (cd dist && shasum -a 256 "$archive" > "$archive.sha256")
           {
@@ -114,7 +122,7 @@ jobs:
             echo "Commit: $GITHUB_SHA"
             echo
             echo "Unsigned and not notarized; for private testing only."
-            echo "Includes FFmpeg 9.0.2 and FFprobe for Intel and Apple Silicon."
+            echo "Uses native FFmpegKit from the Flutter plugin; no standalone FFmpeg executable."\n            echo "Test waveform decoding and subtitle track extraction before release."
             echo "Open the DMG on macOS and drag the .app into Applications."
             echo "The ZIP is provided as a portable alternative."
             echo "If macOS blocks the app, use System Settings > Privacy & Security > Open Anyway."
@@ -136,7 +144,7 @@ jobs:
           staging="$(mktemp -d)"
           ditto "$app" "$staging/$(basename "$app")"
           ln -s /Applications "$staging/Applications"
-          dmg="SubtitleStudio_${version}_macOS_test_unsigned.dmg"
+          dmg="SubtitleStudio_${version}_macOS_FFmpegKit_test_unsigned.dmg"
           hdiutil create -volname "SubtitleStudio" -srcfolder "$staging" \
             -format UDZO -imagekey zlib-level=9 -ov "dist/$dmg"
           hdiutil verify "dist/$dmg"
@@ -146,7 +154,7 @@ jobs:
       - name: Upload test build
         uses: actions/upload-artifact@v4
         with:
-          name: SubtitleStudio-macOS-test-${{ github.run_number }}
+          name: SubtitleStudio-macOS-FFmpegKit-test-${{ github.run_number }}
           path: dist/
           if-no-files-found: error
           retention-days: 7
