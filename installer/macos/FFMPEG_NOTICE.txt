@@ -1,0 +1,21 @@
+SubtitleStudio macOS test package — FFmpeg / FFprobe 9.0.2
+
+Bundled command-line tools: ffmpeg, ffprobe (universal x86_64 + arm64).
+Vendor: Martin Riedl's FFmpeg Build Server
+Binary provider and checksum manifests: https://ffmpeg.martin-riedl.de/
+Pinned source downloads:
+  https://ffmpeg.martin-riedl.de/download/macos/amd64/1789931006_9.0.2/
+  https://ffmpeg.martin-riedl.de/download/macos/arm64/1789931890_9.0.2/
+FFmpeg upstream release: https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz
+Vendor build scripts: https://git.martin-riedl.de/ffmpeg/build-script
+
+These vendor builds enable GPL and version-3 components. FFmpeg and its
+third-party libraries are subject to their own licenses. Refer to
+FFMPEG_LICENSE.txt and FFMPEG_BUILD_INFO.txt installed beside this notice.
+The SubtitleStudio application and bundled FFmpeg executables are separate
+programs communicating by process invocation.
+
+This CI package is for private compatibility testing and is not Apple
+Developer ID signed or notarized. Before any public distribution, review
+the complete corresponding source offer, third-party licenses, compiled
+codec configuration, trademark/patent obligations and Apple signing.
